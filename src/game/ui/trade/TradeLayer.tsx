@@ -160,7 +160,10 @@ function GrantRow({ pos, laps, onToggle, onSetLaps }: { pos: number; laps: numbe
   const on = laps !== undefined
   return (
     <div className={cn('flex flex-col gap-1.5 px-2 py-1.5 rounded-[var(--radius-sharp)] border transition-colors', on ? 'border-gold bg-gold/15' : 'border-coffee-500 bg-coffee-900')}>
-      <button type="button" onClick={onToggle} className="flex items-center gap-2 w-full text-left">
+      {/* 044/T031: sem padding próprio, esta linha tinha ~18px de alvo de toque (a altura
+          do ToggleDot) — abaixo do mínimo de 24px. `min-h-6` garante o piso sem mexer no
+          tamanho do texto/dot visível. */}
+      <button type="button" onClick={onToggle} className="flex items-center gap-2 w-full min-h-6 text-left">
         <ToggleDot on={on} />
         <span className="flex-1 min-w-0 truncate text-cream text-xs">Conceder em {BOARD[pos].name}</span>
       </button>
@@ -171,8 +174,10 @@ function GrantRow({ pos, laps, onToggle, onSetLaps }: { pos: number; laps: numbe
               key={n}
               type="button"
               onClick={() => onSetLaps(n)}
+              // 044/T031: `text-micro` (9px) + `py-1` ficava perto de 19px de alvo —
+              // `min-h-6` fecha os 24px mínimos sem aumentar o texto.
               className={cn(
-                'label text-micro px-2 py-1 rounded-[var(--radius-sharp)] border transition-colors',
+                'label text-micro px-2 py-1 min-h-6 inline-flex items-center rounded-[var(--radius-sharp)] border transition-colors',
                 laps === n ? 'bg-gold text-coffee-900 border-gold' : 'bg-coffee-700 text-cream-muted border-coffee-500 hover:border-gold/60',
               )}
             >
@@ -183,7 +188,7 @@ function GrantRow({ pos, laps, onToggle, onSetLaps }: { pos: number; laps: numbe
             type="button"
             onClick={() => onSetLaps(null)}
             className={cn(
-              'label text-micro px-2 py-1 rounded-[var(--radius-sharp)] border transition-colors',
+              'label text-micro px-2 py-1 min-h-6 inline-flex items-center rounded-[var(--radius-sharp)] border transition-colors',
               laps === null ? 'bg-gold text-coffee-900 border-gold' : 'bg-coffee-700 text-cream-muted border-coffee-500 hover:border-gold/60',
             )}
           >
@@ -411,7 +416,7 @@ function TradeScale({
         <span className="absolute left-1/2 -translate-x-1/2 bottom-[4px] w-9 h-[4px] rounded-full" style={{ background: 'var(--gradient-brass)' }} />
         <span className="absolute left-1/2 -translate-x-1/2 bottom-0 w-14 h-[5px] rounded-full bg-brass-soft/80" />
         {/* mostrador: arco graduado fixo sob o fulcro… */}
-        <svg viewBox="0 0 44 24" className="absolute left-1/2 -translate-x-1/2 top-[12px] w-[44px] h-[24px]">
+        <svg aria-hidden viewBox="0 0 44 24" className="absolute left-1/2 -translate-x-1/2 top-[12px] w-[44px] h-[24px]">
           <path d="M13.5 20.1 A20 20 0 0 0 30.5 20.1" stroke="var(--color-brass)" strokeOpacity="0.4" strokeWidth="1" fill="none" />
           <path d="M22 18.4 L22 22.2" stroke="var(--color-brass-glow)" strokeOpacity="0.7" strokeWidth="1.2" strokeLinecap="round" />
         </svg>
@@ -638,6 +643,8 @@ function Composer({ onClose }: { onClose: () => void }) {
                 key={p.id}
                 type="button"
                 title={p.id}
+                aria-label={`Trocar com ${p.id}`}
+                aria-pressed={p.id === toId}
                 onClick={() => pickRecipient(p.id)}
                 className={cn('rounded-full p-0.5 border transition-colors', p.id === toId ? 'border-gold bg-gold/15' : 'border-transparent hover:border-gold/50')}
               >

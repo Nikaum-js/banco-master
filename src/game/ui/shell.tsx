@@ -1,10 +1,20 @@
 // Casca única de modal do jogo — overlay, cartão e header em gradiente do
 // tema. Toda camada modal (ModalLayer, Trade, HandCard, LandAuction, Notice)
 // usa este vocabulário; divergência de backdrop/raio/gradiente é bug.
-import { type ReactNode } from 'react'
+//
+// 044/T023 (US3/D4 do plan, D-039): é também o ÚNICO lugar que implementa acessibilidade
+// de modal — role="dialog", aria-modal, aria-labelledby (ligado ao título do ModalHeader
+// via contexto), foco inicial, trap de Tab e restauração de foco no desmonte. `dismissible`
+// (default FALSE) decide se Esc/clique no backdrop fecham — o default fechado é o lado
+// seguro: modal novo nasce sem deixar Esc virar comando de jogo por engano.
+//
+// O contexto/hook de título e o hook de trap/foco vivem em `a11y/dialog.ts`, não aqui — o
+// lint de fast-refresh recusa um arquivo que mistura componente com contexto/hook solto.
+import { useId, useRef, type ReactNode } from 'react'
 import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { useMotion } from '@/game/ui/motion'
+import { ModalTitleContext, useModalTitleId, useDialogA11y } from '@/game/ui/a11y/dialog'
 
 // Overlay padrão: véu de tinta com VINHETA (centro mais claro, bordas mais
 // fundas — foco no cartão) + blur leve, sempre o MESMO. Só o z-index varia
@@ -15,28 +25,51 @@ export function Overlay({
   onClick,
   className,
   children,
+  dismissible = false,
+  ariaLabel,
 }: {
   z?: number
   onClick?: () => void
   className?: string
   children: ReactNode
+  // 044/T023 (D4 do plan): governa Esc E clique no backdrop, sempre junto. Default FALSE —
+  // o lado seguro. Só camadas informativas (NoticeLayer, popovers) marcam `true`; as que
+  // decidem a partida (ModalLayer, TradeLayer, LandAuctionLayer, HandCardLayer) não marcam.
+  dismissible?: boolean
+  // Nome acessível pra Overlay sem ModalHeader (ex.: EndGameScreen). Com ModalHeader,
+  // deixe de fora — o título dele já vira `aria-labelledby` via contexto.
+  ariaLabel?: string
 }) {
   const { fade } = useMotion() // freio de graça: quem usa Overlay não precisa lembrar disso
+  const titleId = useId()
+  const containerRef = useRef<HTMLDivElement>(null)
+  useDialogA11y(containerRef, { dismissible, onDismiss: onClick })
+
   return (
-    <motion.div
-      initial={fade.initial}
-      animate={fade.animate}
-      exit={fade.exit}
-      onClick={onClick}
-      style={{
-        zIndex: z,
-        background:
-          'radial-gradient(120% 120% at 50% 40%, color-mix(in srgb, var(--color-coffee-950) 60%, transparent) 0%, color-mix(in srgb, var(--color-coffee-950) 90%, transparent) 100%)',
-      }}
-      className={cn('fixed inset-0 flex items-center justify-center backdrop-blur-[3px] p-4', className)}
-    >
-      {children}
-    </motion.div>
+    <ModalTitleContext.Provider value={titleId}>
+      <motion.div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabel ? undefined : titleId}
+        tabIndex={-1}
+        initial={fade.initial}
+        animate={fade.animate}
+        exit={fade.exit}
+        onClick={() => {
+          if (dismissible) onClick?.()
+        }}
+        style={{
+          zIndex: z,
+          background:
+            'radial-gradient(120% 120% at 50% 40%, color-mix(in srgb, var(--color-coffee-950) 60%, transparent) 0%, color-mix(in srgb, var(--color-coffee-950) 90%, transparent) 100%)',
+        }}
+        className={cn('fixed inset-0 flex items-center justify-center backdrop-blur-[3px] p-4 outline-none', className)}
+      >
+        {children}
+      </motion.div>
+    </ModalTitleContext.Provider>
   )
 }
 
@@ -100,6 +133,9 @@ export function ModalHeader({
   // latão polido. Bisel: luz na aresta de cima, sombra na de baixo.
   const background = bg ?? (tone === 'signal' ? 'var(--gradient-signal-shine)' : 'var(--gradient-brass-shine)')
   const dark = tone !== 'signal' // texto tinta sobre latão/stripes; claro sobre signal
+  // 044/T023 (D4 do plan): título vira o `aria-labelledby` do diálogo — o id vem de quem
+  // envolve este header (Overlay ou o DecisionShell do GameHUD), nunca inventado aqui.
+  const titleId = useModalTitleId()
   return (
     <div
       className={cn('relative px-4 py-3 border-b-2 border-coffee-950 shrink-0', center && 'text-center', className)}
@@ -112,7 +148,7 @@ export function ModalHeader({
       <div className={cn('flex items-center gap-2.5', center && 'justify-center')}>
         {icon && <div className="shrink-0 w-9 h-9 flex items-center justify-center">{icon}</div>}
         <div className={cn('min-w-0', !center && 'flex-1')}>
-          <h3 className={cn('display text-lg leading-none truncate', dark ? 'text-coffee-950' : 'text-cream')}>
+          <h3 id={titleId ?? undefined} className={cn('display text-lg leading-none truncate', dark ? 'text-coffee-950' : 'text-cream')}>
             {title}
           </h3>
           {subtitle && (

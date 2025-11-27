@@ -23,6 +23,7 @@ import { buildCost } from '@/game/economy/construction'
 import { GavelIcon, CoinIcon, HouseIcon, HotelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
+import { useModalTitleId } from '@/game/ui/a11y/dialog'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 
@@ -61,6 +62,70 @@ function ArrowGlyph({ flip = false }: { flip?: boolean }) {
       <path d="M4 12h15" />
       <path d="m13 6 6 6-6 6" />
     </svg>
+  )
+}
+
+// Carta revelada — componente PRÓPRIO (não inline no JSX de ModalLayer) por necessidade,
+// não por gosto: 044/T024, `useModalTitleId()` só resolve o id certo quando chamado por um
+// componente que é DESCENDENTE do `Overlay` que o gerou (Context resolve por posição na
+// árvore de fibers, não por aninhamento textual do JSX) — inline aqui leria o contexto de
+// FORA do Overlay (sempre `null`), do mesmo jeito que `ModalHeader` (que já é componente
+// à parte) resolve certo.
+function CardRevealCard({
+  view,
+  reduced,
+  onConfirm,
+}: {
+  view: Extract<ModalView, { kind: 'card-reveal' }>
+  reduced: boolean
+  onConfirm: () => void
+}) {
+  const titleId = useModalTitleId()
+  return (
+    <motion.div
+      initial={reduced ? false : { opacity: 0, scale: 0.9, y: 10, rotateZ: -2 }}
+      animate={{ opacity: 1, scale: 1, y: 0, rotateZ: 0 }}
+      exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 10 }}
+      transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 26 }}
+      onClick={(e) => e.stopPropagation()}
+      className="w-[300px] max-w-[90vw] bg-coffee-800 rounded-[var(--radius-modal)] overflow-hidden border-2"
+      style={{ borderColor: RARITY_COLOR[view.rarity], boxShadow: `var(--shadow-dropdown), 0 0 22px color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 45%, transparent)` }}
+    >
+      {/* Faixa da raridade */}
+      <div
+        className="px-4 py-2.5 flex items-center justify-between"
+        style={{ background: `linear-gradient(180deg, ${RARITY_COLOR[view.rarity]} 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 75%, var(--color-ink-950)) 100%)` }}
+      >
+        <span className="display text-coffee-950 text-sm leading-none tracking-[var(--tracking-caps)] uppercase">{view.deckId === 'acaso' ? 'Acaso' : 'Tesouro'}</span>
+        <span className="label text-coffee-950/85 text-micro">{RARITY_LABEL[view.rarity]}</span>
+      </div>
+
+      {/* Corpo — véu radial na cor da raridade atrás do título */}
+      <div
+        className="px-5 pt-7 pb-5 flex flex-col items-center gap-5"
+        style={{
+          background: `radial-gradient(90% 55% at 50% 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 10%, transparent) 0%, transparent 62%)`,
+        }}
+      >
+        <h2 id={titleId ?? undefined} className="display text-cream text-3xl leading-[0.95] text-center">{cardLabel(view.effect)}</h2>
+        <div className="w-full">
+          <div className="flex items-center gap-2 justify-center mb-2">
+            <span className="h-px flex-1 bg-coffee-500/50" />
+            <span className="label text-gold text-micro">O que faz</span>
+            <span className="h-px flex-1 bg-coffee-500/50" />
+          </div>
+          <p className="text-cream text-sm leading-snug text-center">{CARD_DESC[view.effect] ?? 'Carta sorteada.'}</p>
+        </div>
+      </div>
+
+      {/* Rodapé */}
+      <div className="px-4 py-3 border-t-2 border-coffee-950 bg-coffee-900/60">
+        <p className="label text-cream-muted text-center mb-2 text-micro">vai para a sua mão</p>
+        <div className="flex">
+          <ActionBtn onClick={onConfirm}>Guardar na mão</ActionBtn>
+        </div>
+      </div>
+    </motion.div>
   )
 }
 
@@ -200,50 +265,7 @@ export function ModalLayer() {
           )}
 
           {view.kind === 'card-reveal' && (
-            <motion.div
-              initial={reduced ? false : { opacity: 0, scale: 0.9, y: 10, rotateZ: -2 }}
-              animate={{ opacity: 1, scale: 1, y: 0, rotateZ: 0 }}
-              exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 10 }}
-              transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 26 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-[300px] max-w-[90vw] bg-coffee-800 rounded-[var(--radius-modal)] overflow-hidden border-2"
-              style={{ borderColor: RARITY_COLOR[view.rarity], boxShadow: `var(--shadow-dropdown), 0 0 22px color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 45%, transparent)` }}
-            >
-              {/* Faixa da raridade */}
-              <div
-                className="px-4 py-2.5 flex items-center justify-between"
-                style={{ background: `linear-gradient(180deg, ${RARITY_COLOR[view.rarity]} 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 75%, var(--color-ink-950)) 100%)` }}
-              >
-                <span className="display text-coffee-950 text-sm leading-none tracking-[var(--tracking-caps)] uppercase">{view.deckId === 'acaso' ? 'Acaso' : 'Tesouro'}</span>
-                <span className="label text-coffee-950/85 text-micro">{RARITY_LABEL[view.rarity]}</span>
-              </div>
-
-              {/* Corpo — véu radial na cor da raridade atrás do título */}
-              <div
-                className="px-5 pt-7 pb-5 flex flex-col items-center gap-5"
-                style={{
-                  background: `radial-gradient(90% 55% at 50% 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 10%, transparent) 0%, transparent 62%)`,
-                }}
-              >
-                <h2 className="display text-cream text-3xl leading-[0.95] text-center">{cardLabel(view.effect)}</h2>
-                <div className="w-full">
-                  <div className="flex items-center gap-2 justify-center mb-2">
-                    <span className="h-px flex-1 bg-coffee-500/50" />
-                    <span className="label text-gold text-micro">O que faz</span>
-                    <span className="h-px flex-1 bg-coffee-500/50" />
-                  </div>
-                  <p className="text-cream text-sm leading-snug text-center">{CARD_DESC[view.effect] ?? 'Carta sorteada.'}</p>
-                </div>
-              </div>
-
-              {/* Rodapé */}
-              <div className="px-4 py-3 border-t-2 border-coffee-950 bg-coffee-900/60">
-                <p className="label text-cream-muted text-center mb-2 text-micro">vai para a sua mão</p>
-                <div className="flex">
-                  <ActionBtn onClick={() => confirmCardReveal()}>Guardar na mão</ActionBtn>
-                </div>
-              </div>
-            </motion.div>
+            <CardRevealCard view={view} reduced={reduced} onConfirm={confirmCardReveal} />
           )}
 
           {view.kind === 'bus-move' && (

@@ -840,6 +840,10 @@ function PlayerRow({ player: p }: { player: Player }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-1.5">
           <p className="display text-cream text-[17px] leading-none truncate">{p.name}</p>
+          {/* 044/T030 (D-039 ponto 3): "jogador da vez" tinha só borda/fundo diferentes —
+              cor sem segundo canal. A DiceArena já diz o nome de quem joga em texto; esta
+              é a mesma informação na lista lateral, mesmo padrão de tag do "VOCÊ"/"$$"/"IMU". */}
+          {p.active      && <span title="Turno atual" className="label !text-gold">VEZ</span>}
           {p.you         && <span title="Seu assento" className="label !text-gold">VOCÊ</span>}
           {p.loanActive  && <span title="Empréstimo ativo" className="label !text-logo">$$</span>}
           {p.immune      && <span title="Imunidade ativa"  className="label !text-gold">IMU</span>}

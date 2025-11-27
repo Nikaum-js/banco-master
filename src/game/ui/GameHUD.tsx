@@ -11,7 +11,14 @@
 // hipotecar/vender e juntar caixa antes de "Pagar". Demais climas podem ter leve dim.
 // Ações OPCIONAIS não moram aqui: Bus Ticket é canhoto na DiceArena; quitar
 // empréstimo vive no LoanPanel lateral. Sem nada pendente → não renderiza.
-import { type ReactNode, useState } from 'react'
+//
+// 044/T024 (US3/D-039): reação e empréstimo (`dim`) BLOQUEIAM a tela de verdade (o backdrop
+// cobre tudo e recebe clique) — viram diálogo de verdade (role="dialog", trap de foco,
+// restauração), via `useDialogA11y`/`ModalTitleContext` de `shell.tsx` (mesmo mecanismo do
+// `Overlay`, sem duplicar). SEM `dismissible`: são decisões (D-039 ponto 2 cita "reação"
+// nominalmente) — Esc não fecha. A dívida (`dim=false`) fica de fora de propósito: o
+// tabuleiro PRECISA continuar alcançável (hipotecar/vender), um trap ali quebraria isso.
+import { type ReactNode, useId, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { HandCoins, Landmark, ShieldAlert } from 'lucide-react'
 import { PlayerFace } from '@/boards/shared'
@@ -27,6 +34,7 @@ import { EndGameScreen } from '@/game/ui/EndGameScreen'
 import { Button, Chip, MoneyPulse } from '@/game/ui/primitives'
 import { useMoneyPulse } from '@/game/ui/useMoneyPulse'
 import { useMotion } from '@/game/ui/motion'
+import { useDialogA11y, ModalTitleContext, useModalTitleId } from '@/game/ui/a11y/dialog'
 import type { LoanRequest } from '@/game/economy/types'
 import { money as fmt } from '@/lib/money'
 
@@ -92,12 +100,25 @@ function DecisionShell({
   dim = false,
   children,
 }: { dim?: boolean; children: ReactNode }) {
+  // 044/T024: só o clima `dim` bloqueia a tela de verdade (backdrop cobre tudo e recebe
+  // clique) — só ele vira diálogo (foco entra, trap, restaura). A dívida (`dim=false`)
+  // fica de fora: pointer-events-none no container, tabuleiro tem que continuar alcançável.
+  const containerRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
+  useDialogA11y(containerRef, { active: dim })
   return (
-    <div
-      className={`fixed inset-0 z-[60] flex items-center justify-center p-4 ${dim ? 'bg-coffee-950/70 backdrop-blur-[2px]' : 'pointer-events-none'}`}
-    >
-      {children}
-    </div>
+    <ModalTitleContext.Provider value={titleId}>
+      <div
+        ref={dim ? containerRef : undefined}
+        role={dim ? 'dialog' : undefined}
+        aria-modal={dim ? true : undefined}
+        aria-labelledby={dim ? titleId : undefined}
+        tabIndex={dim ? -1 : undefined}
+        className={`fixed inset-0 z-[60] flex items-center justify-center p-4 outline-none ${dim ? 'bg-coffee-950/70 backdrop-blur-[2px]' : 'pointer-events-none'}`}
+      >
+        {children}
+      </div>
+    </ModalTitleContext.Provider>
   )
 }
 
@@ -432,6 +453,9 @@ export function GameHUD() {
 // Cabeçalho das reações — faixa dourada, ícone num selo redondo escuro, título +
 // subtítulo curto. Clima de "interrupção/alerta" sóbrio.
 function ReactionHead({ icon, title, subtitle }: { icon: ReactNode; title: string; subtitle: string }) {
+  // 044/T024: o id vem do `DecisionShell(dim)` que envolve este card — mesmo mecanismo do
+  // `ModalHeader` de shell.tsx, pro título virar `aria-labelledby` do diálogo.
+  const titleId = useModalTitleId()
   return (
     <div
       className="relative flex items-center gap-3 px-5 py-3 border-b-2 border-coffee-950"
@@ -447,7 +471,7 @@ function ReactionHead({ icon, title, subtitle }: { icon: ReactNode; title: strin
         {icon}
       </motion.div>
       <div className="min-w-0">
-        <h3 className="display text-xl leading-none text-coffee-900">{title}</h3>
+        <h3 id={titleId ?? undefined} className="display text-xl leading-none text-coffee-900">{title}</h3>
         <p className="label text-coffee-900/80 leading-none mt-1 normal-case">{subtitle}</p>
       </div>
     </div>

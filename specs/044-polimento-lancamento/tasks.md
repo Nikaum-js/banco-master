@@ -66,17 +66,17 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 
 **Meta**: o caminho de jogo inteiro operável por teclado, anunciado, com contraste e alvos.
 
-- [ ] **T022** [test-first] `tests/ui/a11y/modalFocus.test.tsx`: modal abre → foco entra; `Tab`/`Shift+Tab` circulam dentro; fechar devolve o foco a quem abriu; `dismissible` ausente → Esc **não** fecha; `dismissible` presente → Esc fecha (FR-013, FR-014).
-- [ ] **T023** `src/game/ui/shell.tsx`: `Overlay` ganha `role="dialog"`, `aria-modal`, `aria-labelledby` (ligado ao `ModalHeader`), foco inicial, trap, restauração e `dismissible = false` por padrão ([D4 do plan](./plan.md#d4--o-trap-de-foco-entra-no-shelltsx-não-em-cada-modal)).
-- [ ] **T024** Marcar `dismissible` nas camadas informativas (`NoticeLayer`, popovers) e **deixar sem** nas de decisão (`ModalLayer`, `TradeLayer`, `LandAuctionLayer`, `HandCardLayer`). Conferir cada modal do §12.2 contra a política.
-- [ ] **T025** [P] `src/index.css`: `:focus-visible` global com indicador de contraste próprio (≥3:1), nunca só cor; remoção de qualquer `outline: none` sem substituto (FR-012).
-- [ ] **T026** [P] `src/game/ui/a11y/LiveRegion.tsx` (FR-016): região `polite` alimentada pela última entrada do log via `describeLogEntry` (040) + canal `assertive` para "sua vez", prazo vencendo e comando recusado. Envolvida por `AccessoryErrorBoundary` — `describeLogEntry` lança por exaustividade ([D5 do plan](./plan.md#d5--a-região-viva-reusa-a-frase-do-log-tipado-040-não-inventa-texto)).
-- [ ] **T027** `src/App.tsx`: montar `<LiveRegion/>` junto das camadas existentes.
-- [ ] **T028** [test-first] `tests/ui/a11y/liveRegion.test.tsx`: entrada nova no log → anúncio educado com a mesma frase da tela; início do meu turno → canal assertivo; `kind` desconhecido → a fronteira acessória contém e a partida segue (não repetir o bug da 040).
-- [ ] **T029** Nomes acessíveis (FR-015): varredura de ícones e imagens em `boards/glyphs/**`, `game/ui/icons.tsx`, `PlayerFace`, `SquareIcon` — significado ganha nome, decoração ganha `aria-hidden`.
-- [ ] **T030** Segundo canal além da cor (FR-018): posse de propriedade, jogador da vez, raridade de carta e status de conexão. Onde já existe (raridade tem rótulo), confirmar; onde não existe, acrescentar.
-- [ ] **T031** Contraste (FR-017), alvos ≥24 px (FR-019) e zoom a 200% sem perda de função (FR-020) no caminho de jogo — auditar com a ferramenta da Fase 7 e corrigir os tokens de cor no `index.css`, não caso a caso.
-- [ ] **T032** Ordem de tabulação e alcance por teclado no tabuleiro: casas focáveis com nome, HUD e painéis navegáveis, sem armadilha (FR-011).
+- [x] **T022** [test-first] `tests/ui/a11y/modalFocus.test.tsx`: modal abre → foco entra; `Tab`/`Shift+Tab` circulam dentro; fechar devolve o foco a quem abriu; `dismissible` ausente → Esc **não** fecha; `dismissible` presente → Esc fecha (FR-013, FR-014).
+- [x] **T023** `src/game/ui/shell.tsx`: `Overlay` ganha `role="dialog"`, `aria-modal`, `aria-labelledby` (ligado ao `ModalHeader`), foco inicial, trap, restauração e `dismissible = false` por padrão ([D4 do plan](./plan.md#d4--o-trap-de-foco-entra-no-shelltsx-não-em-cada-modal)).
+- [x] **T024** Marcar `dismissible` nas camadas informativas (`NoticeLayer`, popovers) e **deixar sem** nas de decisão (`ModalLayer`, `TradeLayer`, `LandAuctionLayer`, `HandCardLayer`). Conferir cada modal do §12.2 contra a política.
+- [x] **T025** [P] `src/index.css`: `:focus-visible` global com indicador de contraste próprio (≥3:1), nunca só cor; remoção de qualquer `outline: none` sem substituto (FR-012).
+- [x] **T026** [P] `src/game/ui/a11y/LiveRegion.tsx` (FR-016): região `polite` alimentada pela última entrada do log via `describeLogEntry` (040) + canal `assertive` para "sua vez", prazo vencendo e comando recusado. Envolvida por `AccessoryErrorBoundary` — `describeLogEntry` lança por exaustividade ([D5 do plan](./plan.md#d5--a-região-viva-reusa-a-frase-do-log-tipado-040-não-inventa-texto)).
+- [x] **T027** `src/App.tsx`: montar `<LiveRegion/>` junto das camadas existentes.
+- [x] **T028** [test-first] `tests/ui/a11y/liveRegion.test.tsx`: entrada nova no log → anúncio educado com a mesma frase da tela; início do meu turno → canal assertivo; `kind` desconhecido → a fronteira acessória contém e a partida segue (não repetir o bug da 040).
+- [x] **T029** Nomes acessíveis (FR-015): varredura de ícones e imagens em `boards/glyphs/**`, `game/ui/icons.tsx`, `PlayerFace`, `SquareIcon` — significado ganha nome, decoração ganha `aria-hidden`.
+- [x] **T030** Segundo canal além da cor (FR-018): posse de propriedade, jogador da vez, raridade de carta e status de conexão. Onde já existe (raridade tem rótulo), confirmar; onde não existe, acrescentar.
+- [x] **T031** Contraste (FR-017), alvos ≥24 px (FR-019) e zoom a 200% sem perda de função (FR-020) no caminho de jogo — auditar com a ferramenta da Fase 7 e corrigir os tokens de cor no `index.css`, não caso a caso.
+- [x] **T032** Ordem de tabulação e alcance por teclado no tabuleiro: casas focáveis com nome, HUD e painéis navegáveis, sem armadilha (FR-011).
 
 **Checkpoint**: percorrer home → lobby → partida → decisão → fim **só com teclado**, à mão. **SC-007** e **SC-009** verificados manualmente; o gate automatizado chega na Fase 7.
 

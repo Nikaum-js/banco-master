@@ -6,6 +6,7 @@ import { TradeLayer } from '@/game/ui/trade/TradeLayer'
 import { LandAuctionLayer } from '@/game/ui/landAuction/LandAuctionLayer'
 import { HandCardLayer } from '@/game/ui/cards/HandCardLayer'
 import { NoticeLayer } from '@/game/ui/NoticeLayer'
+import { LiveRegion } from '@/game/ui/a11y/LiveRegion'
 import { SoundLayer } from '@/game/ui/sound/SoundLayer'
 import { AudioControl } from '@/game/ui/sound/AudioControl'
 import { ThemeControl } from '@/game/ui/theme/ThemeControl'
@@ -38,6 +39,7 @@ export default function App() {
       <LandAuctionLayer />
       <HandCardLayer />
       <NoticeLayer />
+      <LiveRegion />
       <AccessoryErrorBoundary label="Som">
         <SoundLayer />
       </AccessoryErrorBoundary>

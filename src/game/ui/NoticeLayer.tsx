@@ -1,12 +1,18 @@
 // Notificações informativas (030, §12.2). Loteria (ex-"Free Parking") = celebração
 // com confete (sem modal); Aquisição Hostil sofrida = modal. Dispensa por clique
 // (a loteria também some sozinha após alguns segundos). Não bloqueia o turno.
-import { useEffect } from 'react'
+//
+// 044/T024 (US3/D-039): as duas são INFORMATIVAS — nenhuma decide a partida, então Esc
+// fecha as duas (`dismissible`). A loteria não passa pelo `Overlay` (backdrop custom,
+// sem ModalShell), então chama `useDialogA11y` direto pra ganhar o mesmo trap/Esc/
+// restauração de foco sem duplicar a lógica.
+import { useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useGameStore } from '@/game/store'
 import { BOARD } from '@/lib/boardData'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
+import { useDialogA11y } from '@/game/ui/a11y/dialog'
 import { useMotion, MOTION } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 
@@ -64,6 +70,8 @@ export function NoticeLayer() {
   const dispatch = useGameStore((s) => s.dispatch)
   const dismissNotice = (): void => dispatch({ kind: 'dismiss-notice' })
   const { reduced } = useMotion()
+  const lotteryRef = useRef<HTMLDivElement>(null)
+  useDialogA11y(lotteryRef, { active: notice?.kind === 'free-parking', dismissible: true, onDismiss: dismissNotice })
 
   // A loteria some sozinha depois de alguns segundos (além do clique).
   useEffect(() => {
@@ -79,12 +87,17 @@ export function NoticeLayer() {
       {notice?.kind === 'free-parking' && (
         <motion.div
           key="lottery"
+          ref={lotteryRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Prêmio da loteria"
+          tabIndex={-1}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: MOTION.base }}
           onClick={() => dismissNotice()}
-          className="fixed inset-0 z-[67] flex items-center justify-center overflow-hidden bg-coffee-950/55 backdrop-blur-[1px] cursor-pointer"
+          className="fixed inset-0 z-[67] flex items-center justify-center overflow-hidden bg-coffee-950/55 backdrop-blur-[1px] cursor-pointer outline-none"
         >
           <Confetti />
           <motion.div
@@ -118,7 +131,7 @@ export function NoticeLayer() {
       )}
 
       {notice?.kind === 'hostile-takeover' && (
-        <Overlay key="takeover" z={67} onClick={() => dismissNotice()}>
+        <Overlay key="takeover" z={67} onClick={() => dismissNotice()} dismissible>
           <ModalShell className="w-[360px] max-w-[92vw]">
             <ModalHeader tone="signal" title="Aquisição Hostil" />
             <div className="p-4">

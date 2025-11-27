@@ -62,7 +62,11 @@ export function EndGameScreen({
   const unconfirmed = standings.filter(isUnconfirmed)
 
   return (
-    <Overlay z={70} className="overflow-y-auto">
+    // 044/T024: sem título via ModalHeader (o cabeçalho é o "VENCEDOR" custom abaixo) —
+    // `ariaLabel` supre o nome do diálogo. Sem `dismissible`: não há ação de fechar
+    // separada do botão de saída (nenhum `onClick` de backdrop foi passado), então o
+    // default seguro (Esc não faz nada) não muda comportamento nenhum.
+    <Overlay z={70} ariaLabel="Fim de jogo" className="overflow-y-auto">
       <Confetti />
       <ModalShell className="relative w-full max-w-lg my-8">
         <div className="flex flex-col items-center px-6 pt-8 pb-4 text-center">

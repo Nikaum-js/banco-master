@@ -67,7 +67,7 @@ export function IdentityForm({
           placeholder="Como aparecer na mesa"
           maxLength={16}
           autoFocus
-          className="px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream placeholder:text-cream-muted/50 focus:outline-none focus:border-gold/60"
+          className="px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream placeholder:text-cream-muted/50 focus:border-gold/60"
         />
       </label>
 
@@ -277,7 +277,7 @@ export function ReentryForm({
           placeholder="Ex.: 7F3K9M"
           maxLength={6}
           autoFocus
-          className="px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream placeholder:text-cream-muted/50 tracking-[0.3em] uppercase focus:outline-none focus:border-gold/60"
+          className="px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream placeholder:text-cream-muted/50 tracking-[0.3em] uppercase focus:border-gold/60"
         />
       </label>
       <p className="label text-cream-muted/70 leading-snug">
