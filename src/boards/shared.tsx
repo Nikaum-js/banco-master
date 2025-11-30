@@ -411,16 +411,22 @@ export function BuildingMark({ pos }: { pos: number }) {
   const n = title ? cityLevel(title) : 0 // 0–7 real (023)
   if (!n) return null
 
+  const side = sideOf(pos)
   const isSkyscraper = n === 7
   const isHotel = n === 5 || n === 6 // hotel ou 2º hotel
   const houseCount = n >= 1 && n <= 4 ? n : 0
+  const isFourHouseGrid = houseCount === 4
 
   return (
     <div
-      className="absolute z-20 pointer-events-none flex items-center justify-center"
+      className="absolute z-20 pointer-events-none items-center justify-center"
+      data-building-layout={isFourHouseGrid ? 'grid-2x2' : 'line'}
       style={{
-        ...markLayout(sideOf(pos)),
-        gap: '1.5px',
+        ...markLayout(side),
+        display: isFourHouseGrid ? 'grid' : 'flex',
+        gridTemplateColumns: isFourHouseGrid ? 'repeat(2, 13px)' : undefined,
+        gridTemplateRows: isFourHouseGrid ? 'repeat(2, 13px)' : undefined,
+        gap: isFourHouseGrid ? '1px' : '1.5px',
         color: 'var(--color-brass-glow)',
         flexWrap: 'nowrap', // 4 casas NUNCA quebram pra outra linha
         width: 'max-content', // dimensiona pelo conteúdo (sem shrink-to-fit da célula)
@@ -1630,15 +1636,25 @@ function useViewportClamp() {
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    const m = 8
-    const r = el.getBoundingClientRect()
-    let x = 0
-    let y = 0
-    if (r.left < m) x = m - r.left
-    else if (r.right > window.innerWidth - m) x = window.innerWidth - m - r.right
-    if (r.top < m) y = m - r.top
-    else if (r.bottom > window.innerHeight - m) y = window.innerHeight - m - r.bottom
-    setOff({ x, y })
+    const clamp = (): void => {
+      const m = 8
+      const r = el.getBoundingClientRect()
+      let dx = 0
+      let dy = 0
+      if (r.left < m) dx = m - r.left
+      else if (r.right > window.innerWidth - m) dx = window.innerWidth - m - r.right
+      if (r.top < m) dy = m - r.top
+      else if (r.bottom > window.innerHeight - m) dy = window.innerHeight - m - r.bottom
+      if (dx || dy) setOff((current) => ({ x: current.x + dx, y: current.y + dy }))
+    }
+    clamp()
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(clamp)
+    observer?.observe(el)
+    window.addEventListener('resize', clamp)
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', clamp)
+    }
   }, [])
   return { ref, off }
 }
@@ -1745,7 +1761,7 @@ const BUILD_BLOCK_MSG: Record<NonNullable<BuildBlock>, string> = {
   'hipoteca-no-grupo': 'Há propriedade hipotecada no grupo',
   topo: 'Esta cidade já está no nível máximo',
   uniformidade: 'Suba as outras cidades do grupo antes de construir aqui.',
-  'grupo-incompleto': 'Arranha-céu exige o grupo completo',
+  'grupo-incompleto': 'Tenha todas as cidades do país para construir o arranha-céu.',
   caixa: 'Caixa insuficiente',
 }
 
@@ -1774,7 +1790,7 @@ function DeedActions({ pos }: { pos: number }) {
           <span>{blockMsg}</span>
         </p>
       )}
-      <div className="deed-actions__grid">
+      <div className="deed-actions__grid" data-kind={dv.kind}>
         {dv.kind === 'property' && (
           <>
             <DeedBtn variant="primary" icon={<HouseIcon size={13} />} disabled={!flags.podeConstruir} onClick={() => buildHouse(pos)} title={blockMsg}>
@@ -1790,12 +1806,24 @@ function DeedActions({ pos }: { pos: number }) {
           </>
         )}
         {!dv.mortgaged ? (
-          <DeedBtn className="col-span-2" icon={<CoinIcon size={13} />} disabled={!flags.podeHipotecar} onClick={() => mortgageProperty(pos)}>
-            Hipotecar · +${dv.mortgageValue}
+          <DeedBtn
+            className={cn(dv.kind !== 'property' && 'col-span-2')}
+            icon={<CoinIcon size={13} />}
+            disabled={!flags.podeHipotecar}
+            title={`Hipotecar por $${dv.mortgageValue}`}
+            onClick={() => mortgageProperty(pos)}
+          >
+            Hipotecar
           </DeedBtn>
         ) : (
-          <DeedBtn className="col-span-2" icon={<CoinIcon size={13} />} disabled={!flags.podeDeshipotecar} onClick={() => unmortgageProperty(pos)}>
-            Desipotecar · −${dv.unmortgageCost}
+          <DeedBtn
+            className={cn(dv.kind !== 'property' && 'col-span-2')}
+            icon={<CoinIcon size={13} />}
+            disabled={!flags.podeDeshipotecar}
+            title={`Desipotecar por $${dv.unmortgageCost}`}
+            onClick={() => unmortgageProperty(pos)}
+          >
+            Desipotecar
           </DeedBtn>
         )}
       </div>

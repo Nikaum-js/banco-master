@@ -110,6 +110,14 @@ describe('Skyscraper (US3)', () => {
     expect(buildHouse(g, 1)).toBe(g) // exige grupo completo
   })
 
+  it('SC-003: exige 2º hotel em todas as cidades do grupo antes do arranha-céu', () => {
+    const g = brown(5) // grupo completo, mas todas ainda no 1º hotel
+    g.titles[1].hotel2 = true // só a cidade clicada chegou ao 2º hotel
+
+    expect(buildHouse(g, 1)).toBe(g)
+    expect(g.titles[1].skyscraper).toBe(false)
+  })
+
   it('SC-003: cidade com Skyscraper cobra o fixo; demais do grupo ×3', () => {
     const comSky = rentCity('navy', 100, 3, 3, { houses: 0, hotel: true, hotel2: true, skyscraper: true }, true)
     expect(comSky).toBe(100 * 58) // arranha-céu fixo (navy), sem ×3 sobre si

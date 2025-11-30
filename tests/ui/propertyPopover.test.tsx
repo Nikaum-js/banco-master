@@ -55,12 +55,41 @@ describe('popover de propriedade', () => {
   it('reaproveita a mesma família de glifos na marca de construção do tabuleiro', () => {
     const game = createSeedState(['p1', 'p2'])
     game.titles[1].ownerId = 'p1'
-    game.titles[1].houses = 3
+    game.titles[1].houses = 4
     act(() => useGameStore.setState({ game }))
 
     const { container } = render(<BuildingMark pos={1} />)
 
-    expect(container.querySelectorAll('svg')).toHaveLength(3)
+    const mark = container.querySelector('[data-building-layout="grid-2x2"]')
+    expect(mark).toBeTruthy()
+    expect(mark?.querySelectorAll('svg')).toHaveLength(4)
+    expect(mark?.querySelector('svg')?.getAttribute('width')).toBe('13')
     expect(container.querySelector('svg animate')).toBeNull()
+  })
+
+  it('bloqueia o arranha-céu no botão e no dispatch quando o grupo está incompleto', () => {
+    const game = createSeedState(['p1', 'p2'])
+    const title = game.titles[1]
+    title.ownerId = 'p1'
+    title.hotel = true
+    title.hotel2 = true
+    game.players[0].cash = 10_000
+    act(() => useGameStore.setState({ game }))
+
+    render(
+      <PropertyPopover
+        square={BOARD[1] as PropertySquare}
+        side="top"
+        onClose={() => undefined}
+      />,
+    )
+
+    expect((screen.getByRole('button', { name: 'Construir' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByText('Tenha todas as cidades do país para construir o arranha-céu.')).toBeTruthy()
+
+    const before = useGameStore.getState().game
+    act(() => useGameStore.getState().dispatch({ kind: 'build-house', pos: 1 }))
+    expect(useGameStore.getState().game).toBe(before)
+    expect(useGameStore.getState().game.titles[1].skyscraper).toBe(false)
   })
 })

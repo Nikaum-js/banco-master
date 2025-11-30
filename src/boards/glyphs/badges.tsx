@@ -27,7 +27,7 @@ export function PlotBadgeIcon({ size = 15 }: BuildingBadgeProps) {
   )
 }
 
-export function HouseBadgeIcon({ size = 11 }: BuildingBadgeProps) {
+export function HouseBadgeIcon({ size = 13 }: BuildingBadgeProps) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" aria-hidden="true">
       <path
@@ -65,19 +65,20 @@ export function HotelBadgeIcon({ size = 18 }: BuildingBadgeProps) {
 
 export function SkyscraperBadgeIcon({ size = 19 }: BuildingBadgeProps) {
   return (
-    <svg viewBox="0 0 20 28" width={Math.round(size * 0.71)} height={size} fill="none" aria-hidden="true">
-      <path d="M10 2v3" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+    <svg viewBox="0 0 28 28" width={size} height={size} fill="none" aria-hidden="true">
+      <path d="M14 1.5V5" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
       <path
-        d="M7 7V5h6v2h2v4h2v15H3V11h2V7h2Z"
+        d="M11 7V5h6v2h2v3h3v4h2v11H4V14h2v-4h3V7h2Z"
         fill="var(--color-ink-950)"
         fillOpacity="0.82"
         stroke="currentColor"
-        strokeWidth="1.45"
+        strokeWidth="1.55"
         strokeLinejoin="round"
       />
-      <path d="M7 11h1.5M11.5 11H13M7 15h1.5M11.5 15H13M7 19h1.5M11.5 19H13" stroke="var(--color-starlight)" strokeWidth="1.15" strokeLinecap="round" opacity="0.84" />
-      <path d="M8 26v-3h4v3M1.5 26h17" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
-      <circle cx="10" cy="2" r="1" fill="currentColor" />
+      <path d="M10 13h2M16 13h2M8 17h2M13 17h2M18 17h2M8 21h2M13 21h2M18 21h2" stroke="var(--color-starlight)" strokeWidth="1.2" strokeLinecap="round" opacity="0.86" />
+      <path d="M12 25v-4h4v4M2.5 25h23" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
+      <path d="m11 7 3-2 3 2" stroke="var(--color-starlight)" strokeWidth="1" strokeLinejoin="round" opacity="0.72" />
+      <circle cx="14" cy="1.5" r="1" fill="currentColor" />
     </svg>
   )
 }
