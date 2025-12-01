@@ -122,11 +122,16 @@ async function driveAndCheck(playerCount: number, seed: number, steps: number): 
 }
 
 describe('perspectiva de carta (043, US5) — a mão para de trafegar', () => {
+  // Timeout explícito: este caso dirige 2000 passos de uma partida de 3 e leva ~5s numa
+  // máquina livre — exatamente o teto padrão do Vitest. Rodando junto da suíte inteira em
+  // paralelo, ele estourava por centésimos e reprovava o gate sem nenhuma regressão real
+  // (visto duas vezes em 2026-07-27, sempre verde quando isolado). A folga é do RELÓGIO,
+  // não da asserção: se a perspectiva quebrar, ele continua falhando na asserção.
   it('3 jogadores: mão própria real, alheia oculta, baralho nunca previsto, convergência pública mantida', async () => {
     const { sawHiddenMao, sawImediata } = await driveAndCheck(3, 1, 2000)
     expect(sawHiddenMao).toBe(true) // exercitou o caso que a spec existe para cobrir
     expect(sawImediata).toBe(true) // carta imediata continua pública (§12.2)
-  })
+  }, 30_000)
 
   it('jogar uma carta a revela no aceito difundido (D10 — jogar é revelar)', async () => {
     // Um `play-hand-card` legítimo o suficiente para o gate de `enumerateActions` (036) topar
