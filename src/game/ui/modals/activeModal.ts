@@ -3,9 +3,9 @@
 // consumida pelo ModalLayer (renderizar) e pelo GameHUD (esconder os ramos cobertos).
 import type { GameState } from '@/game/turn/types'
 import type { Square } from '@/lib/boardData'
-import { BOARD } from '@/lib/boardData'
 import type { Rarity, DeckId, CardMode } from '@/game/cards/types'
 import { cardById } from '@/game/cards/catalog'
+import { activeBoard } from '@/game/ui/theme/boardTheme'
 
 export interface HandCardView {
   id: string // id da carta na mão — alvo do comando discardCard
@@ -74,7 +74,7 @@ export function activeModal(game: GameState): ModalView | null {
     case 'auction': {
       const a = res.auction
       return {
-        kind: 'auction', pos: a.pos, square: BOARD[a.pos],
+        kind: 'auction', pos: a.pos, square: activeBoard()[a.pos],
         currentBid: a.currentBid, highBidder: a.highBidder, deadline: a.deadline,
         activeBidders: a.activeBidders,
       }

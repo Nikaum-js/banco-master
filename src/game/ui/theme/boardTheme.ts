@@ -53,6 +53,23 @@ export function activeCatalog(): MapCatalog {
   return catalogOf(useBoardTheme.getState().theme)
 }
 
+/** As 48 casas de APRESENTAÇÃO do mapa ativo. O motor continua lendo `BOARD` direto —
+ * o esqueleto econômico é idêntico entre mapas (paridade provada em tests/lib). */
+export function activeBoard(): MapCatalog['board'] {
+  return activeCatalog().board
+}
+
+/** Rótulos dos contratos do motor no mapa ativo (Aeroporto/Ferrovia, Loteria/Sorte
+ * Grande, casa/oficina…). */
+export function activeLabels(): MapCatalog['labels'] {
+  return activeCatalog().labels
+}
+
+/** Versão com inicial maiúscula de um rótulo minúsculo do catálogo. */
+export function capLabel(label: string): string {
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
 /** Catálogo do mapa ativo, reativo (componentes que precisam re-renderizar na troca). */
 export function useMapCatalog(): MapCatalog {
   return catalogOf(useBoardTheme((s) => s.theme))

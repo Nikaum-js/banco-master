@@ -4,9 +4,9 @@
 // Mora aqui, e não dentro do diálogo, pelo mesmo motivo de `playersView`/`deedView`: o número
 // que a tela mostra tem de vir da MESMA leitura de estado que o motor usa quando o comando
 // chega — em especial o herdeiro, que muda o destino de tudo e não é óbvio pela tela.
-import { BOARD } from '@/lib/boardData'
 import type { GameState } from '@/game/turn/types'
 import { activeLoanFor } from '@/game/emprestimos/emprestimos'
+import { activeBoard } from '@/game/ui/theme/boardTheme'
 
 export interface ConcedeView {
   /** Títulos que saem das mãos do jogador (propriedades, aeroportos e utilidades). */
@@ -22,7 +22,7 @@ export interface ConcedeView {
 
 export function concedeView(game: GameState, playerId: string): ConcedeView {
   let properties = 0
-  for (const sq of BOARD) {
+  for (const sq of activeBoard()) {
     if (!('price' in sq)) continue
     if (game.titles[sq.pos]?.ownerId === playerId) properties += 1
   }

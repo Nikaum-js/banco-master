@@ -4,7 +4,6 @@
 // (renderizar/habilitar). Sem efeito, sem mutação. Padrão de playersView (020).
 import type { GameState } from '@/game/turn/types'
 import type { GroupKey } from '@/lib/boardData'
-import { BOARD } from '@/lib/boardData'
 import {
   cityLevel,
   buildLevelLimit,
@@ -16,6 +15,7 @@ import {
 } from '@/game/economy/construction'
 import { mortgageValue, unmortgageCost, canMortgage, canUnmortgage } from '@/game/economy/mortgage'
 import { groupSize } from '@/game/economy/titles'
+import { activeBoard } from '@/game/ui/theme/boardTheme'
 
 export interface DeedFlags {
   podeConstruir: boolean
@@ -56,7 +56,7 @@ function activeId(game: GameState): string {
 }
 
 function groupCities(game: GameState, group: GroupKey, ownerId: string): number[] {
-  return BOARD.filter((s) => s.kind === 'property' && s.group === group && game.titles[s.pos]?.ownerId === ownerId).map(
+  return activeBoard().filter((s) => s.kind === 'property' && s.group === group && game.titles[s.pos]?.ownerId === ownerId).map(
     (s) => s.pos,
   )
 }
@@ -73,7 +73,7 @@ const NO_FLAGS: DeedFlags = {
 // Motivo do bloqueio de construção (apenas para a dica) — espelha a ordem de
 // checagem de canBuildHouse. Assume property do jogador da vez.
 function buildBlock(game: GameState, pos: number): BuildBlock {
-  const sq = BOARD[pos]
+  const sq = activeBoard()[pos]
   if (sq.kind !== 'property') return null
   const owner = activeId(game)
   const cities = groupCities(game, sq.group, owner)
@@ -91,7 +91,7 @@ function buildBlock(game: GameState, pos: number): BuildBlock {
 }
 
 export function deedView(game: GameState, pos: number): DeedView | null {
-  const sq = BOARD[pos]
+  const sq = activeBoard()[pos]
   if (sq.kind !== 'property' && sq.kind !== 'airport' && sq.kind !== 'utility') return null
   const title = game.titles[pos]
   const owner = title?.ownerId ?? null

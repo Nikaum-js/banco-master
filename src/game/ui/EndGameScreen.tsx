@@ -146,7 +146,7 @@ export function EndGameScreen({
                 <th scope="col" className="py-1.5 pr-2 font-normal text-right">Patrimônio</th>
                 <th scope="col" className="py-1.5 pr-2 font-normal text-right">Em caixa</th>
                 <th scope="col" className="py-1.5 pr-2 font-normal text-right" title="Países com todas as cidades — é o que destrava construção">Países</th>
-                <th scope="col" className="py-1.5 pr-2 font-normal text-right" title="Casas, hotéis, arranha-céus e Hangares somados">Construções</th>
+                <th scope="col" className="py-1.5 pr-2 font-normal text-right" title="Construções e melhorias somadas">Construções</th>
                 <th scope="col" className="py-1.5 font-normal text-right" title="O maior aluguel que uma propriedade dele cobraria no fim">Maior aluguel</th>
               </tr>
             </thead>

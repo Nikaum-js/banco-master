@@ -8,6 +8,7 @@
 // `SquareIcon` é o adapter da seam: `square.kind` → glifo. É a única coisa que o resto do
 // board precisa conhecer daqui.
 import type { Square } from '@/lib/boardData'
+import { activeCatalog } from '@/game/ui/theme/boardTheme'
 
 // ---------------------------------------------------------------------
 // Glifos SVG próprios para casas especiais — ilustrações full-bleed com
@@ -394,18 +395,140 @@ export function BusGlyph({ size = 24 }: GlyphProps) {
 }
 
 // ---------------------------------------------------------------------
-// Ícones por tipo de casa especial — todos usam glifos SVG próprios.
+// Glifos do mapa Cidade da Fuligem (055/D-069) — mesmos papéis, outro mundo:
+// a locomotiva no lugar do avião, o bilhete de trem no lugar do ônibus, o
+// carvão e a caixa d'água nas utilidades. Estilo idêntico: full-bleed 40×40,
+// paleta por var(--color-*).
+// ---------------------------------------------------------------------
+
+// Ferrovia — locomotiva a vapor de frente, farol aceso e fumaça subindo.
+export function TrainGlyph({ size = 24 }: GlyphProps) {
+  return (
+    <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
+      <ellipse cx="20" cy="36.5" rx="14" ry="1.3" fill="var(--color-ink-950)" opacity="0.45" />
+      {/* fumaça */}
+      <g fill="var(--color-starlight)" opacity="0.3">
+        <circle cx="20" cy="4" r="2.2" />
+        <circle cx="24" cy="2.8" r="1.4" />
+      </g>
+      {/* chaminé + caldeira frontal */}
+      <rect x="17.5" y="5" width="5" height="4" fill="var(--color-ink-500)" stroke="var(--color-ink-950)" strokeWidth="0.9" />
+      <rect x="9" y="9" width="22" height="20" rx="3" fill="var(--color-ink-400)" stroke="var(--color-ink-950)" strokeWidth="1.6" />
+      <rect x="12" y="12" width="16" height="7" rx="1.2" fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="0.8" />
+      {/* farol */}
+      <circle cx="20" cy="23.5" r="3.4" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.9" />
+      <circle cx="20" cy="23.5" r="1.4" fill="var(--color-starlight)" opacity="0.9" />
+      {/* para-choque/limpa-trilhos */}
+      <path d="M 8 29 L 32 29 L 35 35 L 5 35 Z" fill="var(--color-signal-deep)" stroke="var(--color-ink-950)" strokeWidth="1.2" strokeLinejoin="round" />
+      <line x1="14" y1="29.5" x2="11" y2="34.5" stroke="var(--color-ink-950)" strokeWidth="0.8" />
+      <line x1="20" y1="29.5" x2="20" y2="34.5" stroke="var(--color-ink-950)" strokeWidth="0.8" />
+      <line x1="26" y1="29.5" x2="29" y2="34.5" stroke="var(--color-ink-950)" strokeWidth="0.8" />
+      {/* lanternas laterais */}
+      <circle cx="11.5" cy="12.5" r="1.1" fill="var(--color-signal)" />
+      <circle cx="28.5" cy="12.5" r="1.1" fill="var(--color-signal)" />
+    </svg>
+  )
+}
+
+// Bilhete de Trem — bilhete picotado com furo de conferência.
+export function TrainTicketGlyph({ size = 24 }: GlyphProps) {
+  return (
+    <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
+      <ellipse cx="20" cy="35" rx="13" ry="1.2" fill="var(--color-ink-950)" opacity="0.4" />
+      <g transform="rotate(-8 20 20)">
+        <rect x="5" y="12" width="30" height="16" rx="2" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="1.5" />
+        {/* picote central */}
+        <line x1="26" y1="12.5" x2="26" y2="27.5" stroke="var(--color-ink-950)" strokeWidth="0.9" strokeDasharray="1.6 1.6" />
+        {/* furo do conferente */}
+        <circle cx="30.5" cy="20" r="1.6" fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="0.5" />
+        {/* trilho estampado */}
+        <line x1="8" y1="17" x2="23" y2="17" stroke="var(--color-ink-950)" strokeWidth="1" />
+        <line x1="8" y1="23" x2="23" y2="23" stroke="var(--color-ink-950)" strokeWidth="1" />
+        <line x1="10" y1="15.5" x2="10" y2="24.5" stroke="var(--color-ink-950)" strokeWidth="0.7" />
+        <line x1="14" y1="15.5" x2="14" y2="24.5" stroke="var(--color-ink-950)" strokeWidth="0.7" />
+        <line x1="18" y1="15.5" x2="18" y2="24.5" stroke="var(--color-ink-950)" strokeWidth="0.7" />
+        <line x1="22" y1="15.5" x2="22" y2="24.5" stroke="var(--color-ink-950)" strokeWidth="0.7" />
+      </g>
+    </svg>
+  )
+}
+
+// Mina de Carvão — vagonete com carvão e picareta apoiada.
+export function CoalGlyph({ size = 24 }: GlyphProps) {
+  return (
+    <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
+      <ellipse cx="20" cy="36" rx="13" ry="1.2" fill="var(--color-ink-950)" opacity="0.4" />
+      {/* trilho */}
+      <line x1="5" y1="33.5" x2="35" y2="33.5" stroke="var(--color-ink-500)" strokeWidth="1.4" />
+      {/* carvão */}
+      <g fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="0.7">
+        <circle cx="15" cy="15.5" r="3.4" />
+        <circle cx="21" cy="13.5" r="3.8" />
+        <circle cx="26" cy="16" r="3" />
+        <circle cx="18" cy="17" r="2.6" />
+      </g>
+      {/* brilhos do carvão */}
+      <g fill="var(--color-brass-glow)" opacity="0.65">
+        <circle cx="20.5" cy="12.8" r="0.7" />
+        <circle cx="15.5" cy="15" r="0.55" />
+        <circle cx="25.8" cy="15.2" r="0.5" />
+      </g>
+      {/* caçamba */}
+      <path d="M 8 17 L 32 17 L 29 29 L 11 29 Z" fill="var(--color-ink-400)" stroke="var(--color-ink-950)" strokeWidth="1.4" strokeLinejoin="round" />
+      <line x1="14" y1="17.5" x2="15.5" y2="28.5" stroke="var(--color-ink-950)" strokeWidth="0.7" opacity="0.6" />
+      <line x1="26" y1="17.5" x2="24.5" y2="28.5" stroke="var(--color-ink-950)" strokeWidth="0.7" opacity="0.6" />
+      {/* rodas */}
+      <circle cx="14.5" cy="31.5" r="2.2" fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="0.8" />
+      <circle cx="25.5" cy="31.5" r="2.2" fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="0.8" />
+      {/* picareta */}
+      <line x1="31" y1="10" x2="35.5" y2="23" stroke="var(--color-brass-soft)" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M 27.5 11.5 Q 31.5 7.5 35.5 9.5" fill="none" stroke="var(--color-ink-300)" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+// Companhia de Água — caixa d'água elevada com gota.
+export function WaterGlyph({ size = 24 }: GlyphProps) {
+  return (
+    <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
+      <ellipse cx="20" cy="36.5" rx="12" ry="1.2" fill="var(--color-ink-950)" opacity="0.4" />
+      {/* tanque */}
+      <path d="M 9 8 L 31 8 L 29 20 L 11 20 Z" fill="var(--color-ink-400)" stroke="var(--color-ink-950)" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M 9 8 Q 20 5 31 8" fill="var(--color-ink-500)" stroke="var(--color-ink-950)" strokeWidth="1.2" />
+      {/* aros do tanque */}
+      <line x1="10.3" y1="12" x2="29.7" y2="12" stroke="var(--color-ink-950)" strokeWidth="0.7" opacity="0.7" />
+      <line x1="10.8" y1="16" x2="29.2" y2="16" stroke="var(--color-ink-950)" strokeWidth="0.7" opacity="0.7" />
+      {/* pernas */}
+      <line x1="12" y1="20" x2="9" y2="34" stroke="var(--color-ink-500)" strokeWidth="1.8" />
+      <line x1="28" y1="20" x2="31" y2="34" stroke="var(--color-ink-500)" strokeWidth="1.8" />
+      <line x1="10.5" y1="27" x2="29.5" y2="27" stroke="var(--color-ink-500)" strokeWidth="1" />
+      <line x1="11" y1="24" x2="26" y2="31" stroke="var(--color-ink-500)" strokeWidth="0.8" opacity="0.8" />
+      <line x1="29" y1="24" x2="14" y2="31" stroke="var(--color-ink-500)" strokeWidth="0.8" opacity="0.8" />
+      {/* cano + gota */}
+      <line x1="20" y1="20" x2="20" y2="26" stroke="var(--color-ink-500)" strokeWidth="1.6" />
+      <path d="M 20 28 Q 22 30.8 20 32.6 Q 18 30.8 20 28 Z" fill="var(--color-group-skyblue)" stroke="var(--color-ink-950)" strokeWidth="0.7" />
+      {/* nível d'água pintado */}
+      <path d="M 11.6 13.5 Q 20 15 28.4 13.5 L 29 20 L 11 20 Z" fill="var(--color-group-skyblue)" opacity="0.35" />
+    </svg>
+  )
+}
+
+// ---------------------------------------------------------------------
+// Ícones por tipo de casa especial — todos usam glifos SVG próprios. O
+// glifo é escolhido pelo MAPA ativo quando o papel muda de mundo (avião →
+// locomotiva, ônibus → bilhete, bomba de gasolina → vagonete de carvão…).
 // ---------------------------------------------------------------------
 export function SquareIcon({ square, size = 18 }: { square: Square; size?: number | string }) {
+  const fuligem = activeCatalog().id === 'fuligem'
   switch (square.kind) {
-    case 'airport':         return <AirportGlyph    size={size} />
-    case 'utility':         return square.icon === 'fuel' ? <FuelGlyph size={size} />
+    case 'airport':         return fuligem ? <TrainGlyph size={size} /> : <AirportGlyph size={size} />
+    case 'utility':         return square.icon === 'fuel' ? (fuligem ? <CoalGlyph size={size} /> : <FuelGlyph size={size} />)
                                  : square.icon === 'bolt' ? <BoltGlyph size={size} />
-                                 : <GasGlyph size={size} />
+                                 : (fuligem ? <WaterGlyph size={size} /> : <GasGlyph size={size} />)
     case 'tax':             return <TaxGlyph        size={size} />
     case 'acaso':           return <AcasoCellGlyph size={size} />
     case 'tesouro':         return <TesouroCellGlyph  size={size} />
-    case 'bus-ticket':      return <BusGlyph        size={size} />
+    case 'bus-ticket':      return fuligem ? <TrainTicketGlyph size={size} /> : <BusGlyph size={size} />
     case 'corner-go':       return <GoGlyph         size={size} />
     case 'corner-jail':     return <JailGlyph       size={size} />
     case 'corner-parking':  return <LotteryGlyph    size={size} />

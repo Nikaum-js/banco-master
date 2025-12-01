@@ -2,6 +2,7 @@
 // um módulo único, reaproveitado pelo painel "Minhas Cartas". Só apresentação; o
 // motor guarda o EffectId. Mudar aqui reflete em modais E painel (fonte única).
 import type { Rarity } from '@/game/cards/types'
+import { activeCatalog } from '@/game/ui/theme/boardTheme'
 
 // Raridade → cor (SRS §10.2: laranja/azul/verde; lendária > rara > comum).
 export const RARITY_COLOR: Record<Rarity, string> = {
@@ -62,10 +63,15 @@ export const CARD_LABEL: Record<string, string> = {
 }
 
 export function cardLabel(effect: string): string {
-  return CARD_LABEL[effect] ?? effect.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())
+  // 055/D-069: o mapa ativo pode APRESENTAR outro rótulo (ex.: "Bilhete de Trem"
+  // para passagemOnibus na Fuligem). O efeito, o id e o log do motor não mudam.
+  return activeCatalog().cardText[effect]?.label
+    ?? CARD_LABEL[effect]
+    ?? effect.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())
 }
 
-// Descrição curta por efeito (apresentação). Fallback no nome.
+// Descrição curta por efeito (apresentação; valores = mapa Cidades do Mundo).
+// Consuma via `cardDesc()` — é lá que o override do mapa ativo entra.
 export const CARD_DESC: Record<string, string> = {
   aquisicaoHostil: 'No seu turno, force um adversário a te vender uma propriedade dele (sem construções) pela metade do preço de tabela.',
   confiscoGeral: 'No seu turno, escolha uma propriedade construída de um adversário: todas as construções dela desmoronam. Ele mantém o terreno e não recebe nada.',
@@ -99,4 +105,8 @@ export const CARD_DESC: Record<string, string> = {
   erroBanco: 'Erro do banco a seu favor: receba $200.',
   aniversario: 'É seu aniversário: cada jogador te paga $50.',
   honorarios: 'Pague $50 de honorários médicos à Loteria.',
+}
+
+export function cardDesc(effect: string): string {
+  return activeCatalog().cardText[effect]?.desc ?? CARD_DESC[effect] ?? 'Carta sorteada.'
 }

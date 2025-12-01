@@ -1,10 +1,10 @@
 // Draft da negociação (024/028): concentra transições, compatibilidade entre
 // termos e elegibilidade. React só despacha intents e renderiza esta projeção.
-import { BOARD } from '@/lib/boardData'
 import { tradableProps, validateTrade } from '@/game/economy/trade'
 import { tradeBalance } from '@/game/economy/appraisal'
 import type { Immunity, Trade } from '@/game/economy/types'
 import type { GameState, Player } from '@/game/turn/types'
+import { activeBoard } from '@/game/ui/theme/boardTheme'
 
 export const TRADE_LAPS_PRESETS = [2, 5] as const
 export type TradeGrantMap = Record<number, number | null>
@@ -101,7 +101,7 @@ function amountWithin(value: number, max: number): number {
 }
 
 function ownedProps(game: GameState, ownerId: string): number[] {
-  return BOARD
+  return activeBoard()
     .filter((square) => 'price' in square && game.titles[square.pos]?.ownerId === ownerId)
     .map((square) => square.pos)
 }

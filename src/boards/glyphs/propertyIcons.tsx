@@ -94,6 +94,16 @@ const ICON_PATHS: Record<PropertyIconId, React.ReactNode> = {
   ),
 }
 
+/** Só a arte do ícone (sem disco) — para caber dentro de círculos que já existem,
+ * como o avatar da casa e o cabeçalho da escritura. */
+export function PropertyIconArt({ icon, size = 20 }: { icon: PropertyIconId; size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {ICON_PATHS[icon]}
+    </svg>
+  )
+}
+
 /** Disco de ícone — mesma pegada visual do `FlagAvatar` (32px cravado na borda interna). */
 export function PropertyIconDisc({ icon, className }: { icon: PropertyIconId; className?: string }) {
   return (

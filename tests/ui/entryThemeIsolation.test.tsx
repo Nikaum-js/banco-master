@@ -38,11 +38,11 @@ describe('isolamento visual das telas de entrada', () => {
     const cars = document.querySelectorAll('[data-entry-car]')
     expect(cars).toHaveLength(4)
     expect((cars[0] as SVGGElement).style.offsetPath).toContain('path(')
-    expect(document.querySelector('[data-entry-backdrop="neon"]')).toBeNull()
+    expect(document.querySelector('[data-entry-backdrop="fuligem"]')).toBeNull()
     expect(screen.getByTestId('entry-content')).toBeTruthy()
   })
 
-  it('Neon monta somente a metrópole arcade e a troca não remonta o conteúdo', () => {
+  it('Fuligem monta somente o pátio de fábricas e a troca não remonta o conteúdo', () => {
     render(
       <EntryStage>
         <ContentMarker />
@@ -50,13 +50,15 @@ describe('isolamento visual das telas de entrada', () => {
     )
     expect(mounts).toBe(1)
 
-    act(() => useBoardTheme.getState().setTheme('neon'))
+    act(() => useBoardTheme.getState().setTheme('fuligem'))
 
     expect(document.querySelector('[data-entry-backdrop="atlas"]')).toBeNull()
     expect(document.querySelector('[data-entry-cityscape="atlas"]')).toBeNull()
     expect(document.querySelector('[data-entry-car]')).toBeNull()
-    expect(document.querySelector('[data-entry-backdrop="neon"]')).toBeTruthy()
+    expect(document.querySelector('[data-entry-backdrop="fuligem"]')).toBeTruthy()
     expect(screen.getByTestId('entry-content')).toBeTruthy()
+    // A verificação de DESEMPENHO da troca de mapa: trocar a pele nunca pode
+    // remontar a subárvore de conteúdo (contrato herdado do tema anterior).
     expect(mounts).toBe(1)
   })
 })

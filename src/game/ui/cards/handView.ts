@@ -8,7 +8,7 @@ import { cardById } from '@/game/cards/catalog'
 import { reactorFor } from '@/game/cards/reacao'
 import { canAudit, canEmbargo, canSwap } from '@/game/cards/ofensivas'
 import { ownerOf } from '@/game/economy/titles'
-import { cardLabel, CARD_DESC, RARITY_COLOR, RARITY_LABEL } from './cardMeta'
+import { cardLabel, cardDesc, RARITY_COLOR, RARITY_LABEL } from './cardMeta'
 
 export interface CardTargets {
   positions?: number[] // propriedades-alvo válidas
@@ -106,7 +106,7 @@ export function handCardsView(game: GameState, playerId: string): HandCard[] {
       id,
       effect: card.effect,
       label: cardLabel(card.effect),
-      desc: CARD_DESC[card.effect] ?? 'Carta sorteada.',
+      desc: cardDesc(card.effect),
       rarityColor: RARITY_COLOR[card.rarity],
       rarityLabel: RARITY_LABEL[card.rarity],
       timing: card.timing,

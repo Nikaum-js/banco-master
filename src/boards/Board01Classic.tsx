@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence } from 'motion/react'
-import { BOARD, type Square, type PropertySquare, type AirportSquare, type UtilitySquare } from '@/lib/boardData'
+import type { Square, PropertySquare, AirportSquare, UtilitySquare } from '@/lib/boardData'
+import { useMapCatalog } from '@/game/ui/theme/boardTheme'
 import {
   ClassicSquare,
   CornerSquare,
@@ -22,6 +23,9 @@ import { CLASSIC_TOPOLOGY } from './topology'
 const { sideOf, gridArea, trackTemplate } = CLASSIC_TOPOLOGY
 
 export default function Board01Classic() {
+  // As 48 casas de APRESENTAÇÃO vêm do catálogo do mapa da sala (055/D-069) —
+  // mesmo esqueleto econômico, nomes/ícones próprios. Reativo: a home pré-visualiza.
+  const board = useMapCatalog().board
   // Casa selecionada — abre o popover-balão adjacente. Clicar fora ou em
   // outra casa fecha. O elemento-âncora acompanha a posição porque o deed
   // é portado ao `body`: assim ele escapa do stacking context do tabuleiro
@@ -29,7 +33,7 @@ export default function Board01Classic() {
   const [selection, setSelection] = useState<{ pos: number; anchor: HTMLElement } | null>(null)
   const selectedPos = selection?.pos ?? null
   const selectedSquare: Square | undefined =
-    selectedPos !== null ? BOARD.find((s) => s.pos === selectedPos) : undefined
+    selectedPos !== null ? board.find((s) => s.pos === selectedPos) : undefined
 
   return (
     <main
@@ -76,7 +80,7 @@ export default function Board01Classic() {
           </div>
 
           {/* 40 casas */}
-          {BOARD.map((square) => {
+          {board.map((square) => {
             const side = sideOf(square.pos)
             const isCorner = side === 'corner'
             const isProperty = square.kind === 'property'
