@@ -1,6 +1,7 @@
 # D-070 — Cidade da Fuligem tem topologia e regras próprias
 
 **Revogada parcialmente por:** [D-072](D-072-taxa-de-fumaca-sai-da-fuligem.md) — a Taxa de Fumaça saiu do jogo; topologia própria e Desvio pela Ferrovia permanecem.
+**Refinada por:** [D-073](D-073-desvio-pela-ferrovia-uma-vez-por-turno.md) — o Desvio pode ser usado no máximo uma vez por turno.
 
 **Data:** 2026-07-30 · **Status:** aceita · **Refina:** [D-017](D-017-tabuleiro-de-48-casas.md), [D-069](D-069-segundo-mapa-jogavel-cidade-da-fuligem.md)
 

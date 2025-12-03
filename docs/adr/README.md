@@ -82,6 +82,8 @@
 - [D-070](D-070-fuligem-tem-topologia-e-regras-proprias.md) — Cidade da Fuligem usa tabuleiro próprio de 40 casas, 8 bairros e Desvio pela Ferrovia; a Taxa de Fumaça foi revogada pela D-072 (refina D-017/D-069)
 - [D-071](D-071-minas-sao-ativos-passivos-sem-aluguel.md) — Minas são títulos passivos sem aluguel: Ferro −25% em construção, Carvão +50% em Ferrovias, Estanho −15% em impostos/aluguéis pagos e Cobre +25% em propriedades construídas
 - [D-072](D-072-taxa-de-fumaca-sai-da-fuligem.md) — Taxa de Fumaça removida: construções da Fuligem pagam somente o custo normal; Desvio pela Ferrovia e demais regras permanecem (revoga parcialmente D-070)
+- [D-073](D-073-desvio-pela-ferrovia-uma-vez-por-turno.md) — Desvio pela Ferrovia pode ser usado no máximo uma vez por turno, encerrando o ciclo gratuito entre estações (refina D-070)
+- [D-074](D-074-raridade-de-carta-nao-inverte-probabilidade.md) — Cópias respeitam a raridade: lendárias e raras ficam em 1 cópia; excedente dos baralhos 21/18 vai para comuns (refina D-064)
 
 > ℹ️ **Renumeração na integração da 043** (a colisão que este arquivo avisava): a worktree da 043
 > tinha escrito a identidade de transporte como `D-035` e o código de reentrada como `D-038`, e

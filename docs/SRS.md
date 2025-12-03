@@ -1,6 +1,6 @@
 # Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.32
+**Versão:** 1.34
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -211,8 +211,8 @@ Não há Utilidades nem casas fixas de Imposto neste mapa.
 As **Ferrovias** seguem a regra econômica dos Aeroportos (§2.4) e aceitam **Estação de
 Carga**, apresentação do Hangar (§13.6). Ao terminar o turno sobre uma Ferrovia própria
 e não hipotecada, o jogador pode usar o **Desvio pela Ferrovia** para mover diretamente
-até outra Ferrovia própria e não hipotecada. O movimento não passa pelo GO e não resolve
-aluguel na chegada.
+até outra Ferrovia própria e não hipotecada, **no máximo uma vez no mesmo turno**. O
+movimento não passa pelo GO e não resolve aluguel na chegada.
 
 Cada **Mina** custa `R$ 220`, hipoteca por `R$ 110`, não recebe construções e **não cobra
 aluguel**. Cair em Mina de outro jogador não transfere dinheiro. Enquanto a Mina pertencer
@@ -643,6 +643,11 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 | 🟦 **Rara** | Azul | Médio — vantagem tática significativa | Vai pra mão ou efeito imediato grande |
 | 🟩 **Comum** | Verde | Baixo — eventos previsíveis e curtos | Efeito imediato |
 
+As cópias respeitam a hierarquia de raridade (v1.34,
+[D-074](adr/D-074-raridade-de-carta-nao-inverte-probabilidade.md)): nenhuma carta pode
+ser mais provável que outra de nível mais raro. Lendárias e raras têm 1 cópia por efeito;
+o excedente necessário para manter os baralhos em 21/18 cartas fica nas comuns.
+
 ### 10.3 Regras Gerais de Cartas
 
 **Privacidade:**
@@ -674,27 +679,27 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 
 ### 10.4 Distribuição do Deck ACASO (21 cartas)
 
-**(v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))**
+**(v1.34, [D-074](adr/D-074-raridade-de-carta-nao-inverte-probabilidade.md), refina as cópias da [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))**
 
-#### 🟧 Lendárias (5 cartas)
+#### 🟧 Lendárias (4 cartas)
 
 | Carta | Cópias | Modo | Timing |
 |---|---|---|---|
-| **Aquisição Hostil** | 2 | Mão | 🎯 Próprio turno |
+| **Aquisição Hostil** | 1 | Mão | 🎯 Próprio turno |
 | **Confisco Geral** | 1 | Mão | 🎯 Próprio turno |
 | **Imposto Federal** | 1 | Mão | 🎯 Próprio turno |
 | **Permuta Forçada** | 1 | Mão | 🎯 Próprio turno |
 
-#### 🟦 Raras (5 cartas)
+#### 🟦 Raras (4 cartas)
 
 | Carta | Cópias | Modo | Timing |
 |---|---|---|---|
-| **Boicote** | 2 | Mão | 🎯 Próprio turno |
+| **Boicote** | 1 | Mão | 🎯 Próprio turno |
 | **Embargo de Obras** | 1 | Mão | 🎯 Próprio turno |
 | **Crise Imobiliária** | 1 | Imediato | — |
 | **Estatização** | 1 | Imediato | — |
 
-#### 🟩 Comuns (11 cartas)
+#### 🟩 Comuns (13 cartas)
 
 | Carta | Cópias | Modo |
 |---|---|---|
@@ -706,12 +711,12 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 | **Vá direto para a Prisão** | 1 | Imediato |
 | **Volta para o GO** | 1 | Imediato |
 | **Conserto de Imóveis** | 1 | Imediato |
-| **Avance 3 casas** | 1 | Imediato |
-| **Volte 3 casas** | 1 | Imediato |
+| **Avance 3 casas** | 2 | Imediato |
+| **Volte 3 casas** | 2 | Imediato |
 
 ### 10.5 Distribuição do Deck TESOURO (18 cartas)
 
-**(v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))**
+**(v1.34, [D-074](adr/D-074-raridade-de-carta-nao-inverte-probabilidade.md), refina as cópias da [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))**
 
 #### 🟧 Lendárias (2 cartas)
 
@@ -720,16 +725,16 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 | **Diplomacia** | 1 | Mão | ⚡ Reação |
 | **Imunidade Total** | 1 | Mão | 🎯 Próprio turno |
 
-#### 🟦 Raras (6 cartas)
+#### 🟦 Raras (4 cartas)
 
 | Carta | Cópias | Modo | Timing |
 |---|---|---|---|
 | **Saia da Prisão** | 1 | Mão | 🔒 Preso |
-| **Bunker Fiscal** | 2 | Mão | ⚡ Reação |
-| **Boom Econômico** | 2 | Imediato | — |
+| **Bunker Fiscal** | 1 | Mão | ⚡ Reação |
+| **Boom Econômico** | 1 | Imediato | — |
 | **Valorização** | 1 | Mão | 🎯 Próprio turno |
 
-#### 🟩 Comuns (10 cartas)
+#### 🟩 Comuns (12 cartas)
 
 | Carta | Cópias | Modo |
 |---|---|---|
@@ -738,8 +743,8 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 | **Resgate do Pote** | 1 | Imediato |
 | **Obra Relâmpago** | 1 | Imediato |
 | **Incentivo Fiscal** | 1 | Imediato |
-| **Erro do banco a seu favor** | 1 | Imediato |
-| **Aniversário** | 1 | Imediato |
+| **Erro do banco a seu favor** | 2 | Imediato |
+| **Aniversário** | 2 | Imediato |
 | **Honorários médicos** | 1 | Imediato |
 
 ### 10.6 Catálogo de Efeitos por Carta

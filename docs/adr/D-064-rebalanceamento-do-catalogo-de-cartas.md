@@ -1,6 +1,7 @@
 # D-064 — Rebalanceamento do catálogo de cartas (Acaso 21 / Tesouro 18)
 
 **Data:** 2026-07-29 · **Status:** aceita · **Refina:** SRS §10 (catálogo introduzido na 006; ofensivas 016; reação 017)
+**Refinada por:** [D-074](D-074-raridade-de-carta-nao-inverte-probabilidade.md) — redistribui cópias sem alterar as 21/18 cartas.
 
 **Decisão:** o catálogo de cartas deixa de ter 16+16 e passa a **21 (Acaso) + 18 (Tesouro)**, com cartas reforçadas, fundidas, removidas e novas. Decisão de design tomada em playtest/discovery com o Nikolas (2026-07-29), item a item:
 
