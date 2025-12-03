@@ -86,11 +86,11 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 
 **Meta**: paisagem em 740 × 360 e 1024 × 768; retrato pede para girar sem perder a sessão.
 
-- [ ] **T033** [P] `src/game/ui/OrientationGate.tsx`: tela de "gire o aparelho" **por cima** da árvore, sem desmontar nada ([D6 do plan](./plan.md#d6--retrato-é-uma-tela-acima-da-árvore-não-um-layout-alternativo)). Acessível pelas mesmas regras da Fase 4.
-- [ ] **T034** `src/App.tsx`: montar o `OrientationGate` em volta — **acima** do `OnlineGate`, nunca dentro, ou girar viraria saída da sala.
-- [ ] **T035** [test-first] `tests/ui/orientationGate.test.tsx`: retrato abaixo do limiar → aviso visível e árvore de jogo **ainda montada**; voltar a paisagem → aviso some e nada remontou (nenhum efeito de sessão disparou).
-- [ ] **T036** `src/index.css` (`.board-stage`, `.board-frame`, `.side-panel`; FR-023): faixa de paisagem estreita — painéis viram gaveta alcançável em vez de coluna fixa (FR-024); tabuleiro continua limitado pela menor dimensão; nada de rolagem horizontal (FR-025).
-- [ ] **T037** Modais rolam por dentro na viewport mínima, com os botões sempre alcançáveis (FR-026) — no `ModalShell`, uma vez.
+- [x] **T033** [P] `src/game/ui/OrientationGate.tsx`: tela de "gire o aparelho" **por cima** da árvore, sem desmontar nada ([D6 do plan](./plan.md#d6--retrato-é-uma-tela-acima-da-árvore-não-um-layout-alternativo)). Acessível pelas mesmas regras da Fase 4.
+- [x] **T034** `src/App.tsx`: montar o `OrientationGate` em volta — **acima** do `OnlineGate`, nunca dentro, ou girar viraria saída da sala.
+- [x] **T035** [test-first] `tests/ui/orientationGate.test.tsx`: retrato abaixo do limiar → aviso visível e árvore de jogo **ainda montada**; voltar a paisagem → aviso some e nada remontou (nenhum efeito de sessão disparou).
+- [x] **T036** `src/index.css` (`.board-stage`, `.board-frame`, `.side-panel`; FR-023): faixa de paisagem estreita — painéis viram gaveta alcançável em vez de coluna fixa (FR-024); tabuleiro continua limitado pela menor dimensão; nada de rolagem horizontal (FR-025).
+- [x] **T037** Modais rolam por dentro na viewport mínima, com os botões sempre alcançáveis (FR-026) — no `ModalShell`, uma vez.
 - [ ] **T038** [manual] Percorrer o caminho de jogo em 740 × 360 e 1024 × 768 (paisagem) e girar no meio de uma partida em curso.
 
 **Checkpoint**: **SC-010** verificado.

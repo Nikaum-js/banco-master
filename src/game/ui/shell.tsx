@@ -78,6 +78,18 @@ export function Overlay({
 // na borda superior (luz de castiçal). Raio modal, borda coffee, sombra
 // dropdown, entrada com spring e clique interno protegido (não fecha pelo
 // backdrop). Tema-aware: tudo via var(--color-*).
+//
+// 044/T037 (FR-026): teto de altura + rolagem própria SÃO O PADRÃO daqui, não de cada
+// modal — antes, três camadas (`LandAuctionLayer`, `TradeLayer`, `HandCardLayer`)
+// repetiam `max-h-[…vh] overflow-auto` cada uma com seu próprio número, e o resto (o
+// `ModalLayer` principal, `NoticeLayer`, `LobbyScreen`, `HomeScreen`, `FailureScreen`) não
+// tinha proteção nenhuma — um card mais alto que a viewport mínima (740×360 em paisagem)
+// cortava os botões do rodapé pra fora da tela, inalcançáveis. `max-h` calcula o mesmo
+// espaço que o padding do `Overlay` (`p-4`) já reserva, então o cartão nunca encosta na
+// borda; `overflow-auto` deixa o CARTÃO INTEIRO rolar (não some por baixo, rola por
+// dentro) — os botões continuam alcançáveis descendo, mesmo sem espaço pra ficarem
+// sempre visíveis. Uma camada que já declara seu próprio `max-h`/`overflow` (className)
+// continua vencendo via `cn()`/tailwind-merge — nada muda pra quem já tinha o cuidado.
 export function ModalShell({ className, children }: { className?: string; children: ReactNode }) {
   // A entrada é um SPRING, não um dos três tokens (D7 do plan: divergiu de propósito da
   // tabela — é a "personalidade" do cartão de modal, preservada como exceção documentada,
@@ -100,7 +112,10 @@ export function ModalShell({ className, children }: { className?: string; childr
         boxShadow:
           'inset 0 1px 0 0 color-mix(in srgb, var(--color-brass-glow) 22%, transparent), var(--shadow-dropdown)',
       }}
-      className={cn('border-2 border-coffee-500 rounded-[var(--radius-modal)] overflow-hidden', className)}
+      className={cn(
+        'border-2 border-coffee-500 rounded-[var(--radius-modal)] max-h-[calc(100svh-2rem)] overflow-auto overscroll-contain',
+        className,
+      )}
     >
       {children}
     </motion.div>
