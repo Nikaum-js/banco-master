@@ -17,7 +17,7 @@
 - [D-005](#d-005--propriedade-coringa) — ~~2 propriedades coringa no tabuleiro~~ **revogada** (funcionalidade removida)
 - [D-006](#d-006--free-parking-com-prmio-acumulado) — Free Parking acumula prêmio (inicial $500)
 - [D-007](#d-007--go-progressivo) — GO Progressivo ($100 a $400 por ranking)
-- [D-008](#d-008--segundo-hotel-por-propriedade) — Segundo hotel permitido (estoque, não aluguel)
+- [D-008](#d-008--segundo-hotel-por-propriedade) — Segundo hotel permitido (cobra mais aluguel; revista pela D-022)
 - [D-009](#d-009--emprstimos-entre-jogadores) — Empréstimos entre jogadores (10–50%, cobra por GO)
 - [D-010](#d-010--imunidade-de-aluguel-negocivel) — Imunidade de aluguel negociável
 - [D-011](#d-011--cartas-em-mo-privadas-e-no-negociveis) — Cartas em mão privadas e não-negociáveis (limite 3)
@@ -31,6 +31,7 @@
 - [D-019](#d-019--autenticação-anônima-por-link-sem-contas-no-v1) — Autenticação anônima por link (sem contas no v1)
 - [D-020](#d-020--modelo-de-autoridade--sincronização-host-autoritativo--realtime--snapshot) — Modelo de autoridade & sync: host-autoritativo + Realtime + snapshot
 - [D-021](#d-021--espaço-bus-ticket-uso-imediato-ao-parar-revisa-27107) — Espaço Bus Ticket: uso imediato ao parar (revisa §2.7/§10.7)
+- [D-022](#d-022--escassez-de-construção-removida-construção-ilimitada) — Escassez de construção removida (construção ilimitada; remove leilão de casas)
 
 ### Rejeitadas
 - [D-R01](#d-r01--sistema-de-draft-rejeitada) — Sistema de draft de propriedades no início
@@ -79,9 +80,10 @@
 **Revisão (2026-05-24):** o GO Progressivo foi **substituído por regra fixa** (feedback de playtest — o valor variável por ranking confundia e parecia "pouco"): **passar pelo GO = $200**; **cair EXATAMENTE no GO = $400** (em dobro). Implementado em `THEME.GO_PASS` + `advance` (dobra ao parar em pos 0) + carta "Volta para o GO" (Acaso) que teleporta ao GO e credita os $400. O catch-up fica por conta do Free Parking (D-006) e tuning futuro.
 
 ### D-008 — Segundo hotel por propriedade
-**Data:** 2026-05 · **Status:** aceita
+**Data:** 2026-05 · **Status:** aceita, **REVISTA (2026-05-25)**
 **Decisão:** Permitir 2º hotel por propriedade. Não altera aluguel — o valor estratégico é a escassez no estoque global de hotéis.
 **Por quê:** Cria pressão sobre o estoque do banco e abre estratégia de "bloqueio" sem inflar aluguel.
+**Revisão (2026-05-25):** com a escassez de construção removida ([D-022](#d-022--escassez-de-construção-removida-construção-ilimitada)), o 2º hotel perdeu o valor de "bloqueio por estoque". Passa a **cobrar mais aluguel que o 1º hotel** (degrau real da escada, `HOTEL2_RENT_MULT` no tema) e a ser o pré-requisito do arranha-céu (2 hotéis → 1 arranha-céu). SRS §14.4 / §13.7 atualizados.
 
 ### D-009 — Empréstimos entre jogadores
 **Data:** 2026-05 · **Status:** aceita
@@ -129,6 +131,7 @@
 **Decisão:** Expandir o tabuleiro de **40 → 48 casas** (11 por lado + 4 cantos), inspirado no **Monopoly: The Mega Edition** (52 casas). Composição: 28 cidades (grupos 3/3/3/4/4/4/4/3, premium com 4), 4 aeroportos, 3 utilidades, 3 Surpresa, 3 Tesouro, 2 impostos, 1 espaço Bus Ticket, 4 cantos. Cantos nos índices 0/12/24/36. Ajustes de economia que acompanham: dinheiro inicial $1.500 → **$2.000**; estoque global de construção 32 casas/12 hotéis → **40 casas/16 hotéis**.
 **Por quê:** Partidas de 7-8 jogadores precisam de mais propriedades e profundidade — 40 casas saturam rápido (~4 compráveis/jogador). Grupos maiores (3-4) tornam o monopólio mais difícil de fechar, segurando o *runaway leader* e forçando mais negociação (mecanismo central do Mega para muitos jogadores). A escolha é coerente: as mecânicas que fazem um tabuleiro maior funcionar — Speed Die ([D-003](#d-003--speed-die-aps-1-volta)), grupo parcial ([D-004](#d-004--construo-com-grupo-parcial)), Bus Tickets ([D-012](#d-012--bus-tickets-como-item-separado)), Skyscraper, Hangares — **já estavam decididas/no SRS**. A expansão completa um design já meio-Mega em vez de divergir do Richup.
 **Como aplicar:** SRS §2 é a fonte de verdade da nova estrutura (já atualizado). Preços/aluguéis das 28 cidades partem do Richup como base e estendem-se numa escada mais granular ($60–$400). Speed Die permanece padrão. Valores de dinheiro/estoque são tunáveis após playtesting.
+**Atualização (2026-05-25):** o **limite global de estoque** de construção (40 casas / 16 hotéis) foi **removido** — casas, hotéis e arranha-céus são ilimitados ([D-022](#d-022--escassez-de-construção-removida-construção-ilimitada)). O tamanho do tabuleiro (48 casas) e o dinheiro inicial ($2.000) permanecem.
 
 ### D-018 — Termo canônico "Acaso" (antes "Surpresa")
 **Data:** 2026-05-23 · **Status:** aceita
@@ -156,6 +159,12 @@
 **Decisão:** Parar no **espaço Bus Ticket** NÃO banca mais um ticket — abre **na hora** o seletor de "bus ride": o jogador escolhe uma casa do **mesmo lado** e move-se para lá imediatamente (e o destino é resolvido normalmente). O ticket **guardado** passa a vir **apenas** da carta "Passagem de Ônibus" (Tesouro), usável antes de rolar (§10.7 mantido para a carta).
 **Por quê:** feedback de playtest — parar no espaço e só receber um ticket "invisível" para usar no turno seguinte foi confuso; o jogador espera **agir na hora**. O uso imediato é mais claro e satisfatório, e a corrida do mesmo lado é a mesma mecânica do §10.7.
 **Como aplicar:** motor — o handler `'bus-ticket'` abre `awaitingChoice='bus-ride'` (não credita ticket); `chooseBusRide(dest)` valida mesmo lado, move (credita GO ao cruzar) e resolve o destino. UI — seletor vira modal (`BusPicker`), reusado pela carta guardada. **Atualizar SRS §2.7** (espaço = corrida imediata, não concede ticket) e manter §10.7 para o ticket de carta.
+
+### D-022 — Escassez de construção removida (construção ilimitada)
+**Data:** 2026-05-25 · **Status:** aceita
+**Decisão:** Remover o **estoque limitado** de construção do banco. Casas, hotéis e arranha-céus são **ilimitados** — construir nunca é travado por falta de peças. Em consequência: (a) o **leilão de casas em escassez** (antigo SRS §5.4 + spec 026) é removido; (b) o **desmonte forçado** ao vender hotel sem casas (antigo §5.5) deixa de existir; (c) o **2º hotel** ganha valor próprio cobrando mais aluguel ([D-008](#d-008--segundo-hotel-por-propriedade) revista).
+**Por quê:** a escassez de casas no Monopoly físico é artefato da caixa (32 peças) que a Hasbro codificou em regra; a tática que dela emerge ("house starvation") é um **amplificador de runaway-leader** — quem está à frente tranca o estoque e sufoca os demais. Isso contraria o **Princípio IV** (catch-up discreto) e o objetivo da [D-017](#d-017--tabuleiro-de-48-casas) de segurar o líder. O Richup (referência) também não limita. Ganha-se fluidez e elimina-se uma classe de edge cases.
+**Como aplicar:** motor — remover o campo `bank`/`BankStock` e os gates de estoque em `construction.ts`; `rent.ts` ganha `HOTEL2_RENT_MULT` (2º hotel > 1º hotel). SRS §5.2/§5.3 reescritos, §5.4/§5.5 deletados, §7.1/§13.7/§14 atualizados. Spec 026 (leilão de casas) descontinuada. **Leilão por escassez de _terrenos_** (últimos lotes livres do tabuleiro) fica em aberto para desenho futuro — não confundir com este.
 
 ---
 
