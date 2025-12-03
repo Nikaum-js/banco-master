@@ -15,7 +15,7 @@ describe('Tema Cidades do Mundo (018)', () => {
   it('aeroportos têm nomes próprios e IATA preservado', () => {
     const airports = BOARD.filter((s) => s.kind === 'airport')
     expect(airports.map((a) => a.name).sort()).toEqual(
-      ['Aeroporto Heathrow', 'Aeroporto JFK', 'Aeroporto Narita', 'Aeroporto de Sydney'],
+      ['JFK', 'Londres', 'Narita', 'Sydney'],
     )
   })
 
