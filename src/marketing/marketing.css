@@ -4,11 +4,11 @@
    de marketing. Nenhum import do jogo: o bundle destas páginas é CSS + fontes,
    JS zero.
 
-   DOIS MUNDOS, e isso é do produto, não de gosto: `/como-jogar`, `/faq` e o 404
-   ficam no "Atlas da Meia-Noite" (tinta azul + latão), a LANDING veste a
-   "Fundição da Meia-Noite" (carvão quente + luz de fornalha) porque o assunto
-   dela agora é a Cidade da Fuligem. O eixo é `data-world` no <html> e
-   `data-page="landing"` no <body>; tudo que é `mk-*` funciona nos dois.
+   DOIS MUNDOS, e isso é do produto, não de gosto: as quatro páginas ficam no
+   "Atlas da Meia-Noite" (tinta azul + latão), que é a identidade da marca, e a
+   Cidade da Fuligem leva o próprio mundo (carvão e fornalha) onde ela é o
+   assunto — a escritura do segundo mapa. O eixo é `data-world`, e é local:
+   qualquer subárvore pode trocar de mundo sem mexer no resto.
 
    Prefixos: `mk-` = componente compartilhado pelas quatro páginas.
              `fx-` = composição exclusiva da landing (a Fundição).
@@ -84,30 +84,6 @@ body::after {
   background:
     radial-gradient(ellipse 90% 50% at 50% -10%, rgb(217 166 80 / 0.05) 0%, transparent 60%),
     radial-gradient(ellipse at center, transparent 40%, rgb(2 6 16 / 0.5) 100%);
-}
-
-/* ---------- O chão da landing: carvão, não tinta ----------
-   Grão de fuligem ESTÁTICO (fibra vertical + poeira), copiado de
-   `src/index.css` (`:root[data-board-theme="fuligem"] body::before`). Nada anima
-   aqui de propósito: a vida do mundo mora no cenário do hero, com amostra
-   pequena — a mesma disciplina do FuligemBackdrop. */
-body[data-page="landing"] {
-  background:
-    radial-gradient(ellipse 70% 46% at 50% 0%, rgb(217 130 46 / 0.07) 0%, transparent 66%),
-    var(--color-ink-900);
-}
-
-body[data-page="landing"]::before {
-  background-image:
-    repeating-linear-gradient(0deg, rgb(240 231 212 / 0.015) 0 1px, transparent 1px 4px),
-    repeating-linear-gradient(90deg, rgb(7 5 4 / 0.32) 0 2px, transparent 2px 9px);
-  background-size: 100% 4px, 9px 100%;
-}
-
-body[data-page="landing"]::after {
-  background:
-    radial-gradient(ellipse 85% 40% at 50% 108%, rgb(217 130 46 / 0.1) 0%, transparent 62%),
-    radial-gradient(ellipse at center, transparent 46%, rgb(7 5 4 / 0.66) 100%);
 }
 
 main,
@@ -430,39 +406,37 @@ a:hover {
    clip` é a SANGRIA do palco, não conserto de layout: o tabuleiro é maior que a
    dobra de propósito, como uma mesa que não cabe no enquadramento.
    ===================================================================== */
-/* A dobra inteira é o palco: o letreiro em cima, a mesa embaixo, e a linha entre
-   os dois é o horizonte da cidade. A faixa da mesa toma o que sobrar da altura —
-   por isso o tabuleiro é ancorado pela BORDA DA FRENTE: se faltar espaço quem
-   sai do enquadramento é o fundo, nunca o dado, o peão e o GO. */
+/* A primeira dobra é a mesa posta: a proposta em cima, o tabuleiro embaixo em
+   largura inteira, sangrando para fora do enquadramento. A carta (rotas, hubs,
+   rosa dos ventos) fica atrás dos dois, e a névoa por cima dela é o que segura o
+   contraste do texto sem apagar o cenário. */
 .fx-hero {
   position: relative;
   isolation: isolate;
   overflow: clip;
   min-height: 100svh;
   display: grid;
-  grid-template-rows: auto minmax(clamp(10rem, 32vh, 22rem), 1fr);
-  padding-top: clamp(1.25rem, 4.5vh, 3rem);
-  /* tinta do cenário: o preto quente das fábricas, fora da escala de token
-     porque é MATÉRIA (silhueta), não superfície de interface. O plano distante é
-     mais CLARO que o próximo — é a perspectiva aérea que separa os dois; com os
-     dois em #070605 a cidade virava uma mancha só. */
-  --fx-mill-far: #241b13;
-  --fx-mill-near: #0e0a07;
+  grid-template-rows: auto auto;
+  padding-top: clamp(1.5rem, 5vh, 3.5rem);
+  /* matéria da placa: os mesmos valores que o `.board-square` do Atlas usa no app —
+     tinta, filete, marca de registro e feltro. */
+  --fx-plate: #131b2d;
+  --fx-plate-edge: #2c3750;
+  --fx-rivet: rgb(217 166 80 / 0.5);
+  --fx-chip: #0b1120;
+  --fx-chip-edge: rgb(217 166 80 / 0.45);
+  --fx-label: #eef2fb;
+  --fx-felt: #0a1120;
+  --fx-frame: #2c3750;
 }
 
-/* Vinte e uma das vinte e três voltas de ambiente (sopros, brasas, chama,
-   baliza, trem) moram nesta camada. `content-visibility: auto` faz o navegador
-   PULAR a subárvore quando ela sai da tela — e subárvore pulada não anima.
-   Seguro aqui porque a camada é fora de fluxo e tem altura própria: a contenção
-   de tamanho não pode mexer no layout de ninguém. */
 .fx-hero__sky {
   position: absolute;
-  inset: 0 0 auto 0;
-  height: clamp(17rem, 52vh, 30rem);
+  inset: 0;
   z-index: 0;
   pointer-events: none;
   content-visibility: auto;
-  contain-intrinsic-size: auto 1440px auto 480px;
+  contain-intrinsic-size: auto 1440px auto 700px;
 }
 
 .fx-hero__sky-svg {
@@ -471,20 +445,60 @@ a:hover {
   height: 100%;
 }
 
-/* Névoa por cima da cidade: o texto do letreiro nunca disputa contraste com a
-   silhueta — é o que mantém a primeira dobra em AA sem apagar o cenário. */
+/* Névoa: o texto do letreiro nunca disputa contraste com a carta. */
 .fx-hero__haze {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgb(12 9 6 / 0.42) 0%, rgb(12 9 6 / 0.16) 28%, rgb(12 9 6 / 0.62) 84%, var(--color-ink-900) 100%),
-    radial-gradient(ellipse 70% 88% at 20% 52%, rgb(12 9 6 / 0.88), rgb(12 9 6 / 0.58) 54%, transparent 80%);
+    radial-gradient(ellipse 68% 92% at 24% 46%, rgb(6 11 23 / 0.92), rgb(6 11 23 / 0.62) 58%, transparent 84%),
+    linear-gradient(180deg, rgb(6 11 23 / 0.35) 0%, transparent 34%, transparent 62%, var(--color-ink-900) 100%);
+}
+
+/* O tracejado FLUI nas rotas e os hubs pulsam — o mesmo par do cenário do app. */
+@keyframes fx-route-flow {
+  to {
+    stroke-dashoffset: -160;
+  }
+}
+
+.fx-routes path {
+  animation: fx-route-flow 26s linear infinite;
+}
+
+.fx-routes path:nth-child(2) {
+  animation-duration: 34s;
+  animation-direction: reverse;
+}
+
+.fx-routes path:nth-child(3) {
+  animation-duration: 44s;
+}
+
+@keyframes fx-hub {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.fx-hubs circle {
+  animation: fx-hub 6s ease-in-out infinite;
+}
+
+/* A rosa dos ventos de fundo: presença de instrumento, ciclo longuíssimo. */
+.fx-compass {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: fx-spin 300s linear infinite;
 }
 
 .fx-hero__say {
   position: relative;
   z-index: 2;
-  padding-block: clamp(1rem, 4vh, 2.5rem) 0;
+  padding-block: clamp(1.5rem, 6vh, 3.5rem) 0;
 }
 
 /* Medido sobre o pixel mais claro do cenário atrás deste bloco: o `--color-brass`
@@ -495,8 +509,8 @@ a:hover {
 }
 
 .fx-hero__say h1 {
-  margin-top: 0.7rem;
-  font-size: clamp(3rem, 8.2vw, 6rem);
+  margin-top: 1.1rem;
+  font-size: clamp(2.9rem, 7.4vw, 5.4rem);
   line-height: 0.86;
   text-shadow: 0 2px 0 rgb(7 5 4 / 0.9), 0 0 34px rgb(217 130 46 / 0.24);
 }
@@ -507,7 +521,7 @@ a:hover {
 }
 
 .fx-hero__tagline {
-  margin-top: 1.15rem;
+  margin-top: 1.6rem;
   font-size: clamp(1.15rem, 2.1vw, 1.55rem);
   line-height: 1.35;
   color: var(--color-starlight);
@@ -521,7 +535,7 @@ a:hover {
 }
 
 .fx-hero__lede {
-  margin-top: 0.9rem;
+  margin-top: 1.1rem;
   font-size: 0.94rem;
   color: var(--color-starlight-muted);
   max-width: 46ch;
@@ -532,7 +546,7 @@ a:hover {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
-  margin-top: 1.6rem;
+  margin-top: 2rem;
 }
 
 /* A régua fica logo acima da mesa, onde a luz da forja escapa: medida, ela ficava
@@ -550,148 +564,147 @@ a:hover {
 /* O tabuleiro: proporção fixa recortada por baixo — a mesa continua depois da
    dobra. Em tela estreita ele é AMPLIADO e sangra pelos dois lados, porque a
    180px de altura o anel de casas vira um fio. */
-/* A MESA DE VERDADE fecha a dobra: a captura do jogo rodando, ancorada pela
-   borda de baixo e sangrando para fora do enquadramento — a mesa continua
-   depois da dobra, como uma mesa continua depois da beirada da foto. A moldura
-   é o filete de instrumento do sistema, fina, sem canto arredondado: não é um
-   card, é a borda da própria mesa. */
+/* A mesa ocupa a largura inteira e sangra para baixo: a dobra entrega o letreiro,
+   os CTAs e a mesa entrando; a fileira da frente completa logo abaixo. A proporção
+   é travada por `padding-bottom` (33% contra os 33% de 396/1200 do viewBox
+   recortado), e o `overflow: clip` do hero faz a sangria. */
 .fx-hero__table {
   position: relative;
   z-index: 1;
-  margin: 0;
-  align-self: end;
-  animation: fx-table-settle 900ms var(--ease-emphasis) 220ms both;
+  margin-top: clamp(0.5rem, 2.5vh, 1.75rem);
+  height: 0;
+  padding-bottom: 33%;
+  overflow: clip;
 }
 
-@keyframes fx-table-settle {
+.fx-hero__table-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ---------- O momento autoral: a mesa monta ----------
+   O tabuleiro se ergue da borda da frente para o fundo e assenta; os dados caem
+   logo depois e param em dois e três. Uma vez, na chegada. Depois disso quem se
+   mexe é só o mundo em volta (fumaça, brasa, chama, trem). */
+@keyframes fx-board-in {
   from {
     opacity: 0;
-    transform: translateY(3.5rem) scale(0.985);
+    transform: translateY(30px) scale(0.97);
+    clip-path: inset(100% 0 0 0);
   }
-}
-
-.fx-hero__table img {
-  width: min(100%, 72rem);
-  max-width: none;
-  margin-inline: auto;
-  border: 1px solid color-mix(in srgb, var(--color-brass) 30%, var(--color-ink-500));
-  border-bottom: 0;
-  border-radius: var(--radius-sharp) var(--radius-sharp) 0 0;
-  /* a luz da forja escapando por baixo da mesa */
-  box-shadow:
-    0 -12px 38px -22px rgb(217 130 46 / 0.26),
-    0 -2px 0 0 color-mix(in srgb, var(--color-brass) 18%, transparent);
-}
-
-/* ---------- Ambiente: o mundo continua depois da chegada ----------
-   Amostra pequena sobre poucos keyframes — a mesma disciplina do cenário do
-   jogo (FuligemBackdrop): 4 plumas de 3 sopros, 5 brasas, 1 chama, 1 baliza,
-   1 trem. Tudo por transform/opacity. */
-@keyframes fx-puff {
-  0% {
-    transform: translate(0, 0) scale(0.34);
-    opacity: 0;
-  }
-  14% {
-    opacity: var(--puff-peak, 0.16);
-  }
-  58% {
-    opacity: calc(var(--puff-peak, 0.16) * 0.4);
-  }
-  100% {
-    transform: translate(var(--puff-drift, 48px), var(--puff-rise, -180px)) scale(2.1);
-    opacity: 0;
-  }
-}
-
-.fx-plume {
-  transform: translate(var(--x), var(--y));
-}
-
-.fx-plume circle {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  opacity: 0;
-  animation: fx-puff var(--puff-dur, 12000ms) linear infinite;
-}
-
-@keyframes fx-flare {
-  from {
-    transform: scale(0.84, 0.72);
-    opacity: 0.5;
+  55% {
+    opacity: 1;
   }
   to {
-    transform: scale(1.08, 1.16);
-    opacity: 0.82;
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 0 0 0);
   }
 }
 
-.fx-flare {
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-  animation: fx-flare 900ms ease-in-out infinite alternate;
+.fx-board {
+  animation: fx-board-in 950ms var(--ease-emphasis) 160ms both;
 }
 
-.fx-flare-glow {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  animation: fx-flare 1500ms ease-in-out infinite alternate;
-}
-
-@keyframes fx-beacon {
-  0%,
-  60%,
-  100% {
-    opacity: 0.14;
+@keyframes fx-die-a {
+  from {
+    opacity: 0;
+    transform: translate(58px, -120px) rotate(-140deg) scale(0.7);
   }
-  72%,
+  40% {
+    opacity: 1;
+  }
+  62% {
+    transform: translate(0, -14px) rotate(6deg) scale(1.04);
+  }
   80% {
-    opacity: 0.9;
+    transform: translate(0, 2px) rotate(-3deg) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
-.fx-beacon {
-  animation: fx-beacon 3200ms ease-in-out infinite;
-}
-
-@keyframes fx-ember {
-  0% {
-    transform: translate(0, 0) scale(1);
+@keyframes fx-die-b {
+  from {
     opacity: 0;
+    transform: translate(-46px, -132px) rotate(170deg) scale(0.68);
   }
-  12% {
-    opacity: 0.5;
+  40% {
+    opacity: 1;
   }
-  74% {
-    opacity: 0.22;
+  66% {
+    transform: translate(0, -18px) rotate(-9deg) scale(1.05);
   }
-  100% {
-    transform: translate(var(--ember-drift, 60px), var(--ember-rise, -340px)) scale(0.35);
-    opacity: 0;
+  84% {
+    transform: translate(0, 3px) rotate(4deg) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
-.fx-ember {
+/* O `transform` do CSS SUBSTITUI o atributo `transform` do SVG, não compõe com ele:
+   por isso a posição do dado mora no atributo, numa camada, e a queda anima a de
+   dentro. Mesma separação na engrenagem. */
+.fx-die {
   transform-box: fill-box;
   transform-origin: 50% 50%;
-  opacity: 0;
-  animation: fx-ember var(--ember-dur, 22000ms) linear infinite;
+}
+
+.fx-die--a {
+  animation: fx-die-a 820ms var(--ease-emphasis) 1040ms both;
+}
+
+.fx-die--b {
+  animation: fx-die-b 880ms var(--ease-emphasis) 1120ms both;
+}
+
+/* A brasa da forja respirando sob o miolo, e a engrenagem em ciclo longuíssimo:
+   presença de instrumento, não animação. */
+@keyframes fx-ignite {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-forge-breathe {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.fx-forge {
+  animation:
+    fx-ignite 900ms var(--ease-standard) 700ms both,
+    fx-forge-breathe 9s ease-in-out 1.7s infinite;
+}
+
+@keyframes fx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.fx-gear {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: fx-spin 180s linear infinite;
 }
 
 /* O trem entra em cena uns segundos depois da chegada e volta de tempos em
    tempos: recompensa quem ficou olhando, sem competir com o letreiro. */
-@keyframes fx-train {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(1560px);
-  }
-}
 
-.fx-train {
-  animation: fx-train 46s linear -38s infinite;
-}
 
 /* Chegada do letreiro — a mesma gramática, escalonada. */
 @keyframes fx-arrive {
@@ -859,15 +872,17 @@ a:hover {
    ===================================================================== */
 .fx-boards__grid {
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  gap: clamp(1.5rem, 3vw, 2.5rem);
-  margin-top: 2.75rem;
-  align-items: start;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1rem, 1.8vw, 1.5rem);
+  margin-top: 2.5rem;
+  align-items: stretch;
 }
 
 .fx-deed {
   position: relative;
-  padding: clamp(1.35rem, 2.6vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1rem, 1.9vw, 1.4rem);
   border: 1px solid color-mix(in srgb, var(--color-brass) 26%, var(--color-ink-500));
   border-radius: var(--radius-card);
   background: color-mix(in srgb, var(--color-ink-950) 72%, transparent);
@@ -876,7 +891,7 @@ a:hover {
 }
 
 .fx-deed--fuligem {
-  padding-top: calc(clamp(1.35rem, 2.6vw, 2rem) + 0.5rem);
+  padding-top: calc(clamp(1rem, 1.9vw, 1.4rem) + 0.5rem);
   background:
     radial-gradient(ellipse 80% 60% at 20% 0%, rgb(217 130 46 / 0.09), transparent 62%),
     color-mix(in srgb, var(--color-ink-950) 72%, transparent);
@@ -907,13 +922,13 @@ a:hover {
 }
 
 .fx-deed--atlas {
-  padding-top: calc(clamp(1.35rem, 2.6vw, 2rem) + 0.5rem);
+  padding-top: calc(clamp(1rem, 1.9vw, 1.4rem) + 0.5rem);
   background: color-mix(in srgb, var(--color-ink-900) 78%, transparent);
 }
 
 .fx-deed__kicker {
   font-family: var(--font-slab);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: var(--tracking-mono);
   text-transform: uppercase;
@@ -921,13 +936,13 @@ a:hover {
 }
 
 .fx-deed h3 {
-  margin-top: 0.35rem;
-  font-size: clamp(1.7rem, 3vw, 2.2rem);
+  margin-top: 0.3rem;
+  font-size: clamp(1.35rem, 2.2vw, 1.7rem);
 }
 
 .fx-deed__lede {
-  margin-top: 0.7rem;
-  font-size: 0.92rem;
+  margin-top: 0.55rem;
+  font-size: 0.84rem;
   color: var(--color-starlight-muted);
 }
 
@@ -939,38 +954,63 @@ a:hover {
 .fx-deed__tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 1.1rem;
+  gap: 0.32rem;
+  margin-top: 0.85rem;
   padding-left: 0;
   list-style: none;
 }
 
 .fx-deed__tags li {
-  padding: 0.28rem 0.6rem;
+  padding: 0.2rem 0.48rem;
   border: 1px solid color-mix(in srgb, var(--tag-hue, var(--color-brass)) 42%, var(--color-ink-500));
   border-radius: var(--radius-chip);
   background: color-mix(in srgb, var(--tag-hue, var(--color-brass)) 10%, var(--color-ink-950));
   font-family: var(--font-slab);
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   color: var(--color-starlight);
 }
 
 .fx-deed__specs {
-  margin-top: 1.4rem;
+  margin-top: 1.05rem;
   border-top: 1px solid color-mix(in srgb, var(--color-ink-500) 70%, transparent);
+}
+
+/* O compartimento do próximo mapa: assumidamente vazio, sem promessa. O contorno
+   tracejado é o que diz "ainda não existe" sem precisar de rótulo. */
+.fx-deed--next {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--color-ink-300) 52%, transparent);
+  background: none;
+  box-shadow: none;
+}
+
+.fx-deed--next h3 {
+  color: var(--color-starlight-muted);
+}
+
+.fx-deed--next .fx-deed__kicker {
+  color: var(--color-starlight-muted);
+}
+
+.fx-deed--next .fx-deed__lede + .fx-deed__lede {
+  margin-top: 0.7rem;
+}
+
+.fx-deed__specs > div:last-child {
+  border-bottom: 0;
 }
 
 .fx-deed__specs > div {
   display: grid;
-  grid-template-columns: minmax(0, 10rem) minmax(0, 1fr);
-  gap: 0.2rem 1.25rem;
-  padding-block: 0.7rem;
+  grid-template-columns: minmax(0, 8.5rem) minmax(0, 1fr);
+  gap: 0.15rem 1rem;
+  padding-block: 0.5rem;
   border-bottom: 1px solid color-mix(in srgb, var(--color-ink-500) 55%, transparent);
 }
 
 .fx-deed__specs dt {
   font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: 0.9rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--color-starlight);
@@ -978,7 +1018,7 @@ a:hover {
 
 .fx-deed__specs dd {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   color: var(--color-starlight-muted);
 }
 
@@ -1072,16 +1112,6 @@ a:hover {
 }
 
 /* A brasa da fornalha subindo do rodapé — a última luz da página. */
-@keyframes fx-forge-breathe {
-  0%,
-  100% {
-    opacity: 0.72;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
 .fx-finale__glow {
   position: absolute;
   inset: auto 0 -30% 0;
@@ -1402,6 +1432,18 @@ a:hover {
   }
 }
 
+@media (max-width: 1040px) {
+  .fx-boards__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Em duas colunas o compartimento vazio ocupa a linha inteira embaixo: ele é o
+     rodapé da seção, não um par dos dois mapas que existem. */
+  .fx-deed--next {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 900px) {
   .fx-boards__grid {
     grid-template-columns: 1fr;
@@ -1447,14 +1489,47 @@ a:hover {
     margin-right: 0;
   }
 
-  /* Em tela estreita a mesa SANGRA pelos dois lados: a 375px de largura o
-     tabuleiro inteiro viraria uma miniatura ilegível. */
-  .fx-hero__table img {
-    width: 150%;
-    margin-left: -25%;
+  /* Em tela estreita a mesa desce para baixo do texto e SANGRA pelos dois lados:
+     a 375px de largura as casas do fundo virariam um fio, e é o nome nelas que
+     prova que este é o tabuleiro do jogo. */
+  /* Em tela estreita a mesa SANGRA pelos dois lados: a 375px de largura as casas
+     do fundo virariam um fio, e é o nome nelas que prova que este é o tabuleiro
+     do jogo, não um desenho de tabuleiro. */
+  .fx-hero__table {
+    padding-bottom: 53%;
   }
 
-  .fx-deed__specs > div {
+  .fx-hero__table-svg {
+    left: -30%;
+    width: 160%;
+  }
+
+  /* O compartimento do próximo mapa: assumidamente vazio, sem promessa. O contorno
+   tracejado é o que diz "ainda não existe" sem precisar de rótulo. */
+.fx-deed--next {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--color-ink-300) 52%, transparent);
+  background: none;
+  box-shadow: none;
+}
+
+.fx-deed--next h3 {
+  color: var(--color-starlight-muted);
+}
+
+.fx-deed--next .fx-deed__kicker {
+  color: var(--color-starlight-muted);
+}
+
+.fx-deed--next .fx-deed__lede + .fx-deed__lede {
+  margin-top: 0.7rem;
+}
+
+.fx-deed__specs > div:last-child {
+  border-bottom: 0;
+}
+
+.fx-deed__specs > div {
     grid-template-columns: 1fr;
   }
 }
@@ -1502,47 +1577,28 @@ a:hover {
    Os tokens já zeram as durações (tokens.css); aqui as animações são
    CANCELADAS, e não apenas encurtadas, porque `animation-delay` sobrevive à
    duração zero: sem isto o letreiro passaria meio segundo invisível antes de
-   aparecer de estalo. Cada elemento fica no estado FINAL: cidade acesa, mesa
-   assentada, fumaça no meio da coluna. O que se perde é a interpolação, nunca
-   o quadro.
+   aparecer de estalo. Cada elemento fica no estado FINAL: mesa assentada, dados
+   parados, rotas desenhadas, rosa dos ventos no lugar. O que se perde é a
+   interpolação, nunca o quadro.
    ===================================================================== */
 @media (prefers-reduced-motion: reduce) {
-  .fx-mills--far,
-  .fx-mills--near,
-  .fx-flare,
-  .fx-flare-glow,
-  .fx-beacon,
-  .fx-ember,
-  .fx-train,
+  .fx-board,
+  .fx-die,
+  .fx-gear,
+  .fx-compass,
+  .fx-routes path,
+  .fx-hubs circle,
   .fx-finale__glow,
-  .fx-hero__table,
   .fx-hero__say [data-arrive] {
     animation: none;
   }
 
-  .fx-flare {
-    opacity: 0.7;
+  .fx-hubs circle {
+    opacity: 0.8;
   }
 
-  .fx-beacon {
-    opacity: 0.7;
-  }
-
-  .fx-ember {
-    opacity: 0.4;
-  }
-
-  /* A pluma congela COM A FORMA DA COLUNA: `--puff-t` é a posição (0…1) de cada
-     sopro no ciclo, então o quadro parado é um quadro do MEIO — fumaça, não
-     bolha empilhada na boca da chaminé. */
-  .fx-plume circle {
+  .fx-forge {
     animation: none;
-    opacity: calc(var(--puff-peak, 0.16) * 0.85);
-    transform:
-      translate(
-        calc(var(--puff-drift, 48px) * var(--puff-t, 0)),
-        calc(var(--puff-rise, -180px) * var(--puff-t, 0))
-      )
-      scale(calc(0.34 + 1.76 * var(--puff-t, 0)));
+    opacity: 0.9;
   }
 }
