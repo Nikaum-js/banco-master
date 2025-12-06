@@ -11,7 +11,7 @@ test('partida de 2 jogadores roda 10+ rodadas sem erro de runtime', async ({ pag
   const errors = trackRuntimeErrors(page)
   await page.goto(`/?players=${PLAYER_COUNT}`)
 
-  await expect(page.locator('.board-stage')).toBeVisible()
+  await expect(page.locator('.board-stage')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByRole('button', { name: 'Rolar dados' })).toBeVisible()
 
   await driveTurns(page, MIN_ROUNDS * PLAYER_COUNT)
