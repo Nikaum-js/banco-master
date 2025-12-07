@@ -12,9 +12,9 @@ Tema inicial: "Cidades do Mundo". Base extensível para outros temas no futuro.
 
 ## 2. Fase atual
 
-**Lançamento (M4).** As specs 001–042 e a **044** estão implementadas: motor fechado, multiplayer vivo sobre o Supabase, fronteira de erro, e o polimento de lançamento (fim de jogo com classificação, acessibilidade AA no caminho de jogo, paisagem em tablet/celular, telemetria anônima, gates de CI e deploy na Vercel).
+**Lançamento (M4).** As specs 001–044 estão implementadas e integradas ao `main`: motor fechado, multiplayer vivo sobre o Supabase, fronteira de erro, identidade de transporte atestada pelo servidor (043) e o polimento de lançamento (044 — fim de jogo com classificação, acessibilidade AA no caminho de jogo, paisagem em tablet/celular, telemetria anônima, gates de CI e deploy na Vercel).
 
-**O que falta não é código: é operação.** Aplicar as três migrations em produção, ligar o projeto na Vercel e promover o primeiro deploy — passo a passo em [`docs/RUNBOOK.md`](./docs/RUNBOOK.md). A spec **043** (identidade de transporte) segue aberta numa worktree própria e ainda não foi integrada.
+**O que falta não é código: é operação.** Aplicar as **quatro** migrations em produção, ligar o projeto na Vercel e promover o primeiro deploy — passo a passo em [`docs/RUNBOOK.md`](./docs/RUNBOOK.md).
 
 Comportamento esperado:
 

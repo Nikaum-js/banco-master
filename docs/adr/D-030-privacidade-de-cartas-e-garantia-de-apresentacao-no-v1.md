@@ -1,6 +1,6 @@
 # D-030 — Privacidade de cartas é garantia de apresentação no v1
 
-**Revogada por:** [D-037](D-037-estado-por-perspectiva-a-mao-nao-trafega.md) — a privacidade passou a ser garantia de **distribuição**: a mão não trafega mais para quem não é o dono. O gatilho previsto em "Revisar se" não foi o que disparou; foi o caminho privado por assento da [D-035](D-035-identidade-de-transporte-atestada-pelo-servidor.md) ter baixado o custo que esta decisão considerou proibitivo.
+**Revogada por:** [D-037](D-037-estado-por-perspectiva-a-mao-nao-trafega.md) — a privacidade passou a ser garantia de **distribuição**: a mão não trafega mais para quem não é o dono. O gatilho previsto em "Revisar se" não foi o que disparou; foi o caminho privado por assento da [D-042](D-042-identidade-de-transporte-atestada-pelo-servidor.md) ter baixado o custo que esta decisão considerou proibitivo.
 
 **Data:** 2026-07-24 · **Status:** revogada (2026-07-26)
 **Decisão:** No v1, a privacidade da mão (princípio VI, §10.3, [D-011](D-011-cartas-em-mao-privadas-e-nao-negociaveis.md)) é garantida **na apresentação**: nenhuma interface exibe as cartas de outro jogador — só os contadores públicos (§12.3). O estado da partida, porém, continua chegando **completo** a todos os clientes, como exige o modelo de sincronização da [D-020](D-020-modelo-de-autoridade-sincronizacao-host-autoritativo-realtim.md) (difusão por comando + reducer determinístico): quem inspecionar o próprio cliente consegue ver a mão alheia.

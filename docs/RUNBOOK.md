@@ -10,7 +10,7 @@
 
 | Item | Onde | Observação |
 |---|---|---|
-| Projeto Supabase de produção | painel Supabase | já existe desde a spec 037 — o que nunca subiu foram as migrations (§1) |
+| Projeto Supabase de produção | painel Supabase | já existe desde a spec 037; confira em §1 **quais** migrations já subiram — o repo tem quatro |
 | Projeto Vercel ligado ao repositório | painel Vercel | a integração nativa cuida dos **previews de PR**; produção é do workflow |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Vercel → Environment Variables (**Production** e **Preview**) | públicas por desenho: a RLS pressupõe que a anon key está no bundle |
 | `VITE_SENTRY_DSN` | Vercel → Production | opcional. Ausente = nenhum código de monitoramento roda |
@@ -23,16 +23,19 @@
 
 ## 1. Migrations — antes do primeiro deploy
 
-As três, **nesta ordem**, contra o projeto de produção:
+As **quatro**, nesta ordem, contra o projeto de produção:
 
 ```sh
 supabase link --project-ref <project-ref>
 supabase db push
 ```
 
-1. `0001_rooms_snapshots.sql` — tabela `rooms`, publicação Realtime, RLS · *pendente desde a spec 037*
-2. `0002_snapshot_monotonic.sql` — gatilho que rejeita snapshot obsoleto · *pendente desde a spec 041*
-3. `0003_telemetry_events.sql` — telemetria, insert-only · *spec 044, D-040*
+1. `0001_rooms_snapshots.sql` — tabela `rooms`, publicação Realtime, RLS · *spec 037*
+2. `0002_snapshot_monotonic.sql` — gatilho que rejeita snapshot obsoleto · *spec 041*
+3. `0003_attested_identity.sql` — identidade atestada pelo servidor: políticas por tópico, funções de leitura, código de reentrada imutável · *spec 043, D-042/D-036/D-037/D-043*
+4. `0004_telemetry_events.sql` — telemetria, insert-only · *spec 044, D-040*
+
+> ⚠️ **A de telemetria nasceu como `0003` e foi renumerada para `0004`** quando a 043 entrou na linha principal com um `0003` próprio. Duas migrations com o mesmo prefixo têm a **mesma versão** para o CLI do Supabase — `db push` falharia ou aplicaria só uma. Se você chegou a aplicar a telemetria enquanto ela ainda era `0003`, não há problema: ela é idempotente (`create table if not exists`, `drop policy if exists`), então reaplicar como `0004` não muda nada no banco.
 
 ### Verificação — o passo que separa "rodei o comando" de "está aplicado"
 
@@ -42,6 +45,7 @@ supabase db push
 | `update rooms set seq = <menor que o atual>` | **no-op silencioso** (gatilho de monotonia ativo) |
 | `insert into telemetry_events (kind) values ('room_created')` com anon key | aceito |
 | `select * from telemetry_events` com anon key | **negado** (não há política de leitura, por desenho) |
+| As políticas e funções da 043 | ver `specs/043-identidade-de-transporte/contracts/policies.md` — a identidade atestada tem verificação própria, e `scripts/attack.ts` exercita seis vetores contra o projeto real |
 
 Sem os quatro, **não prossiga**: um jogo publicado sem `rooms` perde a partida no primeiro reload, e sem o gatilho de monotonia uma escrita atrasada regride o estado — o cenário que a 041 caçou.
 

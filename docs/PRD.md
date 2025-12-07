@@ -118,7 +118,7 @@ Legenda: ✅ entregue · ❌ descontinuada · ⏳ pendente (sem spec ainda).
 |---|---|---|
 | 044 | Classificação e resumo no fim de jogo (D-038, 4 campos novos no estado, `matchSummary` derivada); WCAG 2.2 AA no caminho de jogo com gate `axe` no CI (D-039 — trap de foco e política de Esc no primitivo de modal, região viva sobre o log tipado, teclado no tabuleiro); paisagem em tablet e celular com aviso de girar em retrato; vocabulário único de movimento com freio de `prefers-reduced-motion`; telemetria mínima anônima (D-040 — porta com adaptador nulo, Supabase + Sentry, id de sala nunca em claro); publicação na Vercel promovida só com gate verde (D-041); smoke E2E de partida completa sobre o build | ✅ código · ⏳ lançamento |
 
-> **O que falta é operação, não código** (`docs/RUNBOOK.md`): aplicar as três migrations em produção, ligar o projeto na Vercel com as variáveis, promover o primeiro deploy e ensaiar o retorno uma vez.
+> **O que falta é operação, não código** (`docs/RUNBOOK.md`): aplicar as quatro migrations em produção, ligar o projeto na Vercel com as variáveis, promover o primeiro deploy e ensaiar o retorno uma vez.
 
 ---
 
@@ -139,14 +139,14 @@ O engine e a UI single-player estão fechados, e a **fundação multiplayer saiu
    dois browsers; o DoD #4 do §3 (lobby com nomes reais) está cumprido.
 3. **039 Leilão do espólio do falido-ao-banco** (§9.2) — ✅ entregue (2026-07-25). **O SRS não tem mais lacuna de regra**: era a última.
 4. **044 Polimento & Lançamento** — ✅ código entregue (2026-07-27). Resta o **lançamento**: as
-   migrations da 037/041 (que nunca subiram) mais a de telemetria, o projeto na Vercel e o
+   quatro migrations (037, 041, 043 e a de telemetria da 044), o projeto na Vercel e o
    primeiro deploy. Passo a passo em [`RUNBOOK.md`](RUNBOOK.md).
 
 > **Decisão travada antes de specificar 037 — resolvida:** a autoridade de estado (item 17 da
 > auditoria / `store.ts:262`) foi fechada pela 037: todo comando carrega o `playerId` do remetente e
 > o host o confere contra o assento da conexão, descartando spoof (provado em `tests/net/antispoof.test.ts`).
 > A ressalva que existia aqui — no transporte Supabase o remetente era auto-declarado no payload, então
-> a paridade dependia só da **lógica** do host — foi fechada pela **spec 043** ([D-035](adr/D-035-identidade-de-transporte-atestada-pelo-servidor.md)/[D-036](adr/D-036-acesso-a-sala-autorizado-no-servidor.md)/[D-037](adr/D-037-estado-por-perspectiva-a-mao-nao-trafega.md)/[D-038](adr/D-038-o-codigo-de-reentrada-e-imutavel-e-a-autoridade-o-le.md)): a identidade passou a ser
+> a paridade dependia só da **lógica** do host — foi fechada pela **spec 043** ([D-042](adr/D-042-identidade-de-transporte-atestada-pelo-servidor.md)/[D-036](adr/D-036-acesso-a-sala-autorizado-no-servidor.md)/[D-037](adr/D-037-estado-por-perspectiva-a-mao-nao-trafega.md)/[D-043](adr/D-043-o-codigo-de-reentrada-e-imutavel-e-a-autoridade-o-le.md)): a identidade passou a ser
 > o `uid` da sessão anônima, atestado pelo servidor, e o **remetente vem do endereço do tópico**, não do
 > conteúdo. Não foi preciso Edge Function — a política de canal do Realtime compara o sufixo do tópico
 > com `auth.uid()`, e é isso que torna o remetente inforjável. A conferência do host continua onde
