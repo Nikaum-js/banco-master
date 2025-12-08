@@ -205,7 +205,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.simulation == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # 50, não 25: a amostra de cada push fecha em ~5min e não paga nada por um teto alto
+    # (o runner cobra o tempo usado), mas o lote COMPLETO do schedule/`full_simulation` mede
+    # ~20min só na contagem de 6 jogadores. Com 25 o caminho completo reprovava por relógio.
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
 

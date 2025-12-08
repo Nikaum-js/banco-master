@@ -25,7 +25,11 @@ describe('simulação headless — 6 jogadores', () => {
       writeReport(report, 'reports/headless-6p')
       expect(report.failed, formatReport(report)).toBe(0)
     },
-    600_000, // SC-002 pede <2min em condições normais; o teto é guarda contra trava, não
-             // medida de desempenho. 180s reprovava um lote SADIO em runner compartilhado.
+    // Teto PROPORCIONAL ao lote, não fixo. É guarda contra trava, nunca medida de desempenho
+    // (SC-002 pede <2min em condições normais; 180s reprovava um lote SADIO em runner
+    // compartilhado). Os 600_000 fixos vinham de quando o CI só rodava `SIM_GAMES=30`: o lote
+    // COMPLETO de 6 jogadores mede ~1.182.000ms num runner, então o caminho `full_simulation`
+    // e o schedule noturno reprovavam por relógio, sempre, sem nada de errado com o motor.
+    Math.max(600_000, GAMES * 15_000),
   )
 })
