@@ -18,22 +18,22 @@
 
 export type GroupKey =
   | 'brown' | 'skyblue' | 'pink' | 'orange'
-  | 'red' | 'yellow' | 'green' | 'navy' | 'purple'
+  | 'red' | 'yellow' | 'green' | 'navy' | 'purple' | 'platinum'
 
-// 9 países no total. Premium (4 cidades): Brasil e EUA. Novos médios (2):
-// Alemanha e China. Novo premium: Rússia (4). Regulares (3): demais.
-// A "cor" do grupo preserva o slot no schema; visualmente identificado
-// pela bandeira-avatar (vide FlagAvatar).
+// 10 grupos (032/033). 8 grupos de 3 cidades; França (navy) com 2 e Emirados
+// (platinum, super-luxo: Abu Dhabi/Dubai) com 2 — os dois duos de prestígio do topo.
+// A "cor" identifica a faixa; cada cidade tem a bandeira-avatar (vide FlagAvatar).
 export const GROUPS: Record<GroupKey, { name: string; bg: string; token: string }> = {
-  brown:   { name: 'Itália',       bg: 'bg-group-brown',   token: 'group-brown' },
-  skyblue: { name: 'Egito',        bg: 'bg-group-skyblue', token: 'group-skyblue' },
-  pink:    { name: 'Japão',        bg: 'bg-group-pink',    token: 'group-pink' },
-  purple:  { name: 'Espanha',      bg: 'bg-group-purple',  token: 'group-purple' },
-  orange:  { name: 'Alemanha',     bg: 'bg-group-orange',  token: 'group-orange' },
-  red:     { name: 'China',        bg: 'bg-group-red',     token: 'group-red' },
-  yellow:  { name: 'Brasil',       bg: 'bg-group-yellow',  token: 'group-yellow' },
-  green:   { name: 'EUA',          bg: 'bg-group-green',   token: 'group-green' },
-  navy:    { name: 'França',       bg: 'bg-group-navy',    token: 'group-navy' },
+  brown:    { name: 'Itália',    bg: 'bg-group-brown',    token: 'group-brown' },
+  skyblue:  { name: 'Egito',     bg: 'bg-group-skyblue',  token: 'group-skyblue' },
+  pink:     { name: 'Japão',     bg: 'bg-group-pink',     token: 'group-pink' },
+  purple:   { name: 'Espanha',   bg: 'bg-group-purple',   token: 'group-purple' },
+  orange:   { name: 'Alemanha',  bg: 'bg-group-orange',   token: 'group-orange' },
+  red:      { name: 'China',     bg: 'bg-group-red',      token: 'group-red' },
+  yellow:   { name: 'Brasil',    bg: 'bg-group-yellow',   token: 'group-yellow' },
+  green:    { name: 'EUA',       bg: 'bg-group-green',    token: 'group-green' },
+  navy:     { name: 'França',    bg: 'bg-group-navy',     token: 'group-navy' },
+  platinum: { name: 'Emirados',  bg: 'bg-group-platinum', token: 'group-platinum' },
 }
 
 export type SquareKind =
@@ -141,31 +141,31 @@ export const BOARD: Square[] = [
   // ---------- lado superior (esquerda → direita) — Alemanha + China + Brasil ----------
   { pos: 25, kind: 'property', group: 'orange',  name: 'Berlim',     uf: 'DE', capital: 'Alemanha', price: 240, rent: 22 },
   { pos: 26, kind: 'property', group: 'orange',  name: 'Munique',    uf: 'DE', capital: 'Alemanha', price: 260, rent: 24 },
-  { pos: 27, kind: 'property', group: 'red',     name: 'Hong Kong',  uf: 'CN', capital: 'China',    price: 265, rent: 24 },
+  { pos: 27, kind: 'property', group: 'orange',  name: 'Hamburgo',   uf: 'DE', capital: 'Alemanha', price: 265, rent: 24 },
   { pos: 28, kind: 'property', group: 'red',     name: 'Pequim',     uf: 'CN', capital: 'China',    price: 270, rent: 24 },
   { pos: 29, kind: 'property', group: 'red',     name: 'Xangai',     uf: 'CN', capital: 'China',    price: 280, rent: 26 },
   { pos: 30, kind: 'airport',  name: 'Narita',   iata: 'NRT', price: 200, rent: 25 },
-  { pos: 31, kind: 'property', group: 'yellow',  name: 'Rio de Janeiro', short: 'Rio', uf: 'BR', capital: 'Brasil', price: 285, rent: 26 },
+  { pos: 31, kind: 'property', group: 'red',     name: 'Hong Kong',  uf: 'CN', capital: 'China', price: 285, rent: 26 },
   { pos: 32, kind: 'utility',  name: 'Eletro Corp', icon: 'bolt', price: 150 },
-  { pos: 33, kind: 'property', group: 'yellow',  name: 'São Paulo',  uf: 'BR', capital: 'Brasil', price: 300, rent: 28 },
-  { pos: 34, kind: 'property', group: 'yellow',  name: 'Salvador',   uf: 'BR', capital: 'Brasil', price: 305, rent: 28 },
+  { pos: 33, kind: 'property', group: 'yellow',  name: 'Rio de Janeiro', short: 'Rio', uf: 'BR', capital: 'Brasil', price: 300, rent: 28 },
+  { pos: 34, kind: 'property', group: 'yellow',  name: 'São Paulo',  uf: 'BR', capital: 'Brasil', price: 305, rent: 28 },
   { pos: 35, kind: 'property', group: 'yellow',  name: 'Brasília',   uf: 'BR', capital: 'Brasil', price: 320, rent: 30 },
 
   // ---------- canto superior direito ----------
   { pos: 36, kind: 'corner-gotojail', name: 'Vá para Prisão', short: 'Vá pra Prisão' },
 
-  // ---------- lado direito (cima → baixo) — EUA + França ----------
-  { pos: 37, kind: 'property', group: 'green',   name: 'Nova York',   uf: 'US', capital: 'EUA', price: 325, rent: 30 },
-  { pos: 38, kind: 'property', group: 'green',   name: 'Los Angeles', uf: 'US', capital: 'EUA', price: 340, rent: 34 },
+  // ---------- lado direito (cima → baixo) — EUA + França + Emirados (super-luxo) ----------
+  { pos: 37, kind: 'property', group: 'green',    name: 'Nova York',   uf: 'US', capital: 'EUA',    price: 325, rent: 30 },
+  { pos: 38, kind: 'property', group: 'green',    name: 'Los Angeles', uf: 'US', capital: 'EUA',    price: 340, rent: 34 },
   { pos: 39, kind: 'tesouro',  name: 'Tesouro' },
-  { pos: 40, kind: 'property', group: 'green',   name: 'Chicago',     uf: 'US', capital: 'EUA',    price: 345, rent: 34 },
-  { pos: 41, kind: 'property', group: 'green',   name: 'Miami',       uf: 'US', capital: 'EUA',    price: 360, rent: 38 },
+  { pos: 40, kind: 'property', group: 'green',    name: 'Miami',       uf: 'US', capital: 'EUA',    price: 360, rent: 38 },
+  { pos: 41, kind: 'property', group: 'navy',     name: 'Cannes',      uf: 'FR', capital: 'França', price: 380, rent: 40 },
   { pos: 42, kind: 'airport',  name: 'Sydney',   iata: 'SYD', price: 200, rent: 25 },
   { pos: 43, kind: 'utility',  name: 'Gas Corp',    icon: 'gas',  price: 150 },
-  { pos: 44, kind: 'property', group: 'navy',    name: 'Cannes',      uf: 'FR', capital: 'França', price: 380, rent: 35 },
+  { pos: 44, kind: 'property', group: 'navy',     name: 'Paris',       uf: 'FR', capital: 'França',  price: 430, rent: 52 },
   { pos: 45, kind: 'tax',      name: 'Imposto de Luxo',  amount: 100 },
-  { pos: 46, kind: 'property', group: 'navy',    name: 'Lyon',        uf: 'FR', capital: 'França', price: 395, rent: 45 },
-  { pos: 47, kind: 'property', group: 'navy',    name: 'Paris',       uf: 'FR', capital: 'França', price: 400, rent: 50 },
+  { pos: 46, kind: 'property', group: 'platinum', name: 'Abu Dhabi',   uf: 'AE', capital: 'Emirados', price: 550, rent: 60 },
+  { pos: 47, kind: 'property', group: 'platinum', name: 'Dubai',       uf: 'AE', capital: 'Emirados', price: 650, rent: 72 },
 ]
 
 // Converte código ISO-3166-1 alfa-2 (BR, US, JP…) no emoji da bandeira via
