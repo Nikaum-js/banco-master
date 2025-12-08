@@ -44,6 +44,8 @@ supabase db push
 
 > ℹ️ **Não existe `0008`**: o prefixo ficou reservado pela worktree paralela da spec 054, ainda fora do `main` — mesma razão do buraco entre `D-068` e `D-069`. O CLI aplica por versão, então a lacuna é inócua.
 
+> ⚠️ **Produção tem uma migration que o repo não tem** (verificado em 2026-07-31): o diretório de lobbies públicos da spec **054** está aplicado lá como `public_room_directory` — tabelas `public_room_listings`/`public_room_rate_events`, funções `list_public_rooms`, `join_public_room`, `publish_public_room`, `heartbeat_public_room` e o gatilho `unpublish_room_after_lobby`. A worktree da 054 nunca integrou o `main`, então **nada disso é reproduzível a partir deste repo**: um `db reset`, um projeto novo ou um ambiente de preview nascem sem essas funções. Enquanto a 054 não integrar, trate produção como schema com um sobrescrito — e, ao mexer em `room_preview`/`read_snapshot`/`write_room`/`write_snapshot`, confira antes se a definição viva ainda é a do repo (na aplicação da `0009`+`0010` era, e por isso elas foram seguras).
+
 > ⚠️ **A de telemetria nasceu como `0003` e foi renumerada para `0004`** quando a 043 entrou na linha principal com um `0003` próprio. Duas migrations com o mesmo prefixo têm a **mesma versão** para o CLI do Supabase — `db push` falharia ou aplicaria só uma. Se você chegou a aplicar a telemetria enquanto ela ainda era `0003`, não há problema: ela é idempotente (`create table if not exists`, `drop policy if exists`), então reaplicar como `0004` não muda nada no banco.
 
 ### Verificação — o passo que separa "rodei o comando" de "está aplicado"
