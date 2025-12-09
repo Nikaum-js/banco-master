@@ -12,7 +12,6 @@ import { NoticeLayer } from '@/game/ui/NoticeLayer'
 import { GameHUD } from '@/game/ui/GameHUD'
 import { AirportPopover, PropertyPopover, UtilityPopover } from '@/boards/shared'
 import { Button, Chip, EmptyState } from '@/game/ui/primitives'
-import { ButtonPrototype } from './ButtonPrototype'
 import {
   prepareVisualLabCase,
   VISUAL_LAB_CASES,
@@ -21,10 +20,7 @@ import {
 } from './cases'
 import './visualLab.css'
 
-const INITIAL_CASE: VisualLabCaseId =
-  new URLSearchParams(window.location.search).get('ui-lab') === 'buttons'
-    ? 'button-variants'
-    : 'bus-ticket'
+const INITIAL_CASE: VisualLabCaseId = 'bus-ticket'
 const PROPERTY = BOARD[1] as PropertySquare
 const AIRPORT = BOARD[6] as AirportSquare
 const UTILITY = BOARD[14] as UtilitySquare
@@ -101,8 +97,6 @@ function VisualStage({ item }: { item: VisualLabCase }) {
           <HandPanel />
         </div>
       )
-    case 'button-variants':
-      return <ButtonPrototype />
     case 'primitives':
       return <PrimitivesStage />
   }
@@ -178,9 +172,7 @@ export function VisualLab() {
               <h2>{active.label}</h2>
               <p>{active.description}</p>
             </div>
-            <span className="visual-lab__real-badge">
-              {'prototype' in active && active.prototype ? 'Protótipo' : 'Componente real'}
-            </span>
+            <span className="visual-lab__real-badge">Componente real</span>
           </div>
 
           <div className="visual-lab__stage" data-case={active.id}>

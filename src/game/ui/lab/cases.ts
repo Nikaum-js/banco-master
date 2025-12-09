@@ -17,7 +17,6 @@ export type VisualLabSurface =
   | 'airport'
   | 'utility'
   | 'hand-panel'
-  | 'button-variants'
   | 'primitives'
 
 interface VisualLabCaseDefinition {
@@ -27,7 +26,6 @@ interface VisualLabCaseDefinition {
   description: string
   surface: VisualLabSurface
   suspended?: boolean
-  prototype?: boolean
 }
 
 export const VISUAL_LAB_CASES = [
@@ -70,7 +68,6 @@ export const VISUAL_LAB_CASES = [
   { id: 'airport-hangar', category: 'Títulos e venda', label: 'Aeroporto: hangar', description: 'Hangar construído e ação de venda.', surface: 'airport' },
   { id: 'utility-owned', category: 'Títulos e venda', label: 'Utilidade própria', description: 'Multiplicadores, hipoteca e gestão.', surface: 'utility' },
 
-  { id: 'button-variants', category: 'Sistema visual', label: 'Comparativo de botões', description: 'Cinco pares primário e secundário para escolher uma direção.', surface: 'button-variants', prototype: true },
   { id: 'primitives', category: 'Sistema visual', label: 'Primitivos', description: 'Botões, chips e estado vazio canônicos.', surface: 'primitives' },
 ] as const satisfies readonly VisualLabCaseDefinition[]
 
@@ -290,7 +287,6 @@ export function prepareVisualLabCase(id: VisualLabCaseId): void {
     case 'utility-owned':
       setTitle(game, 14, 'p1')
       break
-    case 'button-variants':
     case 'primitives':
       break
     default: {
