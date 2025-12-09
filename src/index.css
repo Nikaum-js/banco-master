@@ -34,7 +34,7 @@
   --color-logo: #dc2626;
   --color-logo-deep: #991b1b;
 
-  /* ---------- 8 cores de grupo (faixas de propriedade) ---------- */
+  /* ---------- 9 cores de grupo (faixas de propriedade) ---------- */
   --color-group-brown:   #b07a4a;
   --color-group-skyblue: #67c3e0;
   --color-group-pink:    #ec4899;
@@ -43,6 +43,7 @@
   --color-group-yellow:  #facc15;
   --color-group-green:   #22c55e;
   --color-group-navy:    #3b82f6;
+  --color-group-purple:  #9333ea;
 
   /* ---------- Tipografia ---------- */
   --font-display: "Bebas Neue", "Oswald", system-ui, sans-serif;
