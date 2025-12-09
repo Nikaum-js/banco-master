@@ -22,7 +22,7 @@
 
 Transformar o SRS em specs operacionais, uma por feature. Antes de qualquer código.
 
-- [ ] Spec: **Tabuleiro & Casas** (40 casas, layout, semântica de cada tipo)
+- [ ] Spec: **Tabuleiro & Casas** (48 casas, layout, semântica de cada tipo)
 - [ ] Spec: **Fluxo de Turno** (rolar, mover, resolver, finalizar, duplas)
 - [ ] Spec: **Compra & Aluguel** (modal, leilão, escalonamento por grupo)
 - [ ] Spec: **Construção** (casas, hotéis, uniformidade, grupo parcial, escassez)
