@@ -11,10 +11,43 @@ export const COMMIT_SHA = (import.meta.env.VITE_COMMIT_SHA as string | undefined
 
 export const MAX_PLAYERS = 8
 
+export const STATS = {
+  squares: BOARD.length,
+  countries: Object.keys(GROUPS).length,
+  players: MAX_PLAYERS,
+  busTickets: BOARD.filter((square) => square.kind === 'bus-ticket').length,
+}
+
+export type HomeMapFactKind = 'squares' | 'countries' | 'bus-ticket'
+
+export interface HomeMapFact {
+  kind: HomeMapFactKind
+  value: number
+  label: string
+}
+
+interface HomeMapDefinition {
+  name: string
+  playable: boolean
+  facts: readonly HomeMapFact[]
+}
+
 export const HOME_MAPS = {
-  atlas: { name: 'Cidades do Mundo', playable: true },
-  neon: { name: 'Metrópole Neon', playable: false },
-} as const satisfies Record<BoardTheme, { name: string; playable: boolean }>
+  atlas: {
+    name: 'Cidades do Mundo',
+    playable: true,
+    facts: [
+      { kind: 'squares', value: STATS.squares, label: 'casas' },
+      { kind: 'countries', value: STATS.countries, label: 'países' },
+      { kind: 'bus-ticket', value: STATS.busTickets, label: 'Bus Ticket' },
+    ],
+  },
+  neon: {
+    name: 'Metrópole Neon',
+    playable: false,
+    facts: [],
+  },
+} as const satisfies Record<BoardTheme, HomeMapDefinition>
 
 // A frase da home. Diz o que o jogo É e que não cobra nada, em três negativas curtas —
 // é o que responde "por que eu clicaria?" antes de qualquer botão. Cada estilo pode
@@ -37,12 +70,6 @@ export const CITIES = BOARD.filter((s): s is PropertySquare => s.kind === 'prope
   country: GROUPS[s.group].name,
   price: s.price,
 }))
-
-export const STATS = {
-  squares: BOARD.length,
-  countries: Object.keys(GROUPS).length,
-  players: MAX_PLAYERS,
-}
 
 export function useHomeForm({ onCreate, onJoin, onLocal }: HomeActions) {
   const [name, setName] = useState(() => recallPlayerName())

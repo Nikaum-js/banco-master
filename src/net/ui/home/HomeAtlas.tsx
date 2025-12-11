@@ -7,7 +7,7 @@ import { motion } from 'motion/react'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import { DepartureFlap } from '../departureFlap'
 import { EntryStage, OrnamentRule } from '../entryShell'
-import { COMMIT_SHA, TAGLINE, type HomeForm } from './homeShared'
+import { TAGLINE, type HomeForm } from './homeShared'
 import { HomeMapPanel } from './HomeMapPanel'
 import type { BoardTheme } from '@/game/ui/theme/boardTheme'
 
@@ -98,20 +98,6 @@ export function HomeAtlas({
         onChangeMap={onChangeMap}
         mapChanging={mapChanging}
       />
-
-      {/* Benefícios concretos da sala online — informação útil antes de começar. */}
-      <footer className="flex flex-col items-center gap-2 [@media(max-height:640px)]:hidden">
-        <p className="label text-starlight-muted/70 flex items-center gap-2.5 text-[0.55rem]">
-          <span>Multiplayer em tempo real</span>
-          <span className="text-brass/50" aria-hidden="true">◆</span>
-          <span>Convite por link</span>
-          <span className="text-brass/50" aria-hidden="true">◆</span>
-          <span>Partida salva automaticamente</span>
-        </p>
-        {/* Versão publicada (044, FR-048): é o que transforma "deu erro" em um relato
-            que localiza a build. Vazio em desenvolvimento — aí não há o que identificar. */}
-        {COMMIT_SHA && <p className="label text-starlight-muted/70 text-[0.6rem] tracking-wider">versão {COMMIT_SHA.slice(0, 7)}</p>}
-      </footer>
     </EntryStage>
   )
 }

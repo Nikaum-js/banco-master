@@ -2,10 +2,11 @@ import { AnimatePresence, motion } from 'motion/react'
 import {
   ArrowLeft,
   ArrowRight,
-  Compass,
+  Globe2,
   Link2,
   LockKeyhole,
   Map,
+  Ticket,
 } from 'lucide-react'
 import { Button } from '@/game/ui/primitives'
 import { EASE, MOTION } from '@/game/ui/motion'
@@ -15,6 +16,7 @@ import { EntryPanel } from '../entryShell'
 import {
   HOME_MAPS,
   NAME_MAX,
+  type HomeMapFact,
   type HomeForm,
 } from './homeShared'
 
@@ -110,16 +112,34 @@ function CityNetwork({ skin }: { skin: HomeMapSkin }) {
   )
 }
 
-function MapManifest() {
+const MAP_FACT_ICONS = {
+  squares: Map,
+  countries: Globe2,
+  'bus-ticket': Ticket,
+} as const
+
+function MapFacts({
+  mapName,
+  facts,
+}: {
+  mapName: string
+  facts: readonly HomeMapFact[]
+}) {
   return (
-    <div className="home-map-panel__manifest">
-      <div className="home-map-panel__manifest-seal" aria-hidden="true">
-        <Compass />
-      </div>
-      <div className="home-map-panel__manifest-copy">
-        <strong>Jogue grátis.</strong>
-        <span>Sem anúncios. Sem instalar.</span>
-      </div>
+    <div
+      className="home-map-panel__stats"
+      aria-label={`Características do mapa ${mapName}`}
+    >
+      {facts.map((fact) => {
+        const Icon = MAP_FACT_ICONS[fact.kind]
+        return (
+          <div key={fact.kind}>
+            <Icon aria-hidden />
+            <strong>{fact.value}</strong>
+            <span>{fact.label}</span>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -191,7 +211,7 @@ export function HomeMapPanel({
           </div>
 
           {map.playable ? (
-            <MapManifest />
+            <MapFacts mapName={map.name} facts={map.facts} />
           ) : (
             <div className="home-map-panel__availability">
               <LockKeyhole aria-hidden />

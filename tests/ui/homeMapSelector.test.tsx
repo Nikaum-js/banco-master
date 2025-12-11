@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { HomeScreen } from '@/net/ui/HomeScreen'
 
@@ -32,8 +32,14 @@ describe('seletor visual do mapa na home', () => {
     fireEvent.change(input, { target: { value: 'Nikaum' } })
 
     expect(screen.queryByText('Novos mapas em breve')).toBeNull()
-    expect(screen.getByText('Jogue grátis.')).toBeTruthy()
-    expect(screen.getByText('Sem anúncios. Sem instalar.')).toBeTruthy()
+    const mapFacts = screen.getByLabelText('Características do mapa Cidades do Mundo')
+    expect(within(mapFacts).getByText('48')).toBeTruthy()
+    expect(within(mapFacts).getByText('10')).toBeTruthy()
+    expect(within(mapFacts).getByText('1')).toBeTruthy()
+    expect(within(mapFacts).getByText('Bus Ticket')).toBeTruthy()
+    expect(screen.queryByText('Multiplayer em tempo real')).toBeNull()
+    expect(screen.queryByText('Convite por link')).toBeNull()
+    expect(screen.queryByText('Partida salva automaticamente')).toBeNull()
     fireEvent.click(screen.getByRole('button', {
       name: 'Pré-visualizar o mapa Metrópole Neon',
     }))
