@@ -1,8 +1,17 @@
 /* =====================================================================
    Folha das páginas públicas (051) — landing, como-jogar, faq, 404.
-   Mundo visual: "Atlas da Meia-Noite" (ver DESIGN.md). Os tokens vêm do
-   subset em tokens.css; aqui mora só composição e componente de marketing.
-   Nenhum import do jogo: o bundle destas páginas é CSS + fontes, JS zero.
+   Os tokens vêm do subset em tokens.css; aqui mora só composição e componente
+   de marketing. Nenhum import do jogo: o bundle destas páginas é CSS + fontes,
+   JS zero.
+
+   DOIS MUNDOS, e isso é do produto, não de gosto: `/como-jogar`, `/faq` e o 404
+   ficam no "Atlas da Meia-Noite" (tinta azul + latão), a LANDING veste a
+   "Fundição da Meia-Noite" (carvão quente + luz de fornalha) porque o assunto
+   dela agora é a Cidade da Fuligem. O eixo é `data-world` no <html> e
+   `data-page="landing"` no <body>; tudo que é `mk-*` funciona nos dois.
+
+   Prefixos: `mk-` = componente compartilhado pelas quatro páginas.
+             `fx-` = composição exclusiva da landing (a Fundição).
    ===================================================================== */
 @import "./tokens.css";
 
@@ -75,6 +84,30 @@ body::after {
   background:
     radial-gradient(ellipse 90% 50% at 50% -10%, rgb(217 166 80 / 0.05) 0%, transparent 60%),
     radial-gradient(ellipse at center, transparent 40%, rgb(2 6 16 / 0.5) 100%);
+}
+
+/* ---------- O chão da landing: carvão, não tinta ----------
+   Grão de fuligem ESTÁTICO (fibra vertical + poeira), copiado de
+   `src/index.css` (`:root[data-board-theme="fuligem"] body::before`). Nada anima
+   aqui de propósito: a vida do mundo mora no cenário do hero, com amostra
+   pequena — a mesma disciplina do FuligemBackdrop. */
+body[data-page="landing"] {
+  background:
+    radial-gradient(ellipse 70% 46% at 50% 0%, rgb(217 130 46 / 0.07) 0%, transparent 66%),
+    var(--color-ink-900);
+}
+
+body[data-page="landing"]::before {
+  background-image:
+    repeating-linear-gradient(0deg, rgb(240 231 212 / 0.015) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgb(7 5 4 / 0.32) 0 2px, transparent 2px 9px);
+  background-size: 100% 4px, 9px 100%;
+}
+
+body[data-page="landing"]::after {
+  background:
+    radial-gradient(ellipse 85% 40% at 50% 108%, rgb(217 130 46 / 0.1) 0%, transparent 62%),
+    radial-gradient(ellipse at center, transparent 46%, rgb(7 5 4 / 0.66) 100%);
 }
 
 main,
@@ -150,15 +183,6 @@ a:hover {
   margin-inline: auto;
 }
 
-/* Etiqueta pequena com letterspacing (o `.label` do jogo). */
-.mk-label {
-  font-size: 0.625rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-mono);
-  color: var(--color-starlight-muted);
-}
-
 /* ---------- Botões — o vocabulário tátil do jogo (ui-button) ---------- */
 .mk-btn {
   display: inline-flex;
@@ -228,6 +252,13 @@ a:hover {
   border-color: var(--color-brass);
   background: color-mix(in srgb, var(--color-brass) 14%, var(--color-ink-900));
   transform: translateY(-2px);
+}
+
+/* O gesto do clímax: o mesmo botão, com o porte do fim de partida. */
+.mk-btn--lg {
+  min-height: 3.4rem;
+  padding-inline: 2.2rem;
+  font-size: 1.3rem;
 }
 
 @media (pointer: coarse) {
@@ -321,18 +352,7 @@ a:hover {
   font-size: 0.95rem;
 }
 
-/* ---------- Hero ---------- */
-.mk-hero {
-  padding-block: clamp(3rem, 8vh, 5.5rem) clamp(2.5rem, 6vh, 4rem);
-}
-
-.mk-hero .mk-container {
-  display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-  align-items: center;
-  gap: clamp(2rem, 5vw, 4rem);
-}
-
+/* ---------- Etiquetas e réguas compartilhadas ---------- */
 .mk-hero__eyebrow {
   color: var(--color-brass);
   font-size: 0.7rem;
@@ -341,48 +361,14 @@ a:hover {
   text-transform: uppercase;
 }
 
-.mk-hero h1 {
-  margin-top: 0.75rem;
-  font-size: clamp(3.1rem, 7.5vw, 5.5rem);
-  line-height: 0.88;
-}
-
-.mk-hero h1 b {
-  font-weight: 400;
-  color: var(--color-brass);
-}
-
-.mk-hero__tagline {
-  margin-top: 1.25rem;
-  font-size: clamp(1.05rem, 1.6vw, 1.2rem);
-  line-height: 1.5;
-  color: var(--color-starlight);
-  max-width: 34ch;
-  text-wrap: balance;
-}
-
-.mk-hero__lede {
-  margin-top: 0.85rem;
-  font-size: 0.92rem;
-  color: var(--color-starlight-muted);
-  max-width: 44ch;
-}
-
-.mk-hero__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
-  margin-top: 1.75rem;
-}
-
-/* Régua de fatos: graduação de carta náutica, não fileira de stat-tiles. */
+/* Régua de fatos: graduação de instrumento, não fileira de stat-tiles. */
 .mk-facts {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem 2rem;
-  margin-top: 2.25rem;
+  margin-top: 2rem;
   padding-top: 1rem;
+  padding-left: 0;
   border-top: 1px solid color-mix(in srgb, var(--color-ink-500) 85%, transparent);
   background:
     repeating-linear-gradient(
@@ -392,7 +378,6 @@ a:hover {
       )
       top / 100% 3px no-repeat;
   list-style: none;
-  padding-left: 0;
 }
 
 .mk-facts li {
@@ -407,78 +392,25 @@ a:hover {
   color: var(--color-brass-glow);
 }
 
-/* Moldura de instrumento para o produto real: marcas de registro nos cantos
-   (as mesmas do board-square do jogo) + régua de graduação na borda. */
-.mk-frame {
-  position: relative;
-  padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--color-brass) 26%, var(--color-ink-500));
-  border-radius: var(--radius-card);
-  background: color-mix(in srgb, var(--color-ink-950) 72%, transparent);
-  box-shadow: var(--shadow-lift);
-}
-
-.mk-frame::before {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  pointer-events: none;
-  --tick: color-mix(in srgb, var(--color-brass) 38%, transparent);
-  background:
-    linear-gradient(var(--tick), var(--tick)) left top / 10px 1px,
-    linear-gradient(var(--tick), var(--tick)) left top / 1px 10px,
-    linear-gradient(var(--tick), var(--tick)) right top / 10px 1px,
-    linear-gradient(var(--tick), var(--tick)) right top / 1px 10px,
-    linear-gradient(var(--tick), var(--tick)) left bottom / 10px 1px,
-    linear-gradient(var(--tick), var(--tick)) left bottom / 1px 10px,
-    linear-gradient(var(--tick), var(--tick)) right bottom / 10px 1px,
-    linear-gradient(var(--tick), var(--tick)) right bottom / 1px 10px;
-  background-repeat: no-repeat;
-}
-
-.mk-frame img {
-  border-radius: var(--radius-sharp);
-  border: 1px solid var(--color-ink-abyss);
-}
-
-.mk-frame figcaption {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 0.25rem 0;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: var(--tracking-mono);
-  text-transform: uppercase;
-  color: var(--color-starlight-muted);
-}
-
-.mk-frame figcaption::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-brass);
-  flex: 0 0 auto;
-}
-
 /* ---------- Seções ---------- */
 .mk-section {
-  padding-block: clamp(3rem, 8vh, 5.5rem);
+  padding-block: clamp(3.5rem, 9vh, 6rem);
 }
 
 .mk-section > .mk-container > h2 {
-  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
-  line-height: 1;
+  font-size: clamp(2rem, 4.2vw, 3rem);
+  line-height: 0.98;
+  max-width: 20ch;
+  text-wrap: balance;
 }
 
 .mk-section__intro {
-  margin-top: 0.85rem;
+  margin-top: 0.9rem;
   color: var(--color-starlight-muted);
   font-size: 0.95rem;
 }
 
-/* Filete de seção: linha com um tick de latão — o OrnamentRule da entrada. */
+/* Filete de seção: linha com um tick de latão. */
 .mk-rule {
   display: block;
   width: 4.5rem;
@@ -491,161 +423,795 @@ a:hover {
       left center / 100% 1px no-repeat;
 }
 
-/* ---------- Como funciona: linha de embarque em 3 paradas ---------- */
-.mk-steps {
-  counter-reset: parada;
+/* =====================================================================
+   HERO — A MESA ACENDE
+   Três camadas empilhadas: a cidade no horizonte (fundo), o letreiro (meio) e
+   o tabuleiro em perspectiva subindo da borda de baixo (frente). O `overflow:
+   clip` é a SANGRIA do palco, não conserto de layout: o tabuleiro é maior que a
+   dobra de propósito, como uma mesa que não cabe no enquadramento.
+   ===================================================================== */
+/* A dobra inteira é o palco: o letreiro em cima, a mesa embaixo, e a linha entre
+   os dois é o horizonte da cidade. A faixa da mesa toma o que sobrar da altura —
+   por isso o tabuleiro é ancorado pela BORDA DA FRENTE: se faltar espaço quem
+   sai do enquadramento é o fundo, nunca o dado, o peão e o GO. */
+.fx-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  min-height: 100svh;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 2.25rem;
-  margin-top: 2.5rem;
-  padding-left: 0;
-  list-style: none;
-  position: relative;
+  grid-template-rows: auto minmax(clamp(10rem, 32vh, 22rem), 1fr);
+  padding-top: clamp(1.25rem, 4.5vh, 3rem);
+  /* tinta do cenário: o preto quente das fábricas, fora da escala de token
+     porque é MATÉRIA (silhueta), não superfície de interface. O plano distante é
+     mais CLARO que o próximo — é a perspectiva aérea que separa os dois; com os
+     dois em #070605 a cidade virava uma mancha só. */
+  --fx-mill-far: #241b13;
+  --fx-mill-near: #0e0a07;
+  --fx-plate: #1a140f;
+  --fx-plate-corner: #241a12;
+  --fx-plate-edge: #3a2c20;
+  --fx-felt: #120d09;
 }
 
-/* A rota pontilhada que liga as paradas (o tracejado das rotas do palco de entrada). */
-.mk-steps::before {
-  content: "";
+/* Vinte e uma das vinte e três voltas de ambiente (sopros, brasas, chama,
+   baliza, trem) moram nesta camada. `content-visibility: auto` faz o navegador
+   PULAR a subárvore quando ela sai da tela — e subárvore pulada não anima.
+   Seguro aqui porque a camada é fora de fluxo e tem altura própria: a contenção
+   de tamanho não pode mexer no layout de ninguém. */
+.fx-hero__sky {
   position: absolute;
-  top: 1.05rem;
-  left: calc(16.66% );
-  right: calc(16.66%);
-  border-top: 2px dashed color-mix(in srgb, var(--color-brass) 34%, transparent);
+  inset: 0 0 auto 0;
+  height: clamp(17rem, 52vh, 30rem);
+  z-index: 0;
+  pointer-events: none;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1440px auto 480px;
 }
 
-.mk-steps li {
+.fx-hero__sky-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Névoa por cima da cidade: o texto do letreiro nunca disputa contraste com a
+   silhueta — é o que mantém a primeira dobra em AA sem apagar o cenário. */
+.fx-hero__haze {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(12 9 6 / 0.42) 0%, rgb(12 9 6 / 0.16) 30%, rgb(12 9 6 / 0.6) 82%, var(--color-ink-900) 100%),
+    radial-gradient(ellipse 62% 74% at 20% 46%, rgb(12 9 6 / 0.8), rgb(12 9 6 / 0.45) 52%, transparent 76%);
+}
+
+.fx-hero__say {
   position: relative;
-  min-width: 0;
+  z-index: 2;
+  padding-block: clamp(1rem, 4vh, 2.5rem) 0;
 }
 
-.mk-steps li::before {
-  counter-increment: parada;
-  content: counter(parada);
+/* Medido sobre o pixel mais claro do cenário atrás deste bloco: o `--color-brass`
+   dá 4,15:1 ali, abaixo do piso AA para texto normal. O `--color-brass-glow`
+   sobe para 6,87:1 — mesma família, mesmo papel, contraste que passa. */
+.fx-hero__say .mk-hero__eyebrow {
+  color: var(--color-brass-glow);
+}
+
+.fx-hero__say h1 {
+  margin-top: 0.7rem;
+  font-size: clamp(3rem, 8.2vw, 6rem);
+  line-height: 0.86;
+  text-shadow: 0 2px 0 rgb(7 5 4 / 0.9), 0 0 34px rgb(217 130 46 / 0.24);
+}
+
+.fx-hero__say h1 b {
+  font-weight: 400;
+  color: var(--color-brass);
+}
+
+.fx-hero__tagline {
+  margin-top: 1.15rem;
+  font-size: clamp(1.15rem, 2.1vw, 1.55rem);
+  line-height: 1.35;
+  color: var(--color-starlight);
+  max-width: 26ch;
+  text-wrap: balance;
+}
+
+.fx-hero__tagline b {
+  font-weight: 600;
+  color: var(--color-brass-glow);
+}
+
+.fx-hero__lede {
+  margin-top: 0.9rem;
+  font-size: 0.94rem;
+  color: var(--color-starlight-muted);
+  max-width: 46ch;
+}
+
+.fx-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.6rem;
+}
+
+.fx-hero__say .mk-facts {
+  max-width: 34rem;
+  margin-top: 1.5rem;
+}
+
+/* O tabuleiro: proporção fixa recortada por baixo — a mesa continua depois da
+   dobra. Em tela estreita ele é AMPLIADO e sangra pelos dois lados, porque a
+   180px de altura o anel de casas vira um fio. */
+.fx-hero__table {
   position: relative;
   z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 2.15rem;
-  height: 2.15rem;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--color-brass) 56%, var(--color-ink-500));
-  background: color-mix(in srgb, var(--color-brass) 8%, var(--color-ink-950));
-  box-shadow: 0 0 0 6px var(--color-ink-900);
-  color: var(--color-brass-glow);
-  font-family: var(--font-slab);
-  font-size: 0.95rem;
-  font-weight: 600;
+  margin-top: clamp(0.25rem, 1.5vh, 1rem);
+  overflow: clip;
 }
 
-.mk-steps h3 {
-  margin-top: 0.9rem;
-  font-size: 1.3rem;
+/* Largura amarrada à ALTURA da janela (`vh`) e não só à largura: numa tela larga
+   e baixa um tabuleiro de 100% de largura teria 600px de altura e a faixa só
+   mostraria a fileira da frente. Amarrado ao vh ele encolhe junto com a dobra. */
+.fx-hero__table-svg {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  translate: -50% 0;
+  display: block;
+  width: min(100%, 132vh);
+  height: auto;
+}
+
+/* ---------- O momento autoral: a chegada, em seis tempos ----------
+   1. o tabuleiro se monta da borda da frente para trás
+   2. a cidade sobe e as fornalhas acendem
+   3. os dados caem e param
+   4. o peão sai do GO e anda os cinco passos
+   5. a Sorte Grande reage
+   6. o letreiro fecha o momento
+   Sob movimento reduzido TODAS elas são canceladas (bloco no fim do arquivo):
+   a composição fica inteira, parada e legível. */
+@keyframes fx-board-in {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.965);
+    clip-path: inset(100% 0 0 0);
+  }
+  55% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.fx-board {
+  animation: fx-board-in 900ms var(--ease-emphasis) 120ms both;
+}
+
+@keyframes fx-mills-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+}
+
+.fx-mills--far {
+  animation: fx-mills-in 700ms var(--ease-emphasis) 60ms both;
+}
+
+.fx-mills--near {
+  animation: fx-mills-in 760ms var(--ease-emphasis) 200ms both;
+}
+
+/* A luz da forja: acende no tempo 2 e depois só respira. */
+@keyframes fx-ignite {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-forge-breathe {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.fx-forge {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation:
+    fx-ignite 900ms var(--ease-standard) 620ms both,
+    fx-forge-breathe 9s ease-in-out 1.6s infinite;
+}
+
+/* Os dados: caem, quicam uma vez e param. Só transform. */
+@keyframes fx-die-a {
+  from {
+    opacity: 0;
+    transform: translate(58px, -120px) rotate(-140deg) scale(0.7);
+  }
+  40% {
+    opacity: 1;
+  }
+  62% {
+    transform: translate(0, -14px) rotate(6deg) scale(1.04);
+  }
+  80% {
+    transform: translate(0, 2px) rotate(-3deg) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fx-die-b {
+  from {
+    opacity: 0;
+    transform: translate(-46px, -132px) rotate(170deg) scale(0.68);
+  }
+  40% {
+    opacity: 1;
+  }
+  66% {
+    transform: translate(0, -18px) rotate(-9deg) scale(1.05);
+  }
+  84% {
+    transform: translate(0, 3px) rotate(4deg) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.fx-die {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
+.fx-die--a {
+  animation: fx-die-a 820ms var(--ease-emphasis) 1000ms both;
+}
+
+.fx-die--b {
+  animation: fx-die-b 880ms var(--ease-emphasis) 1080ms both;
+}
+
+/* O peão: dois e três dão cinco. Cinco saltos, um por casa, com a pausa curta
+   entre eles — o passo é o que faz parecer peça de mesa e não sprite deslizando.
+   Os deslocamentos são os CENTROS REAIS das casas 0→5 do tabuleiro projetado. */
+@keyframes fx-walk {
+  0% {
+    transform: translate(0, 0);
+  }
+  8% {
+    transform: translate(-57px, -13px);
+  }
+  16%,
+  20% {
+    transform: translate(-113.9px, 0);
+  }
+  28% {
+    transform: translate(-158px, -13px);
+  }
+  36%,
+  40% {
+    transform: translate(-203.3px, 0);
+  }
+  48% {
+    transform: translate(-248px, -13px);
+  }
+  56%,
+  60% {
+    transform: translate(-292.7px, 0);
+  }
+  68% {
+    transform: translate(-337px, -13px);
+  }
+  76%,
+  80% {
+    transform: translate(-382px, 0);
+  }
+  88% {
+    transform: translate(-427px, -13px);
+  }
+  96%,
+  100% {
+    transform: translate(-471.4px, 0);
+  }
+}
+
+/* O `transform` do CSS SUBSTITUI o atributo `transform` do SVG — não compõe com
+   ele. Por isso a posição de partida do peão mora no atributo, numa camada, e a
+   caminhada anima a camada de dentro: misturar as duas teria jogado a peça para
+   fora do tabuleiro. Mesma separação nos dados e na engrenagem. */
+.fx-walker__body {
+  animation: fx-walk 1500ms var(--ease-standard) 1750ms both;
+}
+
+@keyframes fx-walker-land {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+.fx-walker__pop {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: fx-walker-land 320ms var(--ease-emphasis) 1620ms both;
+}
+
+/* Tempo 5: a Sorte Grande reage ao dado que passou por perto. */
+@keyframes fx-luck-flash {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+.fx-luck {
+  animation: fx-luck-flash 900ms var(--ease-standard) 3100ms 2 both;
+}
+
+/* ---------- Ambiente: o mundo continua depois da chegada ----------
+   Amostra pequena sobre poucos keyframes — a mesma disciplina do cenário do
+   jogo (FuligemBackdrop): 4 plumas de 3 sopros, 5 brasas, 1 chama, 1 baliza,
+   1 trem. Tudo por transform/opacity. */
+@keyframes fx-puff {
+  0% {
+    transform: translate(0, 0) scale(0.34);
+    opacity: 0;
+  }
+  14% {
+    opacity: var(--puff-peak, 0.16);
+  }
+  58% {
+    opacity: calc(var(--puff-peak, 0.16) * 0.4);
+  }
+  100% {
+    transform: translate(var(--puff-drift, 48px), var(--puff-rise, -180px)) scale(2.1);
+    opacity: 0;
+  }
+}
+
+.fx-plume {
+  transform: translate(var(--x), var(--y));
+}
+
+.fx-plume circle {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  opacity: 0;
+  animation: fx-puff var(--puff-dur, 12000ms) linear infinite;
+}
+
+@keyframes fx-flare {
+  from {
+    transform: scale(0.84, 0.72);
+    opacity: 0.5;
+  }
+  to {
+    transform: scale(1.08, 1.16);
+    opacity: 0.82;
+  }
+}
+
+.fx-flare {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: fx-flare 900ms ease-in-out infinite alternate;
+}
+
+.fx-flare-glow {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: fx-flare 1500ms ease-in-out infinite alternate;
+}
+
+@keyframes fx-beacon {
+  0%,
+  60%,
+  100% {
+    opacity: 0.14;
+  }
+  72%,
+  80% {
+    opacity: 0.9;
+  }
+}
+
+.fx-beacon {
+  animation: fx-beacon 3200ms ease-in-out infinite;
+}
+
+@keyframes fx-ember {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.5;
+  }
+  74% {
+    opacity: 0.22;
+  }
+  100% {
+    transform: translate(var(--ember-drift, 60px), var(--ember-rise, -340px)) scale(0.35);
+    opacity: 0;
+  }
+}
+
+.fx-ember {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  opacity: 0;
+  animation: fx-ember var(--ember-dur, 22000ms) linear infinite;
+}
+
+/* O trem entra em cena uns segundos depois da chegada e volta de tempos em
+   tempos: recompensa quem ficou olhando, sem competir com o letreiro. */
+@keyframes fx-train {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(1560px);
+  }
+}
+
+.fx-train {
+  animation: fx-train 46s linear -38s infinite;
+}
+
+/* A engrenagem do miolo: presença de instrumento, não animação. */
+@keyframes fx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.fx-gear {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: fx-spin 180s linear infinite;
+}
+
+/* Chegada do letreiro — a mesma gramática, escalonada. */
+@keyframes fx-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(0.7rem);
+  }
+}
+
+.fx-hero__say [data-arrive] {
+  animation: fx-arrive var(--motion-slow) var(--ease-emphasis) both;
+}
+
+.fx-hero__say [data-arrive="1"] { animation-delay: 80ms; }
+.fx-hero__say [data-arrive="2"] { animation-delay: 200ms; }
+.fx-hero__say [data-arrive="3"] { animation-delay: 380ms; }
+.fx-hero__say [data-arrive="4"] { animation-delay: 500ms; }
+.fx-hero__say [data-arrive="5"] { animation-delay: 620ms; }
+.fx-hero__say [data-arrive="6"] { animation-delay: 780ms; }
+
+/* =====================================================================
+   CAPÍTULO 1 — TRÊS CASAS
+   Não é um grid de cards: são três PLACAS de tabuleiro num trilho, com a faixa
+   de bairro em cima e rebites nas quinas — o mesmo componente que o jogo
+   desenha em `.board-square` sob o tema Fuligem.
+   ===================================================================== */
+.fx-path__list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1rem, 2.5vw, 1.75rem);
+  margin-top: 2.75rem;
+  padding-left: 0;
+  list-style: none;
+}
+
+.fx-plate {
+  position: relative;
+  padding: 1.5rem 1.35rem 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-ink-400) 62%, transparent);
+  border-radius: var(--radius-sharp);
+  background:
+    linear-gradient(170deg, color-mix(in srgb, var(--color-ink-700) 82%, transparent), var(--color-ink-950));
+  box-shadow: var(--shadow-card);
+  transition:
+    transform var(--motion-base) var(--ease-emphasis),
+    border-color var(--motion-base) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard);
+}
+
+/* Rebites de ferro nas quatro quinas — a placa de fábrica do tema. */
+.fx-plate::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  pointer-events: none;
+  --rivet: color-mix(in srgb, var(--color-brass) 46%, transparent);
+  background:
+    radial-gradient(circle 1.6px at 5px 5px, var(--rivet) 98%, transparent),
+    radial-gradient(circle 1.6px at calc(100% - 5px) 5px, var(--rivet) 98%, transparent),
+    radial-gradient(circle 1.6px at 5px calc(100% - 5px), var(--rivet) 98%, transparent),
+    radial-gradient(circle 1.6px at calc(100% - 5px) calc(100% - 5px), var(--rivet) 98%, transparent);
+  background-repeat: no-repeat;
+}
+
+.fx-plate:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--color-brass) 40%, var(--color-ink-500));
+  box-shadow: var(--shadow-lift);
+}
+
+.fx-plate__stripe {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 6px;
+  background: var(--plate-hue, var(--color-brass));
+  opacity: 0.9;
+}
+
+.fx-plate__num {
+  display: block;
+  font-family: var(--font-slab);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-mono);
+  color: var(--color-brass);
+}
+
+.fx-plate h3 {
+  margin-top: 0.5rem;
+  font-size: 1.45rem;
   letter-spacing: 0.05em;
 }
 
-.mk-steps p {
-  margin-top: 0.45rem;
+.fx-plate p {
+  margin-top: 0.55rem;
   font-size: 0.9rem;
   color: var(--color-starlight-muted);
 }
 
-.mk-steps p b {
+.fx-plate p b {
   color: var(--color-starlight);
   font-weight: 600;
 }
 
-/* ---------- Livro-razão de mecânicas ---------- */
-.mk-ledger {
-  margin-top: 2.5rem;
-  border-top: 1px solid var(--color-ink-500);
+/* O trilho e o peão que percorre as três casas. Sem enhancement o peão está no
+   destino — a informação (três paradas ligadas por um trilho) é do desenho, não
+   da animação. */
+/* `clip` porque o trilho É o limite do percurso: o invólucro do peão tem a
+   largura do trilho e anda uma largura inteira, então a CAIXA dele termina fora
+   — o que empurrava a página 886px para a direita. Recortar no trilho é a
+   fronteira do componente, não conserto de estouro. */
+.fx-path__rail {
+  position: relative;
+  height: 26px;
+  margin-top: 1.5rem;
+  overflow: clip;
+}
+
+.fx-path__rail svg {
+  display: block;
+  width: 100%;
+  height: 24px;
+}
+
+/* O invólucro tem a LARGURA DO TRILHO — é ele que anda, e é por isso que o
+   `translateX` em porcentagem mede o trilho. A peça dentro tem tamanho fixo:
+   sem isso o SVG estica para os 1088px do invólucro e o rosto vai parar no meio
+   do nada. */
+.fx-path__pawn {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 26px;
+  transform: translateX(calc(100% - 26px));
+}
+
+.fx-path__pawn svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 26px;
+  height: 26px;
+  filter: drop-shadow(0 2px 3px rgb(7 5 4 / 0.7));
+}
+
+/* =====================================================================
+   CAPÍTULO 2 — O DIÁRIO DE BORDO
+   Cada mecânica entra como um acontecimento da partida, não como um card de
+   feature. A linha do log é a cena; o parágrafo ao lado é o fato.
+   ===================================================================== */
+.fx-log {
+  margin-top: 2.75rem;
+  padding-left: 0;
+  list-style: none;
+  border-top: 1px solid color-mix(in srgb, var(--color-ink-500) 70%, transparent);
+}
+
+.fx-log__row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: clamp(2rem, 5vw, 4.5rem);
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: clamp(1.25rem, 4vw, 3.25rem);
+  align-items: center;
+  padding-block: clamp(1.25rem, 2.4vw, 1.85rem);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-ink-500) 62%, transparent);
 }
 
-.mk-ledger > div {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: baseline;
-  gap: 0.35rem 1.25rem;
-  padding-block: 1.05rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-ink-500) 80%, transparent);
+/* O diário ZIGUEZAGUEIA: cena à esquerda numa linha, à direita na seguinte. Oito
+   linhas idênticas empilhadas voltariam a ser o grid de features que esta seção
+   existe para não ser — e o olho perde o fio numa lista longa e regular. */
+.fx-log__row:nth-child(even) {
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
 }
 
-.mk-ledger dt {
-  font-family: var(--font-display);
-  font-size: 1.18rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--color-starlight);
-  white-space: nowrap;
+.fx-log__row:nth-child(even) .fx-log__line {
+  grid-column: 2;
+  grid-row: 1;
 }
 
-.mk-ledger dt::before {
+.fx-log__row:nth-child(even) .fx-log__fact {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+/* A cena vem no PAINEL do diário de bordo, o mesmo componente que a partida
+   desenha no miolo do tabuleiro: caixa recuada, filete de latão à esquerda,
+   slab tabular. É o artefato do produto, não uma citação decorativa. */
+.fx-log__line {
+  position: relative;
+  padding: 0.85rem 1rem 0.85rem 1.15rem;
+  border: 1px solid color-mix(in srgb, var(--color-ink-500) 60%, transparent);
+  border-radius: var(--radius-sharp);
+  background: color-mix(in srgb, var(--color-ink-950) 58%, transparent);
+  font-family: var(--font-slab);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--color-starlight) 92%, var(--color-brass));
+  max-width: 44ch;
+}
+
+.fx-log__line::before {
   content: "";
-  display: inline-block;
-  width: 0.55rem;
-  height: 0.55rem;
-  margin-right: 0.65rem;
-  vertical-align: 6%;
-  background: var(--ledger-hue, var(--color-brass));
-  border-radius: 1px;
+  position: absolute;
+  left: 0;
+  top: 0.9rem;
+  bottom: 0.9rem;
+  width: 2px;
+  background: var(--color-brass);
+  opacity: 0.55;
+  transition:
+    opacity var(--motion-base) var(--ease-standard),
+    top var(--motion-base) var(--ease-emphasis),
+    bottom var(--motion-base) var(--ease-emphasis);
 }
 
-.mk-ledger dd {
-  margin: 0;
-  font-size: 0.88rem;
+.fx-log__row:hover .fx-log__line::before {
+  top: 0.3rem;
+  bottom: 0.3rem;
+  opacity: 1;
+}
+
+.fx-log__fact h3 {
+  font-size: 1.35rem;
+  letter-spacing: 0.05em;
+  color: var(--color-brass-glow);
+}
+
+.fx-log__fact p {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
   color: var(--color-starlight-muted);
 }
 
-/* ---------- Produto real ---------- */
-.mk-shots {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(1.5rem, 3vw, 2.5rem);
-  margin-top: 2.5rem;
-}
-
-/* ---------- Temas ---------- */
-.mk-themes {
+/* =====================================================================
+   CAPÍTULO 3 — DOIS TABULEIROS
+   Duas escrituras, e a do Atlas volta a ser AZUL (data-world="atlas"): os dois
+   mundos existem no jogo, então existem aqui.
+   ===================================================================== */
+.fx-boards__grid {
   display: grid;
   grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  gap: clamp(2rem, 4vw, 3.5rem);
-  margin-top: 2.5rem;
-  align-items: stretch;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  margin-top: 2.75rem;
+  align-items: start;
 }
 
-/* Título de propriedade do universo atual: a barra de luzes de cidade em cima
-   é a assinatura do tabuleiro (10 grupos, 10 cores). */
-.mk-deed {
-  border: 1px solid color-mix(in srgb, var(--color-brass) 30%, var(--color-ink-500));
+.fx-deed {
+  position: relative;
+  padding: clamp(1.35rem, 2.6vw, 2rem);
+  border: 1px solid color-mix(in srgb, var(--color-brass) 26%, var(--color-ink-500));
   border-radius: var(--radius-card);
-  background: color-mix(in srgb, var(--color-ink-950) 66%, transparent);
+  background: color-mix(in srgb, var(--color-ink-950) 72%, transparent);
   box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
-.mk-deed__stripe {
+.fx-deed--fuligem {
+  padding-top: calc(clamp(1.35rem, 2.6vw, 2rem) + 0.5rem);
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 0%, rgb(217 130 46 / 0.09), transparent 62%),
+    color-mix(in srgb, var(--color-ink-950) 72%, transparent);
+}
+
+/* A assinatura da Fuligem é o filete REBITADO, como a do Atlas é a barra de dez
+   luzes: cada tabuleiro se anuncia com o próprio ornamento. */
+.fx-deed--fuligem::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 6px;
+  background:
+    radial-gradient(circle 2px at 10px 50%, var(--color-brass) 98%, transparent),
+    radial-gradient(circle 2px at calc(100% - 10px) 50%, var(--color-brass) 98%, transparent),
+    linear-gradient(var(--color-brass), var(--color-brass)) center / calc(100% - 32px) 1px;
+  background-repeat: no-repeat;
+  opacity: 0.7;
+}
+
+/* A barra de luzes de cidade: 10 grupos, 10 cores — a assinatura do Atlas. */
+.fx-deed__lights {
+  position: absolute;
+  inset: 0 0 auto 0;
   display: grid;
   grid-template-columns: repeat(10, 1fr);
-  height: 0.55rem;
+  height: 0.5rem;
 }
 
-.mk-deed__body {
-  padding: 1.4rem 1.5rem 1.5rem;
+.fx-deed--atlas {
+  padding-top: calc(clamp(1.35rem, 2.6vw, 2rem) + 0.5rem);
+  background: color-mix(in srgb, var(--color-ink-900) 78%, transparent);
 }
 
-.mk-deed__body h3 {
-  font-size: 1.65rem;
+.fx-deed__kicker {
+  font-family: var(--font-slab);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+  color: var(--color-brass);
 }
 
-.mk-deed__body > p {
-  margin-top: 0.6rem;
-  font-size: 0.9rem;
+.fx-deed h3 {
+  margin-top: 0.35rem;
+  font-size: clamp(1.7rem, 3vw, 2.2rem);
+}
+
+.fx-deed__lede {
+  margin-top: 0.7rem;
+  font-size: 0.92rem;
   color: var(--color-starlight-muted);
 }
 
-.mk-deed__cities {
+.fx-deed__lede b {
+  color: var(--color-starlight);
+  font-weight: 600;
+}
+
+.fx-deed__tags {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
@@ -654,49 +1220,149 @@ a:hover {
   list-style: none;
 }
 
-.mk-deed__cities li {
+.fx-deed__tags li {
   padding: 0.28rem 0.6rem;
-  border: 1px solid color-mix(in srgb, var(--city-hue, var(--color-brass)) 40%, var(--color-ink-500));
+  border: 1px solid color-mix(in srgb, var(--tag-hue, var(--color-brass)) 42%, var(--color-ink-500));
   border-radius: var(--radius-chip);
-  background: color-mix(in srgb, var(--city-hue, var(--color-brass)) 9%, var(--color-ink-950));
+  background: color-mix(in srgb, var(--tag-hue, var(--color-brass)) 10%, var(--color-ink-950));
   font-family: var(--font-slab);
   font-size: 0.72rem;
   color: var(--color-starlight);
 }
 
-/* O compartimento do próximo tabuleiro: assumidamente vazio, sem promessa. */
-.mk-next-board {
+.fx-deed__specs {
+  margin-top: 1.4rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-ink-500) 70%, transparent);
+}
+
+.fx-deed__specs > div {
+  display: grid;
+  grid-template-columns: minmax(0, 10rem) minmax(0, 1fr);
+  gap: 0.2rem 1.25rem;
+  padding-block: 0.7rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-ink-500) 55%, transparent);
+}
+
+.fx-deed__specs dt {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-starlight);
+}
+
+.fx-deed__specs dd {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-starlight-muted);
+}
+
+/* =====================================================================
+   CAPÍTULO 4 — A PROVA
+   Composição sobreposta com profundidade, não parede de PNG: a mesa grande
+   ancorada, o pregão entrando por cima dela, e as duas provas menores lado a
+   lado embaixo.
+   ===================================================================== */
+.fx-proof__stack {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1.25rem, 3vw, 2.25rem);
+  margin-top: 2.75rem;
+}
+
+.fx-shot {
+  position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 0.6rem;
-  padding: 1.5rem;
-  border: 1px dashed color-mix(in srgb, var(--color-ink-300) 55%, transparent);
-  border-radius: var(--radius-card);
+  border: 1px solid color-mix(in srgb, var(--color-brass) 24%, var(--color-ink-500));
+  border-radius: var(--radius-sharp);
+  background: color-mix(in srgb, var(--color-ink-950) 82%, transparent);
+  padding: 8px;
+  box-shadow: var(--shadow-lift);
+  transition: transform var(--motion-slow) var(--ease-emphasis);
+}
+
+.fx-shot img {
+  border-radius: 1px;
+  border: 1px solid var(--color-ink-abyss);
+}
+
+.fx-shot figcaption {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.2rem 0.1rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
   color: var(--color-starlight-muted);
 }
 
-.mk-next-board h3 {
-  font-size: 1.25rem;
-  color: var(--color-starlight-muted);
+.fx-shot figcaption::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-brass);
 }
 
-.mk-next-board p {
-  font-size: 0.88rem;
+.fx-shot--main {
+  grid-column: 1 / -1;
 }
 
-/* ---------- CTA final ---------- */
-.mk-finale {
-  padding-block: clamp(3.5rem, 9vh, 6rem);
+/* A legenda da prova principal sobe para o TOPO: é o pregão que entra por baixo
+   dela, e embaixo ela ficava coberta pela sobreposição em telas médias. */
+.fx-shot--main figcaption {
+  order: -1;
+  padding: 0.1rem 0.2rem 0.6rem;
+}
+
+/* O pregão entra POR CIMA da mesa: as duas telas são do mesmo momento de
+   partida, e a sobreposição diz isso melhor que uma legenda. */
+.fx-shot--inset {
+  grid-column: 1 / -1;
+  justify-self: end;
+  width: min(52%, 30rem);
+  margin-top: clamp(-9rem, -14vw, -4rem);
+  margin-right: clamp(-1.5rem, -2vw, 0rem);
+  z-index: 1;
+}
+
+.fx-shot--main:hover,
+.fx-shot--inset:hover {
+  transform: translateY(-5px);
+}
+
+/* =====================================================================
+   CLÍMAX
+   ===================================================================== */
+.fx-finale {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  padding-block: clamp(4rem, 11vh, 7.5rem);
   text-align: center;
 }
 
-.mk-finale .mk-container {
+/* A brasa da fornalha subindo do rodapé — a última luz da página. */
+.fx-finale__glow {
+  position: absolute;
+  inset: auto 0 -30% 0;
+  z-index: -1;
+  height: 70%;
+  pointer-events: none;
+  background: radial-gradient(ellipse 60% 100% at 50% 100%, rgb(217 130 46 / 0.22), transparent 68%);
+  animation: fx-forge-breathe 11s ease-in-out infinite;
+}
+
+.fx-finale .mk-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.4rem;
-  padding-block: clamp(2.5rem, 5vw, 4rem);
+  gap: 1.1rem;
+  padding-block: clamp(2.5rem, 5vw, 3.75rem);
   border-block: 1px solid color-mix(in srgb, var(--color-brass) 26%, var(--color-ink-500));
   background:
     repeating-linear-gradient(
@@ -713,21 +1379,40 @@ a:hover {
       bottom / 100% 3px no-repeat;
 }
 
-.mk-finale h2 {
-  font-size: clamp(2.2rem, 5vw, 3.4rem);
-  line-height: 0.92;
-  max-width: 18ch;
+.fx-finale__kicker {
+  font-family: var(--font-slab);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-brass);
 }
 
-.mk-finale h2 b {
+.fx-finale h2 {
+  font-size: clamp(2.6rem, 7vw, 4.5rem);
+  line-height: 0.9;
+  max-width: 16ch;
+  text-shadow: 0 2px 0 rgb(7 5 4 / 0.9), 0 0 34px rgb(217 130 46 / 0.22);
+}
+
+.fx-finale h2 b {
   font-weight: 400;
   color: var(--color-brass);
 }
 
-.mk-finale p {
+.fx-finale__lede {
   color: var(--color-starlight-muted);
   font-size: 0.95rem;
-  max-width: 52ch;
+  max-width: 54ch;
+}
+
+.fx-finale__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 0.4rem;
 }
 
 /* ---------- Footer ---------- */
@@ -924,115 +1609,135 @@ a:hover {
   margin-top: 0.5rem;
 }
 
-/* ---------- O momento autoral: a chegada do hero ----------
-   Uma entrada só, orquestrada (eyebrow → letreiro → texto → ações → mapa),
-   com os tokens de movimento do jogo. Sob movimento reduzido as durações
-   zeram (tokens.css) e tudo simplesmente ESTÁ lá. */
-@keyframes mk-arrive {
-  from {
-    opacity: 0;
-    transform: translateY(0.6rem);
+/* =====================================================================
+   ENHANCEMENT ROLADO — scroll-driven, e SÓ em decoração.
+   Nada de texto, imagem ou CTA depende disto: sem suporte a
+   `animation-timeline`, sem JavaScript ou com movimento reduzido, cada
+   elemento já está no seu estado final. É por isso que o peão do trilho tem
+   como posição PADRÃO o fim do percurso, e não o começo.
+   ===================================================================== */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes fx-pawn-run {
+      from {
+        transform: translateX(0);
+      }
+      to {
+        transform: translateX(calc(100% - 26px));
+      }
+    }
+
+    .fx-path__pawn {
+      animation: fx-pawn-run linear both;
+      animation-timeline: view();
+      animation-range: entry 30% cover 62%;
+    }
+
+    /* Deslocamento curto entre as provas: a sobreposição ganha profundidade
+       quando as duas camadas não sobem na mesma velocidade. */
+    @keyframes fx-shot-drift {
+      from {
+        transform: translateY(2.2rem);
+      }
+      to {
+        transform: translateY(-1.4rem);
+      }
+    }
+
+    .fx-shot--inset {
+      animation: fx-shot-drift linear both;
+      animation-timeline: view();
+      animation-range: cover 12% cover 88%;
+    }
   }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.mk-hero [data-arrive] {
-  animation: mk-arrive var(--motion-slow) var(--ease-emphasis) both;
-}
-
-.mk-hero [data-arrive="2"] {
-  animation-delay: calc(var(--motion-fast) * 0.75);
-}
-
-.mk-hero [data-arrive="3"] {
-  animation-delay: calc(var(--motion-fast) * 1.5);
-}
-
-.mk-hero [data-arrive="4"] {
-  animation-delay: calc(var(--motion-fast) * 2.25);
 }
 
 /* ---------- Responsivo ---------- */
-/* Tela BAIXA (paisagem de celular): o letreiro cede altura pra dobra mostrar o CTA —
-   mesma decisão da home do jogo, que dimensiona o wordmark também por vh. */
-@media (max-height: 520px) {
-  .mk-hero {
-    padding-block: 1.25rem 2rem;
+/* Tela BAIXA (paisagem de celular): o letreiro cede altura para a dobra mostrar
+   o CTA — mesma decisão da home do jogo. */
+@media (max-height: 560px) {
+  .fx-hero {
+    padding-top: 1rem;
   }
 
-  .mk-hero h1 {
-    font-size: clamp(2.2rem, 14vh, 3.2rem);
+  .fx-hero__say h1 {
+    font-size: clamp(2.2rem, 15vh, 3.4rem);
   }
 
-  .mk-hero__tagline {
-    margin-top: 0.8rem;
+  .fx-hero__tagline {
+    margin-top: 0.7rem;
+    font-size: 1.05rem;
   }
 
-  .mk-hero__actions {
-    margin-top: 1.1rem;
+  .fx-hero__lede {
+    display: none;
+  }
+
+  .fx-hero__actions {
+    margin-top: 1rem;
+  }
+
+  .fx-hero__sky {
+    height: 100%;
   }
 }
 
 @media (max-width: 900px) {
-  .mk-hero .mk-container {
+  .fx-boards__grid {
     grid-template-columns: 1fr;
   }
 
-  .mk-themes {
+  .fx-log__row,
+  .fx-log__row:nth-child(even) {
     grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  /* Em coluna o ziguezague se desfaz — e as colunas EXPLÍCITAS das linhas pares
+     precisam ser desfeitas junto, senão `grid-column: 2` inventa uma segunda
+     coluna implícita e metade das linhas encolhe pela metade. */
+  .fx-log__row:nth-child(even) .fx-log__line,
+  .fx-log__row:nth-child(even) .fx-log__fact {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  /* Em coluna o FATO vem antes da cena: quem varre a página lê o nome da
+     mecânica primeiro, e a cena vira o comentário — a inversão que a leitura
+     de uma coluna só pede. */
+  .fx-log__fact {
+    order: -1;
   }
 }
 
 @media (max-width: 760px) {
-  .mk-ledger {
+  .fx-path__list {
+    grid-template-columns: 1fr;
+    max-width: 32rem;
+  }
+
+  .fx-path__rail {
+    display: none;
+  }
+
+  .fx-proof__stack {
     grid-template-columns: 1fr;
   }
 
-  /* Em tela estreita a linha do razão empilha: nome em cima, descrição embaixo —
-     lado a lado a descrição ficava espremida numa coluna de poucas palavras. */
-  .mk-ledger > div {
+  .fx-shot--inset {
+    width: min(78%, 24rem);
+    margin-top: clamp(-5rem, -14vw, -2.5rem);
+    margin-right: 0;
+  }
+
+  /* O tabuleiro AMPLIA em tela estreita: a 375px de largura o anel inteiro
+     viraria um fio de 2px. Sangrar pelos lados devolve escala de mesa. */
+  .fx-hero__table-svg {
+    width: 168%;
+  }
+
+  .fx-deed__specs > div {
     grid-template-columns: 1fr;
-  }
-
-  .mk-shots {
-    grid-template-columns: 1fr;
-  }
-
-  .mk-steps {
-    grid-template-columns: 1fr;
-    gap: 1.75rem;
-    max-width: 30rem;
-  }
-
-  /* Em coluna, a rota vira um fio vertical à esquerda das paradas. */
-  .mk-steps::before {
-    top: 2.4rem;
-    bottom: 0.5rem;
-    left: 1.02rem;
-    right: auto;
-    border-top: 0;
-    border-left: 2px dashed color-mix(in srgb, var(--color-brass) 34%, transparent);
-  }
-
-  .mk-steps li {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    column-gap: 1rem;
-  }
-
-  .mk-steps li::before {
-    grid-row: 1 / span 2;
-  }
-
-  .mk-steps h3 {
-    margin-top: 0.35rem;
-  }
-
-  .mk-steps p {
-    grid-column: 2;
   }
 }
 
@@ -1041,9 +1746,9 @@ a:hover {
     font-size: 1.05rem;
   }
 
-  /* Abaixo de 380px o wordmark competia com o botão "Jogar agora" e o cabeçalho quebrava em
-     duas linhas. O monograma sozinho identifica a marca, e o `aria-label` do link mantém o
-     nome disponível para leitor de tela. */
+  /* Abaixo de 380px o wordmark competia com o botão "Jogar agora" e o cabeçalho
+     quebrava em duas linhas. O monograma sozinho identifica a marca, e o
+     `aria-label` do link mantém o nome para leitor de tela. */
   @media (max-width: 380px) {
     .mk-brand__word {
       display: none;
@@ -1068,7 +1773,77 @@ a:hover {
     font-size: 0.88rem;
   }
 
-  .mk-hero__actions .mk-btn {
+  .fx-hero__actions .mk-btn,
+  .fx-finale__actions .mk-btn {
     flex: 1 1 100%;
+  }
+}
+
+/* =====================================================================
+   MOVIMENTO REDUZIDO — a composição inteira, parada.
+   Os tokens já zeram as durações (tokens.css); aqui as animações são
+   CANCELADAS, e não apenas encurtadas, porque `animation-delay` sobrevive à
+   duração zero: sem isto o letreiro passaria meio segundo invisível antes de
+   aparecer de estalo. Cada elemento fica no estado FINAL — cidade acesa,
+   tabuleiro montado, dados parados, peão na casa de destino, fumaça no meio da
+   coluna —, então o que se perde é a interpolação, nunca o quadro.
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .fx-board,
+  .fx-mills--far,
+  .fx-mills--near,
+  .fx-die,
+  .fx-walker__pop,
+  .fx-luck,
+  .fx-flare,
+  .fx-flare-glow,
+  .fx-beacon,
+  .fx-ember,
+  .fx-train,
+  .fx-gear,
+  .fx-finale__glow,
+  .fx-hero__say [data-arrive] {
+    animation: none;
+  }
+
+  .fx-forge {
+    animation: none;
+    opacity: 0.9;
+  }
+
+  /* O peão fica onde os dados o levaram: a última casa do percurso. */
+  .fx-walker__body {
+    animation: none;
+    transform: translate(-471.4px, 0);
+  }
+
+  .fx-luck {
+    opacity: 0.85;
+  }
+
+  .fx-flare {
+    opacity: 0.7;
+  }
+
+  .fx-beacon {
+    opacity: 0.7;
+  }
+
+  .fx-ember {
+    opacity: 0.4;
+  }
+
+  /* A pluma congela COM A FORMA DA COLUNA: `--puff-t` é a posição (0…1) de cada
+     sopro no ciclo, então o quadro parado é um quadro do MEIO — fumaça, não
+     bolha empilhada na boca da chaminé. */
+  .fx-plume circle {
+    animation: none;
+    opacity: calc(var(--puff-peak, 0.16) * 0.85);
+    transform:
+      translate(
+        calc(var(--puff-drift, 48px) * var(--puff-t, 0)),
+        calc(var(--puff-rise, -180px) * var(--puff-t, 0))
+      )
+      scale(calc(0.34 + 1.76 * var(--puff-t, 0)));
   }
 }

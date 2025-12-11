@@ -69,6 +69,69 @@
   --tracking-caps: 0.28em;
 }
 
+/* =====================================================================
+   MUNDO DA FULIGEM — o segundo tema do jogo, disponível como ESCOPO.
+   Copiado de `src/index.css` (`:root[data-board-theme="fuligem"]`) pela mesma
+   razão do bloco acima: importar o index.css arrastaria o jogo inteiro.
+   Os 10 `--color-group-*` NÃO entram aqui de propósito — na Fuligem eles
+   herdam a cartela do Atlas, já calibrada para contraste e dicromacia.
+
+   Uso: `data-world="fuligem"` em qualquer subárvore (a landing veste a página
+   inteira; `data-world="atlas"` devolve o azul onde o Atlas é o assunto).
+   ===================================================================== */
+[data-world="fuligem"] {
+  --color-ink-100: #e8dcc6;
+  --color-ink-200: #c9b89c;
+  --color-ink-300: #9b8a6f;
+  --color-ink-400: #6b5c48;
+  --color-ink-500: #4a3e31;
+  --color-ink-600: #352c22;
+  --color-ink-700: #2a221a;
+  --color-ink-800: #1e1812;
+  --color-ink-900: #15100c;
+  --color-ink-950: #0c0906;
+  --color-ink-abyss: #070504;
+
+  --color-starlight: #f0e7d4;
+  --color-starlight-muted: #b3a58c;
+  --color-brass: #d9822e;
+  --color-brass-soft: #a35a1b;
+  --color-brass-glow: #ffb36b;
+  --color-signal: #e2574b;
+
+  --shadow-card: 0 1px 0 0 #070504, 0 2px 8px -2px rgb(7 5 4 / 0.7);
+  --shadow-lift: 0 8px 24px -8px rgb(7 5 4 / 0.85), 0 0 18px -8px rgb(217 130 46 / 0.35);
+  --shadow-glow: 0 0 0 1px rgb(217 130 46 / 0.4), 0 0 22px -6px rgb(217 130 46 / 0.45);
+}
+
+/* O Atlas de volta, explícito — para a seção onde o assunto é o outro tabuleiro.
+   Repete os valores do `:root` porque um escopo aninhado não herda de volta o que
+   um ancestral com `data-world="fuligem"` já sobrescreveu. */
+[data-world="atlas"] {
+  --color-ink-100: #cfd9ec;
+  --color-ink-200: #a3b2cf;
+  --color-ink-300: #71809f;
+  --color-ink-400: #48546f;
+  --color-ink-500: #2c3750;
+  --color-ink-600: #202942;
+  --color-ink-700: #182136;
+  --color-ink-800: #121a2c;
+  --color-ink-900: #0d1424;
+  --color-ink-950: #060b17;
+  --color-ink-abyss: #04070f;
+
+  --color-starlight: #eef2fb;
+  --color-starlight-muted: #93a1bd;
+  --color-brass: #d9a650;
+  --color-brass-soft: #b58430;
+  --color-brass-glow: #ffd98a;
+  --color-signal: #e2574b;
+
+  --shadow-card: 0 1px 0 0 #060b17, 0 2px 8px -2px rgb(2 6 16 / 0.65);
+  --shadow-lift: 0 8px 24px -8px rgb(2 6 16 / 0.75), 0 2px 6px -2px rgb(2 6 16 / 0.45);
+  --shadow-glow: 0 0 0 1px rgb(217 166 80 / 0.4), 0 0 28px -4px rgb(217 166 80 / 0.35);
+}
+
 /* Mesmo freio do jogo (src/index.css): sob movimento reduzido as três durações zeram e
    toda transição/animação que resolve por var(--motion-*) para de se mover — o fato
    (posição final, cor, conteúdo) continua inteiro. */
