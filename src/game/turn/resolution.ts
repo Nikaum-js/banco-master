@@ -17,6 +17,7 @@ export interface TurnPorts {
   onCollectCenter(state: GameState, playerId: string): void // Free Parking: coleta o pote (007)
   isEliminated(playerId: string): boolean
   onInsolvency?(playerId: string, amount: number, creditorId: string | null): void // → Falência (003)
+  afterPassGo?(state: GameState, playerId: string): void // → juros de empréstimo no GO (010)
 }
 
 export interface ResolveCtx {
@@ -44,7 +45,12 @@ export const resolutionRegistry: Record<Square['kind'], ResolutionHandler> = {
   utility: stub,
   acaso: stub,
   tesouro: stub,
-  'bus-ticket': stub,
+  // Espaço Bus Ticket (009, SRS §2.7): parar concede +1 ticket; passar não dispara resolução.
+  'bus-ticket': ({ state, playerId }) => {
+    const p = state.players.find((x) => x.id === playerId)
+    if (p) p.busTickets += 1
+    return { done: true }
+  },
   // Roteados pelo turno:
   tax: ({ square, ports, state, playerId }) => {
     if (square.kind !== 'tax') return { done: true }
