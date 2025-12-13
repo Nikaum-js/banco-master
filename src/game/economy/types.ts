@@ -6,12 +6,16 @@ export interface Title {
   ownerId: string | null // null = banco (livre)
   mortgaged: boolean // gerido pela spec Hipoteca; lido aqui para isentar aluguel
   houses: number // 0–4 (só cidades; aeroporto/utilidade ficam 0) — Construção (004)
-  hotel: boolean // hotel construído (substitui 4 casas) — Construção (004)
+  hotel: boolean // hotel construído (substitui 4 casas) — Construção (004); permanece true nos níveis acima
+  hotel2: boolean // 2º hotel (nível 6) — Construção avançada (011, §14); não altera aluguel
+  skyscraper: boolean // Skyscraper (nível 7) — Construção avançada (011, §13.7)
+  hangar: boolean // Hangar de aeroporto — dobra o aluguel daquele aeroporto (011, §13.6)
 }
 
 export interface BankStock {
   houses: number // de 40 (D-017)
-  hotels: number // de 16
+  hotels: number // de 16 (2º hotel consome do mesmo estoque)
+  skyscrapers: number // estoque global de Skyscrapers (011, §13.7) — limite provisório de tema
 }
 
 export interface HouseAuction {
