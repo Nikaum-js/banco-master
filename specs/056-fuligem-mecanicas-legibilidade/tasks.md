@@ -34,3 +34,10 @@
 - [x] T018 Capturar e inspecionar screenshots reais do tabuleiro e do leilão
 - [x] T019 Revisar diff e criar micro-commits sem arquivos alheios
 - [x] T020 Fazer push de `main` e acompanhar CI/deploy até estado terminal
+
+## Fase 6 — Simplificação pós-playtest (FR-013)
+
+- [x] T021 Registrar D-072, atualizar SRS v1.32, contexto e artefatos da spec
+- [x] T022 Remover `smokeTax` do catálogo, motor, UI e simulação
+- [x] T023 Provar por teste que construções da Fuligem não cobram taxa nem alimentam o pote
+- [x] T024 Executar lint, typecheck, testes e build

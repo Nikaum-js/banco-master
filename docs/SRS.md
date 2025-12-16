@@ -1,6 +1,6 @@
 # Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.31
+**Versão:** 1.32
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -99,8 +99,9 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 O mapa **Cidades do Mundo** é composto por **48 casas** dispostas em um quadrado,
 percorridas no sentido horário (11 casas por lado + 4 cantos).
 
-> 📌 **Mapas** (v1.31, [D-069](adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md),
-> [D-070](adr/D-070-fuligem-tem-topologia-e-regras-proprias.md)): cada mapa fornece, por
+> 📌 **Mapas** (v1.32, [D-069](adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md),
+> [D-070](adr/D-070-fuligem-tem-topologia-e-regras-proprias.md),
+> [D-072](adr/D-072-taxa-de-fumaca-sai-da-fuligem.md)): cada mapa fornece, por
 > catálogo de fonte única, suas casas, grupos, topologia, apresentação e regras próprias
 > explicitamente declaradas. O motor, a autoridade da sala e os contratos de estado
 > continuam compartilhados. Os nomes, quantidades e valores das §§2.2–2.7 são do mapa
@@ -224,8 +225,9 @@ ao jogador e não estiver hipotecada, concede o bônus correspondente:
 | Estanho | impostos e aluguéis pagos pelo dono caem 15% |
 | Cobre | aluguel das propriedades do dono com qualquer construção sobe 25% |
 
-Construir **Fábrica**, **Complexo de Fábricas** ou **Torre de Ferro** paga `R$ 50` para a
-**Sorte Grande**. Construir Oficina não paga essa **Taxa de Fumaça**.
+Construir na Cidade da Fuligem paga somente o custo normal da construção. Não existe
+cobrança adicional por subir para **Fábrica**, **Complexo de Fábricas** ou **Torre de
+Ferro**, e construções não alimentam a **Sorte Grande** ([D-072](adr/D-072-taxa-de-fumaca-sai-da-fuligem.md)).
 
 O anel da Fuligem usa a redução de casas para dar mais área a cada célula e mostrar nomes
 completos. O miolo não exibe nomes de regiões ou linhas divisórias: fica reservado às
@@ -1331,4 +1333,4 @@ sendo a fonte de verdade da **regra**, o `CONTEXT.md` é a fonte dos **nomes**.
 
 ---
 
-**Magnata Imobiliário — SRS v1.31 | Julho 2026 | Documento de fonte de verdade absoluta**
+**Magnata Imobiliário — SRS v1.32 | Julho 2026 | Documento de fonte de verdade absoluta**

@@ -79,8 +79,9 @@
 - [D-067](D-067-retencao-leve-fica-na-sala-privada.md) — Retenção leve fica na sala privada: até 10 resumos, estatísticas derivadas e presets sem regra nova (refina D-019/D-038/D-046/D-052)
 - [D-064](D-064-rebalanceamento-do-catalogo-de-cartas.md) — Rebalanceamento do catálogo de cartas: Acaso 21 / Tesouro 18, lendárias reforçadas (Confisco Geral, Aquisição a ½ preço, Imposto Federal 25%), Greve unificada, Imunidade total de 1 volta, 8 cartas novas e Refinanciamento removido (SRS §10, v1.26)
 - [D-069](D-069-segundo-mapa-jogavel-cidade-da-fuligem.md) — Segundo mapa jogável selecionado por sala: Cidade da Fuligem (`fuligem`); mapa é conteúdo + apresentação sobre o mesmo motor, gravado na sala e imutável; fallback `atlas`; conceito Fliperama Neon removido (revisa SRS §16; *D-068 reservada pela worktree da 054*)
-- [D-070](D-070-fuligem-tem-topologia-e-regras-proprias.md) — Cidade da Fuligem usa tabuleiro próprio de 40 casas, 8 bairros, Taxa de Fumaça e Desvio pela Ferrovia; o miolo não recebe zonas ou divisórias (refina D-017/D-069)
+- [D-070](D-070-fuligem-tem-topologia-e-regras-proprias.md) — Cidade da Fuligem usa tabuleiro próprio de 40 casas, 8 bairros e Desvio pela Ferrovia; a Taxa de Fumaça foi revogada pela D-072 (refina D-017/D-069)
 - [D-071](D-071-minas-sao-ativos-passivos-sem-aluguel.md) — Minas são títulos passivos sem aluguel: Ferro −25% em construção, Carvão +50% em Ferrovias, Estanho −15% em impostos/aluguéis pagos e Cobre +25% em propriedades construídas
+- [D-072](D-072-taxa-de-fumaca-sai-da-fuligem.md) — Taxa de Fumaça removida: construções da Fuligem pagam somente o custo normal; Desvio pela Ferrovia e demais regras permanecem (revoga parcialmente D-070)
 
 > ℹ️ **Renumeração na integração da 043** (a colisão que este arquivo avisava): a worktree da 043
 > tinha escrito a identidade de transporte como `D-035` e o código de reentrada como `D-038`, e

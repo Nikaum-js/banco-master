@@ -31,12 +31,12 @@ gatilhos do leilão, autoridade multiplayer e acessibilidade modal intactos.
 
 ## Constitution Check
 
-- **I — SRS absoluto:** passou. D-070/D-071 e SRS v1.31 antecedem a spec.
+- **I — SRS absoluto:** passou. D-070/D-071/D-072 e SRS v1.32 antecedem a implementação vigente.
 - **II — Discovery antes de código:** passou para as mudanças novas; a spec 056 está
   aprovada pelo brief explícito.
 - **III — Tesouro impactante:** não afetado.
-- **IV — Catch-up discreto:** preservado; Taxa de Fumaça continua indo à Sorte Grande sem
-  rótulo de catch-up.
+- **IV — Catch-up discreto:** preservado; a D-072 removeu a Taxa de Fumaça sem criar
+  substituto ou destacar mecanismos de catch-up.
 - **V — Sem cooperação obrigatória:** preservado.
 - **VI — Privacidade de cartas:** não afetado; o leilão só revela saldos que já são públicos.
 - **VII — Resiliência de sessão:** não há estado persistido novo.

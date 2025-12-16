@@ -14,8 +14,10 @@
 > ausência de regra própria foram substituídos pela
 > [D-070](../../docs/adr/D-070-fuligem-tem-topologia-e-regras-proprias.md), pela
 > [D-071](../../docs/adr/D-071-minas-sao-ativos-passivos-sem-aluguel.md) e pela
+> [D-072](../../docs/adr/D-072-taxa-de-fumaca-sai-da-fuligem.md), além da
 > [spec 056](../056-fuligem-mecanicas-legibilidade/spec.md). Seleção autoritativa por sala,
-> identidade visual e remoção do Neon continuam válidas.
+> identidade visual e remoção do Neon continuam válidas. As menções abaixo à antiga casa
+> ou cobrança “Taxa de Fumaça” são registro histórico e não descrevem a regra vigente.
 
 ## Clarifications
 

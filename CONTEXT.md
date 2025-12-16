@@ -67,9 +67,6 @@ Nome de apresentação, no mapa Cidade da Fuligem, do Hotel; **Complexo de Fábr
 Título comprável da Cidade da Fuligem que não cobra aluguel nem recebe construção. Dá ao dono um bônus passivo conforme o metal enquanto não estiver hipotecada ([D-071](./docs/adr/D-071-minas-sao-ativos-passivos-sem-aluguel.md)).
 _Avoid_: Utilidade, Ferrovia
 
-**Taxa de Fumaça**:
-Pagamento de R$ 50 à Sorte Grande ao construir Fábrica, Complexo de Fábricas ou Torre de Ferro na Cidade da Fuligem. Oficina não paga ([D-070](./docs/adr/D-070-fuligem-tem-topologia-e-regras-proprias.md)).
-
 **Desvio pela Ferrovia**:
 Movimento opcional, ao terminar o turno numa Ferrovia própria e não hipotecada, para outra Ferrovia própria e não hipotecada. Não passa pelo GO nem cobra aluguel na chegada ([D-070](./docs/adr/D-070-fuligem-tem-topologia-e-regras-proprias.md)).
 

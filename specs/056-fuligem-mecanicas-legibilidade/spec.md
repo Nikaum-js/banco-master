@@ -12,7 +12,8 @@ deve ter mais espaço e os nomes grandes precisam aparecer. No leilão, não des
 painéis laterais porque o caixa dos adversários informa o lance estratégico.”
 
 > Regras criadas antes da spec: [D-070](../../docs/adr/D-070-fuligem-tem-topologia-e-regras-proprias.md),
-> [D-071](../../docs/adr/D-071-minas-sao-ativos-passivos-sem-aluguel.md) e SRS v1.31
+> [D-071](../../docs/adr/D-071-minas-sao-ativos-passivos-sem-aluguel.md),
+> [D-072](../../docs/adr/D-072-taxa-de-fumaca-sai-da-fuligem.md) e SRS v1.32
 > (§2.8, §12.1–12.3). Esta spec operacionaliza essas decisões.
 
 ## Clarifications
@@ -21,6 +22,7 @@ painéis laterais porque o caixa dos adversários informa o lance estratégico.�
 |---|---|---|
 | “Minas não pagam aluguel” impede compra/leilão? | Não. Mina continua título comprável, leiloável, negociável e hipotecável; somente a renda ao pousar é zero | D-071 |
 | Quais bônus permanecem? | Ferro −25% em construções; Carvão +50% nas Ferrovias; Estanho −15% em impostos/aluguéis pagos; Cobre +25% em propriedades com qualquer construção | D-071 |
+| A Fuligem cobra Taxa de Fumaça ao construir? | Não. Construções pagam somente seu custo normal e não alimentam a Sorte Grande | D-072 |
 | O que remover do miolo? | Os quatro nomes de região e suas linhas/divisórias; dados, diário, Sorte Grande e dívida permanecem | brief + D-070 |
 | Como “aumentar” as casas? | A faixa periférica da topologia Fuligem ganha mais profundidade e os textos usam o nome completo; o Atlas permanece sem mudança | brief + D-070 |
 | Modal de leilão pode deixar o fundo clicável? | Não. Mantém foco e bloqueio de interação, mas sem blur/véu sobre os saldos laterais | SRS §12.2 |
@@ -64,8 +66,11 @@ truncamento programático.
 
 1. **Given** o mapa Fuligem, **When** o tabuleiro renderiza, **Then** cada lado tem 9 casas
    entre cantos e a faixa periférica usa mais área que no Atlas.
-2. **Given** propriedades como “Avenida Marechal Deodoro” e “Rua Treze de Maio”, **When**
-   renderizadas, **Then** o texto visível usa o nome completo e pode quebrar em linhas.
+2. **Given** propriedades como “Barro Preto” e “Treze de Maio”, **When** renderizadas,
+   **Then** o texto visível usa o nome completo e pode quebrar em linhas — em **até duas**.
+   A terceira linha é falha, e o conserto é no DADO, não no layout: o teto é por PALAVRA
+   (7 letras, medido contra a largura da casa), não por nome, então nome de duas ou três
+   palavras curtas é válido (ver `fuligemBoard.ts`). Truncar programaticamente é proibido.
 3. **Given** o miolo da Fuligem, **When** renderizado, **Then** não contém os nomes das
    antigas zonas nem linhas divisórias associadas.
 4. **Given** o mapa Atlas, **When** renderizado, **Then** sua topologia e seus rótulos
@@ -115,6 +120,8 @@ painéis de jogadores visíveis e foco contido no diálogo.
 - **FR-011**: alterações MUST ter testes de motor, apresentação, topologia e modal; o fluxo
   visual MUST ser verificado com screenshot real.
 - **FR-012**: a regra existente que abre leilão ao recusar compra MUST NOT mudar.
+- **FR-013**: construir Oficina, Fábrica, Complexo de Fábricas ou Torre de Ferro na Fuligem
+  MUST debitar somente o custo normal da construção e MUST NOT alimentar a Sorte Grande.
 
 ## Key Entities
 
