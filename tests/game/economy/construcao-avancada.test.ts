@@ -38,11 +38,11 @@ describe('2º hotel (US1)', () => {
   })
 
   it('SC-001: aluguel do 2º hotel é MAIOR que o do 1º hotel (§14.4)', () => {
-    const hotel = rentCity(100, 3, 3, { houses: 0, hotel: true, hotel2: false })
-    const hotel2 = rentCity(100, 3, 3, { houses: 0, hotel: true, hotel2: true })
+    const hotel = rentCity('navy', 100, 3, 3, { houses: 0, hotel: true, hotel2: false })
+    const hotel2 = rentCity('navy', 100, 3, 3, { houses: 0, hotel: true, hotel2: true })
     expect(hotel2).toBeGreaterThan(hotel)
-    expect(hotel).toBe(100 * 100) // HOTEL_RENT_MULT
-    expect(hotel2).toBe(100 * 175) // HOTEL2_RENT_MULT
+    expect(hotel).toBe(100 * 36) // navy hotel mult
+    expect(hotel2).toBe(100 * 47) // navy 2º hotel mult (> hotel)
   })
 
   it('SC-004: vende 2º hotel → metade, volta ao 1º hotel', () => {
@@ -111,11 +111,11 @@ describe('Skyscraper (US3)', () => {
   })
 
   it('SC-003: cidade com Skyscraper cobra o fixo; demais do grupo ×3', () => {
-    const comSky = rentCity(100, 3, 3, { houses: 0, hotel: true, hotel2: true, skyscraper: true }, true)
-    expect(comSky).toBe(100 * 250) // aluguel fixo, sem ×3 sobre si
+    const comSky = rentCity('navy', 100, 3, 3, { houses: 0, hotel: true, hotel2: true, skyscraper: true }, true)
+    expect(comSky).toBe(100 * 58) // arranha-céu fixo (navy), sem ×3 sobre si
 
-    const semSkyNoGrupo = rentCity(100, 3, 3, { houses: 0, hotel: true, hotel2: true }, true)
-    const base = rentCity(100, 3, 3, { houses: 0, hotel: true, hotel2: true }, false)
+    const semSkyNoGrupo = rentCity('navy', 100, 3, 3, { houses: 0, hotel: true, hotel2: true }, true)
+    const base = rentCity('navy', 100, 3, 3, { houses: 0, hotel: true, hotel2: true }, false)
     expect(semSkyNoGrupo).toBe(base * 3) // demais do grupo triplicam
   })
 
