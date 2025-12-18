@@ -12,6 +12,7 @@ import { THEME } from '@/game/theme'
 import { deedView, type BuildBlock } from '@/game/ui/deed/deedView'
 import { computeRents } from '@/game/ui/deed/deedRents'
 import { GROUP_COLOR } from './groupColors'
+import { skinParts, type SkinId } from './faceSkins'
 import { useTradeUI } from '@/game/ui/trade/tradeUI'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { markLayout, popoverPlacement, sideOf, type Side } from './topology'
@@ -421,12 +422,15 @@ export function PlayerFace({
   size = 24,
   active = false,
   asleep = false,
+  skin,
   className,
 }: {
   color: string
   size?: number | string
   active?: boolean
   asleep?: boolean
+  /** Visual do personagem (`boards/faceSkins`). Ausente = carinha clássica. */
+  skin?: SkinId
   className?: string
 }) {
   // Fallback de cor: nunca pinta a cabeça de preto se a cor vier vazia/indefinida.
@@ -436,6 +440,8 @@ export function PlayerFace({
   const bobDelay = `${(h % 2400) / 1000}s`
   const blinkDelayL = `${((h + 1300) % 5000) / 1000}s`
   const blinkDelayR = `${((h + 1430) % 5000) / 1000}s`  // levemente diferente
+  // Camadas da skin já resolvidas na cor do jogador (vazio na carinha clássica).
+  const s = skinParts(skin, head)
 
   return (
     <svg
@@ -456,17 +462,27 @@ export function PlayerFace({
       {/* Sombra da cabeça */}
       <ellipse cx="16" cy="30" rx="11" ry="1.6" fill="rgba(0,0,0,0.45)" />
 
-      {/* Cabeça */}
-      <circle cx="16" cy="15" r="13" fill={head} stroke="var(--color-ink-950)" strokeWidth="1.5" />
+      {/* Skin: camada atrás da cabeça (orelhas, crista, antena) */}
+      {s.behind}
+
+      {/* Cabeça — círculo padrão, ou o formato próprio da skin */}
+      {s.head ?? (
+        <circle cx="16" cy="15" r="13" fill={head} stroke="var(--color-ink-950)" strokeWidth="1.5" />
+      )}
 
       {/* Highlight 3D no topo */}
-      <ellipse
-        cx="12"
-        cy="9"
-        rx="5.5"
-        ry="3.5"
-        fill="rgba(255,255,255,0.28)"
-      />
+      {!s.noHighlight && (
+        <ellipse
+          cx="12"
+          cy="9"
+          rx="5.5"
+          ry="3.5"
+          fill="rgba(255,255,255,0.28)"
+        />
+      )}
+
+      {/* Skin: camada entre a cabeça e o rosto (focinho, máscara) */}
+      {s.mid}
 
       {/* Olhos — abertos ou fechados se "asleep" (jogador falido) */}
       {asleep ? (
@@ -474,6 +490,8 @@ export function PlayerFace({
           <path d="M9 15 Q11 16.5 13 15" stroke="var(--color-ink-950)" strokeWidth="1.4" fill="none" strokeLinecap="round" />
           <path d="M19 15 Q21 16.5 23 15" stroke="var(--color-ink-950)" strokeWidth="1.4" fill="none" strokeLinecap="round" />
         </>
+      ) : s.eyes ? (
+        s.eyes
       ) : (
         <>
           {/* Olho esquerdo (cada um piscando com delay próprio) */}
@@ -494,6 +512,8 @@ export function PlayerFace({
       {/* Boca */}
       {asleep ? (
         <line x1="13" y1="22" x2="19" y2="22" stroke="var(--color-ink-950)" strokeWidth="1.3" strokeLinecap="round" />
+      ) : s.mouth ? (
+        s.mouth
       ) : (
         <path
           d="M11.5 20.5 Q16 24 20.5 20.5"
@@ -503,6 +523,9 @@ export function PlayerFace({
           strokeLinecap="round"
         />
       )}
+
+      {/* Skin: camada sobre tudo (chapéu, cabelo, capacete) */}
+      {s.front}
 
       {/* Anel giratório do jogador da vez — na COR do player (não dourado fixo) */}
       {active && (
