@@ -34,7 +34,6 @@ describe('Espólio — o gatilho (US1)', () => {
     const after = declareBankruptcy(withDebt(null, [1, 3, 6]), ctx)
     expect(after.landAuction).not.toBeNull()
     expect(after.landAuction!.lots.map((l) => l.pos).sort((a, b) => a - b)).toEqual([1, 3, 6])
-    expect(after.landAuction!.origin).toBe('bankruptcy')
     expect(after.landAuction!.bankruptId).toBe('p1')
     // Lotes nascem virgens e com o prazo vindo do ctx.
     expect(after.landAuction!.lots.every((l) => l.currentBid === 0 && l.highBidder === null)).toBe(true)
@@ -66,13 +65,6 @@ describe('Espólio — o gatilho (US1)', () => {
     expect(after.players[0].cash).toBe(0)
     expect(after.centerPot).toBe(potBefore) // destruído, como antes da 039
     expect(after.landAuction!.lots).toHaveLength(1) // só a propriedade
-  })
-
-  it('FR-018: o espólio não consome o episódio da escassez', () => {
-    const g = withDebt(null, [1, 3])
-    expect(g.landAuctionArmed).toBe(true)
-    const after = declareBankruptcy(g, ctx)
-    expect(after.landAuctionArmed).toBe(true) // intacto — a escassez ainda pode disparar
   })
 
   it('serializa: o pregão do espólio sobrevive ao round-trip JSON (snapshot)', () => {

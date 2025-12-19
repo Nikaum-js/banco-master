@@ -120,7 +120,7 @@ test('cada jogador rola o Maior dado na própria vez e toda a mesa acompanha', a
   const host = await hostCtx.newPage()
   const guest = await guestCtx.newPage()
 
-  await host.goto('/')
+  await host.goto('/jogar')
   await host.getByRole('button', { name: /^Criar sala$/ }).click()
   await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
@@ -220,7 +220,7 @@ test('dois browsers jogam a mesma partida, cada um da sua perspectiva', async ({
   }
 
   // — 1. Tela inicial: a porta de entrada existe sem editar URL (FR-021) —
-  await host.goto('/')
+  await host.goto('/jogar')
   await expect(host.getByRole('button', { name: /^Criar sala$/ })).toBeVisible()
 
   await host.getByRole('button', { name: /^Criar sala$/ }).click()
@@ -309,7 +309,7 @@ test('queda do convidado pausa a mesa e diz quem caiu', async ({ browser }) => {
   const host = await hostCtx.newPage()
   const guest = await guestCtx.newPage()
 
-  await host.goto('/')
+  await host.goto('/jogar')
   await host.getByRole('button', { name: /^Criar sala$/ }).click()
   await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
@@ -374,7 +374,7 @@ test('leilão sobrevive ao reload do host — prazo preservado (SC-005/SC-009)',
   const host = await hostCtx.newPage()
   const guest = await guestCtx.newPage()
 
-  await host.goto('/')
+  await host.goto('/jogar')
   await host.getByRole('button', { name: /^Criar sala$/ }).click()
   await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
@@ -443,7 +443,7 @@ test('convidado reanexa por código a partir de um terceiro dispositivo', async 
   const host = await hostCtx.newPage()
   const guest = await guestCtx.newPage()
 
-  await host.goto('/')
+  await host.goto('/jogar')
   await host.getByRole('button', { name: /^Criar sala$/ }).click()
   await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })

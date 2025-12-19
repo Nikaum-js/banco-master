@@ -18,7 +18,7 @@ const ALL_KINDS: PlayerAction['kind'][] = [
   'resolve-pending', 'buy-property', 'decline-property', 'place-bid', 'pass-bid', 'place-land-bid',
   'build-house', 'sell-building', 'build-hangar', 'sell-hangar', 'mortgage', 'unmortgage',
   'play-hand-card', 'discard-card', 'choose-card-shortcut', 'confirm-card-reveal', 'respond-reaction',
-  'pay-debt', 'declare-bankruptcy', 'grant-loan', 'propose-loan', 'respond-loan', 'pay-off-loan',
+  'pay-debt', 'declare-bankruptcy', 'concede', 'grant-loan', 'propose-loan', 'respond-loan', 'pay-off-loan',
   'execute-trade', 'propose-trade', 'accept-trade', 'reject-trade', 'dismiss-notice',
 ]
 

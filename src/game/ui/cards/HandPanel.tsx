@@ -93,31 +93,18 @@ export function HandPanel() {
                 exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               >
+                {/* O acento local é a raridade: uma variável, e a classe resolve borda,
+                    filete, selo e hover a partir dela (padrão `.trade-deed-item`). */}
                 <article
-                  className={cn(
-                    'relative overflow-hidden rounded-[var(--radius-card)] border bg-coffee-700',
-                    'shadow-[inset_0_0_0_1px_var(--color-coffee-800),var(--shadow-card)] transition-all',
-                    c.playable
-                      ? 'border-coffee-500 hover:border-gold/60 hover:-translate-y-0.5 hover:shadow-[inset_0_0_0_1px_var(--color-coffee-800),var(--shadow-lift)]'
-                      : 'border-coffee-500/70',
-                  )}
+                  className={cn('hand-card', c.playable ? 'hand-card--playable' : 'hand-card--locked')}
+                  style={{ '--hand-card-accent': c.rarityColor } as React.CSSProperties}
                 >
-                  {/* faixa de raridade no topo */}
-                  <div className="h-1" style={{ background: c.rarityColor }} aria-hidden />
-                  <div
-                    className="px-3 pt-2.5 pb-3"
-                    style={{ background: `linear-gradient(180deg, color-mix(in srgb, ${c.rarityColor} 9%, transparent) 0%, transparent 55%)` }}
-                  >
+                  <div className="px-3 pt-3 pb-3">
                     <div className="flex items-start justify-between gap-2">
-                      <span className="display text-cream text-[15px] leading-tight flex-1 min-w-0">{c.label}</span>
-                      <span
-                        className="label text-nano shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sharp)] border leading-none"
-                        style={{ color: c.rarityColor, borderColor: `color-mix(in srgb, ${c.rarityColor} 40%, transparent)`, background: `color-mix(in srgb, ${c.rarityColor} 8%, transparent)` }}
-                      >
-                        {c.rarityLabel}
-                      </span>
+                      <span className="display text-starlight text-[15px] leading-tight flex-1 min-w-0 text-balance">{c.label}</span>
+                      <span className="hand-card__rarity label text-nano shrink-0">{c.rarityLabel}</span>
                     </div>
-                    <p className="text-cream-muted text-xs leading-snug mt-1.5">{c.desc}</p>
+                    <p className="text-starlight-muted text-xs leading-snug mt-1.5">{c.desc}</p>
 
                     {c.playable ? (
                       <Button
@@ -133,10 +120,7 @@ export function HandPanel() {
                         )}
                       </Button>
                     ) : (
-                      <p
-                        title={c.reason}
-                        className="mt-2.5 flex items-center gap-1.5 text-cream-muted text-[11px] leading-snug px-2.5 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-950/40 border border-coffee-500/50"
-                      >
+                      <p title={c.reason} className="hand-card__reason text-[11px] leading-snug mt-2.5">
                         <LockGlyph /> <span className="flex-1 min-w-0">{c.reason}</span>
                       </p>
                     )}
