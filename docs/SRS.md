@@ -72,7 +72,7 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Construção com grupo parcial | Permitida com penalidade no aluguel (70% com construção, 150% sem) |
 | Free Parking com prêmio acumulado | Presente — impostos/multas vão para o centro, prêmio inicial $500 |
 | GO Progressivo | Presente — escala de $100 (1º lugar) a $400 (último) por patrimônio |
-| Segundo hotel por propriedade | Presente — sequencial, mesmo aluguel, estratégico pelo estoque |
+| Segundo hotel por propriedade | Presente — sequencial, cobra **mais** aluguel que o 1º; 2 hotéis viram arranha-céu |
 | Empréstimos entre jogadores | Presentes — juros 10%–50%, cobrados a cada passagem pelo GO |
 | Imunidade de aluguel em negociações | Presente — pode ser negociada por N voltas ou até o fim |
 | Sistema de raridade de cartas | 3 tiers (Lendária/Rara/Comum) com cores (laranja/azul/verde) |
@@ -293,31 +293,16 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 - O jogador pode construir mesmo sem grupo completo (Seção 13.3), com penalidade.
 - Nenhuma propriedade do grupo pode estar hipotecada para iniciar construção.
 - **Uniformidade:** não pode haver diferença maior que 1 casa entre propriedades do mesmo grupo possuídas pelo jogador.
-- Sequência por propriedade: 0 → 1 → 2 → 3 → 4 casas → 1 hotel → 2 hotéis (Seção 14).
-- O hotel substitui as 4 casas (retornam ao banco).
-- **Limite global do banco:** 40 casas e 16 hotéis (escalado de 32/12 para acompanhar as 28 propriedades). Se houver escassez de casas, ocorre **leilão de casas** entre interessados (Seção 5.4) — a escassez segue sendo alavanca estratégica, sem virar trava constante.
+- Sequência por propriedade: 0 → 1 → 2 → 3 → 4 casas → 1 hotel → 2 hotéis (Seção 14) → arranha-céu (Seção 13.7).
+- O hotel substitui as 4 casas; **2 hotéis** se transformam em 1 **arranha-céu** (máx. 1 por propriedade).
+- **Sem limite de estoque:** casas, hotéis e arranha-céus são **ilimitados** — construir nunca é travado por falta de peças no banco. Não há escassez de construção (D-017 rev.); o jogo descarta a "escassez-como-bloqueio" por contrariar o catch-up discreto (Princípio IV).
 - Custos de construção definidos na ficha de cada propriedade no tema.
 
 ### 5.3 Venda de Construções
 
 - Pode vender casas/hotéis ao banco por **metade** do preço de construção, a qualquer momento.
-- Ao vender hotel: recebe 4 casas do banco (se disponíveis). Se não houver casas suficientes, jogador escolhe entre esperar disponibilidade ou aceitar apenas o dinheiro.
+- Ao vender, desce um nível na escada: arranha-céu → 2º hotel → 1º hotel → 4 casas → casas. Vender o hotel devolve a propriedade a 4 casas.
 - A venda deve respeitar a regra de uniformidade.
-
-### 5.4 Leilão de Casas em Escassez
-
-Quando o banco não tem casas suficientes para atender múltiplos jogadores que querem construir simultaneamente:
-
-- As casas disponíveis vão a leilão entre os jogadores interessados.
-- O maior lance leva a(s) casa(s).
-- Regras gerais de leilão (Seção 7) se aplicam.
-
-### 5.5 Venda de Hotel sem Casas Disponíveis
-
-Caso o jogador precise vender hotel para pagar dívida, mas o banco não tenha 4 casas disponíveis para troca:
-
-- O jogador é obrigado a desmontar **todos** os hotéis do grupo simultaneamente, recebendo apenas o dinheiro equivalente às casas que o banco consegue fornecer.
-- Não é permitido desmontar apenas um hotel parcialmente.
 
 ---
 
@@ -350,7 +335,6 @@ Caso o jogador precise vender hotel para pagar dívida, mas o banco não tenha 4
 
 - Jogador para em propriedade livre e recusa a compra.
 - Banco leiloa propriedades de jogador falido (quando devia ao banco).
-- Escassez de casas no banco (Seção 5.4).
 
 ### 7.2 Regras do Leilão
 
@@ -721,7 +705,7 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor d
 | Modal | Quando aparece |
 |---|---|
 | Compra de propriedade | Jogador para em propriedade livre |
-| Leilão | Recusa de compra / banco leiloa falido / escassez de casas |
+| Leilão | Recusa de compra / banco leiloa falido |
 | Negociação (proposta) | Jogador abre modal de trade |
 | Negociação (recebida) | Jogador recebe proposta |
 | Hipoteca / Deshipoteca | Jogador acessa painel de propriedades |
@@ -869,8 +853,7 @@ Cada aeroporto pode receber **um Hangar**, melhoria individual que **dobra o alu
 Quarto nível de construção, **acima do segundo hotel**. Pré-requisitos:
 
 - Possuir **grupo completo**.
-- Ter **4 casas + 1 hotel + 2º hotel** em **todas as propriedades** do grupo.
-- Banco deve ter Skyscraper disponível no estoque (limite global definido no tema).
+- Ter **4 casas + 1 hotel + 2º hotel** em **todas as propriedades** do grupo (os 2 hotéis da propriedade se transformam no arranha-céu).
 
 Características:
 
@@ -904,7 +887,6 @@ Após o primeiro hotel, o jogador pode construir um **segundo hotel** na mesma p
 
 - Já possuir 1 hotel construído na propriedade.
 - Todas as outras propriedades do grupo possuídas pelo jogador devem ter pelo menos 1 hotel (uniformidade estendida ao 2º hotel).
-- O banco deve ter hotéis disponíveis no estoque (limite global de 12 — o 2º hotel consome do mesmo estoque).
 
 ### 14.3 Custo
 
@@ -912,8 +894,8 @@ Após o primeiro hotel, o jogador pode construir um **segundo hotel** na mesma p
 
 ### 14.4 Aluguel
 
-- **NÃO** altera o aluguel cobrado — permanece igual ao do primeiro hotel.
-- O valor estratégico é a **escassez** que cria no estoque global do banco, potencialmente bloqueando adversários.
+- Cobra **mais** aluguel que o primeiro hotel — é um degrau real da escada (valor de tema entre o 1º hotel e o arranha-céu).
+- É também o pré-requisito do arranha-céu: 2 hotéis na propriedade se transformam em 1 arranha-céu (Seção 13.7).
 
 ### 14.5 Venda do Segundo Hotel
 
