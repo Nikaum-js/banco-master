@@ -4,16 +4,17 @@
 // A spec de Construção envolverá esta função para somar os multiplicadores de
 // casas/hotéis/2º hotel/Skyscraper (SRS §5.1, linhas "com construção").
 import type { Roll } from '../turn/types'
+import { THEME } from '../theme'
 
 // Maioria do grupo: 2 (grupo de 3) / 3 (grupo de 4). §13.3 + clarificação 2026-05-23.
 function majority(size: number): number {
   return size === 4 ? 3 : 2
 }
 
-// Multiplicadores de aluguel por construção — valores de TEMA provisórios (004/011, research D3/R8).
-const HOUSE_RENT_MULT = [5, 15, 45, 80] as const // 1..4 casas
-const HOTEL_RENT_MULT = 100 // hotel e 2º hotel (§14.4: 2º hotel não muda o aluguel)
-const SKYSCRAPER_RENT_MULT = 250 // aluguel fixo do Skyscraper (011, §13.7) — o maior da propriedade
+// Multiplicadores de aluguel por construção — valores oficiais do tema (fonte única: theme.ts).
+const HOUSE_RENT_MULT = THEME.HOUSE_RENT_MULT // 1..4 casas
+const HOTEL_RENT_MULT = THEME.HOTEL_RENT_MULT // hotel e 2º hotel (§14.4: 2º hotel não muda o aluguel)
+const SKYSCRAPER_RENT_MULT = THEME.SKYSCRAPER_RENT_MULT // aluguel fixo do Skyscraper (011, §13.7)
 
 // Aluguel de cidade. Com construção (004), a tabela de construção × (0.7 parcial | 1.0 completo)
 // SUBSTITUI o escalonamento por posse (§5.1). Skyscraper = valor fixo; e enquanto o grupo tiver
@@ -37,12 +38,12 @@ export function rentCity(
   return triple(base) // não-maioria → base
 }
 
-const AIRPORT_RENT = [25, 50, 100, 200] as const
+const AIRPORT_RENT = THEME.AIRPORT_RENT
 export function rentAirport(owned: number): number {
   return AIRPORT_RENT[Math.min(owned, 4) - 1] ?? 0
 }
 
-const UTILITY_MULT = [4, 10, 20] as const
+const UTILITY_MULT = THEME.UTILITY_MULT
 export function rentUtility(owned: number, dice: number): number {
   return (UTILITY_MULT[Math.min(owned, 3) - 1] ?? 0) * dice
 }

@@ -10,9 +10,10 @@
 // Campo `uf` é código ISO-3166-1 alfa-2 do país (BR, US, JP…) — usado
 // como semente pra renderizar a bandeira-avatar no tabuleiro.
 //
-// Preços/aluguéis são uma escada PROVISÓRIA ($60–$400, crescente ao longo
-// do percurso). Valores finais são dado de tema (spec FR-014 / research §5),
-// tunáveis após playtesting.
+// Preços/aluguéis-base por cidade são os valores OFICIAIS do tema "Cidades do
+// Mundo" (escada $60–$400). Os multiplicadores/knobs globais (aluguel, GO,
+// estoques, custos, imposto) vivem em `src/game/theme.ts` (fonte única, tunável).
+// Aeroporto: `rent` aqui é decorativo — o aluguel vem de `theme.AIRPORT_RENT`.
 // =====================================================================
 
 export type GroupKey =
@@ -111,7 +112,7 @@ export const BOARD: Square[] = [
   { pos: 3,  kind: 'property', group: 'brown',   name: 'Veneza',     uf: 'IT', capital: 'Itália', price: 80,  rent: 4 },
   { pos: 4,  kind: 'tax',      name: 'Imposto de Renda', amount: 200 },
   { pos: 5,  kind: 'property', group: 'brown',   name: 'Pisa',       uf: 'IT', capital: 'Itália', price: 100, rent: 6 },
-  { pos: 6,  kind: 'airport',  name: 'Nova York',        iata: 'JFK', price: 200, rent: 25 },
+  { pos: 6,  kind: 'airport',  name: 'Aeroporto JFK',     iata: 'JFK', price: 200, rent: 25 },
   { pos: 7,  kind: 'property', group: 'skyblue', name: 'Cairo',      uf: 'EG', capital: 'Egito',  price: 115, rent: 8 },
   { pos: 8,  kind: 'acaso', name: 'Acaso' },
   { pos: 9,  kind: 'property', group: 'skyblue', name: 'Gizé',       uf: 'EG', capital: 'Egito',  price: 120, rent: 8 },
@@ -127,7 +128,7 @@ export const BOARD: Square[] = [
   { pos: 15, kind: 'property', group: 'pink',    name: 'Kyoto',      uf: 'JP', capital: 'Japão',   price: 180, rent: 14 },
   { pos: 16, kind: 'property', group: 'pink',    name: 'Osaka',      uf: 'JP', capital: 'Japão',   price: 190, rent: 16 },
   { pos: 17, kind: 'acaso', name: 'Acaso' },
-  { pos: 18, kind: 'airport',  name: 'Londres',          iata: 'LHR', price: 200, rent: 25 },
+  { pos: 18, kind: 'airport',  name: 'Aeroporto Heathrow', iata: 'LHR', price: 200, rent: 25 },
   { pos: 19, kind: 'property', group: 'purple',  name: 'Madri',      uf: 'ES', capital: 'Espanha', price: 200, rent: 18 },
   { pos: 20, kind: 'tesouro',  name: 'Tesouro' },
   { pos: 21, kind: 'property', group: 'purple',  name: 'Ibiza',      uf: 'ES', capital: 'Espanha', price: 220, rent: 20 },
@@ -143,7 +144,7 @@ export const BOARD: Square[] = [
   { pos: 27, kind: 'property', group: 'red',     name: 'Hong Kong',  uf: 'CN', capital: 'China',    price: 265, rent: 24 },
   { pos: 28, kind: 'property', group: 'red',     name: 'Pequim',     uf: 'CN', capital: 'China',    price: 270, rent: 24 },
   { pos: 29, kind: 'property', group: 'red',     name: 'Xangai',     uf: 'CN', capital: 'China',    price: 280, rent: 26 },
-  { pos: 30, kind: 'airport',  name: 'Tóquio',           iata: 'NRT', price: 200, rent: 25 },
+  { pos: 30, kind: 'airport',  name: 'Aeroporto Narita',  iata: 'NRT', price: 200, rent: 25 },
   { pos: 31, kind: 'property', group: 'yellow',  name: 'Rio de Janeiro', short: 'Rio', uf: 'BR', capital: 'Brasil', price: 285, rent: 26 },
   { pos: 32, kind: 'utility',  name: 'Eletro Corp', icon: 'bolt', price: 150 },
   { pos: 33, kind: 'property', group: 'yellow',  name: 'São Paulo',  uf: 'BR', capital: 'Brasil', price: 300, rent: 28 },
@@ -159,7 +160,7 @@ export const BOARD: Square[] = [
   { pos: 39, kind: 'tesouro',  name: 'Tesouro' },
   { pos: 40, kind: 'property', group: 'green',   name: 'Chicago',     uf: 'US', capital: 'EUA',    price: 345, rent: 34 },
   { pos: 41, kind: 'property', group: 'green',   name: 'Miami',       uf: 'US', capital: 'EUA',    price: 360, rent: 38 },
-  { pos: 42, kind: 'airport',  name: 'Sydney',           iata: 'SYD', price: 200, rent: 25 },
+  { pos: 42, kind: 'airport',  name: 'Aeroporto de Sydney', iata: 'SYD', price: 200, rent: 25 },
   { pos: 43, kind: 'utility',  name: 'Gas Corp',    icon: 'gas',  price: 150 },
   { pos: 44, kind: 'property', group: 'navy',    name: 'Cannes',      uf: 'FR', capital: 'França', price: 380, rent: 35 },
   { pos: 45, kind: 'tax',      name: 'Imposto de Luxo',  amount: 100 },
