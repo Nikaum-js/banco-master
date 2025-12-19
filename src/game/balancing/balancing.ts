@@ -1,24 +1,15 @@
 // Balanceamento (catch-up) — puro. GO Progressivo por ranking de patrimônio e
 // pote do Free Parking. Injetado nas portas do 002 pelo store (002 não importa daqui).
 import type { GameState } from '../turn/types'
-import { netWorth } from '../cards/effects'
 import { THEME } from '../theme'
 
 export const PARKING_SEED = THEME.PARKING_SEED
 
-// Bônus do GO: escala inversa ao ranking de patrimônio líquido (006).
-// Linear $100 (mais rico) → $400 (mais pobre); desempate estável por assento. §13.5 (tunável).
-export function goBonus(state: GameState, playerId: string): number {
-  const { min, max } = THEME.GO_BONUS
-  const active = state.players.filter((p) => !p.eliminated)
-  if (active.length <= 1) return min
-  const seatOf = (id: string): number => state.turnOrder.indexOf(state.players.findIndex((p) => p.id === id))
-  const ranked = active
-    .map((p) => ({ id: p.id, nw: netWorth(state, p.id), seat: seatOf(p.id) }))
-    .sort((a, b) => b.nw - a.nw || a.seat - b.seat)
-  const pos = ranked.findIndex((r) => r.id === playerId)
-  if (pos < 0) return min
-  return Math.round(min + (pos / (ranked.length - 1)) * (max - min))
+// Bônus do GO: FLAT $200 ao passar (o `advance` dobra para $400 quando o jogador
+// CAI exatamente no GO). Substitui o GO Progressivo por ranking (revisão de regra).
+// Mantém a assinatura (state, playerId) para as portas/UI já existentes.
+export function goBonus(_state: GameState, _playerId: string): number {
+  return THEME.GO_PASS
 }
 
 // Free Parking: rotear ao pote / coletar (reabastece $500).

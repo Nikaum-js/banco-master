@@ -7,7 +7,7 @@ export const THEME = {
   BANK: { houses: 40, hotels: 16, skyscrapers: 4 }, // estoque global (D-017 + Skyscraper 011)
   PARKING_SEED: 500, // pote do Free Parking — semente/reabastecimento (007/D-006)
 
-  GO_BONUS: { min: 100, max: 400 }, // GO Progressivo por ranking de patrimônio (007/D-007)
+  GO_PASS: 200, // passar pelo GO = $200; CAIR exatamente no GO = $400 (2×) — substitui o GO Progressivo
 
   HOUSE_RENT_MULT: [5, 15, 45, 80] as const, // aluguel = base × mult (1..4 casas)
   HOTEL_RENT_MULT: 100, // hotel e 2º hotel (§14.4: 2º hotel não muda o aluguel)
