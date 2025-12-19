@@ -16,24 +16,14 @@ function realPorts(): TurnPorts {
   }
 }
 
-describe('GO Progressivo (US1)', () => {
-  it('SC-001: último +$400, primeiro +$100, meio entre', () => {
+describe('GO fixo (US1)', () => {
+  it('passar pelo GO = $200 fixo, igual para todos (sem ranking)', () => {
     const g = createSeedState(['p1', 'p2', 'p3'])
     g.players[0].cash = 5000 // mais rico
-    g.players[1].cash = 2000
     g.players[2].cash = 100 // mais pobre
-    expect(goBonus(g, 'p1')).toBe(100)
-    expect(goBonus(g, 'p3')).toBe(400)
-    expect(goBonus(g, 'p2')).toBe(250) // round(100 + 1/2 × 300)
-  })
-
-  it('SC-005: usa netWorth (caixa + ativos, hipotecada ÷2)', () => {
-    const g = createSeedState(['p1', 'p2'])
-    g.players[0].cash = 1000
-    g.players[1].cash = 1000
-    g.titles[1].ownerId = 'p1' // Roma (price 60) → p1 mais rico por ativo
-    expect(goBonus(g, 'p1')).toBe(100)
-    expect(goBonus(g, 'p2')).toBe(400)
+    expect(goBonus(g, 'p1')).toBe(200)
+    expect(goBonus(g, 'p2')).toBe(200)
+    expect(goBonus(g, 'p3')).toBe(200)
   })
 })
 
