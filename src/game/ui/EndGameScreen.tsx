@@ -68,8 +68,8 @@ export function EndGameScreen({
     // default seguro (Esc não faz nada) não muda comportamento nenhum.
     <Overlay z={70} ariaLabel="Fim de jogo" className="overflow-y-auto">
       <Confetti />
-      <ModalShell className="relative w-full max-w-lg my-8">
-        <div className="flex flex-col items-center px-6 pt-8 pb-4 text-center">
+      <ModalShell className="endgame-shell relative w-full max-w-lg my-8">
+        <div className="endgame-hero flex flex-col items-center px-6 pt-8 pb-5 text-center">
           <Crown
             size={56}
             className="text-gold"
@@ -92,7 +92,7 @@ export function EndGameScreen({
         )}
 
         <div className="px-6 pb-2 overflow-y-auto max-h-[42vh]">
-          <table className="w-full text-sm border-collapse">
+          <table className="endgame-table w-full text-sm border-separate border-spacing-y-1.5">
             <caption className="sr-only">Classificação final da partida</caption>
             <thead>
               <tr className="label text-cream-muted text-left">
@@ -105,14 +105,14 @@ export function EndGameScreen({
             </thead>
             <tbody>
               {confirmed.map((row) => (
-                <tr key={row.playerId} className="border-t border-coffee-600/60">
-                  <td className="py-1.5 pr-2 text-cream-muted tabular-nums">{row.rank}º</td>
-                  <td className="py-1.5 pr-2 text-cream max-w-[9rem]">
+                <tr key={row.playerId} data-rank={row.rank}>
+                  <td className="endgame-rank py-2 pl-2 pr-2 text-cream-muted tabular-nums">{row.rank}º</td>
+                  <td className="py-2 pr-2 text-cream max-w-[9rem]">
                     <PlayerName playerId={row.playerId} dot />
                   </td>
-                  <td className="py-1.5 pr-2 text-right currency text-cream">{money(row.netWorth)}</td>
-                  <td className="py-1.5 pr-2 text-right text-cream-muted tabular-nums">{row.properties}</td>
-                  <td className="py-1.5 text-right text-cream-muted tabular-nums">
+                  <td className="py-2 pr-2 text-right currency text-cream">{money(row.netWorth)}</td>
+                  <td className="py-2 pr-2 text-right text-cream-muted tabular-nums">{row.properties}</td>
+                  <td className="py-2 pr-2 text-right text-cream-muted tabular-nums">
                     {row.eliminatedAtRound ?? '—'}
                   </td>
                 </tr>
@@ -138,14 +138,14 @@ export function EndGameScreen({
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-coffee-600/60 text-center">
+        <div className="endgame-meta mx-6 mt-2 px-4 py-3 text-center">
           <p className="label text-cream-muted normal-case">
             {formatRounds(rounds)} · {formatDuration(durationMs)}
           </p>
         </div>
 
-        <div className="px-6 pb-6 flex justify-center">
-          <Button onClick={onExit} className="px-6 py-2.5 text-base">
+        <div className="px-6 pt-4 pb-6 flex justify-center">
+          <Button onClick={onExit} className="w-full px-6 py-2.5 text-base">
             {online ? 'Voltar ao início' : 'Novo jogo'}
           </Button>
         </div>

@@ -65,7 +65,7 @@ export function Overlay({
           background:
             'radial-gradient(120% 120% at 50% 40%, color-mix(in srgb, var(--color-coffee-950) 60%, transparent) 0%, color-mix(in srgb, var(--color-coffee-950) 90%, transparent) 100%)',
         }}
-        className={cn('fixed inset-0 flex items-center justify-center backdrop-blur-[3px] p-4 outline-none', className)}
+        className={cn('modal-overlay fixed inset-0 flex items-center justify-center backdrop-blur-[3px] p-4 outline-none', className)}
       >
         {children}
       </motion.div>
@@ -113,7 +113,7 @@ export function ModalShell({ className, children }: { className?: string; childr
           'inset 0 1px 0 0 color-mix(in srgb, var(--color-brass-glow) 22%, transparent), var(--shadow-dropdown)',
       }}
       className={cn(
-        'border-2 border-coffee-500 rounded-[var(--radius-modal)] max-h-[calc(100svh-2rem)] overflow-auto overscroll-contain',
+        'modal-shell border-2 border-coffee-500 rounded-[var(--radius-modal)] max-h-[calc(100svh-2rem)] overflow-auto overscroll-contain',
         className,
       )}
     >
@@ -153,14 +153,20 @@ export function ModalHeader({
   const titleId = useModalTitleId()
   return (
     <div
-      className={cn('relative px-4 py-3 border-b-2 border-coffee-950 shrink-0', center && 'text-center', className)}
+      data-tone={tone}
+      className={cn(
+        'modal-header relative px-4 py-3 border-b-2 border-coffee-950 shrink-0',
+        center && 'text-center',
+        onClose && 'pr-14',
+        className,
+      )}
       style={{
         background,
         boxShadow:
           'inset 0 1px 0 0 color-mix(in srgb, white 32%, transparent), inset 0 -2px 0 0 color-mix(in srgb, var(--color-ink-950) 22%, transparent)',
       }}
     >
-      <div className={cn('flex items-center gap-2.5', center && 'justify-center')}>
+      <div className={cn('relative z-[1] flex items-center gap-2.5', center && 'justify-center')}>
         {icon && <div className="shrink-0 w-9 h-9 flex items-center justify-center">{icon}</div>}
         <div className={cn('min-w-0', !center && 'flex-1')}>
           <h3 id={titleId ?? undefined} className={cn('display text-lg leading-none truncate', dark ? 'text-coffee-950' : 'text-cream')}>
@@ -180,7 +186,7 @@ export function ModalHeader({
           aria-label="Fechar"
           title="Fechar (a proposta continua na mesa)"
           className={cn(
-            'absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full grid place-items-center transition-colors',
+            'absolute z-[2] right-1 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full grid place-items-center transition-colors',
             dark
               ? 'text-coffee-950/70 hover:text-coffee-950 hover:bg-coffee-950/15'
               : 'text-cream/70 hover:text-cream hover:bg-coffee-950/25',
