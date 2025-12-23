@@ -23,6 +23,11 @@ const ROOT = path.resolve(import.meta.dirname, '..')
 const DIST = path.join(ROOT, 'dist')
 const MARKETING_PAGES = ['index.html', 'how-to-play.html', 'faq.html', '404.html']
 
+// Origem do Plausible auto-hospedado (D-082) — o único `<script src>` tolerado no marketing.
+// É um IP porque a instância ainda não tem domínio; ao ganhar um, troca-se aqui e no `<head>`
+// das páginas, e mais nenhum lugar.
+const ANALYTICS_HOST = '147.15.89.222'
+
 function kb(bytes: number): string {
   return `${(bytes / 1024).toFixed(1)} KB`
 }
@@ -53,13 +58,20 @@ for (const page of MARKETING_PAGES) {
   const imgRefs = [...html.matchAll(/<img[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1])
   const cssSize = cssRefs.reduce((total, ref) => total + sizeOf(ref.replace(/^\//, '')), 0)
   const imgSize = imgRefs.reduce((total, ref) => total + sizeOf(ref.replace(/^\//, '')), 0)
-  const ok = scriptRefs.length === 0
+  // O que FR-006/SC-003 proíbem é CÓDIGO DO APP na página de marketing. "Zero <script src>"
+  // era o proxy disso, e valia enquanto não existia script de terceiro legítimo. Com o
+  // Plausible auto-hospedado (D-082), o proxy passou a reprovar o que a regra permite — então
+  // a checagem mede o alvo: qualquer script fora do host de analytics reprova, e mesmo ele
+  // entra no máximo uma vez por página.
+  const leaked = scriptRefs.filter((ref) => !ref.includes(ANALYTICS_HOST))
+  const ok = leaked.length === 0 && scriptRefs.length <= 1
   console.log(
     `${ok ? '✓' : '✗'} ${page}: ${scriptRefs.length} js externo, css ${kb(cssSize)}, imagens ${kb(imgSize)} (${imgRefs.length})`,
   )
   if (!ok) {
     failed = true
-    for (const ref of scriptRefs) console.error(`    vazou script: ${ref}`)
+    for (const ref of leaked) console.error(`    vazou script: ${ref}`)
+    if (!leaked.length) console.error(`    mais de um script de analytics: ${scriptRefs.join(', ')}`)
   }
 }
 
@@ -150,4 +162,6 @@ if (failed) {
   console.error('\nAUDITORIA FALHOU.')
   process.exit(1)
 }
-console.log('\nAuditoria ok: marketing sem nenhum JS externo; jogo isolado em play.html.')
+console.log(
+  '\nAuditoria ok: marketing sem JS do app (só analytics); jogo isolado em play.html.',
+)
