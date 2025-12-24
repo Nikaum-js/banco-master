@@ -22,6 +22,8 @@ import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 import { MOTION, useMotion } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 import { deedPresentation } from '@/game/ui/deed/presentation'
+import { CountryFlagDisc } from '@/boards/glyphs/flags'
+import { countryName } from '@/boards/glyphs/countries'
 
 const INCREMENTS = [10, 50, 100] as const
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
@@ -31,12 +33,7 @@ function LandDeedIcon({ sq, size = 40 }: { sq: Square; size?: number }) {
   const deed = deedPresentation(sq)
   if (deed?.flagCode) {
     return (
-      <div
-        className="rounded-full bg-coffee-900 border-2 border-coffee-950 overflow-hidden shrink-0 shadow-[var(--shadow-card)]"
-        style={{ width: size, height: size }}
-      >
-        <img src={`https://flagcdn.com/${deed.flagCode.toLowerCase()}.svg`} alt={deed.flagCode} className="w-full h-full object-cover" draggable={false} />
-      </div>
+      <CountryFlagDisc code={deed.flagCode} size={size} />
     )
   }
   return <span className="text-gold shrink-0"><SquareIcon square={sq} size={size * 0.8} /></span>
@@ -63,87 +60,163 @@ function DeedStat({ icon, label, value }: { icon: React.ReactNode; label: string
   )
 }
 
-function LotCard(props: { lot: LandLot; now: number; cashAvail: number; onBid: (pos: number, amount: number) => void }) {
-  const { lot, now, cashAvail, onBid } = props
+/**
+ * CARD 03 — o lote redesenhado em torno da DECISÃO, não da escritura.
+ *
+ * O problema do desenho antigo não era a estética: era a hierarquia. Ele abria com a tabela de
+ * aluguel completa (até 8 linhas), enterrava o preço num rodapé de três estatísticas iguais,
+ * punha o lance atual em corpo pequeno no meio, e terminava em três botões idênticos sem ação
+ * principal. Com 8 segundos de prazo, o jogador tinha de montar a decisão sozinho lendo de baixo
+ * para cima. Com 24s (D-060) o tempo passa a existir — e a ordem de leitura passa a valer a pena.
+ *
+ * A ordem agora é a da pergunta que o jogador está fazendo:
+ *
+ *   1. **Que lote é** — bandeira, cidade, país, stripe do grupo.
+ *   2. **Quanto tempo tenho** — cronômetro no topo, com o número em corpo grande, porque é o
+ *      recurso mais escasso da tela. Deriva do `deadline` autoritativo, corrigido pelo offset
+ *      de relógio do host: nunca de um timer local que cada aparelho conta diferente.
+ *   3. **Quanto está e quanto vale** — lance atual em latão, ao lado do preço de tabela, que é a
+ *      única referência de "caro ou barato" que existe. Antes eles estavam em seções distintas,
+ *      então a comparação exigia memória.
+ *   4. **Uma ação principal** — cobrir o lance. Os incrementos ficam como ações secundárias.
+ *
+ * A tabela de aluguel sai do card e vira um detalhe expansível: em 24 segundos ninguém compara
+ * oito linhas, e ela empurrava tudo o que importa para fora da primeira dobra no celular.
+ */
+function LotCard(props: {
+  lot: LandLot
+  now: number
+  cashAvail: number
+  bidder: string
+  onBid: (pos: number, amount: number) => void
+}) {
+  const { lot, now, cashAvail, bidder, onBid } = props
+  const { reduced } = useMotion()
+  const [open, setOpen] = useState(false)
+  /**
+   * Trava de reenvio (CARD 03). Dois cliques rápidos no mesmo botão mandavam dois comandos: o
+   * segundo virava no-op no host, mas gastava difusão e piscava a UI.
+   *
+   * DERIVADA, não sincronizada por efeito: guarda-se o valor enviado, e ele conta como "em voo"
+   * só enquanto for MAIOR que o lance atual. Quando a difusão chega, `currentBid` alcança o
+   * valor e a trava solta sozinha — sem `useEffect` que corrige o próprio estado (era o que o
+   * `react-hooks/set-state-in-effect` acusava, e a regra estava certa: um efeito ali dispara
+   * uma renderização em cascata a cada tick do relógio).
+   */
+  const [sentAmount, setSentAmount] = useState(0)
+  const inFlight = (amount: number): boolean => sentAmount === amount && amount > lot.currentBid
+
   const sq = BOARD[lot.pos]
   const deed = deedPresentation(sq)
   if (!deed) return null
+
   const remainingMs = lot.deadline - now
   const frac = clamp01(remainingMs / LAND_AUCTION_WINDOW)
   const secs = Math.max(0, Math.ceil(remainingMs / 1000))
-  const baixo = secs <= 3
+  // Alerta proporcional à janela, não um 3 fixo herdado dos 8s: um quarto do prazo é o ponto em
+  // que "dá tempo de pensar" vira "decide agora", em qualquer janela que o tema configure.
+  const urgente = remainingMs <= LAND_AUCTION_WINDOW * 0.25
+  const encerrado = remainingMs <= 0
+  const liderando = lot.highBidder === bidder
+  const minimo = lot.currentBid + INCREMENTS[0]
+  const podeMinimo = minimo <= cashAvail && !encerrado
 
   return (
-    <div className="rounded-[var(--radius-card)] border border-coffee-500 bg-coffee-900/50 overflow-hidden flex flex-col">
-      {/* Avatar + nome (header com tinta do grupo) */}
-      <div className="px-3 py-2.5 flex items-center gap-2 border-b border-coffee-500/60" style={{ background: `color-mix(in srgb, ${deed.accent} 24%, transparent)` }}>
-        <LandDeedIcon sq={sq} size={34} />
-        <div className="min-w-0">
-          <p className="display display--tight text-cream text-sm leading-tight truncate">{deed.name}</p>
-          <p className="label text-cream-muted leading-none">{deed.subtitle}</p>
+    <div className={`lot-card${urgente && !encerrado ? ' lot-card--urgent' : ''}${encerrado ? ' lot-card--closed' : ''}`} style={{ '--lot-accent': deed.accent } as React.CSSProperties}>
+      {/* 1. Que lote é */}
+      <div className="lot-card__head">
+        <LandDeedIcon sq={sq} size={32} />
+        <div className="lot-card__identity">
+          <p className="lot-card__name">{deed.name}</p>
+          <p className="lot-card__origin">{deed.flagCode ? countryName(deed.flagCode) : deed.subtitle}</p>
+        </div>
+        {liderando && <span className="lot-card__lead" title="Você é o maior licitante deste lote">SEU</span>}
+      </div>
+
+      {/* 2. Quanto tempo tenho — e o que aconteceu quando acabar (feedback de timeout) */}
+      <div className="lot-card__clock">
+        {encerrado ? (
+          <span className="lot-card__closed-label">
+            <GavelIcon size={12} aria-hidden />
+            {lot.highBidder ? 'Arrematado — fechando' : 'Sem lance — fica livre'}
+          </span>
+        ) : (
+          <>
+            <span className="lot-card__secs" aria-live="off">{secs}<small>s</small></span>
+            <div className="lot-card__bar" role="progressbar" aria-valuenow={secs} aria-valuemin={0} aria-valuemax={Math.round(LAND_AUCTION_WINDOW / 1000)} aria-label={`Tempo restante do lote ${deed.name}`}>
+              <motion.div
+                className="lot-card__bar-fill"
+                // `prefers-reduced-motion` (§12.6): sem interpolação a barra ainda cai — o FATO
+                // permanece, só a suavização some. Zerar a barra seria remover a informação.
+                animate={{ width: `${frac * 100}%` }}
+                transition={reduced ? { duration: 0 } : { ease: 'linear', duration: MOTION.base }}
+              />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* 3. Quanto está, e quanto vale — lado a lado, porque a comparação é a decisão */}
+      <div className="lot-card__figures">
+        <span className="lot-card__figure">
+          <span className="lot-card__figure-value lot-card__figure-value--bid">{money(lot.currentBid)}</span>
+          <span className="lot-card__figure-label">{lot.highBidder ? 'lance de ' : 'sem lance'}{lot.highBidder && <PlayerName playerId={lot.highBidder} />}</span>
+        </span>
+        <span className="lot-card__figure lot-card__figure--right">
+          <span className="lot-card__figure-value">{money(deed.price)}</span>
+          <span className="lot-card__figure-label">preço de tabela</span>
+        </span>
+      </div>
+
+      {/* 4. Uma ação principal, e os incrementos como secundárias */}
+      <div className="lot-card__actions">
+        <Button
+          disabled={!podeMinimo || inFlight(minimo)}
+          onClick={() => { setSentAmount(minimo); onBid(lot.pos, minimo) }}
+          className="lot-card__primary"
+          title={!podeMinimo ? 'Caixa insuficiente (o que você lidera em outros lotes fica comprometido)' : undefined}
+        >
+          {inFlight(minimo) ? 'Enviando…' : `Cobrir · ${money(minimo)}`}
+        </Button>
+        <div className="lot-card__steps">
+          {INCREMENTS.slice(1).map((inc) => {
+            const next = lot.currentBid + inc
+            const pode = next <= cashAvail && !encerrado
+            return (
+              <button
+                key={inc}
+                type="button"
+                disabled={!pode || inFlight(next)}
+                onClick={() => { setSentAmount(next); onBid(lot.pos, next) }}
+                className="lot-card__step"
+                title={pode ? `Lance de ${money(next)}` : 'Caixa insuficiente'}
+              >
+                +{inc}
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      {/* Tabela de aluguel */}
-      <div className="px-3 py-2 flex flex-col flex-1">
-        {rentRows(sq).map((r, i, arr) => (
-          <div
-            key={r.label}
-            className={`flex items-center justify-between gap-3 text-xs py-[3px] ${
-              i < arr.length - 1 ? 'border-b border-coffee-500/15' : ''
-            }`}
-          >
-            <span className="text-cream-muted">{r.label}</span>
-            <span className="currency text-cream tabular-nums">{r.value}</span>
+      {/* Escritura completa, sob demanda. Em 24s ninguém compara oito linhas de aluguel — mas
+          quem quer conferir antes de subir o lance precisa poder. */}
+      <details className="lot-card__deed" open={open} onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
+        <summary className="lot-card__deed-summary">Escritura</summary>
+        <div className="lot-card__deed-body">
+          {rentRows(sq).map((r) => (
+            <div key={r.label} className="lot-card__deed-row">
+              <span>{r.label}</span>
+              <span className="currency tabular-nums">{r.value}</span>
+            </div>
+          ))}
+          <div className="lot-card__deed-stats">
+            <DeedStat icon={<CoinIcon size={13} />} label="Preço" value={money(deed.price)} />
+            {deed.kind === 'property' && <DeedStat icon={<HouseIcon size={13} />} label="Casa" value={money(deed.buildCost)} />}
+            {deed.kind === 'property' && <DeedStat icon={<HotelIcon size={13} />} label="Hotel" value={money(deed.buildCost)} />}
+            {deed.kind === 'airport' && <DeedStat icon={<HotelIcon size={13} />} label="Hangar" value={money(deed.hangar.cost)} />}
           </div>
-        ))}
-      </div>
-
-      {/* Rodapé Preço / Casa / Hotel (propriedade) ou Preço / Hangar (aeroporto) */}
-      <div className="px-2 py-2 border-t border-coffee-500/50 flex items-stretch gap-1">
-        <DeedStat icon={<CoinIcon size={14} />} label="Preço" value={money(deed.price)} />
-        {deed.kind === 'property' && <DeedStat icon={<HouseIcon size={14} />} label="Casa" value={money(deed.buildCost)} />}
-        {deed.kind === 'property' && <DeedStat icon={<HotelIcon size={14} />} label="Hotel" value={money(deed.buildCost)} />}
-        {deed.kind === 'airport' && <DeedStat icon={<HotelIcon size={14} />} label="Hangar" value={money(deed.hangar.cost)} />}
-      </div>
-
-      {/* Lance atual */}
-      <div className="px-3 pt-2 text-center border-t border-coffee-950">
-        <p className="label text-cream-muted leading-none">Lance</p>
-        <p className="currency text-gold-glow text-xl leading-none mt-0.5">{money(lot.currentBid)}</p>
-        <p className="label text-cream-muted leading-none mt-1">Maior: <span className="text-cream">{lot.highBidder ?? '—'}</span></p>
-      </div>
-
-      {/* Cronômetro do lote (8s) */}
-      <div className="px-3 mt-2">
-        <div className="flex items-center gap-1 mb-1">
-          <GavelIcon size={11} className={baixo ? 'text-signal' : 'text-cream-muted'} />
-          <span className={`label leading-none ${baixo ? 'text-signal' : 'text-cream-muted'}`}>{secs}s</span>
         </div>
-        <div className="h-2 rounded-full bg-coffee-950/60 overflow-hidden">
-          <motion.div className={`h-full rounded-full ${baixo ? 'bg-signal' : 'bg-gold'}`} animate={{ width: `${frac * 100}%` }} transition={{ ease: 'linear', duration: MOTION.base }} />
-        </div>
-      </div>
-
-      {/* Botões de lance */}
-      <div className="px-3 py-3 flex gap-1.5">
-        {INCREMENTS.map((inc) => {
-          const next = lot.currentBid + inc
-          const pode = next <= cashAvail
-          return (
-            <Button
-              key={inc}
-              disabled={!pode}
-              onClick={() => onBid(lot.pos, next)}
-              title={!pode ? 'Caixa insuficiente (comprometido em outros lotes)' : undefined}
-              className="flex-1 flex-col px-1 py-2 gap-0"
-            >
-              <span className="currency text-xs leading-none text-coffee-950">{money(next)}</span>
-              <span className="currency mt-1 leading-none text-coffee-950" style={{ fontSize: '10px' }}>+{inc}</span>
-            </Button>
-          )
-        })}
-      </div>
+      </details>
     </div>
   )
 }
@@ -239,7 +312,7 @@ export function LandAuctionLayer() {
           {/* Lotes */}
           <div className="p-4 grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}>
             {lots.map((lot) => (
-              <LotCard key={lot.pos} lot={lot} now={now} cashAvail={cash - committedFor(lot.pos)} onBid={bid} />
+              <LotCard key={lot.pos} lot={lot} now={now} cashAvail={cash - committedFor(lot.pos)} bidder={bidder} onBid={bid} />
             ))}
           </div>
         </ModalShell>

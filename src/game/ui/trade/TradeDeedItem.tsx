@@ -4,6 +4,7 @@ import { BOARD } from '@/lib/boardData'
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { SquareIcon } from '@/boards/glyphs/squares'
 import { money } from '@/lib/money'
+import { CountryFlag } from '@/boards/glyphs/flags'
 
 function TradeDeedAvatar({ pos, compact }: { pos: number; compact: boolean }) {
   const square = BOARD[pos]
@@ -14,11 +15,9 @@ function TradeDeedAvatar({ pos, compact }: { pos: number; compact: boolean }) {
   if (deed.flagCode) {
     return (
       <span className="trade-deed-item__avatar" style={{ width: size, height: size }}>
-        <img
-          src={`https://flagcdn.com/${deed.flagCode.toLowerCase()}.svg`}
-          alt=""
-          className="block h-full w-full object-cover"
-          draggable={false}
+        <CountryFlag
+          code={deed.flagCode}
+          fill
         />
       </span>
     )

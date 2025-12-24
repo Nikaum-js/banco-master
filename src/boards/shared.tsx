@@ -44,6 +44,7 @@ import { describeLogEntry } from '@/game/ui/log/describeLog'
 import { logIcon } from '@/game/ui/log/logIcon'
 import { AccessoryErrorBoundary } from '@/app/AccessoryErrorBoundary'
 import { identityOf } from '@/net/identity'
+import { CountryFlag } from '@/boards/glyphs/flags'
 
 // Este módulo exporta SÓ componentes — cada consumidor importa constante e seletor da
 // própria fonte (`./groupColors`, `./topology`, `./glyphs/squares`, `@/game/ui/panels/playersView`).
@@ -83,12 +84,10 @@ function FlagAvatar({ iso2, side }: { iso2: string; side: Side }) {
       }}
       title={iso2}
     >
-      <img
-        src={`https://flagcdn.com/${iso2.toLowerCase()}.svg`}
-        alt={iso2}
-        className="w-full h-full object-cover block"
+      <CountryFlag
+        code={iso2}
+        fill
         style={{ transform: `rotate(${artRotation}deg)` }}
-        draggable={false}
       />
     </div>
   )
@@ -492,10 +491,11 @@ export function EffectMark({ pos }: { pos: number }) {
   const sq = BOARD[pos]
   let badge: { tag: string; tone: 'logo' | 'gold'; title: string } | null = null
   for (const e of effects) {
-    if (e.kind === 'apagao' && sq.kind === 'airport') badge = { tag: 'A', tone: 'logo', title: 'Hangar inativo por apagão' }
-    else if (e.kind === 'greve' && sq.kind === 'utility') badge = { tag: 'G', tone: 'logo', title: 'Utilidade sem aluguel por greve' }
+    if (e.kind === 'apagao' && sq.kind === 'airport') badge = { tag: 'A', tone: 'logo', title: 'Hangar inativo pela Greve' }
+    else if (e.kind === 'greve' && sq.kind === 'utility') badge = { tag: 'G', tone: 'logo', title: 'Utilidade sem aluguel pela Greve' }
     else if (e.kind === 'boicote' && e.pos === pos) badge = { tag: 'B', tone: 'logo', title: 'Propriedade sob boicote, sem aluguel' }
     else if (e.kind === 'imunidade-temp' && e.pos === pos) badge = { tag: 'I', tone: 'gold', title: 'Imunidade temporária' }
+    else if (e.kind === 'valorizacao' && e.pos === pos) badge = { tag: 'V', tone: 'gold', title: 'Valorização: aluguel em dobro' }
   }
   if (!badge) return null
   return <EffectMarkBadge badge={badge} />
@@ -534,10 +534,16 @@ function effectRow(e: TempEffect, i: number): {
   const laps = `${e.lapsRemaining} ${e.lapsRemaining === 1 ? 'volta' : 'voltas'}`
   const place = BOARD[e.pos ?? 0]?.name ?? '—'
   switch (e.kind) {
-    case 'apagao': return { key: `a${i}`, label: 'Apagão', desc: `Hangares inativos · ${laps}`, detail: 'Hangares inativos', tag: 'A', laps: e.lapsRemaining, tone: 'logo' }
-    case 'greve': return { key: `g${i}`, label: 'Greve', desc: `Utilidades sem aluguel · ${laps}`, detail: 'Utilidades sem aluguel', tag: 'G', laps: e.lapsRemaining, tone: 'logo' }
+    case 'apagao': return { key: `a${i}`, label: 'Greve (Hangares)', desc: `Hangares inativos · ${laps}`, detail: 'Hangares inativos', tag: 'A', laps: e.lapsRemaining, tone: 'logo' }
+    case 'greve': return { key: `g${i}`, label: 'Greve (Utilidades)', desc: `Utilidades sem aluguel · ${laps}`, detail: 'Utilidades sem aluguel', tag: 'G', laps: e.lapsRemaining, tone: 'logo' }
     case 'boicote': return { key: `b${i}`, label: 'Boicote', desc: `${place} sem aluguel · ${laps}`, detail: `${place} sem aluguel`, tag: 'B', laps: e.lapsRemaining, tone: 'logo' }
     case 'imunidade-temp': return { key: `i${i}`, label: 'Imunidade temp.', desc: `${place} · ${laps}`, detail: `${place} protegida`, tag: 'I', laps: e.lapsRemaining, tone: 'gold' }
+    // D-064 — efeitos novos: Estatização (board-wide), Valorização (casa), Embargo e
+    // Imunidade Total (jogador; a identidade é resolvida pela UI que consome, não aqui).
+    case 'estatizacao': return { key: `e${i}`, label: 'Estatização', desc: `Aluguéis vão à Loteria · ${laps}`, detail: 'Aluguéis confiscados para a Loteria', tag: 'E', laps: e.lapsRemaining, tone: 'logo' }
+    case 'valorizacao': return { key: `v${i}`, label: 'Valorização', desc: `${place} cobra em dobro · ${laps}`, detail: `${place} com aluguel em dobro`, tag: 'V', laps: e.lapsRemaining, tone: 'gold' }
+    case 'embargo': return { key: `em${i}`, label: 'Embargo de Obras', desc: `Alvo sem construir · ${laps}`, detail: 'Jogador embargado não constrói', tag: 'O', laps: e.lapsRemaining, tone: 'logo' }
+    case 'imunidade-total': return { key: `it${i}`, label: 'Imunidade Total', desc: `Sem aluguel/imposto · ${laps}`, detail: 'Jogador protegido de cobranças e ofensivas', tag: 'I', laps: e.lapsRemaining, tone: 'gold' }
   }
 }
 
@@ -1927,11 +1933,9 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
               shadow-[var(--shadow-card)]
             "
           >
-            <img
-              src={`https://flagcdn.com/${presentation.flagCode.toLowerCase()}.svg`}
-              alt={presentation.flagCode}
-              className="w-full h-full object-cover"
-              draggable={false}
+            <CountryFlag
+              code={presentation.flagCode}
+              fill
             />
           </div>
           <div className="flex-1 min-w-0">

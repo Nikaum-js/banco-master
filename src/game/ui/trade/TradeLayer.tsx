@@ -35,6 +35,7 @@ import {
 } from './draft'
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { TradeDeedItem } from './TradeDeedItem'
+import { CountryFlag } from '@/boards/glyphs/flags'
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n))
 const lapsLabel = (laps: number | null): string => (
@@ -92,7 +93,7 @@ function DeedAvatar({ sq, size = 22 }: { sq: Square; size?: number }) {
     return (
       // `block`: fora de flex (ex. prato da balança) um span inline ignoraria width/height
       <span className="block rounded-full bg-coffee-900 border border-coffee-950 overflow-hidden shrink-0 shadow-[var(--shadow-card)]" style={{ width: size, height: size }}>
-        <img src={`https://flagcdn.com/${deed.flagCode.toLowerCase()}.svg`} alt={deed.flagCode} className="w-full h-full object-cover block" draggable={false} />
+        <CountryFlag code={deed.flagCode} fill />
       </span>
     )
   }

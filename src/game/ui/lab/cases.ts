@@ -164,11 +164,11 @@ export function prepareVisualLabCase(id: VisualLabCaseId): void {
       useHandCardUI.setState({ cardId: 'aquisicao-hostil-1' })
       break
     case 'hand-target-player':
-      game.players[0].hand = ['auditoria-fiscal-1']
-      useHandCardUI.setState({ cardId: 'auditoria-fiscal-1' })
+      game.players[0].hand = ['imposto-federal-1']
+      useHandCardUI.setState({ cardId: 'imposto-federal-1' })
       break
     case 'hand-panel':
-      game.players[0].hand = ['aquisicao-hostil-1', 'auditoria-fiscal-1', 'diplomacia-1']
+      game.players[0].hand = ['aquisicao-hostil-1', 'imposto-federal-1', 'diplomacia-1']
       break
     case 'trade-compose':
       useTradeUI.setState({ open: true, selectedProposalId: null })

@@ -32,6 +32,7 @@ import { useModalTitleId } from '@/game/ui/a11y/dialog'
 import { useMotion } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 import { deedPresentation } from '@/game/ui/deed/presentation'
+import { CountryFlag } from '@/boards/glyphs/flags'
 
 // Botão de ação do modal — casca fina sobre o primitivo Button (flex-1).
 function ActionBtn({
@@ -284,11 +285,9 @@ export function ModalLayer() {
                       </span>
                       {dest.kind === 'property' ? (
                         <span className="w-7 h-7 shrink-0 rounded-full bg-coffee-900 border border-coffee-950 overflow-hidden shadow-[var(--shadow-card)]">
-                          <img
-                            src={`https://flagcdn.com/${(dest as PropertySquare).uf.toLowerCase()}.svg`}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            draggable={false}
+                          <CountryFlag
+                            code={(dest as PropertySquare).uf}
+                            fill
                           />
                         </span>
                       ) : (
@@ -442,11 +441,9 @@ function BusStopGlyph({ square, size = 24 }: { square: Square; size?: number }) 
         className="bus-stop-flag"
         style={{ width: size, height: size }}
       >
-        <img
-          src={`https://flagcdn.com/${square.uf.toLowerCase()}.svg`}
-          alt=""
-          className="block h-full w-full object-cover"
-          draggable={false}
+        <CountryFlag
+          code={square.uf}
+          fill
         />
       </span>
     )
@@ -714,7 +711,7 @@ function DeedIcon({ sq }: { sq: AuctionSquare }) {
   if (deed?.flagCode) {
     return (
       <div className="title-auction-lot__flag">
-        <img src={`https://flagcdn.com/${deed.flagCode.toLowerCase()}.svg`} alt={deed.flagCode} className="w-full h-full object-cover" draggable={false} />
+        <CountryFlag code={deed.flagCode} fill />
       </div>
     )
   }
