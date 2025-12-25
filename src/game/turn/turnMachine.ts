@@ -40,12 +40,23 @@ export function advance(state: GameState, player: Player, steps: number, ports: 
   if (passedGo) {
     player.cash += ports.onPassGo(state, player.id) // GO Progressivo creditado (007)
     player.completouPrimeiraVolta = true // Speed Die a partir da próxima rolagem (clarify Q2)
+    ports.afterPassGo?.(state, player.id) // juros de empréstimo cobrados após o bônus (010)
   }
 }
 
 // Teleporte do triple: move à frente até `dest`; GO se o caminho cruzar o 0.
 function teleport(state: GameState, player: Player, dest: number, ports: TurnPorts): void {
   advance(state, player, (dest - player.pos + BOARD_SIZE) % BOARD_SIZE, ports)
+}
+
+// Índice do lado do tabuleiro (0..3) — as 11 casas entre cantos; `null` para os
+// cantos 0/12/24/36 (que são fronteira, não pertencem a lado). SRS §10.7 / 009.
+export function sideOf(pos: number): 0 | 1 | 2 | 3 | null {
+  if (pos === 0 || pos === 12 || pos === 24 || pos === 36) return null
+  if (pos <= 11) return 0 // 1..11
+  if (pos <= 23) return 1 // 13..23
+  if (pos <= 35) return 2 // 25..35
+  return 3 // 37..47
 }
 
 function sendToJail(player: Player): void {
@@ -175,6 +186,25 @@ export function chooseTripleDest(state: GameState, dest: number, ctx: TurnCtx): 
   turn.awaitingChoice = null
   teleport(s, player, dest, ctx.ports)
   land(turn, player, turn.lastRoll) // triple não dá re-roll (FR-026)
+  return finishIfEnded(s, ctx)
+}
+
+// Uso de Bus Ticket (009, SRS §10.7): antes de rolar, gasta 1 ticket e move para
+// uma casa do MESMO LADO em vez de rolar. Sem rolagem ⇒ sem dupla ⇒ sem re-rolagem.
+export function useBusTicket(state: GameState, dest: number, ctx: TurnCtx): GameState {
+  if (state.paused) return state // FR-011
+  if (state.turn.state !== 'aguardando-rolagem') return state // só antes de rolar (FR-001)
+  const player = activePlayer(state)
+  if (player.busTickets < 1) return state // FR-002
+  const fromSide = sideOf(player.pos)
+  if (fromSide === null) return state // sobre canto: indisponível (FR-003a)
+  if (sideOf(dest) !== fromSide || dest === player.pos) return state // destino inválido (FR-003)
+  const s = clone(state)
+  const turn = s.turn
+  const p = activePlayer(s)
+  p.busTickets -= 1 // FR-004
+  advance(s, p, (dest - p.pos + BOARD_SIZE) % BOARD_SIZE, ctx.ports) // horário; credita GO ao cruzar (FR-005)
+  land(turn, p, null) // pousa sem rolagem: sem dupla nem re-rolagem (FR-007); dest nunca é canto
   return finishIfEnded(s, ctx)
 }
 
