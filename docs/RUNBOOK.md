@@ -68,7 +68,10 @@ Sem as nove, **não prossiga**: um jogo publicado sem `rooms` perde a partida no
 
 ## 2. Primeiro lançamento
 
-1. `main` verde no CI — **todos** os jobs: `gates`, `simulation`, `e2e`, `a11y`, `full-match`.
+1. `main` verde no CI — `changes` mais todos os jobs aplicáveis ao diff (`gates`, `database`,
+   `simulation`, `e2e`, `responsivo`, `a11y`, `full-match`). Job omitido por escopo não é falha.
+   Antes de um lançamento deliberado, rode `workflow_dispatch` com `full_simulation=true` para
+   executar também 100 partidas por contagem; o schedule das 03h BRT faz a mesma amostra completa.
 2. `deploy.yml` dispara por `workflow_run` e promove produção sozinho.
 3. Abrir a URL e rodar o teste de fumaça manual (§3).
 4. Conferir a versão publicada: o rodapé da home mostra os 7 primeiros caracteres do commit.

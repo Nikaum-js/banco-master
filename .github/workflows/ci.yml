@@ -6,16 +6,138 @@ on:
   push:
     branches: [main]
   pull_request:
+  # 03h BRT: paga a cauda completa de seeds fora do feedback de cada commit.
+  schedule:
+    - cron: '0 6 * * *'
   workflow_dispatch:
+    inputs:
+      full_simulation:
+        description: Rodar 100 partidas por contagem em vez da amostra de 30
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   # Um push novo no mesmo ref cancela o anterior — a fila não acumula runs obsoletos.
-  group: ci-${{ github.ref }}
+  # Schedule/manual usam grupos próprios para nunca cancelar a validação de um push.
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: detectar escopo
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      quality: ${{ steps.scope.outputs.quality }}
+      database: ${{ steps.scope.outputs.database }}
+      simulation: ${{ steps.scope.outputs.simulation }}
+      browser: ${{ steps.scope.outputs.browser }}
+      full_simulation: ${{ steps.scope.outputs.full_simulation }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Jobs caros só rodam quando um arquivo do seu caminho de execução mudou. O schedule
+      # liga apenas a simulação completa; workflow_dispatch liga a verificação integral.
+      - name: Classificar arquivos alterados
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REQUEST_FULL_SIMULATION: ${{ inputs.full_simulation || false }}
+        run: |
+          set -euo pipefail
+
+          quality=false
+          database=false
+          simulation=false
+          browser=false
+          full_simulation=false
+
+          enable_all() {
+            quality=true
+            database=true
+            simulation=true
+            browser=true
+          }
+
+          if [[ "$EVENT_NAME" == "schedule" ]]; then
+            simulation=true
+          elif [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            enable_all
+          else
+            base_sha="$BEFORE_SHA"
+            if [[ "$EVENT_NAME" == "pull_request" ]]; then
+              base_sha="$PR_BASE_SHA"
+            fi
+
+            # Primeiro push de uma branch/repositório não tem base comparável. Segurança:
+            # nesse caso roda tudo, em vez de economizar omitindo um gate necessário.
+            if [[ -z "$base_sha" || "$base_sha" =~ ^0+$ ]] || ! git cat-file -e "$base_sha^{commit}"; then
+              enable_all
+            else
+              while IFS= read -r changed_file; do
+                [[ -z "$changed_file" ]] && continue
+                echo "changed: $changed_file"
+
+                case "$changed_file" in
+                  .github/workflows/*|package.json|bun.lock|.bun-version|eslint.config.*|tsconfig*.json|vite.config.*|vitest.config.*|playwright.config.*|vercel.json)
+                    enable_all
+                    ;;
+                esac
+
+                case "$changed_file" in
+                  tests/db/*)
+                    ;;
+                  src/*|tests/*|e2e/*|scripts/*|public/*|index.html)
+                    quality=true
+                    ;;
+                esac
+
+                case "$changed_file" in
+                  supabase/*|tests/db/*)
+                    database=true
+                    ;;
+                esac
+
+                case "$changed_file" in
+                  src/game/ui/*)
+                    ;;
+                  src/game/*|src/lib/*|src/net/recorder.ts|tests/sim/*|scripts/sim-*)
+                    simulation=true
+                    ;;
+                esac
+
+                case "$changed_file" in
+                  src/*|e2e/*|public/*|index.html|vite.config.*|playwright.config.*)
+                    browser=true
+                    ;;
+                esac
+              done < <(git diff --name-only "$base_sha" "$HEAD_SHA")
+            fi
+          fi
+
+          if [[ "$EVENT_NAME" == "schedule" || "$REQUEST_FULL_SIMULATION" == "true" ]]; then
+            full_simulation=true
+          fi
+
+          {
+            echo "quality=$quality"
+            echo "database=$database"
+            echo "simulation=$simulation"
+            echo "browser=$browser"
+            echo "full_simulation=$full_simulation"
+          } >> "$GITHUB_OUTPUT"
+
   gates:
     name: lint · types · testes · build
+    needs: changes
+    if: needs.changes.outputs.quality == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -50,6 +172,8 @@ jobs:
 
   database:
     name: contrato do banco (RPCs sobre Postgres real)
+    needs: changes
+    if: needs.changes.outputs.database == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -78,6 +202,8 @@ jobs:
 
   simulation:
     name: simulação seedada
+    needs: changes
+    if: needs.changes.outputs.simulation == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -90,15 +216,7 @@ jobs:
       - name: Instalar dependências
         run: bun install --frozen-lockfile
 
-      # Lote CURTO e seedado (036): 30 partidas em 2/3/6 jogadores sob o teto padrão de rodadas.
-      # Roda em job separado do gate principal porque é o passo mais lento e não bloqueia
-      # o feedback de lint/tipos. Seed fixa: uma falha aqui é reproduzível localmente com
-      # `bun run sim:batch -- --games=10 --counts=2,3,6`. `--report=` desliga a escrita em
-      # `reports/` (ignorado pelo git, sem valor num runner efêmero).
-      - name: Lote de simulação
-        run: bun run sim:batch -- --games=10 --counts=2,3,6 --report=
-
-      # Lotes LONGOS (100 partidas × 2/3/6). Moram aqui, e não no `vitest run` do gate
+      # Os lotes headless moram aqui, e não no `vitest run` do gate
       # principal, porque são CPU-bound e sequenciais: no job generalista disputavam os 2
       # vCPUs com ~100 outros arquivos e o de 6 jogadores estourou o timeout (run
       # 30233981454). Sozinhos no runner, cabem com folga.
@@ -109,13 +227,20 @@ jobs:
       # muda, falso positivo de truncagem — todos os três achados por este job).
       #
       # O que se perde é a CAUDA de seeds: o falso positivo mais recente estava na seed 76 de 100,
-      # então um lote de 30 o encontraria num push seguinte, não no primeiro. Antes de release,
-      # rodar o lote inteiro com `bun run test:sim` (default 100).
+      # então um lote de 30 o encontraria num push seguinte, não no primeiro. O schedule noturno
+      # e workflow_dispatch(full_simulation=true) pagam a cauda inteira (100 por contagem).
       - name: Lotes headless (amostra)
+        if: needs.changes.outputs.full_simulation != 'true'
         run: SIM_GAMES=30 bun run test:sim
+
+      - name: Lotes headless (completos)
+        if: needs.changes.outputs.full_simulation == 'true'
+        run: bun run test:sim
 
   e2e:
     name: smoke E2E (2/3/6 jogadores)
+    needs: changes
+    if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -147,6 +272,8 @@ jobs:
 
   responsivo:
     name: responsivo (celular, tablet e desktop, sobre o build)
+    needs: changes
+    if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -167,8 +294,11 @@ jobs:
       # Cobre retrato de 320 a 768, paisagem de 667 a 1024 (com 740×360, o mínimo oficial),
       # desktop como regressão, Atlas e Fuligem, e o contrato do OrientationGate — girar o
       # aparelho não pode desmontar a partida.
+      # `pregao.spec.ts` (D-078) entra neste job e não no `a11y`: o que ele mede é
+      # geometria em viewport (transbordo, alvo de toque, ação alcançável em 667×375 e
+      # 740×360), com a auditoria do axe como último passo do próprio arquivo.
       - name: Gate responsivo
-        run: bunx playwright test e2e/responsive.spec.ts
+        run: bunx playwright test e2e/responsive.spec.ts e2e/pregao.spec.ts
 
       - if: failure()
         uses: actions/upload-artifact@v4
@@ -179,6 +309,8 @@ jobs:
 
   a11y:
     name: acessibilidade (axe, sobre o build)
+    needs: changes
+    if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -209,7 +341,9 @@ jobs:
           retention-days: 7
 
   full-match:
-    name: partida completa (semeada, sobre o build)
+    name: partida completa e animação real
+    needs: changes
+    if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -228,9 +362,9 @@ jobs:
       # `e2e/fullMatch.spec.ts` (projeto `built`, FR-050/FR-051): conduz uma partida SEMEADA
       # (?scenario=endgame, D10 do plan) pela interface real até a última falência e confere
       # a classificação na tela. O roteiro anuncia no próprio log que a partida é semeada —
-      # o `sim:batch` (job `simulation`) é quem prova partidas inteiras jogadas do zero.
-      - name: Partida completa (fim de jogo)
-        run: bunx playwright test e2e/fullMatch.spec.ts
+      # os lotes headless (job `simulation`) provam partidas inteiras jogadas do zero.
+      - name: Partida completa e animação real
+        run: bunx playwright test e2e/fullMatch.spec.ts e2e/diceAnimation.spec.ts
 
       - if: failure()
         uses: actions/upload-artifact@v4

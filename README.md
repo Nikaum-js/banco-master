@@ -277,9 +277,12 @@ Roda na Vercel, e o auto-deploy nativo em `main` está **desligado** por
 [`vercel.json`](vercel.json). Produção é promovida pelo workflow
 [`deploy.yml`](.github/workflows/deploy.yml), e só depois de o CI fechar verde.
 
-O [CI](.github/workflows/ci.yml) roda em jobs paralelos: lint, tipos, testes e build; lote de
-simulação seedada; smoke de navegador com 2, 3 e 6 jogadores; acessibilidade sobre o build; e uma
-partida semeada até o fim de jogo.
+O [CI](.github/workflows/ci.yml) classifica os arquivos alterados e roda em paralelo somente os
+gates afetados: quality; contrato do banco; simulação seedada; smoke de navegador com 2, 3 e 6
+jogadores; responsividade; acessibilidade; partida completa e animação real. Os smokes longos usam
+movimento reduzido; a coreografia normal tem um teste curto próprio. Mudança no motor roda 30
+partidas por contagem, enquanto o schedule diário das 03h BRT e o disparo manual com
+`full_simulation` rodam as 100 por contagem.
 
 ## Contribuindo
 

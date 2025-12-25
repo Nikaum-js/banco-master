@@ -14,13 +14,12 @@ const FAKE_SUPABASE_ANON_KEY = 'sb_publishable_e2e_placeholder_key_x'
 
 export default defineConfig({
   testDir: './e2e',
-  // Cada turno depende de animações reais (rolagem ~1s + passo do peão). Com o passo
-  // decidido num único page.evaluate (script.ts), 6 jogadores × 10 rodadas ficou em
-  // ~1min20 no benchmark de implementação — 150s dá margem sem se aproximar do teto
-  // de 5 min do SC-005.
+  // Os smokes longos de 2/3/6 jogadores usam reduced-motion: provam os mesmos comandos e
+  // estados sem pagar ~1s por rolagem. A coreografia normal fica isolada em
+  // diceAnimation.spec.ts. O teto alto continua necessário para multiplayer/infra real.
   timeout: 240_000,
-  // UM worker (043, T045). As specs de simulação (2/3/6 jogadores) são limitadas por CPU:
-  // dirigem centenas de turnos pela UI real. A spec multiplayer é limitada por LATÊNCIA:
+  // UM worker (043, T045). Os smokes (2/3/6 jogadores) dirigem centenas de comandos pela
+  // UI real. A spec multiplayer é limitada por LATÊNCIA:
   // espera difusão de rede com tetos de 20s. Rodando juntas na mesma máquina, as primeiras
   // matam de fome a segunda — medido: a multiplayer leva 7s sozinha e 4 MINUTOS em paralelo,
   // estourando os tetos e falhando por contenção, não por defeito. Um teste que só passa
@@ -44,6 +43,7 @@ export default defineConfig({
         '**/a11y.spec.ts',
         '**/avatarSkins.spec.ts',
         '**/responsive.spec.ts',
+        '**/pregao.spec.ts',
       ],
     },
     {
@@ -60,6 +60,10 @@ export default defineConfig({
         '**/a11y.spec.ts',
         '**/avatarSkins.spec.ts',
         '**/responsive.spec.ts',
+        // D-078: o pregão passa a caber até seis lotes, e a prova é geométrica (alvo de
+        // toque, transbordo, ação alcançável em 667×375 e 740×360). Mesma razão dos outros:
+        // o que se promove é o bundle.
+        '**/pregao.spec.ts',
       ],
     },
   ],
