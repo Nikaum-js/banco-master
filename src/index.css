@@ -2651,8 +2651,16 @@
       grid-column: 2;
     }
 
+    /* `endgame-wealth` também carrega `data-label`, mas estava fora do grupo abaixo que dá
+       `inline-flex` e `gap` — então o `::before` encostava no número e saía
+       "PATRIMÔNIOR$ 3.510", sem espaço nenhum. O rótulo e o valor são duas informações;
+       precisam do mesmo respiro que as outras quatro contas já tinham. */
     .endgame-table .endgame-wealth {
       grid-column: 3;
+      display: inline-flex;
+      align-items: baseline;
+      justify-content: flex-end;
+      gap: 0.3rem;
       font-size: 0.8rem;
     }
 
@@ -4573,9 +4581,12 @@
       gap: 10px;
       /* O controle de áudio é fixo no canto inferior esquerdo, e em retrato esse canto é
          da gaveta — o mesmo defeito que a paisagem estreita já resolvia reservando faixa
-         no fim da rolagem. Aqui a reserva vale para AS DUAS abas, porque elas se revezam
-         no mesmo lugar: cobrar só de uma deixaria a outra terminando debaixo do botão. */
-      padding: 10px 10px calc(3.25rem + var(--safe-bottom));
+         no fim da rolagem. Aqui a reserva vale para TODAS as abas, porque elas se revezam
+         no mesmo lugar: cobrar só de uma deixaria a outra terminando debaixo do botão.
+         A reserva é maior que a altura dos controles de propósito: com o valor justo, o
+         último elemento (o "Nova negociação") encostava no fim da tela e a gaveta parecia
+         cortada mesmo estando inteira. Respiro é informação: diz que acabou. */
+      padding: 10px 10px calc(5.5rem + var(--safe-bottom));
       overflow-y: auto;
       overscroll-behavior: contain;
     }
@@ -4716,6 +4727,46 @@
       gap: 0.55rem;
     }
 
+    /* Zona de ação: o rótulo tem de caber, e ele não cabia.
+       `TurnActionBtn` nasce com `px-5 py-3 text-base` — 20px de padding lateral e 16px de
+       corpo, medidas de uma tela larga. Num miolo de ~240px dividido entre dois botões
+       sobram ~100px por botão, e o texto era CORTADO em silêncio: medido em 360px,
+       "Finalizar turno", "Bilhete de Trem", "Pagar R$ 50" e "Leilão" todos truncados.
+       O que cede é o respiro lateral e o corpo do texto; a ALTURA fica, porque é ela que
+       carrega o alvo de toque de 44px (§12.6). Quebrar em duas linhas é preferível a
+       cortar: o rótulo diz o que o botão faz. */
+    .dice-arena button {
+      padding-inline: 0.55rem;
+      padding-block: 0.5rem;
+      font-size: 0.8rem;
+      gap: 0.3rem;
+      line-height: 1.1;
+      /* `!important` porque o primitivo `Button` traz `whitespace-nowrap` como utilitário, e
+         é ele que transformava o rótulo grande em rótulo CORTADO em vez de rótulo em duas
+         linhas. Numa tela estreita, quebrar linha é a saída certa: o texto do botão diz o
+         que ele faz, e "Pagar R$ 5" não diz. */
+      white-space: normal !important;
+      text-wrap: balance;
+    }
+    .dice-arena .bus-ticket-action {
+      padding-inline: 0.45rem;
+      font-size: 0.72rem;
+    }
+    /* O par "Comprar R$ 60" + "Leilão" divide a linha em 3:1. Num miolo de ~260px isso dá
+       ~60px ao secundário, e "Leilão" — uma palavra só, que não quebra — saía cortado.
+       `min-width: max-content` no secundário inverte quem cede: ele fica com a largura
+       exata do próprio rótulo e o primário, que tem número e pode encurtar, absorve o
+       resto. Vale para qualquer par da zona, não só o de compra. */
+    .dice-arena button:not(:only-child):last-child {
+      flex: 0 1 auto;
+      min-width: max-content;
+    }
+    /* O ícone do dado ocupava 18px de um botão de ~100px. */
+    .dice-arena button > svg {
+      width: 15px;
+      height: 15px;
+    }
+
     /* Sem o Diário embaixo, o alinhamento ao topo deixa um vazio no terço inferior: o que
        resta é um bloco só (jogador · dados · ação) e ele pertence ao centro do miolo. */
     .board-center__stack {
@@ -4724,13 +4775,28 @@
 
     /* O Diário virou aba da gaveta (D-079). Ali ele tem a largura e a altura inteiras —
        `max-width: 80%` é reserva de respiro que só faz sentido dentro do miolo. */
+    /* O Diário na gaveta ROLA. A primeira versão travava `overflow: hidden` no painel e
+       deixava o `.center-log` com `flex: 1 1 auto`: com o estado vazio (a ilustração da
+       rota, que tem altura fixa) o cartão ficava menor que o próprio conteúdo e cortava
+       78px — e não havia como alcançar o resto, porque nem o painel nem o cartão rolavam.
+       Agora o cartão tem altura natural e quem rola é o painel. */
     .side-panel--log {
-      overflow: hidden;
+      overflow-y: auto;
     }
+    /* O cartão do Diário passa a CONTER o próprio conteúdo, e quem rola é a gaveta.
+       No miolo ele vive com altura imposta e o `flex-1` do estado vazio (basis 0) o deixa
+       ocupar a sobra; na gaveta não há sobra a ocupar — o estado vazio colapsava a quase
+       nada e a ilustração era cortada em 136px, sem rolagem que a alcançasse.
+       Os `!important` não são preguiça: `flex-1` e `overflow-hidden` são utilitários do
+       Tailwind, e utilitário vence regra de `@layer components` por ordem de camada, não
+       por especificidade — sem eles estas linhas não teriam efeito nenhum. */
     .side-panel--log > .center-log {
-      flex: 1 1 auto;
+      flex: 0 0 auto !important;
       max-width: 100%;
-      min-height: 0;
+      height: auto;
+    }
+    .side-panel--log .center-log-empty {
+      flex: 0 0 auto !important;
     }
     .center-log-empty {
       margin: 0.5rem;
@@ -4760,12 +4826,13 @@
     .board-square .cell-text,
     .board-square-label {
       margin-top: 0 !important;
-      font-size: 8px !important;
-      letter-spacing: 0.01em !important;
+      font-size: 8.5px !important;
+      letter-spacing: 0 !important;
     }
     .board-square-price {
       padding: 0 2px !important;
-      font-size: 6px !important;
+      font-size: 7.5px !important;
+      font-weight: 700 !important;
       border-width: 0.5px !important;
     }
     .board-square-icon {
@@ -4784,14 +4851,19 @@
       width: 13px !important;
       height: 13px !important;
     }
+    /* Subida deliberada sobre a primeira versão (6,5px / 5px): aquela escala coube, mas o
+       PREÇO ficou ilegível — e o preço é o número que decide a compra. O nome sobe menos
+       porque ele já tinha duas linhas para crescer; o preço sobe mais porque é uma linha só
+       e curta. Medido: continua sem cortar em 320px, que é o piso. */
     .board-square .cell-text,
     .board-square-label {
-      font-size: 6.5px !important;
-      letter-spacing: 0 !important;
+      font-size: 7px !important;
+      letter-spacing: -0.01em !important;
     }
     .board-square-price {
       padding: 0 1px !important;
-      font-size: 5px !important;
+      font-size: 6.5px !important;
+      font-weight: 700 !important;
     }
     .board-square-icon {
       font-size: 13px !important;
@@ -5634,6 +5706,16 @@
     margin-top: 0.15rem;
     color: #b9a9df;
     font-size: 0.55rem;
+  }
+  /* `min-width: 0` nas duas colunas do painel, e é o conserto de um defeito medido, não
+     higiene: item de grade nasce com `min-width: auto`, ou seja, recusa encolher abaixo da
+     largura INTRÍNSECA do conteúdo. Com o campo de convite aberto, o conteúdo pedia 337px
+     e a coluna se recusava a caber nos 320 da tela — o painel vazava para a direita e
+     "Criar sala", "Colar" e "Entrar" ficavam cortados. Só aparecia depois de abrir o
+     convite porque é ele que levanta o piso intrínseco. */
+  .home-map-panel__form,
+  .home-map-panel__canvas {
+    min-width: 0;
   }
   .home-map-panel__form {
     display: flex;
@@ -8914,16 +8996,87 @@
       padding-inline: 0.75rem;
     }
 
+    /* A LINHA DE ÔNIBUS VIRA LISTA (D-079).
+       O desenho horizontal — uma coluna por parada, lado a lado — é a metáfora certa numa
+       tela larga: lê-se o trajeto de uma vez. Num celular ele colapsa: medido em 360px com
+       11 paradas, cada cartão ficava com 24px de largura, o nome saía "Ve n..", "Ac a..",
+       e o alvo de toque era metade do mínimo do §12.6. Uma linha de ônibus ilegível não é
+       uma linha de ônibus.
+       Empilhada, cada parada é uma FILEIRA de largura inteira: número, símbolo, nome
+       completo e valor na mesma leitura, com 48px de altura. O trajeto se lê rolando, que
+       é o que o dedo já faz. */
     .bus-stop-grid {
-      gap: 0.125rem;
+      flex-direction: column;
+      gap: 0.3rem;
+      max-height: 46svh;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding-right: 0.15rem;
+    }
+
+    .bus-stop-cell {
+      flex: 0 0 auto;
+      width: 100%;
     }
 
     .bus-stop-card {
-      height: 8rem;
+      height: auto;
+      min-height: 48px;
+      flex-direction: row;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.6rem 0.35rem 0.75rem;
+    }
+
+    /* O filete de posse era a borda de cima do cartão; deitado, ele é a da esquerda. */
+    .bus-stop-card__stripe {
+      inset: 0 auto 0 0;
+      width: 3px;
+      height: auto;
+    }
+
+    .bus-stop-card__topline {
+      order: 0;
+      flex: 0 0 auto;
+      padding: 0;
+      border: 0;
+    }
+
+    .bus-stop-card__body {
+      order: 1;
+      flex: 1 1 auto;
+      min-width: 0;
+      flex-direction: row;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0;
+      text-align: left;
+    }
+
+    .bus-stop-card__glyph {
+      flex: 0 0 auto;
     }
 
     .bus-stop-card__name {
-      font-size: 0.625rem;
+      overflow: hidden;
+      font-size: 0.8rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bus-stop-card__footer {
+      order: 2;
+      flex: 0 0 auto;
+      width: auto;
+      margin: 0;
+      padding: 0.1rem 0.35rem;
+      border-top: 0;
+    }
+
+    /* Sem hover no dedo: o realce de "parada apontada" não existe, então o cartão não pode
+       depender dele para se distinguir. */
+    .bus-stop-card:hover:not(:disabled) {
+      transform: none;
     }
   }
 }

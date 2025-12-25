@@ -604,6 +604,154 @@ test('retrato: o Diário sai do miolo e vira aba com altura de verdade', async (
   expect(face, 'avatar do miolo voltou ao tamanho de desktop').toBeLessThanOrEqual(52)
 })
 
+// ---------------------------------------------------------------------------
+// Achados do teste em aparelho real (2026-07-31). Cada `test` abaixo nasceu de um
+// defeito RELATADO e MEDIDO, não de boa prática genérica.
+// ---------------------------------------------------------------------------
+
+test('retrato: o Diário vazio cabe inteiro e é alcançável', async ({ page }) => {
+  // A ilustração do estado vazio tem altura própria; o cartão cortava 136px dela e nem o
+  // cartão nem a gaveta rolavam — o resto era inalcançável.
+  await page.setViewportSize({ width: 360, height: 640 })
+  await page.goto('/play?players=2')
+  await page.waitForSelector('.board-stage')
+  await page.waitForTimeout(700)
+  await page.getByRole('tab', { name: 'Diário' }).click()
+  await page.waitForTimeout(400)
+
+  const fim = page.locator('.center-log-empty span').last()
+  await expect(fim, 'fim do estado vazio não renderizou').toBeVisible()
+  await fim.scrollIntoViewIfNeeded()
+  const alcance = await fim.evaluate((el) => {
+    const b = el.getBoundingClientRect()
+    return { dentro: b.top >= -1 && b.bottom <= window.innerHeight + 1, altura: b.height }
+  })
+  expect(alcance.altura, 'a última linha do estado vazio tem altura zero').toBeGreaterThan(0)
+  expect(alcance.dentro, 'o fim do Diário vazio não é alcançável nem rolando').toBe(true)
+})
+
+test('retrato: a gaveta termina com respiro, não colada no rodapé', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 640 })
+  await page.goto('/play?players=2')
+  await page.waitForSelector('.board-stage')
+  await page.waitForTimeout(700)
+  await page.getByRole('tab', { name: 'Ações' }).click()
+  await page.waitForTimeout(300)
+  await page.evaluate(() => { (document.querySelector('.side-panel--actions') as HTMLElement).scrollTop = 99_999 })
+  await page.waitForTimeout(300)
+
+  const folga = await page.evaluate(() => {
+    const ultimo = document.querySelector('.trade-panel__new-action')!.getBoundingClientRect()
+    const audio = document.querySelector('.audio-control')!.getBoundingClientRect()
+    return { ateRodape: window.innerHeight - ultimo.bottom, ateAudio: audio.top - ultimo.bottom }
+  })
+  // O último elemento encostava no fim da tela e a gaveta parecia cortada mesmo inteira.
+  expect(folga.ateRodape, 'a gaveta termina colada no rodapé').toBeGreaterThanOrEqual(48)
+  expect(folga.ateAudio, 'o último item encosta no controle de áudio').toBeGreaterThanOrEqual(8)
+})
+
+for (const modo of ['bus', 'prisao', 'compra'] as const) {
+  test(`retrato: a zona de ação (${modo}) não corta rótulo nem estoura o tabuleiro`, async ({ page }) => {
+    // `TurnActionBtn` nasce com padding e corpo de tela larga, e `Button` traz
+    // `whitespace-nowrap`: num miolo de ~260px o rótulo era CORTADO em silêncio —
+    // "Finalizar turno", "Pagar R$ 50", "Leilão" e "Bilhete de Trem", todos medidos.
+    await page.setViewportSize(PHONE_SMALL_PORTRAIT)
+    await page.goto(`/play?players=2&scenario=acoes&modo=${modo}`)
+    await page.waitForSelector('.board-stage')
+    await page.waitForTimeout(800)
+
+    const z = await page.evaluate(() => {
+      const frame = document.querySelector('.board-frame')!.getBoundingClientRect()
+      const zona = document.querySelector('.dice-arena')!.getBoundingClientRect()
+      const btns = Array.from(document.querySelectorAll('.dice-arena button'))
+      return {
+        cortados: btns.filter((b) => b.scrollWidth > b.clientWidth + 2).map((b) => (b.textContent ?? '').trim().slice(0, 20)),
+        baixos: btns.filter((b) => b.getBoundingClientRect().height < 44).length,
+        estoura: zona.bottom > frame.bottom + 1,
+        quantos: btns.length,
+      }
+    })
+    expect(z.quantos, 'cenário não montou a zona de ação').toBeGreaterThan(0)
+    expect(z.cortados, 'rótulo de ação cortado').toEqual([])
+    expect(z.baixos, 'ação abaixo do alvo de toque').toBe(0)
+    expect(z.estoura, 'a zona de ação passou do tabuleiro').toBe(false)
+  })
+}
+
+test('retrato: a linha do Bus Ticket vira lista tocável', async ({ page }) => {
+  // Lado a lado, 11 paradas davam 24px cada e o nome saía "Ve n..", "Ac a..".
+  await page.setViewportSize(PHONE_SMALL_PORTRAIT)
+  await page.goto('/play?players=2&scenario=acoes&modo=bus')
+  await page.waitForSelector('.board-stage')
+  await page.waitForTimeout(800)
+  await page.getByRole('button', { name: /usar bus ticket/i }).first().click()
+  await page.waitForTimeout(700)
+
+  const bus = await page.evaluate(() => {
+    const cards = Array.from(document.querySelectorAll('.bus-stop-card')).map((el) => el.getBoundingClientRect())
+    const shell = document.querySelector('.bus-picker-modal')!.getBoundingClientRect()
+    return {
+      paradas: cards.length,
+      alturaMin: Math.min(...cards.map((c) => c.height)),
+      larguraMin: Math.min(...cards.map((c) => c.width)),
+      nomesCortados: Array.from(document.querySelectorAll('.bus-stop-card__name'))
+        .filter((n) => n.scrollWidth > n.clientWidth + 2).length,
+      fora: shell.right > document.documentElement.clientWidth + 1 || shell.bottom > window.innerHeight + 1,
+      instrucao: (document.querySelector('.bus-picker-body p')?.textContent ?? '').trim(),
+    }
+  })
+  expect(bus.paradas, 'seletor de parada não abriu').toBeGreaterThan(1)
+  expect(Math.round(bus.alturaMin), 'parada abaixo do alvo de toque').toBeGreaterThanOrEqual(44)
+  expect(Math.round(bus.larguraMin), 'a lista voltou a ser uma linha de colunas estreitas').toBeGreaterThanOrEqual(200)
+  expect(bus.nomesCortados, 'nome de parada truncado').toBe(0)
+  expect(bus.fora, 'o seletor saiu da tela').toBe(false)
+  // No dedo não há cursor para "passar pela linha".
+  expect(bus.instrucao, 'instrução ainda descreve um gesto de mouse').toMatch(/toque/i)
+})
+
+test('retrato: abrir o convite na home não estoura a largura', async ({ page }) => {
+  // Coluna de grade com `min-width: auto` recusa encolher abaixo do conteúdo: com o campo
+  // de convite aberto o painel pedia 337px e vazava numa tela de 320.
+  await page.setViewportSize(PHONE_SMALL_PORTRAIT)
+  for (const rota of ['/play', '/play?map=fuligem']) {
+    await page.goto(rota)
+    await page.waitForTimeout(700)
+    await page.locator('.home-map-panel__invite').click()
+    await page.waitForTimeout(500)
+    const fora = await page.evaluate(() => {
+      const de = document.documentElement
+      return Array.from(document.querySelectorAll('.home-map-panel *')).filter((el) => {
+        const b = el.getBoundingClientRect()
+        if (b.width === 0 || el.closest('[aria-hidden="true"]') || el.tagName === 'svg' || el.closest('svg')) return false
+        return b.right > de.clientWidth + 2
+      }).length
+    })
+    expect(fora, `${rota}: o painel do convite vaza para fora da tela`).toBe(0)
+    await expectNoHorizontalScroll(page, `convite aberto em ${rota}`)
+  }
+})
+
+test('retrato: no fim de jogo o rótulo não encosta no valor', async ({ page }) => {
+  // `endgame-wealth` ficou fora do grupo que dá `gap`, e o `::before` colava no número:
+  // saía "PATRIMÔNIOR$ 3.510".
+  await page.setViewportSize({ width: 360, height: 640 })
+  await page.goto('/play?players=2&scenario=endgame')
+  await page.waitForSelector('.board-stage')
+  await page.waitForTimeout(800)
+  await page.getByRole('button', { name: /falir|declarar/i }).first().click()
+  await page.waitForTimeout(900)
+
+  const gap = await page.evaluate(() => {
+    const el = document.querySelector('.endgame-wealth')
+    if (!el) return null
+    const s = getComputedStyle(el)
+    return { gap: parseFloat(s.columnGap || '0'), display: s.display }
+  })
+  expect(gap, 'a classificação final não renderizou').not.toBeNull()
+  expect(gap!.gap, 'rótulo e valor do patrimônio voltaram a se encostar').toBeGreaterThan(2)
+  await expectNoHorizontalScroll(page, 'fim de jogo em retrato')
+})
+
 test('retrato: o convite com QR não estoura o modal no menor telefone', async ({ page }) => {
   // A grade do convite tinha piso RÍGIDO de duas colunas (~386px de largura mínima)
   // inclusive no bloco "de celular" — não cabia em 390px e destruía 320px. Piso mínimo

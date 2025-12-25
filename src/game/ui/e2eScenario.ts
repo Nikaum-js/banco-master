@@ -22,6 +22,7 @@ import type { GameState } from '@/game/turn/types'
 import { createRoom, joinRoom, SEAT_COLORS } from '@/net/room'
 import { useRoomStore } from '@/net/roomStore'
 import { maybeOpenLandAuction, placeLandBid } from '@/game/economy/landAuction'
+import { busSideOf } from '@/game/turn/turnMachine'
 import { isRentableKind } from '@/game/economy/titles'
 import { THEME } from '@/game/theme'
 import { BOARD } from '@/lib/boardData'
@@ -232,3 +233,67 @@ function applyE2EPregaoScenario(): void {
 }
 
 applyE2EPregaoScenario()
+
+// `?scenario=acoes&modo=bus|prisao|compra` — a ZONA DE AÇÃO do miolo cheia, para o gate
+// responsivo. É a região com mais variação da tela (de um botão a três) e a que mais
+// aperta em retrato de celular, onde o miolo útil fica em ~240px; sem gancho, alcançá-la
+// dependia de rolar o dado até cair na casa certa, o que não é determinístico.
+//
+// Mesmo andaime dos demais: só ativa com o parâmetro, nenhum reducer é tocado, e o estado
+// plantado é exatamente o que o motor produziria — as flags lidas por `diceArenaView`
+// (`aguardando-finalizacao`, `prisao-decisao`, `pendingResolve`) são as de produção.
+function applyE2EAcoesScenario(): void {
+  if (typeof window === 'undefined') return
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('scenario') !== 'acoes') return
+  const modo = params.get('modo') ?? 'bus'
+
+  const g = createSeedState(['p1', 'p2'], Date.now() - 65_000)
+  const [eu] = g.players
+  eu.cash = 2_400
+  g.activeSeat = 0
+  g.round = 7
+
+  if (modo === 'prisao') {
+    // Preso: "Tentar dupla" + "Pagar fiança" — o par que o jogador relatou apertado.
+    eu.pos = BOARD.findIndex((sq) => sq.kind === 'corner-jail')
+    eu.jail = { inJail: true, attempts: 0 }
+    g.turn = { ...g.turn, state: 'prisao-decisao' }
+  } else if (modo === 'compra') {
+    // Comprar + Leilão, com a casa a resolver sob o peão.
+    const alvo = Object.keys(g.titles).map(Number).find((pos) => !g.titles[pos].ownerId)
+    if (alvo === undefined) throw new Error('Cenário de ações exige um título sem dono')
+    eu.pos = alvo
+    g.turn = { ...g.turn, state: 'casa-a-resolver', pendingResolve: true }
+    g.resolution = { kind: 'purchase', pos: alvo }
+  } else {
+    // O PIOR caso: fim de turno com Bus Ticket em mão — dois botões, e três na Fuligem,
+    // onde o desvio pela ferrovia (D-073) acrescenta o de embarque.
+    eu.busTickets = 3
+    // Fora de canto: `canUseBusTicket` recusa sobre canto (FR-003a).
+    eu.pos = BOARD.findIndex((sq, i) => i > 0 && busSideOf(i) !== null && sq.kind === 'property')
+    g.turn = { ...g.turn, state: 'aguardando-finalizacao' }
+  }
+
+  useGameStore.setState({ game: g })
+
+  const room = createRoom('acoes-visual', {
+    uid: 'acoes-p1',
+    name: 'Nikaum',
+    color: SEAT_COLORS[0],
+    avatar: 'prism-face',
+    skin: 'cartola',
+  }, { boardId: params.get('map') === 'fuligem' ? 'fuligem' : 'atlas' })
+  const guest = joinRoom(room, {
+    uid: 'acoes-p2',
+    name: 'Rival',
+    color: SEAT_COLORS[1],
+    avatar: 'totem-face',
+    skin: 'aviador',
+  })
+  if (!guest.ok) throw new Error(`Cenário de ações inválido: ${guest.reason}`)
+  useRoomStore.getState().setRoom({ ...guest.room, status: 'playing' })
+  useRoomStore.setState({ myUid: 'acoes-p1' })
+}
+
+applyE2EAcoesScenario()

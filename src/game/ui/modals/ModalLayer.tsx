@@ -16,6 +16,7 @@ import { AUCTION_WINDOW } from '@/game/economy/purchase'
 import { RARITY_COLOR, RARITY_LABEL, RARITY_PIPS, cardLabel, cardDesc } from '@/game/ui/cards/cardMeta'
 import { cardById } from '@/game/cards/catalog'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
+import { useMediaQuery } from '@/game/ui/media'
 import { PlayerFace } from '@/boards/PlayerFace'
 import { SquareIcon, AcasoCellGlyph, TesouroCellGlyph } from '@/boards/glyphs/squares'
 import { buildingFamily } from '@/boards/glyphs/buildingFamily'
@@ -671,6 +672,7 @@ function BusPicker({
 }) {
   const tickets = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]].busTickets)
   const [boarding, setBoarding] = useState(false)
+  const coarse = useMediaQuery('(pointer: coarse)')
   return (
     <ModalShell className="bus-picker-modal w-[980px] max-w-[calc(100vw-2rem)] overflow-y-auto !overflow-x-hidden">
       <ModalHeader
@@ -684,7 +686,13 @@ function BusPicker({
           onBoard={() => { setBoarding(true); onBoardingChange?.(true) }}
           onEmbarked={onEmbarked}
         />
-        <p className="label text-cream-muted text-center mt-2.5 leading-snug">Passe o cursor pela linha e clique na parada para embarcar.</p>
+        {/* No dedo não há cursor para passar pela linha, e a linha não é mais horizontal
+            (D-079): mandar "passar o cursor" num celular descreve um gesto que não existe. */}
+        <p className="label text-cream-muted text-center mt-2.5 leading-snug">
+          {coarse
+            ? 'Toque na parada para embarcar.'
+            : 'Passe o cursor pela linha e clique na parada para embarcar.'}
+        </p>
       </div>
       {/* Canhoto do bilhete — picote com furos nas bordas + contador + cancelar */}
       <div className="relative border-t-2 border-dashed border-coffee-500/60">
