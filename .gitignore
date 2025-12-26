@@ -28,6 +28,8 @@ dist-ssr
 /test-results/
 /playwright-report/
 /playwright/.cache/
+/.playwright-mcp/
+/scratchpad/
 
 # Relatórios de simulação (036 — extensão de conservação/cobertura), artefato gerado
 /reports/
