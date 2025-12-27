@@ -18,9 +18,11 @@ function addCoverage(coverage: Record<string, number>, mechanisms: string[]): vo
 // política puramente aleatória (Assumption "sem heurística de jogador razoável"): o
 // devedor sempre tenta liquidar (mortgage/vender construção) antes de falir, o que é
 // correto pela regra (§9.1) mas prolonga a sobrevivência bem mais que um jogador humano
-// decidiria. 1500 rodadas cobriu 100/100 seeds em 2/3/6 jogadores no benchmark de
-// implementação, dentro do orçamento de SC-002 (sharding por contagem, research.md D8).
-const DEFAULT_ROUND_CAP = 1500
+// decidiria. O teto de 1500 cobria o benchmark anterior, mas a progressão parcial de
+// construção (D-050) reduz o aluguel máximo de países incompletos: cinco seeds válidas
+// passaram do limite e terminaram entre 1568 e 1930 rodadas. 2000 mantém a salvaguarda
+// finita sem classificar essas partidas completas como deadlock.
+const DEFAULT_ROUND_CAP = 2000
 const SAFETY_TICK_FACTOR = 60 // salvaguarda contra loop sem progresso de rodada (não é o teto de regra)
 
 function fail(

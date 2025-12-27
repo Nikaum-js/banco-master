@@ -1,5 +1,5 @@
 // Lote configurável, maior que o padrão da suíte (036/FR-008, execuções noturnas).
-// Uso: bun run sim:batch -- --games=1000 [--counts=2,3,6] [--base-seed=20260705] [--rounds=1500]
+// Uso: bun run sim:batch -- --games=1000 [--counts=2,3,6] [--base-seed=20260705] [--rounds=2000]
 import { runGame } from '../tests/sim/engine/runGame'
 import { buildReport, formatReport } from '../tests/sim/engine/report'
 import { writeReport } from '../tests/sim/engine/reportIO'
@@ -26,7 +26,7 @@ function argString(name: string, fallback?: string): string | undefined {
 const games = argNumber('games', 100)
 const counts = argList('counts', [2, 3, 6])
 const baseSeed = argNumber('base-seed', 20260705)
-const roundCap = argNumber('rounds', 1500)
+const roundCap = argNumber('rounds', 2000)
 const reportPath = argString('report', `reports/sim-batch-${baseSeed}`)
 
 const t0 = Date.now()

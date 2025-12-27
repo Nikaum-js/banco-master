@@ -72,7 +72,7 @@ test('caminho de jogo não tem violação de acessibilidade serious/critical', a
   await driveUntilVisible(page, /^Comprar/)
   await auditStop(page, 'modal de compra', report)
   await page.getByRole('button', { name: 'Leilão' }).click()
-  await expect(page.getByText('quem der mais, leva')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Leilão ao vivo' })).toBeVisible()
   await auditStop(page, 'modal de leilão', report)
 
   // — 6. Fim de jogo — partida SEMEADA (D10, mesmo aviso de fullMatch.spec.ts): prova a TELA,

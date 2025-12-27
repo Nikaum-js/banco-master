@@ -1,5 +1,5 @@
 // Reexecuta 1 partida por seed explícita, para depuração (036/FR-009).
-// Uso: bun run sim:replay -- --seed=482913 --players=3 [--rounds=1500]
+// Uso: bun run sim:replay -- --seed=482913 --players=3 [--rounds=2000]
 import { runGame } from '../tests/sim/engine/runGame'
 import { buildReport } from '../tests/sim/engine/report'
 import { writeReport } from '../tests/sim/engine/reportIO'
@@ -17,7 +17,7 @@ function argString(name: string, fallback?: string): string | undefined {
 
 const seed = argNumber('seed')
 const players = argNumber('players')
-const roundCap = argNumber('rounds', 1500)!
+const roundCap = argNumber('rounds', 2000)!
 const reportPath = argString('report', seed !== undefined ? `reports/sim-replay-${seed}` : undefined)
 
 if (seed === undefined || players === undefined || ![2, 3, 6].includes(players)) {
