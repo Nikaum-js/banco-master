@@ -1,6 +1,6 @@
 // Tipos de domínio do Fluxo de Turno (spec 002). Tudo serializável (JSON puro):
 // nada de funções/refs no estado — pré-requisito de pausa/reconexão (FR-028).
-import type { Title, ResolutionSlice, BankStock, Loan } from '../economy/types'
+import type { Title, ResolutionSlice, BankStock, Loan, Immunity, TempEffect } from '../economy/types'
 import type { DeckId } from '../cards/types'
 
 export type SpeedFace = 1 | 2 | 3 | 'mr-banco' | 'onibus'
@@ -67,4 +67,6 @@ export interface GameState {
   centerPot: number // pote do Free Parking (007); semente/reabastecimento $500
   loans: Loan[] // empréstimos ativos entre jogadores (010, §15)
   taxManPos: number // posição do Fiscal/Tax Man (012, §13.8); inicia em GO=0
+  immunities: Immunity[] // imunidades de aluguel ativas (014, §8.4)
+  tempEffects: TempEffect[] // efeitos temporários de carta (015, §10.6): apagão/greve/boicote/imunidade-temp
 }

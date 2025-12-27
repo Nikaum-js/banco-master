@@ -41,6 +41,19 @@ export interface Loan {
   ratePct: number // 10..50 — juros simples sobre o principal (§15.4), cobrados por GO
 }
 
+export interface Immunity {
+  beneficiaryId: string // quem não paga aluguel naquela propriedade (014, §8.4)
+  pos: number // propriedade isenta
+  lapsRemaining: number | null // voltas restantes; null = permanente (até o fim)
+}
+
+export interface TempEffect {
+  kind: 'apagao' | 'greve' | 'boicote' | 'imunidade-temp' // efeitos temporários de carta (015, §10.6)
+  ownerId: string // quem originou — relógio da expiração (passagem dele pelo GO)
+  pos: number | null // propriedade (boicote/imunidade-temp) ou null (apagao/greve, board-wide)
+  lapsRemaining: number // voltas restantes (apagao/greve: 1; boicote/imunidade-temp: 2)
+}
+
 export type ResolutionSlice =
   | { kind: 'purchase'; pos: number }
   | { kind: 'auction'; auction: Auction }
@@ -48,3 +61,15 @@ export type ResolutionSlice =
   | { kind: 'card-discard'; deckId: DeckId; drawnId: string } // mão cheia: escolher descarte (006)
   | { kind: 'card-shortcut'; deckId: DeckId; cardId: string } // Atalho: escolher ±3 (006)
   | { kind: 'debt'; amount: number; creditorId: string | null } // dívida pendente: pagar/falir (008)
+  // Reação pendente (017): a carta ofensiva fica "em voo" aqui até o alvo responder.
+  | {
+      kind: 'reaction-diplomacia'
+      reactorId: string
+      attackerId: string
+      effect: string
+      cardId: string
+      deck: DeckId
+      targetPos: number | null
+      targetPlayer: string | null
+    }
+  | { kind: 'reaction-bunker'; reactorId: string; amount: number }
