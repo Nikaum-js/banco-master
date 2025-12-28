@@ -1,11 +1,17 @@
 // Captura de screenshots REAIS pro marketing (051, FR-011). Roda contra um dev server
 // local (`bun run dev`) com os dados fictícios dos andaimes que o E2E já usa:
-// `?players=4` (partida local determinística) e a sala real de `?host=1` (Supabase do
-// `.env`, marcada como `ended` no fim — mesma higiene FR-054 do multiplayer.spec).
+// `?players=6` (partida local determinística) e `?scenario=fuligem-*` (mesa semeada do
+// segundo mapa, sem depender de Supabase).
 //
 // Uso: bun run scripts/capture-marketing-shots.ts [--base http://localhost:5173]
-// Saída: src/marketing/assets/raw/*.png (o build converte pra WebP fora daqui) e
-// public/og.png (imagem social, 1200×630 @2x).
+// Saída: src/marketing/assets/raw/*.png. A conversão é passo MANUAL:
+//   cwebp -q 76 raw/<nome>.png -o src/marketing/assets/<nome>.webp
+//   sips -s format jpeg -s formatOptions 82 raw/og.png --out public/og.jpg
+// O intermediário da OG fica em raw/, nunca em `public/`: tudo que está lá é copiado
+// verbatim pro dist e um PNG de 1,4 MB ao lado do JPEG seria peso publicado à toa.
+//
+// A OG deixou de ser o tabuleiro nu: desde o redesenho da landing ela é a PRIMEIRA DOBRA
+// da landing, que é a identidade que o link agora promete.
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 import { chromium, type Browser, type Page } from '@playwright/test'
@@ -16,10 +22,6 @@ const BASE = process.argv.includes('--base')
   : 'http://localhost:5173'
 
 const RAW_DIR = path.resolve(import.meta.dirname, '../src/marketing/assets/raw')
-const PUBLIC_DIR = path.resolve(import.meta.dirname, '../public')
-
-// Assentos fictícios — nomes claramente de exemplo, nenhum identificador real.
-const LOBBY_SEATS = ['Marina', 'Rafa', 'Bia'] as const
 
 async function settle(page: Page, ms = 1800): Promise<void> {
   await page.waitForTimeout(ms)
@@ -69,7 +71,31 @@ async function captureBoardAndTrade(browser: Browser): Promise<void> {
   await ctx.close()
 }
 
-// Imagem social (OG): o tabuleiro em 1200×630 @2x — proporção exata do card.
+// A Cidade da Fuligem, pelos cenários semeados de `game/ui/e2eScenario.ts`: mesa rica
+// (bairro fechado, escada de construção inteira, hipoteca, Sorte Grande acumulada) e o
+// pregão ao vivo. Determinístico e sem credencial — o oposto do lobby real.
+async function captureFuligem(browser: Browser): Promise<void> {
+  const ctx = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    deviceScaleFactor: 2,
+    reducedMotion: 'reduce',
+  })
+  const page = await ctx.newPage()
+  for (const [scenario, file] of [
+    ['fuligem-showcase', 'fuligem-mesa.png'],
+    ['fuligem-auction', 'fuligem-leilao.png'],
+  ] as const) {
+    await page.goto(`${BASE}/play?players=2&map=fuligem&scenario=${scenario}`)
+    await page.locator('.board-stage').waitFor({ timeout: 30_000 })
+    await settle(page, 2500)
+    await page.screenshot({ path: path.join(RAW_DIR, file), animations: 'disabled', timeout: 60_000 })
+    console.log(`✓ ${file}`)
+  }
+  await ctx.close()
+}
+
+// Imagem social (OG): a PRIMEIRA DOBRA DA LANDING em 1200×630 @2x — proporção exata do
+// card. O cabeçalho sai (não é conteúdo do cartão) e o hero é forçado à altura do card.
 async function captureOg(browser: Browser): Promise<void> {
   const ctx = await browser.newContext({
     viewport: { width: 1200, height: 630 },
@@ -77,85 +103,32 @@ async function captureOg(browser: Browser): Promise<void> {
     reducedMotion: 'reduce',
   })
   const page = await ctx.newPage()
-  await boardMidMatch(page)
-  await page.screenshot({ path: path.join(PUBLIC_DIR, 'og.png'), animations: 'disabled', timeout: 60_000 })
+  await page.goto(`${BASE}/`)
+  await page.addStyleTag({
+    content: '.mk-header, .mk-skip { display: none !important } .fx-hero { min-height: 630px !important; padding-top: 2.5rem }',
+  })
+  await settle(page, 2000)
+  await page.screenshot({
+    path: path.join(RAW_DIR, 'og.png'),
+    clip: { x: 0, y: 0, width: 1200, height: 630 },
+    animations: 'disabled',
+    timeout: 60_000,
+  })
   console.log('✓ og.png')
   await ctx.close()
 }
 
-// Lobby real: precisa de VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY no ambiente (o Bun lê o
-// .env sozinho). Sem credencial, avisa e segue — as outras capturas não dependem disso.
-async function captureLobby(browser: Browser): Promise<void> {
-  const url = process.env.VITE_SUPABASE_URL
-  const key = process.env.VITE_SUPABASE_ANON_KEY
-  if (!url || !key) {
-    console.warn('! lobby.png PULADO: sem VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY no ambiente')
-    return
-  }
-
-  // Mesma espera do e2e/multiplayer.spec: a lista de cores começa cheia (8) e só encolhe
-  // quando a prévia da sala chega — clicar antes disso pega cor tomada e o pedido volta
-  // `color-taken`. `free` = 8 − assentos já ocupados.
-  const fillIdentity = async (page: Page, name: string, cta: RegExp, free: number) => {
-    await page.waitForFunction(
-      (n) => document.querySelectorAll('button[aria-label^="Cor "]').length === n,
-      free,
-      { timeout: 20_000 },
-    )
-    await page.getByLabel('Seu nome').fill(name)
-    await page.locator('button[aria-label^="Cor "]').first().click()
-    await page.getByRole('button', { name: cta }).click()
-  }
-
-  const hostCtx = await browser.newContext({
-    viewport: { width: 1440, height: 900 },
-    deviceScaleFactor: 2,
-    reducedMotion: 'reduce',
-  })
-  const host = await hostCtx.newPage()
-  await host.goto(`${BASE}/play?host=1`)
-  await fillIdentity(host, LOBBY_SEATS[0], /^Criar sala$/, 8)
-  await host.getByText('Sala aberta').waitFor({ timeout: 30_000 })
-  const roomUrl = host.url()
-  const roomId = new URL(roomUrl).searchParams.get('room')
-
-  const guestCtxs = []
-  for (const [i, name] of LOBBY_SEATS.slice(1).entries()) {
-    const ctx = await browser.newContext({ reducedMotion: 'reduce' })
-    guestCtxs.push(ctx)
-    const guest = await ctx.newPage()
-    await guest.goto(roomUrl)
-    await guest.getByText('Entrar na sala').waitFor({ timeout: 20_000 })
-    await fillIdentity(guest, name, /^Confirmar e entrar$/, 8 - (i + 1))
-    await host.getByText(name).waitFor({ timeout: 20_000 })
-  }
-
-  await settle(host)
-  await host.screenshot({ path: path.join(RAW_DIR, 'lobby.png'), animations: 'disabled', timeout: 60_000 })
-  console.log('✓ lobby.png')
-
-  for (const ctx of guestCtxs) await ctx.close()
-  await hostCtx.close()
-
-  // Higiene FR-054: sala de captura não fica aberta pra trás.
-  if (roomId) {
-    const { createClient } = await import('@supabase/supabase-js')
-    await createClient(url, key).from('rooms').update({ status: 'ended' }).eq('id', roomId)
-    console.log(`✓ sala ${roomId} marcada como ended`)
-  }
-}
-
-// `--only board,og,lobby` recaptura só uma parte — recapturar tudo cria sala nova à toa.
+// `--only board,fuligem,og` recaptura só uma parte.
 const ONLY = process.argv.includes('--only')
   ? process.argv[process.argv.indexOf('--only') + 1].split(',')
-  : ['board', 'og', 'lobby']
+  : ['board', 'fuligem', 'og']
 
 mkdirSync(RAW_DIR, { recursive: true })
 const browser = await chromium.launch()
 try {
   if (ONLY.includes('board')) await captureBoardAndTrade(browser)
+  if (ONLY.includes('fuligem')) await captureFuligem(browser)
   if (ONLY.includes('og')) await captureOg(browser)
-  if (ONLY.includes('lobby')) await captureLobby(browser)
 } finally {
   await browser.close()
 }
