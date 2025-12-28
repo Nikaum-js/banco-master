@@ -24,3 +24,8 @@ export function groupOwnedCount(state: GameState, group: GroupKey, ownerId: stri
 export function countOwned(state: GameState, kind: 'airport' | 'utility', ownerId: string): number {
   return BOARD.filter((s) => s.kind === kind && state.titles[s.pos]?.ownerId === ownerId).length
 }
+
+// Alguma cidade do grupo tem Skyscraper? (gatilho do aluguel ×3 das demais — 011, §13.7)
+export function groupHasSkyscraper(state: GameState, group: GroupKey): boolean {
+  return BOARD.some((s) => s.kind === 'property' && s.group === group && state.titles[s.pos]?.skyscraper)
+}
