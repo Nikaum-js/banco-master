@@ -265,17 +265,12 @@ a:hover {
   white-space: nowrap;
 }
 
-/* Monograma ao lado do wordmark. `alt=""` porque o `aria-label` do link já nomeia a marca —
-   duas leituras do mesmo fato só atrapalham quem usa leitor de tela. O raio é `--radius-card`
-   (não pill: o DESIGN.md proíbe pill em superfície), e a borda de latão a 30% costura o
-   monograma ao resto do cabeçalho sem competir com o botão de ação. */
+/* Monograma transparente ao lado do wordmark. `alt=""` porque o `aria-label` do link já
+   nomeia a marca — duas leituras do mesmo fato só atrapalham quem usa leitor de tela. */
 .mk-brand__mark {
   display: block;
   width: 2rem;
   height: 2rem;
-  border-radius: var(--radius-card, 6px);
-  border: 1px solid color-mix(in srgb, var(--color-brass) 30%, transparent);
-  box-shadow: 0 1px 8px -4px color-mix(in srgb, var(--color-brass) 45%, transparent);
 }
 
 .mk-brand__word {

@@ -9,8 +9,6 @@
     Um tabuleiro de propriedades em perspectiva sustenta uma metrópole cuja silhueta forma a letra M.
   </desc>
 
-  <rect width="256" height="256" fill="#f7f3e9" />
-
   <!-- Base do tabuleiro: o filete inferior mantém a leitura de peça mesmo em 32 px. -->
   <path fill="#031f3f" d="m31 174 97 39 97-39v14l-97 44-97-44Z" />
 
