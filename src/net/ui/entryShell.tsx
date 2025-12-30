@@ -11,8 +11,8 @@
 // Movimento: CSS Motion Path (`offset-path`/`.entry-flyer`) — SMIL dinâmico congela no
 // Chromium. Tudo decorativo: some sob `prefers-reduced-motion` (voadores) ou congela de
 // forma composta (nuvens), e nada disso entra na árvore de acessibilidade.
-import type { ReactNode } from 'react'
-import { motion } from 'motion/react'
+import { createContext, useContext, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { useMotion } from '@/game/ui/motion'
 
@@ -257,6 +257,24 @@ function TrailSquare({ i }: { i: number }) {
   )
 }
 
+// O MESMO caminho das casas, em `d` — o token passeia por ele em passos discretos
+// (`.entry-hop`, 30 steps ≈ uma casa por passada), nunca deslizando: peão anda de casa
+// em casa. Como a trilha e o passeio nascem das mesmas bézieres, não têm como desgarrar.
+const TRAIL_PATH = TRAIL_SEGS.map(
+  (seg, i) => `${i === 0 ? `M${seg[0].x} ${seg[0].y}` : ''}C${seg[1].x} ${seg[1].y} ${seg[2].x} ${seg[2].y} ${seg[3].x} ${seg[3].y}`,
+).join('')
+
+// Pino de jogador visto de perfil — base, corpo e cabeça, no traço dos glifos.
+function TokenMark({ scale = 1 }: { scale?: number }) {
+  return (
+    <g transform={`scale(${scale})`} stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+      <ellipse cy="11" rx="9" ry="3" />
+      <path d="M-5.4 10.4c0-4.2 1.6-5.2 1.6-8.4a3.8 3.8 0 0 1 7.6 0c0 3.2 1.6 4.2 1.6 8.4Z" fill="currentColor" fillOpacity="0.18" />
+      <circle cy="-6.6" r="4.2" fill="currentColor" fillOpacity="0.18" />
+    </g>
+  )
+}
+
 function BoardTrail({ className }: { className?: string }) {
   const squares = TRAIL_SEGS.flatMap((seg, si) =>
     Array.from({ length: 11 }, (_, i) => i)
@@ -286,6 +304,29 @@ function BoardTrail({ className }: { className?: string }) {
           <CardMark group="navy" />
         </g>
       </g>
+
+      {/* dois peões percorrendo a trilha, um atrás do outro (o atraso negativo
+          é o que os separa por algumas casas — a mesa nasce no meio da partida) */}
+      {[
+        { dur: '96s', delay: '-12s', scale: 1, opacity: 0.5 },
+        { dur: '96s', delay: '-31s', scale: 0.9, opacity: 0.36 },
+      ].map((t) => (
+        <g
+          key={t.delay}
+          className="entry-flyer entry-hop"
+          opacity={t.opacity}
+          style={{
+            offsetPath: `path('${TRAIL_PATH}')`,
+            offsetRotate: '0deg',
+            animationDuration: t.dur,
+            animationDelay: t.delay,
+          }}
+        >
+          <g transform="translate(0 -26)">
+            <TokenMark scale={t.scale} />
+          </g>
+        </g>
+      ))}
     </svg>
   )
 }
@@ -401,20 +442,102 @@ function AtlasScenery({ className }: { className?: string }) {
 }
 
 // ---------------------------------------------------------------------
+// Parallax de cursor — a carta ganha PROFUNDIDADE: cada camada da cena se
+// desloca por um fator diferente do mesmo par de motion values normalizados
+// (-1..1), então o que está "mais perto" (a trilha do rodapé) anda mais que o
+// que está "mais longe" (as nuvens e os paralelos). Vale para o mouse apenas:
+// dedo não paira sobre nada, e sob movimento reduzido as camadas ficam paradas.
+// ---------------------------------------------------------------------
+const ParallaxCtx = createContext<{ x: MotionValue<number>; y: MotionValue<number> } | null>(null)
+const PARALLAX_SPRING = { stiffness: 45, damping: 18, mass: 0.7 } as const
+
+function ParallaxLayer({ depth, className, children }: { depth: number; className?: string; children: ReactNode }) {
+  const ctx = useContext(ParallaxCtx)
+  // Fallback estável: sem contexto (ou com movimento reduzido) o layer usa um par
+  // de valores parados — a ordem dos hooks não depende de haver parallax.
+  const idleX = useMotionValue(0)
+  const idleY = useMotionValue(0)
+  const x = useTransform(ctx?.x ?? idleX, (v) => v * depth)
+  const y = useTransform(ctx?.y ?? idleY, (v) => v * depth * 0.62)
+  // O leve zoom mora AQUI, no mesmo transform do parallax: uma classe `scale-*` do
+  // Tailwind seria descartada — motion escreve `transform` inline e ganha do CSS.
+  return (
+    <motion.div style={{ x, y, scale: 1.06 }} className={cn('absolute inset-0', className)}>
+      {children}
+    </motion.div>
+  )
+}
+
+// Holofote — a mancha de luz de uma lupa correndo sobre a carta. É um gradiente
+// ESTÁTICO movido por transform (composita na GPU); pintar um radial-gradient
+// novo a cada frame custaria repaint de tela cheia.
+function CursorLantern({ x, y }: { x: MotionValue<number>; y: MotionValue<number> }) {
+  return (
+    <motion.div
+      style={{
+        x,
+        y,
+        width: 720,
+        height: 720,
+        marginLeft: -360,
+        marginTop: -360,
+        background: 'radial-gradient(circle, rgb(217 166 80 / 0.13) 0%, rgb(217 166 80 / 0.05) 38%, transparent 70%)',
+      }}
+      className="absolute left-0 top-0 mix-blend-screen"
+    />
+  )
+}
+
+// ---------------------------------------------------------------------
 // Palco de tela cheia: transparente sobre o graticule do body, com a cena
 // decorativa fixa e o conteúdo centralizado (rola quando não cabe).
 // ---------------------------------------------------------------------
 export function EntryStage({ children }: { children: ReactNode }) {
+  const { reduced } = useMotion()
+  const rawX = useMotionValue(0)
+  const rawY = useMotionValue(0)
+  const lampX = useMotionValue(-9999)
+  const lampY = useMotionValue(-9999)
+  const px = useSpring(rawX, PARALLAX_SPRING)
+  const py = useSpring(rawY, PARALLAX_SPRING)
+  const lx = useSpring(lampX, { stiffness: 90, damping: 22, mass: 0.5 })
+  const ly = useSpring(lampY, { stiffness: 90, damping: 22, mass: 0.5 })
+
+  function track(e: ReactPointerEvent<HTMLDivElement>): void {
+    if (reduced || e.pointerType !== 'mouse') return
+    rawX.set((e.clientX / window.innerWidth) * 2 - 1)
+    rawY.set((e.clientY / window.innerHeight) * 2 - 1)
+    lampX.set(e.clientX)
+    lampY.set(e.clientY)
+  }
+
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto overscroll-contain">
-      <div className="pointer-events-none fixed inset-0" aria-hidden="true">
-        <AtlasScenery className="absolute inset-0 w-full h-full text-brass" />
-        <SkyRoutes className="absolute inset-0 w-full h-full text-brass" />
-        <CompassRose size="min(72vmin, 560px)" className="absolute -right-[10vmin] -bottom-[14vmin] text-brass opacity-[0.1]" />
-        <CompassRose size="24vmin" className="absolute left-[3vmin] top-[5vmin] text-brass opacity-[0.06]" />
-        <BoardTrail className="absolute inset-0 w-full h-full text-brass" />
-      </div>
-      <div className="relative min-h-full flex flex-col items-center justify-center gap-7 p-4 py-10">{children}</div>
+    <div className="fixed inset-0 z-[70] overflow-y-auto overscroll-contain" onPointerMove={track}>
+      <ParallaxCtx.Provider value={reduced ? null : { x: px, y: py }}>
+        {/* A cena inteira é ampliada de leve: o deslocamento do parallax nunca
+            descobre a borda da viewport. */}
+        <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+          <ParallaxLayer depth={10}>
+            <AtlasScenery className="absolute inset-0 w-full h-full text-brass" />
+          </ParallaxLayer>
+          <ParallaxLayer depth={20}>
+            <SkyRoutes className="absolute inset-0 w-full h-full text-brass" />
+          </ParallaxLayer>
+          <ParallaxLayer depth={30}>
+            <CompassRose size="min(72vmin, 560px)" className="absolute -right-[10vmin] -bottom-[14vmin] text-brass opacity-[0.1]" />
+            <CompassRose size="24vmin" className="absolute left-[3vmin] top-[5vmin] text-brass opacity-[0.06]" />
+          </ParallaxLayer>
+          <ParallaxLayer depth={44}>
+            <BoardTrail className="absolute inset-0 w-full h-full text-brass" />
+          </ParallaxLayer>
+          {!reduced && <CursorLantern x={lx} y={ly} />}
+        </div>
+        {/* Tela baixa aperta o ritmo vertical em vez de empurrar o painel pra fora
+            da dobra — o mesmo conteúdo, com menos ar entre os blocos. */}
+        <div className="relative min-h-full flex flex-col items-center justify-center gap-6 p-4 py-10 [@media(max-height:640px)]:gap-3 [@media(max-height:640px)]:py-4">
+          {children}
+        </div>
+      </ParallaxCtx.Provider>
     </div>
   )
 }

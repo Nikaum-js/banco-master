@@ -215,9 +215,7 @@ export function RoomLobby({
         {/* Frase, não rótulo: `.label` versaleta e alarga o espaçamento — bom para "Link da
             sala", ilegível para uma linha inteira de texto. */}
         <p className="text-[0.8rem] text-starlight-muted leading-snug">
-          {faltam > 0
-            ? `Pelo menos ${MIN_SEATS} jogadores para começar — falta${faltam > 1 ? 'm' : ''} ${faltam}.`
-            : `Cabem até ${MAX_SEATS} jogadores — o anfitrião começa quando quiser.`}
+          {faltam > 0 ? `Pelo menos ${MIN_SEATS} jogadores para começar.` : `Cabem até ${MAX_SEATS} jogadores.`}
         </p>
       </div>
 

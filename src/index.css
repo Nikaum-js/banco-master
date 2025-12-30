@@ -785,6 +785,188 @@
     to   { transform: translateX(1720px); }
   }
 
+  /* Token de latão passeando pela trilha do rodapé — mesma mecânica de
+     `.entry-flyer`, mas com timing em STEPS: a peça pula de casa em casa em vez
+     de deslizar, que é como um peão anda num tabuleiro. O número de passos vem
+     inline (uma passada = uma casa da trilha). */
+  .entry-hop { animation-timing-function: steps(30, end) !important; }
+
+  /* Wordmark — varredura de luz de latão atravessando as letras a cada ciclo.
+     É uma CÓPIA do título por cima, com o gradiente recortado no desenho das
+     letras (`background-clip: text`): fora delas não existe pixel nenhum, então
+     nada de retângulo de blend por cima da cena. Anima só `background-position`
+     — composita, não repinta. Sob movimento reduzido a camada some. */
+  .wordmark-shine {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    white-space: nowrap;
+    background-image: linear-gradient(
+      100deg,
+      transparent 41%,
+      color-mix(in srgb, var(--color-brass-glow) 85%, transparent) 47%,
+      rgb(255 255 255 / 0.9) 50%,
+      color-mix(in srgb, var(--color-brass-glow) 85%, transparent) 53%,
+      transparent 59%
+    );
+    background-size: 260% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: wordmark-sweep 7s var(--ease-paper) infinite;
+    animation-delay: 1.1s; /* deixa as letras acabarem de cair antes do primeiro brilho */
+  }
+  @keyframes wordmark-sweep {
+    0%, 55%  { background-position: 190% 0; }
+    100%     { background-position: -90% 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wordmark-shine { display: none; }
+  }
+
+  /* =================================================================
+     Cartão de embarque — o painel da home. Herda a prancha do atlas
+     (.entry-panel) e acrescenta o vocabulário de bilhete: talão à
+     direita separado por perfuração, furos nas bordas e código de
+     barras no rodapé.
+     ================================================================= */
+  .pass-perf {
+    position: relative;
+    border-top: 1px dashed color-mix(in srgb, var(--color-ink-400) 90%, transparent);
+  }
+  /* Os dois furos da perfuração: meio círculo mordendo cada borda. Tinta funda
+     em cima do painel translúcido — lê como recorte sem precisar de máscara
+     (que apagaria a sombra externa do painel inteiro). */
+  .pass-perf::before,
+  .pass-perf::after {
+    content: "";
+    position: absolute;
+    top: -7px;
+    width: 13px;
+    height: 13px;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-ink-950);
+    box-shadow: inset 0 0 0 1px var(--color-ink-500);
+  }
+  .pass-perf::before { left: -7px; }
+  .pass-perf::after  { right: -7px; }
+
+  /* Código de barras — barras de larguras irregulares desenhadas em gradiente
+     repetido; puro ornamento (aria-hidden no JSX). */
+  .pass-barcode {
+    height: 24px;
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--color-starlight-muted) 0 1px,
+      transparent 1px 3px,
+      var(--color-starlight-muted) 3px 5px,
+      transparent 5px 6px,
+      var(--color-starlight-muted) 6px 7px,
+      transparent 7px 11px
+    );
+    opacity: 0.35;
+  }
+
+  /* =================================================================
+     Painel de partidas (split-flap) — cada caractere é uma palheta que
+     tomba na horizontal. A troca de destino remonta os caracteres com
+     chave nova, e cada um cai com o próprio atraso: a onda da esquerda
+     pra direita é o que faz o efeito "clack-clack" de aeroporto.
+     ================================================================= */
+  .flap-cell {
+    display: inline-grid;
+    place-items: center;
+    min-width: 0.86em;
+    padding: 0.18em 0.06em;
+    border-radius: 1.5px;
+    background: linear-gradient(180deg, var(--color-ink-700) 0 49.5%, var(--color-ink-800) 50.5% 100%);
+    box-shadow:
+      inset 0 0 0 1px rgb(2 6 16 / 0.6),
+      inset 0 1px 0 0 rgb(238 242 251 / 0.06);
+    color: var(--color-brass-glow);
+    font-family: var(--font-display);
+    line-height: 1;
+    /* a fenda central da palheta */
+    position: relative;
+  }
+  .flap-cell::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background-color: rgb(2 6 16 / 0.75);
+  }
+  /* Palheta em branco — o letreiro real tem posições vazias; aqui elas ficam
+     presentes mas recuadas, senão a fileira pesa mais que o nome. */
+  .flap-cell--blank { color: transparent; opacity: 0.4; }
+  .flap-anim {
+    transform-origin: 50% 50%;
+    animation: flap-drop 260ms var(--ease-snap) both;
+    backface-visibility: hidden;
+  }
+  @keyframes flap-drop {
+    0%   { transform: rotateX(-88deg); filter: brightness(0.35); }
+    60%  { transform: rotateX(12deg);  filter: brightness(1.12); }
+    100% { transform: rotateX(0deg);   filter: brightness(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .flap-anim { animation: none; }
+  }
+
+  /* =================================================================
+     Ação primária da entrada — botão de latão com varredura de brilho no
+     hover e realce de luz na borda. Estende o `Button` primário (mesma
+     régua de padding/foco) em vez de reinventá-lo.
+     ================================================================= */
+  .cta-embark {
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.35),
+      0 6px 18px -8px rgb(217 166 80 / 0.75);
+  }
+  /* A lâmina de luz é um retângulo estreito ESTACIONADO fora do botão, que
+     atravessa no hover. Posição por transform (não por background-position):
+     é o único jeito de garantir que, parado, nada dela apareça na face. */
+  .cta-embark::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -55%;
+    width: 42%;
+    pointer-events: none;
+    background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.55), transparent);
+    transform: translateX(0);
+    transition: transform 700ms var(--ease-paper);
+  }
+  .cta-embark:hover::after,
+  .cta-embark:focus-visible::after { transform: translateX(330%); }
+  @media (prefers-reduced-motion: reduce) {
+    .cta-embark::after { transition: none; }
+  }
+
+  /* Halo pulsante do CTA — anel de latão respirando atrás do botão, o único
+     ponto da tela que se move sozinho DENTRO do painel (guia o olho pra ação). */
+  .cta-halo {
+    position: absolute;
+    inset: -3px;
+    border-radius: var(--radius-sharp);
+    pointer-events: none;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-brass) 45%, transparent);
+    animation: cta-breathe 3.4s var(--ease-paper) infinite;
+  }
+  @keyframes cta-breathe {
+    0%, 100% { opacity: 0.25; transform: scale(1); }
+    50%      { opacity: 0.75; transform: scale(1.012); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cta-halo { animation: none; opacity: 0.4; }
+  }
+
   /* Input das telas de entrada — vão de tinta funda com foco em latão. */
   .entry-input {
     padding: 0.5rem 0.75rem;
