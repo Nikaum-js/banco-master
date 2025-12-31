@@ -1,0 +1,45 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 256 256"
+  role="img"
+  aria-labelledby="magnata-logo-title magnata-logo-description"
+>
+  <title id="magnata-logo-title">Magnata Imobiliário</title>
+  <desc id="magnata-logo-description">
+    Monograma dourado em forma de M, coroa e edifício sobre fundo azul-marinho.
+  </desc>
+
+  <defs>
+    <linearGradient id="magnata-background" x1="32" y1="16" x2="224" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#041D3A" />
+      <stop offset="1" stop-color="#00142A" />
+    </linearGradient>
+    <linearGradient id="magnata-gold" x1="128" y1="10" x2="128" y2="227" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F2BE45" />
+      <stop offset="1" stop-color="#E3A92E" />
+    </linearGradient>
+    <linearGradient id="magnata-window" x1="116" y1="95" x2="140" y2="118" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8DC" />
+      <stop offset="1" stop-color="#F2E3B6" />
+    </linearGradient>
+  </defs>
+
+  <rect width="256" height="256" fill="url(#magnata-background)" />
+
+  <path
+    fill="url(#magnata-gold)"
+    d="M27 46 128 143 229 46v181h-31V121l-70 70-70-70v106H27V46Z"
+  />
+
+  <path
+    fill="url(#magnata-gold)"
+    d="m72 60 27 21 29-71 29 71 27-21v21l-27 21-29-25-29 25-27-21V60Z"
+  />
+
+  <g fill="url(#magnata-window)">
+    <rect x="116" y="95" width="10" height="10" rx="1" />
+    <rect x="130" y="95" width="10" height="10" rx="1" />
+    <rect x="116" y="109" width="10" height="10" rx="1" />
+    <rect x="130" y="109" width="10" height="10" rx="1" />
+  </g>
+</svg>

@@ -253,6 +253,9 @@ a:hover {
 }
 
 .mk-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
   font-family: var(--font-display);
   font-size: 1.25rem;
   letter-spacing: var(--tracking-display);
@@ -260,6 +263,23 @@ a:hover {
   text-decoration: none;
   color: var(--color-starlight);
   white-space: nowrap;
+}
+
+/* Monograma ao lado do wordmark. `alt=""` porque o `aria-label` do link já nomeia a marca —
+   duas leituras do mesmo fato só atrapalham quem usa leitor de tela. O raio é `--radius-card`
+   (não pill: o DESIGN.md proíbe pill em superfície), e a borda de latão a 30% costura o
+   monograma ao resto do cabeçalho sem competir com o botão de ação. */
+.mk-brand__mark {
+  display: block;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-card, 6px);
+  border: 1px solid color-mix(in srgb, var(--color-brass) 30%, transparent);
+  box-shadow: 0 1px 8px -4px color-mix(in srgb, var(--color-brass) 45%, transparent);
+}
+
+.mk-brand__word {
+  display: inline-block;
 }
 
 .mk-brand b {
@@ -1024,6 +1044,15 @@ a:hover {
 @media (max-width: 460px) {
   .mk-brand {
     font-size: 1.05rem;
+  }
+
+  /* Abaixo de 380px o wordmark competia com o botão "Jogar agora" e o cabeçalho quebrava em
+     duas linhas. O monograma sozinho identifica a marca, e o `aria-label` do link mantém o
+     nome disponível para leitor de tela. */
+  @media (max-width: 380px) {
+    .mk-brand__word {
+      display: none;
+    }
   }
 
   .mk-header .mk-container {
