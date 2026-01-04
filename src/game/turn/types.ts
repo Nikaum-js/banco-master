@@ -55,6 +55,17 @@ export interface Turn {
   pendingResolve: boolean
   mayRollAgain: boolean
   awaitingChoice: AwaitingChoice
+  /**
+   * O Desvio pela Ferrovia (D-073) já foi usado NESTE turno?
+   *
+   * Sem esta flag a regra se auto-realimenta: as condições de `canRailHop` são "estou numa
+   * ferrovia minha" + "tenho outra" + "turno aguardando finalização", e depois de embarcar as
+   * TRÊS voltam a ser verdade — você pousa noutra ferrovia sua e o turno volta ao mesmo estado.
+   * O resultado era embarcar de estação em estação infinitamente, de graça, no mesmo turno.
+   * O limite é por TURNO e não por casa: senão dois embarques em ferrovias diferentes ainda
+   * fechariam o ciclo.
+   */
+  railHopUsed: boolean
 }
 
 export type GamePhase = 'lobby' | 'playing' | 'ended'

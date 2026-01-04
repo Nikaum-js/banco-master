@@ -70,6 +70,7 @@ export function createSeedState(playerIds: string[], startedAt = 0): GameState {
       consecutiveDoubles: 0,
       lastRoll: null,
       pendingResolve: false,
+      railHopUsed: false,
       mayRollAgain: false,
       awaitingChoice: null,
     },

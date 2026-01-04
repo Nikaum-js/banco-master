@@ -159,6 +159,7 @@ export function startTurn(s: GameState): void {
     consecutiveDoubles: 0,
     lastRoll: s.turn?.lastRoll ?? null,
     pendingResolve: false,
+    railHopUsed: false,
     mayRollAgain: false,
     awaitingChoice: null,
   }
@@ -302,6 +303,7 @@ export function canRailHop(state: GameState): boolean {
   if (state.phase !== 'playing') return false
   if (!activeRules().railHop) return false
   if (state.turn.state !== 'aguardando-finalizacao') return false
+  if (state.turn.railHopUsed) return false // D-073: UMA vez por turno
   const player = activePlayer(state)
   const here = BOARD[player.pos]
   if (here?.kind !== 'airport') return false
@@ -326,6 +328,7 @@ export function railHop(state: GameState, dest: number, ctx: TurnCtx): GameState
   const s = clone(state)
   const p = activePlayer(s)
   const from = p.pos
+  s.turn.railHopUsed = true // D-073: consome ANTES de resolver o destino
   p.pos = dest // embarque direto: não percorre o tabuleiro ⇒ sem bônus de GO
   logEvent(s, { kind: 'rail-hop', who: p.id, from, to: dest })
   land(s.turn, p, null) // resolve o destino; sem rolagem ⇒ sem dupla/re-rolagem
