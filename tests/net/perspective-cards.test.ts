@@ -150,7 +150,11 @@ describe('perspectiva de carta (043, US5) — a mão para de trafegar', () => {
       })
     }
 
-    for (let s = 0; s < 2000 && net.host.game().phase !== 'ended'; s++) {
+    // 6000 passos, não 2000: a D-074 reduziu as cartas de MÃO a 1 cópia cada (Aquisição Hostil
+    // e Bunker Fiscal caíram de 2), então topar com um `play-hand-card` legítimo ficou mais raro
+    // — a busca precisa de mais tabuleiro. A asserção continua sendo sobre PERSPECTIVA; o número
+    // de passos é só o tamanho da varredura até o cenário aparecer.
+    for (let s = 0; s < 6000 && net.host.game().phase !== 'ended'; s++) {
       settleAuctions(net)
       if (net.host.game().phase === 'ended') break
       const points = enumerateActions({ game: net.host.game() } as unknown as SimSession)

@@ -81,12 +81,14 @@ describe('deckOdds — ordenação (FR-004)', () => {
 })
 
 describe('deckOdds — cópias agrupadas (FR-003)', () => {
-  it('Aquisição Hostil é UMA linha com 2 cópias e chance 2/21', () => {
-    const rows = deckOdds('acaso').rows.filter((r) => r.effect === 'aquisicaoHostil')
+  it('efeito com 2 cópias é UMA linha, com a chance somada', () => {
+    // Atalho é comum e tem 2 cópias no rebalanceamento da D-074 (antes era a Aquisição
+    // Hostil, lendária — que é justamente a inversão que aquela decisão corrigiu).
+    const rows = deckOdds('acaso').rows.filter((r) => r.effect === 'atalho')
     expect(rows).toHaveLength(1)
     expect(rows[0].copies).toBe(2)
     expect(rows[0].probability).toBeCloseTo(2 / 21, 10)
-    expect(rows[0].rarity).toBe('lendaria')
+    expect(rows[0].rarity).toBe('comum')
   })
 
   it('nenhum efeito aparece duas vezes na vitrine', () => {
@@ -149,5 +151,42 @@ describe('formatOdds', () => {
     expect(formatOdds(2 / 21)).toBe('9,5%')
     expect(formatOdds(1 / 18)).toBe('5,6%')
     expect(formatOdds(2 / 18)).toBe('11,1%')
+  })
+})
+
+describe('raridade É probabilidade — a invariante da D-074', () => {
+  // Antes desta invariante o sistema de raridade da §10.2 mentia: Boom Econômico e Bunker
+  // Fiscal (RARAS, 2 cópias) saíam a 11,1%, o dobro de Diplomacia e Imunidade (LENDÁRIAS, 1
+  // cópia), e no Acaso a Aquisição Hostil era a carta MAIS provável do baralho. Rótulo de
+  // raridade que não corresponde a chance é pior que rótulo nenhum — ensina errado.
+  const ORDEM = { lendaria: 3, rara: 2, comum: 1 } as const
+
+  it.each(['acaso', 'tesouro'] as const)('em %s, nenhuma carta é mais provável que uma mais rara', (deck) => {
+    const rows = deckOdds(deck).rows
+    for (const a of rows) {
+      for (const b of rows) {
+        // `a` é de nível MAIS RARO que `b` ⇒ `a` não pode ser mais provável que `b`.
+        if (ORDEM[a.rarity] > ORDEM[b.rarity]) {
+          expect(
+            a.probability,
+            `${a.title} (${a.rarity}) não pode ser mais provável que ${b.title} (${b.rarity})`,
+          ).toBeLessThanOrEqual(b.probability)
+        }
+      }
+    }
+  })
+
+  it.each(['acaso', 'tesouro'] as const)('em %s, lendária e rara ficam em 1 cópia', (deck) => {
+    // É o que torna a ausência de inversão estrutural, e não coincidência de números: com
+    // ordenação estrita impossível nos tamanhos do SRS, manter os dois níveis raros no piso é
+    // a única forma de nenhuma comum duplicada passar por cima deles.
+    for (const r of deckOdds(deck).rows) {
+      if (r.rarity !== 'comum') expect(r.copies, `${r.title}`).toBe(1)
+    }
+  })
+
+  it('os tamanhos de baralho do SRS não mudaram: Acaso 21, Tesouro 18', () => {
+    expect(deckOdds('acaso').total).toBe(21)
+    expect(deckOdds('tesouro').total).toBe(18)
   })
 })

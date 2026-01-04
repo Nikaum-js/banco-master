@@ -49,9 +49,9 @@ describe('DeckOddsModal — conteúdo e ordem', () => {
 
   it('efeito com 2 cópias mostra a contagem; com 1 cópia, não polui a linha', () => {
     render(<DeckOddsModal deck="acaso" onClose={() => {}} />)
-    const dupla = screen.getByRole('button', { name: /Aquisição Hostil/ })
+    const dupla = screen.getByRole('button', { name: /Atalho/ })
     expect(dupla.textContent).toContain('2 cartas')
-    const unica = screen.getByRole('button', { name: /Confisco Geral/ })
+    const unica = screen.getByRole('button', { name: /Aquisição Hostil/ })
     expect(unica.textContent).not.toContain('cartas')
   })
 })
