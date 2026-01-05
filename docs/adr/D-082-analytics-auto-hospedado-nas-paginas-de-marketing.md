@@ -6,6 +6,8 @@
 
 O que **não** muda: FR-006 intacta — nenhum import de `src/game`, `src/net`, stores ou `motion` chega ao visitante de marketing. SC-003 intacta — o manifest continua provando ausência de Supabase/engine nos chunks. `play.html` segue fora da auditoria de marketing, com o grafo do jogo inteiro pendurado nele.
 
+**`play.html` não recebe o script**, e isso é decisão, não esquecimento. O gate Lighthouse da 044 mede `/play` — a página mais pesada do projeto (~1,2 MB de JS) e a única com orçamento de performance. Medido no CI, incluir o Plausible ali levou o **TBT de 129ms para 201ms** (orçamento: 200ms), com as três amostras acima do baseline limpo. O app já tem telemetria anônima própria (044, `src/telemetry`); gastar 70ms do orçamento da tela de jogo para duplicar isso seria pagar caro por informação que já temos. Analytics de web serve às páginas de aquisição — que é onde ele ficou.
+
 ## Por quê
 
 O requisito e o gate nunca disseram a mesma coisa.
