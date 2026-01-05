@@ -41,9 +41,19 @@ drop policy if exists "rooms_anon_select" on public.rooms;
 drop policy if exists "rooms_anon_insert" on public.rooms;
 drop policy if exists "rooms_anon_update" on public.rooms;
 
+-- SC-005: `0024` (policy permissiva demais) não pode aparecer em `rooms` a partir desta
+-- migration — nem a nova. `WITH CHECK (true)`, mesmo restrito a `authenticated`, ainda dispara
+-- o linter (achado ao aplicar em produção, T041). Mesmo check do `update` abaixo: quem insere
+-- precisa se declarar host da PRÓPRIA linha — "criar a sala é o anfitrião dela" preservado,
+-- só deixa de ser incondicional.
 create policy "rooms_insert_authenticated" on public.rooms
   for insert to authenticated
-  with check (true);
+  with check (
+    exists (
+      select 1 from jsonb_array_elements(seats) as seat
+      where (seat->>'isHost')::boolean and seat->>'uid' = (select auth.uid())::text
+    )
+  );
 
 create policy "rooms_update_host_only" on public.rooms
   for update to authenticated
@@ -70,7 +80,11 @@ create policy "rooms_update_host_only" on public.rooms
 -- | room:<id>:lobby            | qualquer sessão autenticada        | só o uid do anfitrião        |
 -- | room:<id>:play             | só quem tem assento na sala        | só o uid do anfitrião        |
 -- | room:<id>:s:<uid>          | o próprio uid e o anfitrião        | o próprio uid e o anfitrião  |
-alter table realtime.messages enable row level security;
+--
+-- SEM `alter table realtime.messages enable row level security` aqui: o projeto já vem com RLS
+-- ligado ali por padrão (extensão gerida pela plataforma), e a role que aplica a migration não
+-- é dona da tabela para reafirmar — tentar dá `42501: must be owner of table messages` (achado
+-- ao aplicar em produção, T041). `create policy` continua permitido sem essa ownership.
 
 drop policy if exists "room_lobby_select" on realtime.messages;
 drop policy if exists "room_lobby_insert" on realtime.messages;
@@ -100,6 +114,22 @@ as $$
   limit 1;
 $$;
 
+-- "quem chama tem assento nesta sala?" — o par de `room_host_uid` para a política de `:play`.
+-- `security definer` pelo mesmo motivo dela: a política roda como o chamador, e `rooms` não
+-- tem política de select (D5), então perguntar direto à tabela responde sempre "não".
+create or replace function public.has_seat(room_id text) returns boolean
+  language sql
+  stable
+  security definer
+  set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.rooms, jsonb_array_elements(seats) as seat
+    where public.rooms.id = room_id and seat->>'uid' = (select auth.uid())::text
+  );
+$$;
+
 -- `(select realtime.topic())`/`(select auth.uid())` — envolvidos em `select` por convenção de
 -- performance do Postgres RLS (initPlan: avaliado uma vez por query, não por linha).
 --
@@ -119,11 +149,17 @@ create policy "room_lobby_insert" on realtime.messages for insert to authenticat
 create policy "room_play_select" on realtime.messages for select to authenticated
   using (
     split_part((select realtime.topic()), ':', 3) = 'play'
-    and exists (
-      select 1 from public.rooms, jsonb_array_elements(seats) as seat
-      where public.rooms.id = split_part((select realtime.topic()), ':', 2)
-        and seat->>'uid' = (select auth.uid())::text
-    )
+    -- Por FUNÇÃO, nunca por `select` direto em `public.rooms` (043, T043 — medido contra infra
+    -- real). Uma política é avaliada como o usuário chamador, então o RLS de `rooms` vale
+    -- dentro dela — e `rooms` não tem política de select por desenho (D5). Um `exists (select
+    -- 1 from public.rooms ...)` aqui é sempre FALSO, para todo mundo, inclusive o anfitrião:
+    -- ninguém jamais assinava `:play`, o aceito público não chegava a cliente nenhum, e cada
+    -- um ficava parado no último `seq` que lhe tivesse chegado por caminho privado. A falha
+    -- era muda nos dois lados — `send()` resolve "ok" mesmo sem ninguém autorizado a ouvir.
+    -- É a mesma armadilha que já tinha mordido o UPDATE de `rooms` (ver `write_room`): o que
+    -- precisa enxergar a linha tem que ser `security definer`. As outras políticas já eram,
+    -- via `room_host_uid` — esta era a única que consultava a tabela na mão.
+    and public.has_seat(split_part((select realtime.topic()), ':', 2))
   );
 
 create policy "room_play_insert" on realtime.messages for insert to authenticated
@@ -241,6 +277,11 @@ $$;
 -- o que torna a enumeração impossível (sem id, não devolve nada).
 -- ============================================================================================
 
+-- 043, T043 (D-038): a AUTORIDADE recebe os assentos íntegros, como em `read_snapshot`. Não é
+-- conveniência — no lobby não existe snapshot, então esta é a ÚNICA leitura de onde um
+-- anfitrião que deu F5 pode remontar a sala, e é essa sala que ele grava em seguida. Com a
+-- prévia redigida para ele, a remontagem apagava o código de todo convidado. Para quem não é a
+-- autoridade nada muda: o próprio código, e só ele.
 create or replace function public.room_preview(room_id text) returns jsonb
 language sql
 stable
@@ -250,15 +291,22 @@ as $$
   select jsonb_build_object(
     'id', r.id,
     'status', r.status,
-    'seats', (
-      select coalesce(jsonb_agg(
-        case when seat->>'uid' = (select auth.uid())::text
-          then seat
-          else seat - 'reentryCode'
-        end
-      ), '[]'::jsonb)
-      from jsonb_array_elements(r.seats) as seat
-    )
+    'seats', case
+      when exists (
+        select 1 from jsonb_array_elements(r.seats) as seat
+        where (seat->>'isHost')::boolean and seat->>'uid' = (select auth.uid())::text
+      )
+      then r.seats
+      else (
+        select coalesce(jsonb_agg(
+          case when seat->>'uid' = (select auth.uid())::text
+            then seat
+            else seat - 'reentryCode'
+          end
+        ), '[]'::jsonb)
+        from jsonb_array_elements(r.seats) as seat
+      )
+    end
   )
   from public.rooms r
   where r.id = room_id;
@@ -283,7 +331,31 @@ as $$
   select jsonb_build_object(
     'id', r.id,
     'status', r.status,
-    'seats', r.seats,
+    -- `seats` segue a MESMA seleção por chave de `secrets` abaixo (043, T043 — omissão
+    -- corrigida): sem isto, `r.seats` ia cru e todo jogador com assento recebia o
+    -- `reentryCode` de TODOS. O código é credencial portadora (policies.md §2) — quem o lê
+    -- toma o assento por `reattach_by_code`, inclusive o do anfitrião, e leva a autoridade
+    -- junto. A exceção do anfitrião NÃO é conveniência: é ele quem regrava a linha
+    -- (`write_room`/`write_snapshot` com o `room` que acabou de ler), e quem reassume num
+    -- aparelho novo monta a sala a partir daqui — redigir para ele apagaria o código de todo
+    -- mundo na volta. `room_preview` continua redigido para TODOS (§4): lá ninguém precisa
+    -- deles, nem o anfitrião.
+    'seats', case
+      when exists (
+        select 1 from jsonb_array_elements(r.seats) as seat
+        where (seat->>'isHost')::boolean and seat->>'uid' = (select auth.uid())::text
+      )
+      then r.seats
+      else (
+        select coalesce(jsonb_agg(
+          case when seat->>'uid' = (select auth.uid())::text
+            then seat
+            else seat - 'reentryCode'
+          end
+        ), '[]'::jsonb)
+        from jsonb_array_elements(r.seats) as seat
+      )
+    end,
     'seq', r.seq,
     'game', r.game,
     'secrets', case
@@ -304,4 +376,114 @@ as $$
   )
   from public.rooms r
   where r.id = room_id;
+$$;
+
+-- ============================================================================================
+-- FASE 6 (T043/T044) — achado ao rodar contra infra viva: UPDATE sob RLS precisa de política
+-- de SELECT pra decidir quais linhas são candidatas (Postgres combina SELECT+UPDATE — "quais
+-- linhas você vê" AND "quais dessas você atualiza"). `rooms` nunca teve select policy (D5 —
+-- "nada de select direto: toda leitura passa por função") — então TODO update direto do
+-- cliente contra `rooms` sempre afetava 0 linhas, em silêncio, mesmo com a policy de update
+-- tecnicamente correta (reproduzido via SQL direto: INSERT puro funciona; UPDATE — inclusive
+-- dentro de um upsert via ON CONFLICT DO UPDATE — não afeta nenhuma linha). `saveRoom`/
+-- `saveSnapshot` (host.ts, via `.upsert()`) nunca escreveram de fato contra o projeto vivo
+-- desde a Fase 2; nada no headless pegou isso (o adapter local não simula esta interação
+-- específica de RLS). Corrige pelo MESMO padrão já usado por request_seat/reattach_by_code:
+-- escrita passa por função security definer, que valida "é o anfitrião" por dentro e grava
+-- bypassando RLS.
+--
+-- As duas seguem a MESMA regra dupla: sala EXISTENTE — só o anfitrião ATUAL da linha, com
+-- QUALQUER `seats` novo (inclusive vazio, ex.: limpeza); sala NOVA — quem chama precisa se
+-- declarar host DENTRO do que está gravando (impede criar em nome de outro uid). A exigência
+-- "estar marcado host no payload" NÃO se aplica a uma sala já existente — senão o anfitrião
+-- não conseguiria escrever `seats: []`.
+-- ============================================================================================
+
+-- 043, T043 (D-038) — o `reentryCode` é IMUTÁVEL depois de mintado, e é a GRAVAÇÃO que garante
+-- isso, não a boa-fé de quem chama. Toda escrita conserva o código já guardado para cada
+-- assento, casando por `playerId` (estável: a reanexação troca `uid`, nunca `playerId` —
+-- FR-027). Assento novo entra com o código que o anfitrião mintou; assento removido some com a
+-- linha, como sempre. É defesa em profundidade: sem isto, qualquer caminho que remonte a sala a
+-- partir de uma leitura redigida destrói os códigos em silêncio — foi exatamente o que
+-- aconteceu por três caminhos distintos (F5 no lobby, reanexação, prévia gravada de volta), e
+-- o defeito tinha um único lugar onde poderia ter sido barrado: aqui.
+create or replace function public.preserve_seat_codes(room_id text, new_seats jsonb) returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(jsonb_agg(
+    case
+      when stored.code is not null and stored.code <> ''
+        then jsonb_set(t.seat, '{reentryCode}', to_jsonb(stored.code))
+      else t.seat
+    end
+    order by t.ord
+  ), '[]'::jsonb)
+  from jsonb_array_elements(new_seats) with ordinality as t(seat, ord)
+  left join lateral (
+    select old_seat->>'reentryCode' as code
+    from public.rooms r, jsonb_array_elements(r.seats) as old_seat
+    where r.id = room_id and old_seat->>'playerId' = t.seat->>'playerId'
+    limit 1
+  ) stored on true;
+$$;
+
+create or replace function public.write_room(room_id text, status text, seats jsonb) returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  claimed_uid text := (select auth.uid())::text;
+  current_host text := public.room_host_uid(room_id);
+begin
+  if current_host is not null then
+    if current_host is distinct from claimed_uid then
+      raise exception 'not the current host of this room';
+    end if;
+  else
+    if not exists (
+      select 1 from jsonb_array_elements(seats) as seat
+      where (seat->>'isHost')::boolean and seat->>'uid' = claimed_uid
+    ) then
+      raise exception 'not the host of the seats being written';
+    end if;
+  end if;
+
+  insert into public.rooms (id, status, seats)
+  values (room_id, status, public.preserve_seat_codes(room_id, seats))
+  on conflict (id) do update set status = excluded.status, seats = excluded.seats;
+end;
+$$;
+
+create or replace function public.write_snapshot(room_id text, seq int, game jsonb, secrets jsonb, status text, seats jsonb) returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  claimed_uid text := (select auth.uid())::text;
+  current_host text := public.room_host_uid(room_id);
+begin
+  if current_host is not null then
+    if current_host is distinct from claimed_uid then
+      raise exception 'not the current host of this room';
+    end if;
+  else
+    if not exists (
+      select 1 from jsonb_array_elements(seats) as seat
+      where (seat->>'isHost')::boolean and seat->>'uid' = claimed_uid
+    ) then
+      raise exception 'not the host of the seats being written';
+    end if;
+  end if;
+
+  insert into public.rooms (id, status, seats, seq, game, secrets)
+  values (room_id, status, public.preserve_seat_codes(room_id, seats), seq, game, secrets)
+  on conflict (id) do update set
+    status = excluded.status, seats = excluded.seats,
+    seq = excluded.seq, game = excluded.game, secrets = excluded.secrets;
+end;
 $$;
