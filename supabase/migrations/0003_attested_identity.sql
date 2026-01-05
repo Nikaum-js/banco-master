@@ -151,3 +151,84 @@ create policy "room_seat_insert" on realtime.messages for insert to authenticate
       or (select auth.uid())::text = public.room_host_uid(split_part((select realtime.topic()), ':', 2))
     )
   );
+
+-- ============================================================================================
+-- FASE 3 (T016) — a escada de entrada sai do canal. Duas funções `security definer`, cada uma
+-- por um motivo diferente (D4 do plan):
+--
+--   • `request_seat` NÃO valida regra de sala (cheia/cor tomada/já iniciada continua sendo o
+--     host, com `joinRoom`) — só carimba `auth.uid()` e difunde ao lobby via `realtime.send()`,
+--     que roda como o role admin do Realtime e por isso ALCANÇA `:lobby` mesmo o pedinte não
+--     sendo a autoridade (a política `room_lobby_insert` acima não se aplica aqui: RPC não
+--     passa pelo cliente Realtime, escreve direto em `realtime.messages`).
+--   • `reattach_by_code` é a ÚNICA regra de domínio que passa a existir em SQL: o caso que a
+--     justifica — o anfitrião que perdeu o aparelho — não tem autoridade para se autorizar.
+--     `update public.rooms` dentro de uma `security definer` bypassa a ausência de política de
+--     `update` para não-anfitrião (D5) — é exatamente esse bypass controlado que o caso pede.
+-- ============================================================================================
+
+create or replace function public.request_seat(room_id text, name text, color text, piece text default null)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform realtime.send(
+    jsonb_build_object(
+      'who', jsonb_build_object('name', name, 'color', color, 'piece', piece),
+      'uid', (select auth.uid())::text
+    ),
+    'join',
+    'room:' || room_id || ':lobby',
+    true
+  );
+end;
+$$;
+
+create or replace function public.reattach_by_code(room_id text, code text) returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  normalized text := upper(regexp_replace(code, '\s+', '', 'g'));
+  target_player_id text;
+  new_seats jsonb;
+begin
+  select seat->>'playerId' into target_player_id
+  from public.rooms, jsonb_array_elements(seats) as seat
+  where public.rooms.id = room_id
+    and upper(regexp_replace(seat->>'reentryCode', '\s+', '', 'g')) = normalized
+  limit 1;
+
+  if target_player_id is null then
+    return jsonb_build_object('ok', false, 'reason', 'bad-code');
+  end if;
+
+  -- Troca só o `uid` (e marca conectado) do assento casado — o resto do assento (nome, cor,
+  -- peça, código) é preservado por construção, igual ao reducer puro de `room.ts` (FR-027).
+  select jsonb_agg(
+    case when seat->>'playerId' = target_player_id
+      then (seat - 'uid' - 'connected') || jsonb_build_object('uid', (select auth.uid())::text, 'connected', true)
+      else seat
+    end
+  ) into new_seats
+  from public.rooms, jsonb_array_elements(seats) as seat
+  where public.rooms.id = room_id;
+
+  update public.rooms set seats = new_seats where id = room_id;
+
+  -- Aviso ao lobby (T020): é como `host.ts` aprende que um assento mudou de dono fora do seu
+  -- controle em memória, e recarrega a sala. Mesmo mecanismo de `request_seat` — direto em
+  -- `realtime.messages`, sem depender de quem está online ter privilégio de escrita ali.
+  perform realtime.send(
+    jsonb_build_object('playerId', target_player_id),
+    'reattached',
+    'room:' || room_id || ':lobby',
+    true
+  );
+
+  return jsonb_build_object('ok', true);
+end;
+$$;

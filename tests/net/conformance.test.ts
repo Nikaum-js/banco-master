@@ -216,11 +216,10 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     expect(seenRejects).toEqual([])
   })
 
-  // 043, D4: o pedido de assento sai do canal e vira RPC na Fase 3 (`request_seat`) — o host
-  // não tem como assinar o tópico de um assento que ainda não existe. Até lá, `requestJoin`
-  // funciona só no adapter local (que não modela essa restrição); no Supabase é
-  // intencionalmente surdo — cobrado por `reentry.test.ts`/`lobby.test.ts` a partir da 3.
-  it.skipIf(_name === 'supabaseTransport')('requestJoin chega com o uid da conexão (localTransport) — Supabase migra para RPC na Fase 3', async () => {
+  // 043, D4: `requestJoin` é RPC (`request_seat`) — carimba `auth.uid()` no servidor e difunde
+  // ao lobby por conta própria. No adapter local (sem RPC de verdade) o espelho é o mesmo
+  // broadcast de sempre, só que agora `Promise`-shaped nos dois lados do port.
+  it('requestJoin chega com o uid da conexão', async () => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
@@ -233,30 +232,14 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const recusas: string[] = []
     guest.onJoinRejected((uid, reason) => recusas.push(`${uid}:${reason}`))
 
-    guest.requestJoin({ name: 'Ana', color: '#fff' })
+    await guest.requestJoin({ name: 'Ana', color: '#fff' })
     expect(pedidos).toEqual(['t-guest'])
 
     host.rejectJoin('t-guest', 'already-started')
     expect(recusas).toEqual(['t-guest:already-started'])
   })
 
-  // 041 — contrato §3: reentrada por código não é uma mensagem nova na porta, é o MESMO
-  // `JoinRequest` com `reentryCode` presente. Mesma restrição de Fase acima (043, D4).
-  it.skipIf(_name === 'supabaseTransport')('§3: pedido com reentryCode chega ao host com o uid da CONEXÃO', async () => {
-    const f = fixture()
-    const host = f.make('t-host')
-    const guest = f.make('t-guest')
-    await host.connect()
-    await guest.connect()
-
-    const pedidos: { fromUid: string; reentryCode?: string }[] = []
-    host.onJoinRequest((who, fromUid) => pedidos.push({ fromUid, reentryCode: who.reentryCode }))
-
-    guest.requestJoin({ name: '', color: '', reentryCode: 'ABC123' })
-    expect(pedidos).toEqual([{ fromUid: 't-guest', reentryCode: 'ABC123' }])
-  })
-
-  it.skipIf(_name === 'supabaseTransport')('§3: recusa por código inválido ("bad-code") chega, e o pedinte a reconhece como sua', async () => {
+  it('§3: recusa por código inválido ("bad-code") chega, e o pedinte a reconhece como sua', async () => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-a')

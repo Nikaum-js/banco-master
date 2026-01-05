@@ -27,7 +27,7 @@ export interface ClientOptions {
 export interface Client {
   readonly uid: string // ERA `token` (043, D-035) — identidade atestada desta aba, usada p/ achar o próprio assento
   join(): Promise<void> // conecta, lê o snapshot (entrada/reconexão) e passa a aplicar a difusão
-  requestJoin(who: JoinRequest): void // pede assento no lobby (FR-002) — host aceita e publica a sala
+  requestJoin(who: JoinRequest): Promise<void> // pede assento no lobby (FR-002) — host aceita e publica a sala
   leave(): void
   send(action: PlayerAction): void
   game(): GameState | null
@@ -148,6 +148,10 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
         joinError = reason
         notify()
       }))
+      // 043, D4: alguém reanexou por código (RPC, fora do caminho normal de comando) — inclusive
+      // eu mesmo, se foi este uid que reanexou. Ressincroniza pelo snapshot: é assim que ESTE
+      // cliente descobre o próprio assento novo (`resolvePlayerId` roda dentro de `resync`).
+      subs.push(transport.onReattachNotice(() => void resync()))
       // Conexão da PRÓPRIA sessão (041, D5/D11): queda vira `'reconnecting'` na hora;
       // restabelecimento — inclusive numa REASSINATURA — ressincroniza para recuperar as
       // difusões perdidas durante a queda (FR-003), e só então volta a `'connected'`.
@@ -178,9 +182,9 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
       }
     },
 
-    requestJoin(who: JoinRequest): void {
-      if (playerId) return // já assentado (reanexo por uid) — nada a pedir (FR-004)
-      transport.requestJoin(who)
+    requestJoin(who: JoinRequest): Promise<void> {
+      if (playerId) return Promise.resolve() // já assentado — nada a pedir (FR-004)
+      return transport.requestJoin(who)
     },
 
     leave(): void {

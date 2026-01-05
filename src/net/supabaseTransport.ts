@@ -62,6 +62,9 @@ export interface SupabaseLike {
     upsert(row: Record<string, unknown>): PromiseLike<{ error: unknown }>
     select(cols: string): { eq(col: string, val: string): { maybeSingle(): PromiseLike<{ data: RoomRow | null; error: unknown }> } }
   }
+  // 043, D4 — a escada de entrada por RPC (`request_seat`/`reattach_by_code`, security definer
+  // no servidor). `data` é `unknown`: cada chamador conhece o formato da SUA função.
+  rpc(fn: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: unknown }>
 }
 
 interface RoomRow {
@@ -72,7 +75,7 @@ interface RoomRow {
   game: PersistedSnapshot['game'] | null
 }
 
-const EVENT = { submit: 'submit', accepted: 'accepted', room: 'room', join: 'join', rejected: 'rejected' } as const
+const EVENT = { submit: 'submit', accepted: 'accepted', room: 'room', join: 'join', rejected: 'rejected', reattached: 'reattached' } as const
 const seatTopic = (roomId: string, uid: string): string => `room:${roomId}:s:${uid}`
 
 export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: string): Transport {
@@ -84,6 +87,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
   const joinRejCbs: ((target: string, reason: JoinError) => void)[] = []
   const statusCbs: ((status: ConnStatus) => void)[] = []
   const presenceSyncCbs: ((uids: ReadonlySet<string>) => void)[] = []
+  const reattachCbs: (() => void)[] = []
   const live = new Map<string, number>() // presenças vivas por uid — base do takeover, somada entre TODOS os canais de assento observados
   const off = <T>(arr: T[], cb: T): Unsubscribe => () => {
     const i = arr.indexOf(cb)
@@ -141,6 +145,12 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     })
     .on('broadcast', { event: EVENT.room }, ({ payload }) => {
       for (const cb of roomCbs) cb(payload as Room)
+    })
+    // Aviso de reanexação (043, D4) — carimbado pela RPC `reattach_by_code`, que roda no
+    // servidor fora da política normal de escrita de `:lobby`. Nenhum payload a interpretar:
+    // é só o sinal para recarregar (`onReattachNotice`).
+    .on('broadcast', { event: EVENT.reattached }, () => {
+      for (const cb of reattachCbs) cb()
     })
 
   play.on('broadcast', { event: EVENT.accepted }, ({ payload }) => {
@@ -250,8 +260,14 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       emitPresenceSyncAll()
     },
 
-    requestJoin(who: JoinRequest): void {
-      void lobby.send({ type: 'broadcast', event: EVENT.join, payload: { who, uid } })
+    // 043, D4 — RPC (`request_seat`), não mais broadcast em `:lobby`: o pedinte ainda não tem
+    // assento, e escrever em `:lobby` é privilégio da autoridade a partir da Fase 2. A função
+    // carimba `auth.uid()` no servidor e difunde ao lobby por conta própria (`realtime.send`).
+    async requestJoin(who: JoinRequest): Promise<void> {
+      const { error } = await supabase.rpc('request_seat', {
+        room_id: roomId, name: who.name, color: who.color, piece: who.piece ?? null,
+      })
+      if (error) throw error
     },
     onJoinRequest(cb): Unsubscribe {
       joinReqCbs.push(cb)
@@ -264,6 +280,18 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     onJoinRejected(cb): Unsubscribe {
       joinRejCbs.push(cb)
       return off(joinRejCbs, cb)
+    },
+
+    // 043, D4 — `reattach_by_code`: única regra de domínio em SQL. `security definer` bypassa
+    // a ausência de `update` para não-autoridade (o ponto inteiro é não precisar de uma).
+    async reattach(_roomId: string, code: string): Promise<{ ok: true } | { ok: false; reason: JoinError }> {
+      const { data, error } = await supabase.rpc('reattach_by_code', { room_id: roomId, code })
+      if (error) throw error
+      return data as { ok: true } | { ok: false; reason: JoinError }
+    },
+    onReattachNotice(cb): Unsubscribe {
+      reattachCbs.push(cb)
+      return off(reattachCbs, cb)
     },
 
     publishRoom(room: Room): void {

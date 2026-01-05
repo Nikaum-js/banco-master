@@ -14,7 +14,6 @@ import {
   joinRoom,
   kickSeat,
   newReentryCode,
-  reattachByCode,
   shuffleSeatOrder,
   markConnected,
   markDisconnected,
@@ -109,24 +108,11 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   // Pedido de assento no lobby (FR-002/005). A identidade do assento é o uid da CONEXÃO —
   // o pedinte só escolhe nome e cor. Recusa (cheia/cor tomada/já iniciada) volta ao pedinte.
   //
-  // Com `reentryCode` (041, D-033/contrato §3): é REANEXAÇÃO, não assento novo — o gate de
-  // `already-started` não se aplica (perder o aparelho não pode travar a mesa depois do
-  // início). `name`/`color`/`piece` são ignorados nesse caminho; a identidade visual
-  // pertence ao assento, não a quem está reabrindo. `syncPause` depois de republicar é o que
-  // retoma a partida se esta era a última ausência (FR-028).
+  // 043, D4/T020: a reanexação SAIU daqui — vira `reattach_by_code` no servidor (RPC), porque
+  // o host não tem como assinar o tópico de um assento que ainda não existe. Este handler só
+  // trata assento NOVO; `onSeatReattached`/`onReattachNotice` (abaixo) é quem aprende que
+  // alguém reanexou.
   function handleJoinRequest(who: JoinRequest, fromUid: string): void {
-    if (who.reentryCode) {
-      const result = reattachByCode(room, who.reentryCode, fromUid)
-      if (!result.ok) {
-        transport.rejectJoin(fromUid, result.reason)
-        return
-      }
-      room = result.room
-      syncWatchedSeats()
-      publishAndPersistRoom()
-      syncPause()
-      return
-    }
     const taken = new Set(room.seats.map((s) => s.reentryCode))
     const result = joinRoom(room, {
       uid: fromUid, name: who.name, color: who.color, piece: who.piece,
@@ -139,6 +125,19 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     room = result.room
     syncWatchedSeats()
     publishAndPersistRoom()
+  }
+
+  // 043, D4/T020: alguém reanexou por CÓDIGO — a RPC já regravou a linha no servidor, fora do
+  // controle desta autoridade em memória. Recarrega a sala persistida, reconcilia os tópicos
+  // observados e republica; `syncPause` retoma a partida se esta era a última ausência
+  // (FR-028 da 041) — o MESMO efeito que o ramo de reanexação tinha aqui antes de sair.
+  async function handleSeatReattached(): Promise<void> {
+    const fresh = await transport.loadRoom()
+    if (!fresh) return
+    room = fresh
+    syncWatchedSeats()
+    publishAndPersistRoom()
+    syncPause()
   }
 
   function handlePresence(change: PresenceChange): void {
@@ -200,6 +199,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     subs.push(transport.onSubmit(handleSubmit))
     subs.push(transport.onPresence(handlePresence))
     subs.push(transport.onJoinRequest(handleJoinRequest))
+    subs.push(transport.onReattachNotice(() => void handleSeatReattached()))
     // FR-021/022: reconcilia presença ANTES de decidir pausa — nunca o contrário.
     subs.push(transport.onPresenceSync((uids) => {
       reconcilePresence(uids)

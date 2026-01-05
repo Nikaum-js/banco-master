@@ -4,7 +4,7 @@
 // `tests/net/` e prova SC-001/003/004/005 sem infra. O `supabaseTransport` implementa a mesma
 // porta sobre Realtime/Postgres.
 import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
-import type { JoinError, Room } from './room'
+import { reattachByCode, type JoinError, type Room } from './room'
 
 type SubmitCb = (cmd: CommandEnvelope, fromUid: string) => void
 type BroadcastCb = (cmd: AcceptedCommand) => void
@@ -14,6 +14,7 @@ type JoinReqCb = (who: JoinRequest, fromUid: string) => void
 type JoinRejCb = (uid: string, reason: JoinError) => void
 type StatusCb = (status: ConnStatus) => void
 type PresenceSyncCb = (uids: ReadonlySet<string>) => void
+type ReattachCb = () => void
 
 // LISTAS, não slots. Antes cada callback era um campo único (`conn.onBroadcast = cb`),
 // então um segundo assinante silenciosamente derrubava o primeiro — enquanto o adapter
@@ -45,6 +46,7 @@ export class LocalHub {
   private submitCbs: SubmitCb[] = []
   private presenceCbs: PresenceCb[] = []
   private joinReqCbs: JoinReqCb[] = []
+  private reattachCbs: ReattachCb[] = []
   private snapshot: PersistedSnapshot | null = null
   private storedRoom: Room | null = null // sala persistida (existe já no lobby, sem GameState)
   private lastRoom: Room | null = null
@@ -173,6 +175,25 @@ export class LocalHub {
 
   requestJoin(who: JoinRequest, fromUid: string): void {
     for (const cb of this.joinReqCbs) cb(who, fromUid)
+  }
+
+  addReattachNotice(cb: ReattachCb): Unsubscribe {
+    this.reattachCbs.push(cb)
+    return () => { this.reattachCbs = this.reattachCbs.filter((c) => c !== cb) }
+  }
+
+  // Espelho local da RPC `reattach_by_code` (043, D4) — mesmo reducer PURO de `room.ts` que a
+  // SQL replica no servidor. Sem checagem de autoridade: é a ÚNICA regra de domínio que roda
+  // sem depender de quem está online, de propósito (o caso que justifica é o anfitrião FORA).
+  reattachByCodeRpc(code: string, uid: string): { ok: true } | { ok: false; reason: 'bad-code' } {
+    if (!this.storedRoom) return { ok: false, reason: 'bad-code' }
+    const result = reattachByCode(this.storedRoom, code, uid)
+    if (!result.ok) return result
+    this.storedRoom = result.room
+    this.lastRoom = result.room
+    if (this.snapshot) this.snapshot = { ...this.snapshot, room: result.room }
+    for (const cb of this.reattachCbs) cb()
+    return { ok: true }
   }
 
   // Autoridade da sala = dono do assento `isHost` na ÚLTIMA sala persistida (043, D2/D3 —
@@ -331,12 +352,21 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
       for (const cb of presenceSyncCbs) cb(hub.presentUids())
     },
 
-    requestJoin(who): void {
+    requestJoin(who): Promise<void> {
       hub.requestJoin(who, uid)
+      return Promise.resolve()
     },
 
     onJoinRequest(cb): Unsubscribe {
       return hub.addJoinRequest(cb)
+    },
+
+    reattach(_roomId: string, code: string) {
+      return Promise.resolve(hub.reattachByCodeRpc(code, uid))
+    },
+
+    onReattachNotice(cb): Unsubscribe {
+      return hub.addReattachNotice(cb)
     },
 
     rejectJoin(target, reason): void {

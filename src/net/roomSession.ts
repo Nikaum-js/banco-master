@@ -214,15 +214,28 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
 
     requestSeat(who: SessionIdentity): void {
       emit({ busy: true, error: null })
-      client?.requestJoin(who)
+      void client?.requestJoin(who).catch((e) => emit({ busy: false, error: describeError(e) }))
     },
 
-    // `name`/`color`/`piece` ficam de fora (contrato §3.2): a identidade visual pertence ao
-    // assento, não a quem está reabrindo. Recusa por 'bad-code' volta ao formulário —
-    // `syncFromClient` mantém a fase 'reentry' porque `playerId` continua null.
+    // 043, D4: por RPC (`transport.reattach`), não mais um `JoinRequest` com código — reanexar
+    // deixou de ser um tipo de pedido de assento. `name`/`color`/`piece` ficam de fora (contrato
+    // §3.2): a identidade visual pertence ao assento, não a quem está reabrindo. Sucesso não
+    // precisa tocar `phase`/`room` aqui — `client.ts` reage sozinho ao aviso de reanexação
+    // (ressincroniza, descobre o próprio assento) e `syncFromClient` segue a fase dali. Recusa
+    // por 'bad-code' volta ao formulário — `syncFromClient` mantém 'reentry' porque `playerId`
+    // continua null.
     requestReentry(code: string): void {
       emit({ busy: true, error: null })
-      client?.requestJoin({ name: '', color: '', reentryCode: code })
+      void (async () => {
+        if (!transport || !state.roomId) return
+        try {
+          const result = await transport.reattach(state.roomId, code)
+          if (!result.ok) { emit({ busy: false, error: result.reason }); return }
+          emit({ busy: false })
+        } catch (e) {
+          emit({ busy: false, error: describeError(e) })
+        }
+      })()
     },
 
     async startMatch(): Promise<void> {

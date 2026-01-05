@@ -58,11 +58,14 @@ export interface PresenceChange {
 
 // Pedido de assento no lobby (FR-002). NÃO carrega identidade: o host usa o `uid` da CONEXÃO
 // (`fromUid`) como identidade do assento — quem pede não escolhe quem é.
+//
+// 043, D4/T019: `reentryCode` SAI daqui — reanexar deixou de ser um tipo de pedido de assento
+// e virou caminho próprio (`Transport.reattach`), porque o host não tem como assinar o tópico
+// de um assento que ainda não existe (o pedido de um DESCONHECIDO nunca chegaria).
 export interface JoinRequest {
   name: string
   color: string
   piece?: PieceId // peça visual escolhida no lobby (spec 038); única por sala
-  reentryCode?: string // NOVO (041, D-033) — presente = reanexação, não assento novo
 }
 
 // Status de conexão da PRÓPRIA sessão (041, contrato §1). Só dois valores: "conectado
@@ -99,11 +102,27 @@ export interface Transport {
   watchSeat(uid: string): void
   unwatchSeat(uid: string): void
 
-  // lobby: convidado pede assento → host responde publicando a sala (aceito) ou rejeitando
-  requestJoin(who: JoinRequest): void
+  // lobby: convidado pede assento → host responde publicando a sala (aceito) ou rejeitando.
+  // 043, D4: por RPC (`request_seat`) — carimba `auth.uid()` no servidor e difunde ao lobby;
+  // NÃO valida regra de sala (cheia/cor tomada/já iniciada continua sendo o host, com
+  // `joinRoom`). A promise resolve quando a RPC é aceita pelo servidor, não quando o host
+  // decide — a resposta de verdade continua chegando por `onJoinRequest`/`onRoom`.
+  requestJoin(who: JoinRequest): Promise<void>
   onJoinRequest(cb: (who: JoinRequest, fromUid: string) => void): Unsubscribe
   rejectJoin(uid: string, reason: JoinError): void
   onJoinRejected(cb: (uid: string, reason: JoinError) => void): Unsubscribe
+
+  // Reanexação por CÓDIGO (041, D-033 → 043, D4) — não passa pela autoridade: vale para
+  // TODOS os assentos, inclusive o do anfitrião, porque o caso que justifica existir é
+  // exatamente aquele em que não há autoridade viva para autorizar (celular sem bateria).
+  // Único ponto do port com uma regra de domínio implementada no SERVIDOR (`reattach_by_code`,
+  // security definer) — o espelho puro continua em `room.ts` para o adapter local e os testes.
+  reattach(roomId: string, code: string): Promise<{ ok: true } | { ok: false; reason: JoinError }>
+  // Aviso de que ALGUÉM reanexou nesta sala (043, D4) — carimbado no tópico de lobby pela
+  // própria RPC (roda no servidor, fora da política de escrita normal). `client.ts` reage
+  // ressincronizando (é assim que o próprio reanexado descobre o assento novo); `host.ts`
+  // recarrega a sala e reconcilia os tópicos observados (T020).
+  onReattachNotice(cb: () => void): Unsubscribe
 
   // estado da sala (host publica; todos observam)
   publishRoom(room: Room): void

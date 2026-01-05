@@ -94,14 +94,15 @@ describe('reattachByCode — reducer puro (041, D-033)', () => {
   })
 })
 
-// Parte de SESSÃO — prova o mesmo pelo caminho de REDE (host.ts trata `reentryCode` em
-// `handleJoinRequest`, T036), não pelo reducer puro.
+// Parte de SESSÃO — prova o mesmo pelo caminho de REDE, mas agora por RPC (043, D4:
+// `Transport.reattach`, espelhado em `LocalHub.reattachByCodeRpc`), não mais por
+// `JoinRequest.reentryCode` (que saiu do port — T019).
 async function setup() {
   const hub = new LocalHub()
   const hostTransport = localTransport(hub, 'tok-host')
   const hostClient = createClient(hostTransport)
   await hostClient.join()
-  const host = createHost(hostTransport, createRoom('r1', { uid: 'tok-host', name: 'Host', color: SEAT_COLORS[0] }), {
+  const host = createHost(hostTransport, createRoom('r1', { uid: 'tok-host', name: 'Host', color: SEAT_COLORS[0], reentryCode: 'HHHHHH' }), {
     rng: mulberry32(9),
     now: () => 1_000,
   })
@@ -109,7 +110,7 @@ async function setup() {
 
   const bob = createClient(localTransport(hub, 'tok-b'))
   await bob.join()
-  bob.requestJoin({ name: 'Bob', color: SEAT_COLORS[1] })
+  await bob.requestJoin({ name: 'Bob', color: SEAT_COLORS[1] })
   await flush()
 
   await host.startMatch()
@@ -118,7 +119,7 @@ async function setup() {
   return { hub, host, hostClient, bob }
 }
 
-describe('reentrada por código — sessão (041, D-033, T036/T039)', () => {
+describe('reentrada por código — sessão (041, D-033 → 043, D4, RPC)', () => {
   it('SC-007: reentrada por OUTRO uid no meio da partida devolve o assento com estado íntegro', async () => {
     const { hub, host, bob } = await setup()
     const bobId = bob.playerId()!
@@ -128,11 +129,13 @@ describe('reentrada por código — sessão (041, D-033, T036/T039)', () => {
     const before = JSON.stringify(host.game())
     bob.leave() // perde o uid — simula aparelho sem bateria
 
-    const fresh = createClient(localTransport(hub, 'tok-b-novo'))
+    const freshTransport = localTransport(hub, 'tok-b-novo')
+    const fresh = createClient(freshTransport)
     await fresh.join() // ainda sem assento: só observa o jogo em curso
-    fresh.requestJoin({ name: '', color: '', reentryCode: code })
+    const result = await freshTransport.reattach('r1', code)
     await flush()
 
+    expect(result).toEqual({ ok: true })
     expect(fresh.playerId()).toBe(bobId)
     expect(JSON.stringify(host.game())).toBe(before) // saldo/propriedades/cartas intactos
   })
@@ -143,9 +146,10 @@ describe('reentrada por código — sessão (041, D-033, T036/T039)', () => {
     const code = host.room().seats.find((s) => s.playerId === bobId)!.reentryCode
     bob.leave()
 
-    const fresh = createClient(localTransport(hub, 'tok-b-novo'))
+    const freshTransport = localTransport(hub, 'tok-b-novo')
+    const fresh = createClient(freshTransport)
     await fresh.join()
-    fresh.requestJoin({ name: '', color: '', reentryCode: code })
+    await freshTransport.reattach('r1', code)
     await flush()
 
     expect(host.room().seats.some((s) => s.uid === 'tok-b')).toBe(false)
@@ -158,9 +162,10 @@ describe('reentrada por código — sessão (041, D-033, T036/T039)', () => {
     bob.leave()
     expect(host.game().paused).not.toBeNull() // desconexão pausou (US3)
 
-    const fresh = createClient(localTransport(hub, 'tok-b-novo'))
+    const freshTransport = localTransport(hub, 'tok-b-novo')
+    const fresh = createClient(freshTransport)
     await fresh.join()
-    fresh.requestJoin({ name: '', color: '', reentryCode: code })
+    await freshTransport.reattach('r1', code)
     await flush()
 
     expect(host.game().paused).toBeNull() // retomou sozinho, sem ação manual
@@ -175,24 +180,46 @@ describe('reentrada por código — sessão (041, D-033, T036/T039)', () => {
     bob.leave()
     expect(host.game().paused).toBeNull() // eliminado que cai não pausa (D-029)
 
-    const fresh = createClient(localTransport(hub, 'tok-b-novo'))
+    const freshTransport = localTransport(hub, 'tok-b-novo')
+    const fresh = createClient(freshTransport)
     await fresh.join()
-    fresh.requestJoin({ name: '', color: '', reentryCode: code })
+    await freshTransport.reattach('r1', code)
     await flush()
 
     expect(fresh.playerId()).toBe(bobId) // reentrou normalmente
     expect(host.game().paused).toBeNull() // e não destravou nada que já estava livre
   })
 
-  it('código inválido no caminho de rede recusa com "bad-code" — só ao pedinte', async () => {
+  it('código inválido no caminho de rede recusa com "bad-code", sem tocar assento nenhum', async () => {
     const { hub, host } = await setup()
-    const stranger = createClient(localTransport(hub, 'tok-estranho'))
+    const strangerTransport = localTransport(hub, 'tok-estranho')
+    const stranger = createClient(strangerTransport)
     await stranger.join()
-    stranger.requestJoin({ name: '', color: '', reentryCode: 'ZZZZZZ' })
+    const result = await strangerTransport.reattach('r1', 'ZZZZZZ')
     await flush()
 
-    expect(stranger.joinError()).toBe('bad-code')
+    expect(result).toEqual({ ok: false, reason: 'bad-code' })
     expect(stranger.playerId()).toBeNull()
     expect(host.room().seats.some((s) => s.uid === 'tok-estranho')).toBe(false)
+  })
+
+  it('reanexar o assento do ANFITRIÃO devolve a autoridade a ele — funciona com a autoridade OFFLINE', async () => {
+    const { hub, host } = await setup()
+    const hostSeat = host.room().seats.find((s) => s.isHost)!
+    expect(hostSeat.reentryCode).not.toBe('')
+
+    // A autoridade "cai": nada no hub processa comandos, mas a linha persistida continua lá —
+    // é exatamente o caso que justifica a RPC não depender de host algum (D4/plan). O
+    // `playerId` do anfitrião não é necessariamente 'p1': `startMatch` sorteia a ORDEM DE
+    // TURNO (FR-030) por cima da ordem de entrada — isHost e "joga primeiro" são coisas
+    // diferentes desde a 038.
+    const revivedTransport = localTransport(hub, 'tok-host-novo')
+    const revived = createClient(revivedTransport)
+    await revived.join()
+    const result = await revivedTransport.reattach('r1', hostSeat.reentryCode)
+    await flush()
+
+    expect(result).toEqual({ ok: true })
+    expect(revived.playerId()).toBe(hostSeat.playerId)
   })
 })

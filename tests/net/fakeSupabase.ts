@@ -116,6 +116,17 @@ class FakeChannel implements SupabaseChannelLike {
     }
   }
 
+  // Difusão PRIVILEGIADA (043, D4) — o equivalente de `realtime.send()` chamado de DENTRO de
+  // uma função `security definer` (RPC). Ao contrário de `send()`, não passa por `canWrite`:
+  // é exatamente o ponto da RPC existir (`request_seat` fala em nome de quem ainda não tem
+  // assento; `reattach_by_code` fala sem o anfitrião estar vivo).
+  static deliverBroadcast(channels: Set<FakeChannel>, topic: string, event: string, payload: unknown): void {
+    for (const ch of channels) {
+      if (ch.topic !== topic || !ch.subscribed) continue
+      for (const cb of ch.broadcastCbs.get(event) ?? []) cb({ payload })
+    }
+  }
+
   send(msg: { type: 'broadcast'; event: string; payload: unknown }): Promise<unknown> {
     if (!this.subscribed) return Promise.resolve({ status: 'not_subscribed' }) // igual ao real: cai no chão
     if (!canWrite(this.broker, this.topic, this.authUid)) return Promise.resolve({ status: 'error' }) // política recusa (D2)
@@ -271,6 +282,32 @@ export function fakeSupabase(): FakeSupabase {
               }
             },
           }
+        },
+        // 043, D4 — espelho das duas `security definer` de `0003_attested_identity.sql`. Não
+        // é a prova real (isso é a Fase 6, contra Postgres de verdade): é o suficiente para o
+        // adapter rodar headless pelo MESMO caminho de código que a produção usa.
+        rpc(fn: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: unknown }> {
+          const roomId = String(args.room_id)
+          if (fn === 'request_seat') {
+            FakeChannel.deliverBroadcast(broker.channels, `room:${roomId}:lobby`, 'join', {
+              who: { name: args.name, color: args.color, piece: args.piece ?? undefined },
+              uid,
+            })
+            return Promise.resolve({ data: null, error: null })
+          }
+          if (fn === 'reattach_by_code') {
+            const key = `rooms:${roomId}`
+            const row = broker.rows.get(key)
+            const seats = (row?.seats as { playerId: string; reentryCode: string }[] | undefined) ?? []
+            const normalize = (s: string): string => s.replace(/\s+/g, '').toUpperCase()
+            const target = seats.find((s) => normalize(s.reentryCode ?? '') === normalize(String(args.code)))
+            if (!target) return Promise.resolve({ data: { ok: false, reason: 'bad-code' }, error: null })
+            const newSeats = seats.map((s) => (s.playerId === target.playerId ? { ...s, uid, connected: true } : s))
+            broker.rows.set(key, { ...(row ?? {}), seats: newSeats })
+            FakeChannel.deliverBroadcast(broker.channels, `room:${roomId}:lobby`, 'reattached', {})
+            return Promise.resolve({ data: { ok: true }, error: null })
+          }
+          return Promise.resolve({ data: null, error: new Error(`rpc desconhecida no fake: ${fn}`) })
         },
       }
     },
