@@ -94,7 +94,10 @@ jobs:
                 case "$changed_file" in
                   tests/db/*)
                     ;;
-                  src/*|tests/*|e2e/*|scripts/*|public/*|index.html)
+                  # `*.html` e não `index.html`: a 051 transformou o site num MPA com cinco
+                  # entrypoints, e a lista ficou presa no primeiro. Mudança em `play.html`
+                  # — a entrada do app — passava sem lint, tipos, testes nem build.
+                  src/*|tests/*|e2e/*|scripts/*|public/*|*.html)
                     quality=true
                     ;;
                 esac
@@ -114,7 +117,9 @@ jobs:
                 esac
 
                 case "$changed_file" in
-                  src/*|e2e/*|public/*|index.html|vite.config.*|playwright.config.*)
+                  # Idem: o gate Lighthouse mede `/play`, servido por `play.html`. Com
+                  # `index.html` na lista, editar a própria página medida não acionava a medição.
+                  src/*|e2e/*|public/*|*.html|vite.config.*|playwright.config.*)
                     browser=true
                     ;;
                 esac
