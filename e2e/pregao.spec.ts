@@ -357,3 +357,113 @@ for (const map of ['atlas', 'fuligem'] as const) {
     expect(errors, `${map}: erros de runtime`).toEqual([])
   })
 }
+
+// ---------------------------------------------------------------------------
+// O CRONÔMETRO (058/US7)
+//
+// Relato da jogatina: "o cronômetro pareceu crescer conforme as pessoas davam lances e
+// chegou a exibir uns 30 segundos". A janela do SRS §7.3 é de 24s por lote.
+//
+// A causa era `lot.deadline` (epoch do HOST) menos o `Date.now()` LOCAL, sem corrigir o
+// deslocamento de relógio — apesar de o comentário de topo do `LandAuctionLayer` afirmar,
+// desde a 031, que corrigia. Aqui a prova é pela INTERFACE, com o relógio do navegador
+// deslocado de verdade.
+//
+// O soft-close continua: um lance válido reinicia AQUELE lote em 24s. É regra (§7.3), e
+// nenhum teste abaixo a contraria.
+// ---------------------------------------------------------------------------
+
+const JANELA_SEGUNDOS = 24
+
+async function segundosNaTela(page: Page): Promise<number[]> {
+  const textos = await page.locator('.lot-clock__secs').allTextContents()
+  return textos.map((t) => Number.parseInt(t.replace(/\D+/g, ''), 10)).filter((n) => Number.isFinite(n))
+}
+
+for (const skewSegundos of [0, 6, 45]) {
+  test(`cronômetro: com o relógio do cliente ${skewSegundos}s atrás do host, nada passa de ${JANELA_SEGUNDOS}s`, async ({ page }) => {
+    // Atrasa o relógio DO NAVEGADOR antes de qualquer script do app rodar. O `deadline`
+    // dos lotes é gravado pelo cenário com o `Date.now()` já deslocado, então o cliente
+    // fica exatamente na situação relatada: prazo do host à frente do relógio local.
+    await page.addInitScript((skew) => {
+      const real = Date.now
+      Date.now = () => real() - skew * 1000
+    }, skewSegundos)
+
+    await page.setViewportSize(DESKTOP)
+    await abrirPregao(page, 6)
+
+    const segundos = await segundosNaTela(page)
+    expect(segundos.length, 'cronômetros na tela').toBeGreaterThan(0)
+    for (const s of segundos) {
+      expect(s, `segundos exibidos com skew de ${skewSegundos}s`).toBeLessThanOrEqual(JANELA_SEGUNDOS)
+      expect(s, 'cronômetro negativo').toBeGreaterThanOrEqual(0)
+    }
+  })
+}
+
+test('cronômetro: decorre para baixo e nunca retrocede', async ({ page }) => {
+  await page.setViewportSize(DESKTOP)
+  await abrirPregao(page, 6)
+
+  const primeira = await segundosNaTela(page)
+  await page.waitForTimeout(2_600)
+  const segunda = await segundosNaTela(page)
+
+  expect(segunda.length).toBe(primeira.length)
+  for (let i = 0; i < primeira.length; i++) {
+    expect(segunda[i], `lote ${i}: cronômetro voltou no tempo`).toBeLessThanOrEqual(primeira[i])
+    expect(segunda[i], `lote ${i}: cronômetro negativo`).toBeGreaterThanOrEqual(0)
+  }
+  // Andou de verdade — um cronômetro travado passaria no teste acima.
+  expect(segunda.some((s, i) => s < primeira[i]), 'nenhum cronômetro andou').toBe(true)
+})
+
+test('soft-close: um lance válido reinicia SÓ o lote dele, e sem passar da janela', async ({ page }) => {
+  await page.setViewportSize(DESKTOP)
+  await abrirPregao(page, 6)
+
+  // Deixa o tempo correr para a diferença ser mensurável.
+  await page.waitForTimeout(3_200)
+  const antes = await segundosNaTela(page)
+
+  // Cobre o primeiro lote — o botão principal do primeiro cartão.
+  await page.locator('.lot-card .lot-actions__primary').first().click()
+  await page.waitForTimeout(500)
+
+  const depois = await segundosNaTela(page)
+  expect(depois[0], 'o lote que recebeu o lance voltou à janela').toBeGreaterThan(antes[0])
+  expect(depois[0], 'e não passou dela').toBeLessThanOrEqual(JANELA_SEGUNDOS)
+  for (let i = 1; i < antes.length; i++) {
+    expect(depois[i], `lote ${i} NÃO podia ter sido reiniciado`).toBeLessThanOrEqual(antes[i])
+  }
+})
+
+// ---------------------------------------------------------------------------
+// BANDEIRAS DO LOTE (058/US6)
+//
+// `CountryFlagDisc` ampliava o SVG a 1,5× e contava com `overflow: hidden`. Item de grade
+// MAIOR que a área não fica centrado por `place-items: center`: a borda inicial é ancorada
+// e o excesso sai por um lado só. Medido num disco de 30px: 2px cortados à esquerda contra
+// 17px à direita — a Itália aparecia sem a faixa vermelha inteira.
+// ---------------------------------------------------------------------------
+
+test('bandeiras do pregão cabem no disco, sem corte assimétrico', async ({ page }) => {
+  await page.setViewportSize(DESKTOP)
+  await abrirPregao(page, 6)
+
+  const cortes = await page.evaluate(() => {
+    const fora: { code: string | null; esquerda: number; direita: number }[] = []
+    for (const svg of Array.from(document.querySelectorAll('.lot-card__head svg[viewBox="0 0 60 40"]'))) {
+      const host = svg.parentElement!
+      const h = host.getBoundingClientRect()
+      const s = svg.getBoundingClientRect()
+      // Tolerância de 3px cobre a borda de 2px do disco e o arredondamento.
+      const esquerda = h.x - s.x
+      const direita = (s.x + s.width) - (h.x + h.width)
+      if (esquerda > 3 || direita > 3) fora.push({ code: svg.getAttribute('aria-label'), esquerda, direita })
+    }
+    return fora
+  })
+  expect(cortes, 'bandeira transbordando o disco').toEqual([])
+})

@@ -34,10 +34,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useGameStore } from '@/game/store'
-import { useLocalView, useName } from '@/net/roomStore'
+import { useLocalView, useName, useRoomStore } from '@/net/roomStore'
 import { PlayerName } from '@/net/ui/PlayerName'
-import { committedCash, LAND_AUCTION_WINDOW } from '@/game/economy/landAuction'
-import type { LandLot } from '@/game/economy/types'
+import { committedCash } from '@/game/economy/landAuction'
+import { readLot, INCREMENTS, LAND_AUCTION_WINDOW_SECONDS, type LotView } from './lotView'
 import { type Square } from '@/lib/boardData'
 import { SquareIcon } from '@/boards/glyphs/squares'
 import { CoinIcon, HouseIcon, HotelIcon, GavelIcon } from '@/game/ui/icons'
@@ -49,11 +49,6 @@ import { money } from '@/lib/money'
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { CountryFlagDisc } from '@/boards/glyphs/flags'
 import { PropertyIconArt } from '@/boards/glyphs/propertyIcons'
-import { countryName } from '@/boards/glyphs/countries'
-import { activeBoard } from '@/game/ui/theme/boardTheme'
-
-const INCREMENTS = [10, 50, 100] as const
-const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
 
 // Paisagem BAIXA — celular deitado (667×375, 740×360). O corte é só por ALTURA: o tablet em
 // paisagem (1024×768) tem altura de sobra e fica na grade, como manda o desenho. É o mesmo
@@ -104,70 +99,6 @@ function DeedStat({ icon, label, value }: { icon: React.ReactNode; label: string
 }
 
 // --------------------------------------------------------------------------------------
-// Leitura de um lote — tudo o que os dois layouts precisam saber, derivado uma vez só.
-// --------------------------------------------------------------------------------------
-interface LotView {
-  lot: LandLot
-  sq: Square
-  name: string
-  origem: string
-  accent: string
-  price: number
-  secs: number
-  frac: number
-  urgente: boolean
-  encerrado: boolean
-  liderando: boolean
-  /** Rótulo textual do estado. Nunca só cor: é ele que vai ao leitor de tela e ao chip. */
-  estado: string
-  cashAvail: number
-  committed: number
-  minimo: number
-  podeMinimo: boolean
-}
-
-function readLot(
-  lot: LandLot,
-  now: number,
-  bidder: string,
-  cash: number,
-  committed: number,
-): LotView | null {
-  const sq = activeBoard()[lot.pos]
-  const deed = deedPresentation(sq)
-  if (!deed) return null
-  const remainingMs = lot.deadline - now
-  const encerrado = remainingMs <= 0
-  const liderando = lot.highBidder === bidder
-  const cashAvail = cash - committed
-  const minimo = lot.currentBid + INCREMENTS[0]
-  return {
-    lot,
-    sq,
-    name: deed.name,
-    origem: deed.flagCode ? countryName(deed.flagCode) : (deed.subtitle ?? ''),
-    accent: deed.accent,
-    price: deed.price,
-    secs: Math.max(0, Math.ceil(remainingMs / 1000)),
-    frac: clamp01(remainingMs / LAND_AUCTION_WINDOW),
-    // Alerta proporcional à janela, não um 3 fixo herdado dos 8s: um quarto do prazo é o ponto
-    // em que "dá tempo de pensar" vira "decide agora", em qualquer janela que o tema configure.
-    urgente: remainingMs <= LAND_AUCTION_WINDOW * 0.25,
-    encerrado,
-    liderando,
-    estado: encerrado
-      ? (lot.highBidder ? 'Arrematado, fechando' : 'Sem lance, fica livre')
-      : liderando ? 'Você lidera'
-      : lot.highBidder ? 'Lance de rival'
-      : 'Sem lance',
-    cashAvail,
-    committed,
-    minimo,
-    podeMinimo: minimo <= cashAvail && !encerrado,
-  }
-}
-
-// --------------------------------------------------------------------------------------
 // Cronômetro do lote. Um só componente para os dois layouts, com dois tamanhos.
 //
 // O número NÃO é anunciado a cada segundo: `aria-live="off"` no dígito, e o prazo fica
@@ -193,7 +124,7 @@ function LotClock({ view, size }: { view: LotView; size: 'sm' | 'lg' }) {
         role="progressbar"
         aria-valuenow={view.secs}
         aria-valuemin={0}
-        aria-valuemax={Math.round(LAND_AUCTION_WINDOW / 1000)}
+        aria-valuemax={LAND_AUCTION_WINDOW_SECONDS}
         aria-label={`Tempo restante do lote ${view.name}`}
       >
         <motion.div
@@ -507,13 +438,22 @@ export function LandAuctionLayer() {
   const bidder =
     local.seatId ??
     (pickedBidder && auction?.bidders.includes(pickedBidder) ? pickedBidder : auction?.bidders[0] ?? null)
-  const [now, setNow] = useState(() => Date.now())
+  const [localNow, setLocalNow] = useState(() => Date.now())
   const compacto = useMediaQuery(LANDSCAPE_TIGHT)
+  // 058/US7 — `lot.deadline` é epoch do HOST. Este arquivo AFIRMA, no comentário de topo
+  // desde a 031, que o prazo é "corrigido pelo offset de relógio do host" — e não era: o
+  // pregão lia `Date.now()` cru. Com o relógio do cliente atrasado N segundos, o cronômetro
+  // exibia `24 + N`, que é o "chegou a uns 30 segundos" da jogatina.
+  //
+  // O leilão comum (`ModalLayer`) e a região viva já faziam exatamente isto. O pregão era o
+  // único consumidor de prazo que faltava.
+  const clockOffsetMs = useRoomStore((s) => s.clockOffsetMs)
+  const now = localNow + clockOffsetMs
 
   // Tick do relógio (barras) enquanto há pregão aberto.
   useEffect(() => {
     if (!auction) return
-    const t = setInterval(() => setNow(Date.now()), 250)
+    const t = setInterval(() => setLocalNow(Date.now()), 250)
     return () => clearInterval(t)
   }, [auction])
 
