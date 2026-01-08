@@ -1,6 +1,6 @@
 // Tipos de domínio do Fluxo de Turno (spec 002). Tudo serializável (JSON puro):
 // nada de funções/refs no estado — pré-requisito de pausa/reconexão (FR-028).
-import type { Title, ResolutionSlice, BankStock, Loan, Immunity, TempEffect, LogEntry, Trade, HouseAuction } from '../economy/types'
+import type { Title, ResolutionSlice, Loan, Immunity, TempEffect, LogEntry, Trade } from '../economy/types'
 import type { DeckId } from '../cards/types'
 
 export type SpeedFace = 1 | 2 | 3 | 'mr-banco' | 'onibus'
@@ -68,7 +68,6 @@ export interface GameState {
   phase: GamePhase
   titles: Record<number, Title> // pos → posse (003); só casas compráveis
   resolution: ResolutionSlice | null // interação transitória de compra/leilão (003)
-  bank: BankStock // estoque global de construção (004)
   decks: Record<DeckId, string[]> // ids de cartas por deck; topo = índice 0 (006)
   centerPot: number // pote do Free Parking (007); semente/reabastecimento $500
   loans: Loan[] // empréstimos ativos entre jogadores (010, §15)
@@ -77,7 +76,6 @@ export interface GameState {
   tempEffects: TempEffect[] // efeitos temporários de carta (015, §10.6): apagão/greve/boicote/imunidade-temp
   log: LogEntry[] // eventos do jogo (021); bounded em 50, mais recentes ao fim
   pendingTrade: Trade | null // proposta de troca pendente (024); uma por vez; null = nenhuma
-  houseAuction: HouseAuction | null // leilão de casas em escassez (026); evento autônomo, fora do turno
   tradeHistory: Trade[] // trocas aceitas (027); mais recentes ao fim, bounded ~12
   notice: Notice | null // notificação informativa ativa (030, §12.2); null = nenhuma
 }

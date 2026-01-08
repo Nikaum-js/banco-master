@@ -24,7 +24,6 @@ import { economyResolve } from './economy/resolveRentable'
 import { buyProperty, declineProperty } from './economy/purchase'
 import { placeBid, passBid, closeAuction } from './economy/auction'
 import { buildHouse, sellBuilding, buildHangar, sellHangar } from './economy/construction'
-import { openHouseAuction, placeHouseBid, closeHouseAuction } from './economy/houseAuction'
 import { mortgageProperty, unmortgageProperty } from './economy/mortgage'
 import { goBonus, payToCenter, collectCenter } from './balancing/balancing'
 import { payDebt, declareBankruptcy } from './falencia/falencia'
@@ -91,7 +90,6 @@ export function createSeedState(playerIds: string[]): GameState {
     phase: 'playing',
     titles: seedTitles(),
     resolution: null,
-    bank: { ...THEME.BANK }, // estoque global do tema (D-017 + Skyscraper 011)
     decks: { acaso: deckCardIds('acaso'), tesouro: deckCardIds('tesouro') }, // 006 — embaralhar no store
     centerPot: THEME.PARKING_SEED, // 007 — Free Parking (tema)
     loans: [], // 010 — empréstimos ativos
@@ -100,7 +98,6 @@ export function createSeedState(playerIds: string[]): GameState {
     tempEffects: [], // 015 — efeitos temporários de carta
     log: [], // 021 — event log do jogo
     pendingTrade: null, // 024 — proposta de troca pendente
-    houseAuction: null, // 026 — leilão de casas (evento autônomo)
     tradeHistory: [], // 027 — histórico de trocas aceitas
     notice: null, // 030 — notificação informativa (Free Parking / Aquisição Hostil)
   }
@@ -127,9 +124,6 @@ interface GameStore {
   sellBuilding(pos: number): void
   buildHangar(pos: number): void
   sellHangar(pos: number): void
-  openHouseAuction(housesAvailable: number, bidders: string[]): void
-  placeHouseBid(playerId: string, amount: number): void
-  closeHouseAuction(): void
   mortgageProperty(pos: number): void
   unmortgageProperty(pos: number): void
   playHandCard(cardId: string, target?: number, targetPlayer?: string): void
@@ -212,9 +206,6 @@ export const useGameStore = create<GameStore>((set, get) => {
     sellBuilding: (pos) => set((st) => ({ game: sellBuilding(st.game, pos) })),
     buildHangar: (pos) => set((st) => ({ game: buildHangar(st.game, pos) })),
     sellHangar: (pos) => set((st) => ({ game: sellHangar(st.game, pos) })),
-    openHouseAuction: (housesAvailable, bidders) => set((st) => ({ game: openHouseAuction(st.game, housesAvailable, bidders) })), // 026 — evento autônomo
-    placeHouseBid: (playerId, amount) => set((st) => ({ game: placeHouseBid(st.game, playerId, amount) })),
-    closeHouseAuction: () => set((st) => ({ game: closeHouseAuction(st.game) })),
     mortgageProperty: (pos) => set((st) => ({ game: mortgageProperty(st.game, pos) })),
     unmortgageProperty: (pos) => set((st) => ({ game: unmortgageProperty(st.game, pos) })),
     playHandCard: (cardId, target, targetPlayer) =>
