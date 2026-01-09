@@ -1,6 +1,6 @@
-# Banco Master — Software Requirements Specification (SRS)
+# Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.18
+**Versão:** 1.21
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -35,7 +35,7 @@
 
 ### 1.1 Descrição
 
-O **Banco Master** é uma aplicação web multiplayer de jogo de tabuleiro estilo Banco Imobiliário (inspirado em Monopoly e diretamente baseado no [Richup.io](https://richup.io/)). O jogo permite que até 8 jogadores humanos se conectem em salas online, joguem em tempo real, comprem e negociem propriedades, construam casas e hotéis, hipotequem imóveis e disputem quem acumula mais riqueza sem ir à falência.
+O **Magnata Imobiliário** é uma aplicação web multiplayer de jogo de tabuleiro estilo Banco Imobiliário (inspirado em Monopoly e diretamente baseado no [Richup.io](https://richup.io/)). O jogo permite que até 8 jogadores humanos se conectem em salas online, joguem em tempo real, comprem e negociem propriedades, construam casas e hotéis, hipotequem imóveis e disputem quem acumula mais riqueza sem ir à falência.
 
 Este documento é a **fonte de verdade absoluta** do projeto. Toda decisão de produto deve respeitar as especificações aqui descritas. Quando uma informação não estiver explicitamente definida neste documento, a referência comportamental é o jogo Richup.io.
 
@@ -73,14 +73,15 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Free Parking com prêmio acumulado | Presente — impostos/multas vão para o centro, prêmio inicial $500 |
 | Bônus de GO | Fixo — $200 ao passar; $400 ao parar exatamente no GO (revisão D-007, 2026-05-24) |
 | Segundo hotel por propriedade | Presente — sequencial, cobra **mais** aluguel que o 1º; 2 hotéis viram arranha-céu |
-| Empréstimos entre jogadores | Presentes — juros 10%–50%, cobrados a cada passagem pelo GO |
+| Empréstimos entre jogadores | Presentes — juros 10%–50%, cobrados a cada passagem pelo GO; vencem em 3 voltas com cobrança automática do principal (D-054, §15.6) |
 | Imunidade de aluguel em negociações | Presente — pode ser negociada por N voltas ou até o fim |
+| Negociação com contrapartida mínima | Presente — cada lado recebe ao menos metade do valor dos ativos que entrega (D-055, §8.5) |
 | Sistema de raridade de cartas | 3 tiers (Lendária/Rara/Comum) com cores (laranja/azul/verde) |
 | Cartas em mão | Privadas (apenas contador visível), não-negociáveis, limite de 3 totais |
 | Bus Tickets | Item de mão separado das cartas, obtido via carta "Passagem de Ônibus" |
 | Cartas ofensivas (Aquisição Hostil, Despejo, Auditoria, Boicote) | Presentes no v1 — não podem ser recusadas pelo alvo, exceto via reação (Diplomacia) |
 | Tesouro precisa ser impactante | Princípio de design: Tesouro não pode virar "casa de troquinho" como no Richup |
-| Fim de jogo | Classificação completa por ordem inversa de eliminação, com patrimônio e duração (D-038) |
+| Fim de jogo | Classificação completa por ordem inversa de eliminação, com patrimônio e duração; depois, retorno à mesma sala para revanche (D-038/D-052) |
 | Acessibilidade | WCAG 2.2 AA no caminho de jogo, verificada automaticamente; paisagem é a orientação de jogo (D-039) |
 | Telemetria | Mínima e anônima — contagem de partidas no próprio Supabase, exceção em monitoramento de erro (D-040) |
 | Ordem inicial | Host escolhe no lobby entre Leilão secreto e Maior dado; neste, cada jogador rola à vista da mesa (D-046/D-051) |
@@ -428,6 +429,33 @@ Um jogador pode oferecer/solicitar imunidade de aluguel em uma ou mais proprieda
 
 > 📌 Exemplo válido: "Te dou Paris se você me deixar passar nas suas propriedades de graça por 3 voltas."
 
+### 8.5 Contrapartida Mínima
+
+> Seção nova em v1.21, apoiada na [D-055](adr/D-055-troca-exige-contrapartida-minima.md).
+
+Uma proposta só é válida se **cada lado receber pelo menos metade do valor avaliado dos ativos que entrega**. Ativo, aqui, é **propriedade, Bus Ticket e imunidade** — concedida ou transferida.
+
+- **Dinheiro entregue não conta contra quem paga.** Pagar caro por uma propriedade é livre, em qualquer valor.
+- O que o lado **recebe** conta integralmente: propriedades, Bus Tickets, imunidades **e** dinheiro.
+- **Entregar e não receber absolutamente nada nunca é troca**, mesmo quando o que sai é só dinheiro.
+- A proposta que não atinge o piso **não pode ser enviada nem aceita**, e o proponente vê na hora quanto falta.
+- A verificação acontece na criação da proposta **e de novo na aceitação**, junto da revalidação da §8.3.
+
+**Avaliação** — vale só para esta verificação; nenhum destes valores é cobrado de ninguém:
+
+| Item | Valor avaliado |
+|---|---|
+| Propriedade livre | Preço de tabela |
+| Propriedade hipotecada | Metade do preço de tabela |
+| Bus Ticket | $100 cada |
+| Imunidade por N voltas | 10% do preço da propriedade protegida por volta, teto de 50% do preço |
+| Imunidade permanente | 50% do preço da propriedade protegida |
+| Dinheiro | Valor nominal (só a favor de quem recebe) |
+
+> 📌 O que essa regra barra é o **abandono com dano dirigido** — entregar o patrimônio inteiro a um jogador escolhido a dedo para decidir a partida dos outros fora do tabuleiro. Negociação desequilibrada continua permitida; o exemplo da §8.4 (uma propriedade por 3 voltas de imunidade **nas propriedades** do outro) é válido e permanece válido — a imunidade é sobre um conjunto, e um conjunto de peso comparável cobre o piso.
+>
+> 📌 Esta regra **soma-se** à proteção de credor da §9.1 (o devedor com dívida pendente não pode ficar insolvente por causa de uma troca), sem substituí-la.
+
 ---
 
 ## 9. Falência
@@ -471,7 +499,9 @@ Se o jogador falido possui empréstimo ativo com outro jogador:
 
 A partida termina quando restar apenas **1 jogador** com saldo positivo. Ele é declarado vencedor.
 
-> 📌 **O fim tem classificação e resumo** (v1.9, [D-038](adr/D-038-fim-de-jogo-tem-classificacao-e-resumo.md)): ao terminar, **todas** as telas — inclusive as de quem já foi eliminado — mostram a classificação completa, do 1º ao último. A ordem é a **inversa da ordem de eliminação**: vence quem sobrou, é 2º o último a falir, e é último o primeiro a falir. Cada linha traz o **patrimônio final** (o mesmo cálculo de patrimônio líquido usado por Auditoria Fiscal e Aquisição Hostil: caixa + preço das propriedades, hipotecada pela metade, + custo das construções), **quantas propriedades** o jogador tinha e — para quem caiu — **em que rodada** caiu. O resumo fecha com a **duração da partida** em rodadas e em tempo decorrido. A classificação é derivada do estado da partida, não da tela: por isso o estado registra a ordem de eliminação, o número da rodada e os instantes de início e de fim, e todos veem exatamente a mesma classificação, inclusive depois de recarregar. Não há revanche: a sala encerra e o link não reabre a mesa (§11.1, spec 037); em partida local, começar de novo continua disponível.
+> 📌 **O fim tem classificação e resumo** (v1.9, [D-038](adr/D-038-fim-de-jogo-tem-classificacao-e-resumo.md)): ao terminar, **todas** as telas — inclusive as de quem já foi eliminado — mostram a classificação completa, do 1º ao último. A ordem é a **inversa da ordem de eliminação**: vence quem sobrou, é 2º o último a falir, e é último o primeiro a falir. Cada linha traz o **patrimônio final** (o mesmo cálculo de patrimônio líquido usado por Auditoria Fiscal e Aquisição Hostil: caixa + preço das propriedades, hipotecada pela metade, + custo das construções), **quantas propriedades** o jogador tinha e — para quem caiu — **em que rodada** caiu. O resumo fecha com a **duração da partida** em rodadas e em tempo decorrido. A classificação é derivada do estado da partida, não da tela: por isso o estado registra a ordem de eliminação, o número da rodada e os instantes de início e de fim, e todos veem exatamente a mesma classificação, inclusive depois de recarregar.
+>
+> 📌 **Depois do resumo, o grupo continua na mesma sala** (v1.19, [D-052](adr/D-052-revanche-reabre-a-mesma-sala.md)): cada jogador pode deixar a classificação no próprio ritmo e voltar ao lobby da sala. O host reabre a sala e inicia outra partida pelo fluxo normal; assentos e identidades permanecem, mas todo estado específico da partida encerrada é descartado. Em partida local, começar de novo continua disponível.
 
 ---
 
@@ -479,7 +509,7 @@ A partida termina quando restar apenas **1 jogador** com saldo positivo. Ele é 
 
 ### 10.1 Visão Geral
 
-O Banco Master tem **2 decks separados** de cartas, cada um com 16 cartas distribuídas em 3 níveis de **raridade**:
+O Magnata Imobiliário tem **2 decks separados** de cartas, cada um com 16 cartas distribuídas em 3 níveis de **raridade**:
 
 - 🃏 **Acaso** (Chance) — efeitos ofensivos, caóticos, agressivos. "Cair em Acaso pode mudar o jogo."
 - 🎁 **Tesouro** (Community Chest) — efeitos defensivos, benignos, com pequenas surpresas. "Cair em Tesouro quase sempre tem peso."
@@ -756,6 +786,18 @@ Regras de v1.10, introduzidas por [D-042](adr/D-042-identidade-de-transporte-ate
 - **O código de reentrada é segredo do dono** (§11.4). Não é exibido nem transmitido a outros jogadores: é a credencial que reanexa um assento, e quem o tivesse poderia tomar o assento alheio.
 - **O link entra, não lê.** O link da sala continua sendo a credencial de **entrada** (§11.2, D-019): quem o apresenta vê a **prévia** da sala — que ela existe, seu status e quem já sentou — e pode pedir assento. O **estado da partida** só é legível por quem tem assento nela.
 
+### 11.6 Revanche na Mesma Sala
+
+Regras de v1.19, introduzidas pela [D-052](adr/D-052-revanche-reabre-a-mesma-sala.md).
+
+- Ao terminar a partida, cada jogador pode sair da classificação e voltar ao lobby da **mesma sala**.
+- O host preserva sua autoridade e é quem reabre a sala e inicia a próxima partida.
+- A sala preserva assentos, nomes, cores, Avatar, Skin, códigos de reentrada e estado de conexão.
+- A próxima partida não começa automaticamente: o host escolhe novamente o Ritual de Largada e confirma o início.
+- O estado da partida anterior não atravessa a revanche: caixa, posições, propriedades, construções, cartas, efeitos, imunidades, empréstimos, negociações, leilões, ordem, Loteria, decks, log e classificação são recriados.
+- A classificação encerrada permanece estável para quem ainda não saiu dela; a volta de outro jogador não apaga o resumo local.
+- Reload e mensagens atrasadas não podem restaurar o jogo encerrado depois que a sala foi reaberta. A versão vigente da mesa é sempre a publicada pela autoridade.
+
 
 ---
 
@@ -788,7 +830,6 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor d
 | Bunker Fiscal disponível (reação) | Jogador deve pagar imposto — pergunta se quer usar Bunker |
 | Aquisição Hostil sofrida (notificação) | Jogador perdeu propriedade — visualizar transferência |
 | Usar Bus Ticket | Jogador ativa antes de rolar — escolhe casa do mesmo lado |
-| Falência | Jogador não consegue pagar |
 | Fim de jogo | Último jogador restante — classificação completa e resumo (§9.5, [D-038](adr/D-038-fim-de-jogo-tem-classificacao-e-resumo.md)) |
 | Empréstimo (solicitação) | Devedor solicita empréstimo durante seu turno |
 | Empréstimo (recebido) | Credor recebe solicitação |
@@ -796,6 +837,8 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor d
 | Speed Die — escolha de dado (Ônibus) | Resultado da face Ônibus |
 | Speed Die — escolha de casa (Triples) | Triples nos dados |
 | Hangar | Jogador deseja construir hangar em aeroporto próprio |
+
+> 📌 **A cobrança de dívida NÃO é modal** (v1.21, [D-056](adr/D-056-cobranca-de-divida-sai-do-centro-da-tela.md)). Ela aparece como **faixa ancorada na base**, que **reduz a altura do tabuleiro em vez de cobri-lo** — a decisão de o que hipotecar ou vender é tomada olhando o tabuleiro inteiro. A faixa não escurece a tela, não captura nem prende o foco, e Esc continua sem fechá-la (§12.6): sai-se dela pagando, negociando ou declarando falência (§9.1). Ela mostra, na ordem: a quem se deve, quanto, o caixa atual, quanto falta e **quanto ainda dá para levantar** vendendo construções e hipotecando tudo — este último é a mesma medida que autoriza o botão de falência. A escolha de credor para empréstimo abre a partir da faixa, sem empilhar um botão por adversário.
 
 ### 12.3 HUD
 
@@ -879,7 +922,7 @@ A versão em produção só é promovida a partir da linha principal e **depois*
 
 ## 13. Mecânicas de Balanceamento
 
-Esta seção descreve as mecânicas adicionadas ao Banco Master para corrigir os desequilíbrios estruturais do Monopoly/Richup.io.
+Esta seção descreve as mecânicas adicionadas ao Magnata Imobiliário para corrigir os desequilíbrios estruturais do Monopoly/Richup.io.
 
 ### 13.1 Problemas Identificados
 
@@ -892,12 +935,14 @@ Esta seção descreve as mecânicas adicionadas ao Banco Master para corrigir os
 
 ### 13.2 Speed Die (Dado de Velocidade)
 
+> Personagem renomeado de "Mr. Banco Master" para "Mr. Magnata" em v1.20, apoiado em [D-053](adr/D-053-projeto-renomeado-para-magnata-imobiliario.md).
+
 Terceiro dado especial baseado na mecânica oficial do Monopoly (edição 2006+). Ativado após o jogador completar a **primeira volta** do tabuleiro.
 
 **Faces do Speed Die (6 faces):**
 
 - Faces **1, 2 e 3** (3 faces): somam ao movimento normal.
-- Face **Mr. Banco Master** (2 faces): o jogador move normalmente e depois avança até a **próxima propriedade não comprada** — podendo comprá-la imediatamente. Se todas estiverem compradas, avança até a próxima propriedade não hipotecada de adversário e paga aluguel.
+- Face **Mr. Magnata** (2 faces): o jogador move normalmente e depois avança até a **próxima propriedade não comprada** — podendo comprá-la imediatamente. Se todas estiverem compradas, avança até a próxima propriedade não hipotecada de adversário e paga aluguel.
 - Face **Ônibus** (1 face): jogador escolhe mover o valor de um dos dois dados individualmente, ou a soma dos dois.
 - **Triples** (os três dados iguais): pode mover seu token para **qualquer casa do tabuleiro** à sua escolha.
 
@@ -908,7 +953,7 @@ Terceiro dado especial baseado na mecânica oficial do Monopoly (edição 2006+)
 - Para Utilidades, o valor do Speed Die é somado aos outros dados.
 - Speed Die **não conta** para duplas — 3-3 nos brancos + 3 no Speed Die não é tripla dupla.
 
-> 📌 O Mr. Banco Master resolve o first-mover advantage — cria oportunidades de compra independentes de onde o dado "natural" leva.
+> 📌 O Mr. Magnata resolve o first-mover advantage — cria oportunidades de compra independentes de onde o dado "natural" leva.
 
 ### 13.3 Construção com Grupo Parcial
 
@@ -1038,15 +1083,18 @@ Jogadores podem conceder empréstimos entre si durante a partida, criando dinâm
 - **Apenas 1 empréstimo ativo por jogador por vez** — não pode pegar novo enquanto tiver um em aberto.
 - A taxa de juros é definida pelo credor, dentro do range de **10% a 50%** do valor emprestado.
 - Os juros são cobrados a cada vez que o devedor **passa pelo GO** — debitado automaticamente do devedor e creditado ao credor **na hora**.
-- O devedor pode **quitar a qualquer momento** pagando apenas o **principal** (os juros já foram debitados a cada passagem pelo GO — não acumulam para o fim).
-- O credor **não pode cancelar** ou exigir pagamento antecipado unilateralmente — o prazo é do devedor.
+- **O empréstimo vence em 3 voltas do devedor** (v1.21, [D-054](adr/D-054-emprestimo-vence-em-tres-voltas.md)) — contadas pelas passagens **dele** pelo GO, a partir da concessão. Ver Seção 15.6.
+- O devedor pode **quitar a qualquer momento** pagando apenas o **principal**, e com isso se livra das voltas de juros que ainda faltavam.
+- O credor **não pode cancelar** ou exigir pagamento antecipado unilateralmente — o prazo é do devedor, e é o mesmo (3 voltas) em todo empréstimo.
 
 ### 15.4 Cálculo de Juros
 
 **Exemplo:** João pediu $500 emprestado de Pedro a 20% de juros.
 
 - A cada passagem pelo GO: João paga **$100** de juros a Pedro (20% de $500), debitado na hora.
-- Após 2 voltas, João já desembolsou $200 em juros (nos GOs). Ao quitar, paga só os **$500** do principal — **$700 desembolsados no total**.
+- Se João deixar vencer: paga $100 na 1ª volta, $100 na 2ª e, na **3ª**, paga os $100 de juros daquela volta **mais os $500 do principal** — **$800 desembolsados no total** (Seção 15.6).
+- Se João quitar durante a 1ª volta, antes de passar pelo GO: paga só os **$500** do principal, sem juros nenhum.
+- Se João quitar depois de 2 voltas: já desembolsou $200 em juros e paga os **$500** do principal — **$700 no total**.
 - Juros são sempre **simples** (sobre o principal original), não compostos.
 
 ### 15.5 Falência do Devedor com Empréstimo Ativo
@@ -1057,6 +1105,26 @@ Jogadores podem conceder empréstimos entre si durante a partida, criando dinâm
 - O empréstimo é considerado **liquidado** — credor assumiu ativos e passivos como compensação.
 
 > 📌 O credor herda **tudo**, ativos E passivos. Se as dívidas herdadas forem maiores que os ativos, o credor assume o prejuízo.
+
+### 15.6 Vencimento e Cobrança Automática
+
+> Seção nova em v1.21, apoiada na [D-054](adr/D-054-emprestimo-vence-em-tres-voltas.md), que revoga parcialmente a [D-009](adr/D-009-emprestimos-entre-jogadores.md).
+
+Todo empréstimo nasce com **prazo de 3 voltas do devedor**, contadas pelas passagens dele pelo GO desde a concessão:
+
+| Passagem pelo GO | O que é cobrado |
+|---|---|
+| 1ª | Juros da volta |
+| 2ª | Juros da volta |
+| **3ª** | Juros da volta **+ o principal**, automaticamente — o empréstimo é encerrado |
+
+- A cobrança do vencimento é **automática**: não pede confirmação ao devedor nem ao credor, e acontece logo após o bônus do GO.
+- Se o caixa do devedor **não cobrir** a cobrança, o que faltar vira **dívida pendente ao credor** (§9.1). O devedor precisa vender construções, hipotecar, negociar ou **declarar falência** — nada é perdoado nem parcelado.
+- O prazo é medido no GO **do devedor**. Turnos parados, prisão ou voltas curtas não aceleram nem atrasam o vencimento em relação aos outros jogadores.
+- Empréstimo concedido e quitado **antes da 1ª passagem pelo GO** não paga juros nenhum.
+- **Um empréstimo por vez continua valendo** (§15.3): só depois de encerrado — por quitação ou por vencimento — o devedor pode tomar outro.
+- Falência do devedor com empréstimo ativo segue §9.3/§15.5 sem alteração. O vencimento não cria destino de ativos novo.
+- O prazo restante é **informação pública**: quantas voltas faltam aparece onde o empréstimo é exibido, para devedor e credor.
 
 ---
 
@@ -1088,4 +1156,4 @@ sendo a fonte de verdade da **regra**, o `CONTEXT.md` é a fonte dos **nomes**.
 
 ---
 
-**Banco Master — SRS v1.17 | Julho 2026 | Documento de fonte de verdade absoluta**
+**Magnata Imobiliário — SRS v1.21 | Julho 2026 | Documento de fonte de verdade absoluta**

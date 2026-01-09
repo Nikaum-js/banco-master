@@ -62,6 +62,11 @@
 - [D-049](D-049-construcao-deve-ser-vendida-antes-da-hipoteca.md) — Toda construção deve ser vendida antes da hipoteca, inclusive Hangar
 - [D-050](D-050-limite-de-construcao-por-posse.md) — País incompleto limita o nível de construção pela quantidade de cidades possuídas (refina D-026)
 - [D-051](D-051-maior-dado-e-rolado-por-cada-jogador.md) — Maior dado é rolado por cada jogador, em sequência e à vista da mesa (refina D-046)
+- [D-052](D-052-revanche-reabre-a-mesma-sala.md) — Revanche reabre a mesma sala e preserva assentos entre partidas (revoga parcialmente D-038)
+- [D-053](D-053-projeto-renomeado-para-magnata-imobiliario.md) — Projeto renomeado de Banco Master para Magnata Imobiliário (risco de marca registrada no INPI)
+- [D-054](D-054-emprestimo-vence-em-tres-voltas.md) — Empréstimo vence em três voltas, com cobrança automática do principal (revoga parcialmente D-009)
+- [D-055](D-055-troca-exige-contrapartida-minima.md) — Troca exige contrapartida mínima de metade do valor entregue em ativos (novo §8.5)
+- [D-056](D-056-cobranca-de-divida-sai-do-centro-da-tela.md) — Cobrança de dívida sai do centro da tela e vira faixa ancorada que encolhe o tabuleiro (refina D-039)
 
 > ℹ️ **Renumeração na integração da 043** (a colisão que este arquivo avisava): a worktree da 043
 > tinha escrito a identidade de transporte como `D-035` e o código de reentrada como `D-038`, e

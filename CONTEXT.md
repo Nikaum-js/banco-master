@@ -1,4 +1,4 @@
-# Banco Master
+# Magnata Imobiliário
 
 Clone web multiplayer do Richup.io (Monopoly online), até 8 jogadores humanos, sem IA. Tema inicial: "Cidades do Mundo".
 
@@ -15,6 +15,10 @@ _Avoid_: peça
 **Skin**:
 Visual sobreposto ao Avatar. O catálogo contém Careca, Cavanhaque, Topete, Cartola, Safári, Aviador, Robô e Astronauta; toda Skin é compatível com todo Avatar e a combinação persiste como identidade do assento ([D-047](./docs/adr/D-047-avatares-escolhiveis-e-persistentes.md)).
 _Avoid_: peça, Avatar
+
+**Revanche**:
+Nova partida iniciada no lobby da mesma sala depois do resumo final. Preserva assentos e identidades, mas recria todo o estado de jogo ([D-052](./docs/adr/D-052-revanche-reabre-a-mesma-sala.md)).
+_Avoid_: reiniciar a partida, recriar sala
 
 ### Tabuleiro e movimento
 
@@ -47,10 +51,10 @@ Mesmos valores nos dois dados brancos.
 _Avoid_: Duplo, Double
 
 **Speed Die**:
-Terceiro dado especial ativado após a 1ª volta, com faces 1/2/3, Mr. Banco Master e Ônibus. Atualmente suspenso por flag ([D-003](./docs/adr/D-003-speed-die-apos-1a-volta.md)).
+Terceiro dado especial ativado após a 1ª volta, com faces 1/2/3, Mr. Magnata e Ônibus. Atualmente suspenso por flag ([D-003](./docs/adr/D-003-speed-die-apos-1a-volta.md)).
 _Avoid_: Dado de velocidade, terceiro dado
 
-**Mr. Banco Master**:
+**Mr. Magnata**:
 Face do Speed Die que envia o jogador à próxima propriedade disponível.
 
 **Bus Ticket**:
@@ -126,13 +130,25 @@ Oferta persistente enviada por um jogador a outro. Várias podem coexistir; cada
 _Avoid_: pendingTrade, proposta global
 
 **Empréstimo**:
-Transferência de dinheiro entre jogadores, com juros de 10–50% cobrados a cada passagem do devedor pelo GO ([D-009](./docs/adr/D-009-emprestimos-entre-jogadores.md)).
+Transferência de dinheiro entre jogadores, com juros de 10–50% cobrados a cada passagem do devedor pelo GO ([D-009](./docs/adr/D-009-emprestimos-entre-jogadores.md)) e prazo de três voltas ([D-054](./docs/adr/D-054-emprestimo-vence-em-tres-voltas.md)).
+
+**Vencimento**:
+Terceira passagem do devedor pelo GO, quando o jogo cobra juros e principal de uma vez e encerra o empréstimo. Caixa insuficiente vira dívida pendente ao credor.
+_Avoid_: prazo estourado, calote
 
 **Credor**:
 Jogador que concedeu o empréstimo.
 
 **Devedor**:
 Jogador que recebeu o empréstimo.
+
+**Contrapartida mínima**:
+Piso de validade de uma proposta: cada lado precisa receber ao menos metade do valor avaliado dos ativos que entrega ([D-055](./docs/adr/D-055-troca-exige-contrapartida-minima.md)). Dinheiro pago não conta contra quem paga.
+_Avoid_: troca justa, anti-dump
+
+**Valor avaliado**:
+Medida de referência de propriedades, Bus Tickets e imunidades, usada só para verificar a contrapartida. Nunca é cobrada de ninguém.
+_Avoid_: preço de mercado, valuation
 
 **Imunidade de Aluguel**:
 Benefício negociável que permite passar por uma propriedade sem pagar aluguel por N voltas ([D-010](./docs/adr/D-010-imunidade-de-aluguel-negociavel.md)).
@@ -146,3 +162,11 @@ _Avoid_: Fiscal, cobrador
 **Catch-up mechanic**:
 Mecanismo que dá vantagem a jogadores em desvantagem. Por princípio, nunca é rotulado como tal na interface.
 _Avoid_: rubber banding, mecanismo de equilíbrio
+
+**Faixa de cobrança**:
+Superfície ancorada na base que apresenta uma dívida pendente. Reduz a altura do tabuleiro em vez de cobri-lo, e não é modal ([D-056](./docs/adr/D-056-cobranca-de-divida-sai-do-centro-da-tela.md)).
+_Avoid_: modal de falência, card de dívida
+
+**Capacidade de levantar**:
+Caixa mais venda de construções mais hipoteca de tudo que ainda é hipotecável. É o número que diz se ainda há saída, e o mesmo que autoriza declarar falência.
+_Avoid_: patrimônio, net worth
