@@ -31,6 +31,7 @@ export function rollTaxMan(state: GameState, rng: RNG): void {
   } else {
     const t = state.titles[sq.pos]
     amount = rentCity(
+      sq.group,
       sq.rent,
       groupOwnedCount(state, sq.group, owner),
       groupSize(sq.group),

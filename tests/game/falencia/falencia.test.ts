@@ -52,6 +52,7 @@ describe('Falência (US1)', () => {
 
   it('SC-002: falir devendo ao banco → propriedades voltam ao banco; construção desfeita', () => {
     const g = withDebt(null, 500)
+    g.players[0].cash = 0 // insolvente (liquidação < dívida) → pode falir
     g.titles[1].ownerId = 'p1'
     g.titles[1].hotel = true
     const after = declareBankruptcy(g, ctx)
@@ -61,7 +62,9 @@ describe('Falência (US1)', () => {
   })
 
   it('SC-003: turno pula o eliminado', () => {
-    const after = declareBankruptcy(withDebt('p2', 500), ctx) // p1 (seat 0) falir
+    const g = withDebt('p2', 500)
+    g.players[0].cash = 100 // insolvente → p1 (seat 0) falir
+    const after = declareBankruptcy(g, ctx)
     expect(after.activeSeat).not.toBe(0)
     expect(after.players[after.turnOrder[after.activeSeat]].eliminated).toBe(false)
   })
@@ -79,6 +82,7 @@ describe('Fim de jogo (US2)', () => {
 
   it('SC-004: última falência encerra a partida com o vencedor', () => {
     const g = withDebt(null, 500)
+    g.players[0].cash = 0 // insolvente → p1 vai falir
     g.players[2].eliminated = true // sobram p1 e p2; p1 vai falir
     const after = declareBankruptcy(g, ctx)
     expect(after.phase).toBe('ended')

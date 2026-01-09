@@ -64,6 +64,9 @@ export function payDebt(state: GameState): GameState {
 // tudo — ativos e passivos —, precedendo a dívida-gatilho).
 export function declareBankruptcy(state: GameState, ctx: TurnCtx): GameState {
   if (state.resolution?.kind !== 'debt') return state
+  // §9.1: só há falência quando o jogador NÃO consegue pagar mesmo liquidando tudo (caixa +
+  // venda de construções + hipoteca). Solvente → no-op (precisa pagar/hipotecar/vender).
+  if (!isBankrupt(state, activePlayer(state).id, state.resolution.amount)) return state
   const debtCreditorId = state.resolution.creditorId
   const s = clone(state)
   const debtor = activePlayer(s)
