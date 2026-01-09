@@ -50,10 +50,11 @@ export function advance(state: GameState, player: Player, steps: number, ports: 
   const passedGo = player.pos + steps >= BOARD_SIZE
   player.pos = (player.pos + steps) % BOARD_SIZE
   if (passedGo) {
-    const bonus = ports.onPassGo(state, player.id) // GO Progressivo creditado (007)
+    const landedOnGo = player.pos === 0 // caiu EXATAMENTE no GO → bônus em dobro
+    const bonus = ports.onPassGo(state, player.id) * (landedOnGo ? 2 : 1)
     player.cash += bonus
     player.completouPrimeiraVolta = true // Speed Die a partir da próxima rolagem (clarify Q2)
-    logEvent(state, player.id, `passou pelo GO (+$${bonus})`) // 021
+    logEvent(state, player.id, landedOnGo ? `parou no GO (+$${bonus})` : `passou pelo GO (+$${bonus})`) // 021
     ports.afterPassGo?.(state, player.id) // juros de empréstimo cobrados após o bônus (010)
   }
 }
@@ -88,7 +89,7 @@ function nextBuyableSteps(fromPos: number): number {
 }
 
 // Pousa o token: "Vá para a Prisão" encerra o turno; senão exige resolução da casa.
-function land(turn: Turn, player: Player, roll: Roll | null): void {
+export function land(turn: Turn, player: Player, roll: Roll | null): void {
   if (BOARD[player.pos].kind === 'corner-gotojail') {
     sendToJail(player) // FR-012 — sem GO (já tratado), encerra o movimento
     turn.state = 'encerrado'
@@ -115,7 +116,7 @@ export function advanceSeat(s: GameState, ctx: TurnCtx): void {
 }
 
 // Turnos forçados a encerrar (3ª dupla, prisão, tentativa falha) passam a vez na hora.
-function finishIfEnded(s: GameState, ctx: TurnCtx): GameState {
+export function finishIfEnded(s: GameState, ctx: TurnCtx): GameState {
   if (s.turn.state === 'encerrado') advanceSeat(s, ctx)
   return s
 }
@@ -207,8 +208,8 @@ export function chooseTripleDest(state: GameState, dest: number, ctx: TurnCtx): 
   return finishIfEnded(s, ctx)
 }
 
-// Uso de Bus Ticket (009, SRS §10.7): antes de rolar, gasta 1 ticket e move para
-// uma casa do MESMO LADO em vez de rolar. Sem rolagem ⇒ sem dupla ⇒ sem re-rolagem.
+// Uso de Bus Ticket (009, SRS §10.7): antes de rolar, gasta 1 ticket e PULA DIRETO
+// para uma casa do MESMO LADO (não percorre o tabuleiro → NÃO cruza o GO, sem $200).
 export function useBusTicket(state: GameState, dest: number, ctx: TurnCtx): GameState {
   if (state.paused) return state // FR-011
   if (state.turn.state !== 'aguardando-rolagem') return state // só antes de rolar (FR-001)
@@ -221,8 +222,27 @@ export function useBusTicket(state: GameState, dest: number, ctx: TurnCtx): Game
   const turn = s.turn
   const p = activePlayer(s)
   p.busTickets -= 1 // FR-004
-  advance(s, p, (dest - p.pos + BOARD_SIZE) % BOARD_SIZE, ctx.ports) // horário; credita GO ao cruzar (FR-005)
-  land(turn, p, null) // pousa sem rolagem: sem dupla nem re-rolagem (FR-007); dest nunca é canto
+  p.pos = dest // pulo direto no mesmo lado — sem volta no tabuleiro, sem bônus de GO
+  land(turn, p, null) // resolve o destino; sem rolagem ⇒ sem dupla/re-rolagem (FR-007)
+  return finishIfEnded(s, ctx)
+}
+
+// Bus ride do ESPAÇO (D-021, §2.7 revisto): ao PARAR no espaço Bus Ticket, escolhe
+// um destino do MESMO LADO e move já (resolve o destino). Não gasta ticket — o
+// espaço É a corrida. Disparado por awaitingChoice='bus-ride'.
+export function chooseBusRide(state: GameState, dest: number, ctx: TurnCtx): GameState {
+  if (state.paused) return state
+  if (state.turn.awaitingChoice !== 'bus-ride') return state
+  const player = activePlayer(state)
+  const fromSide = sideOf(player.pos)
+  if (fromSide === null) return state // sobre canto (não ocorre: o espaço fica num lado)
+  if (sideOf(dest) !== fromSide || dest === player.pos) return state // destino inválido
+  const s = clone(state)
+  const turn = s.turn
+  const p = activePlayer(s)
+  turn.awaitingChoice = null
+  p.pos = dest // pulo direto no mesmo lado — sem volta no tabuleiro, sem bônus de GO
+  land(turn, p, null) // resolve o destino normalmente
   return finishIfEnded(s, ctx)
 }
 
@@ -234,11 +254,13 @@ export function resolvePending(state: GameState, ctx: TurnCtx): GameState {
   const player = activePlayer(s)
   const rctx: ResolveCtx = { playerId: player.id, square: BOARD[player.pos], roll: turn.lastRoll, ports: ctx.ports, state: s }
   const outcome = ctx.resolve?.(rctx) ?? resolveSquare(rctx)
+  // Carta de movimento (Avance/Volte 3) pode mover e cair em "Vá pra Prisão" → 'encerrado': passa a vez.
+  if (s.turn.state === 'encerrado') return finishIfEnded(s, ctx)
   if (outcome.done) {
     turn.pendingResolve = false
     turn.state = 'aguardando-finalizacao' // FR-007
   }
-  // outcome.done === false: casa segue pendente (ex.: compra/leilão abertos por 003)
+  // outcome.done === false: casa segue pendente (ex.: compra/leilão; ou destino de carta de movimento)
   return s
 }
 
