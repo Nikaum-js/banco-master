@@ -6,6 +6,7 @@ import type { GameState } from '../turn/types'
 import { buildCost, cityLevel, HANGAR_COST } from '../economy/construction'
 import { activePlayer, completeResolution, advanceSeat, type TurnCtx } from '../turn/turnMachine'
 import { activeLoanFor } from '../emprestimos/emprestimos'
+import { logEvent } from '../log'
 
 function clone(state: GameState): GameState {
   return structuredClone(state)
@@ -53,6 +54,7 @@ export function payDebt(state: GameState): GameState {
   } else {
     s.centerPot += amount // dívida ao banco (imposto) → pote do Free Parking
   }
+  logEvent(s, activePlayer(s).id, `pagou dívida $${amount}`) // 021
   completeResolution(s)
   return s
 }
@@ -99,9 +101,13 @@ export function declareBankruptcy(state: GameState, ctx: TurnCtx): GameState {
   }
   debtor.cash = 0
   debtor.eliminated = true // token sai do tabuleiro (LiveTokens pula eliminados)
+  logEvent(s, debtor.id, 'faliu') // 021
 
   // Empréstimos liquidados: o do devedor (herdado via §9.3) e os em que ele era CREDOR (R8).
   s.loans = s.loans.filter((l) => l.debtorId !== debtor.id && l.creditorId !== debtor.id)
+  // §9.4 (019): imunidades concedidas/recebidas pelo eliminado e efeitos temporários por ele originados.
+  s.immunities = s.immunities.filter((i) => i.granterId !== debtor.id && i.beneficiaryId !== debtor.id)
+  s.tempEffects = s.tempEffects.filter((e) => e.ownerId !== debtor.id)
 
   s.resolution = null
   s.turn.pendingResolve = false

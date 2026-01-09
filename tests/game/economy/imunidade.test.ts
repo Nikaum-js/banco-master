@@ -22,7 +22,7 @@ describe('Imunidade — concessão na troca (US1)', () => {
       fromId: 'p1', toId: 'p2', fromProps: [], fromCash: 0, toProps: [], toCash: 200,
       fromImmunities: [{ pos: 1, laps: 3 }],
     })
-    expect(out.immunities).toEqual([{ beneficiaryId: 'p2', pos: 1, lapsRemaining: 3 }])
+    expect(out.immunities).toEqual([{ beneficiaryId: 'p2', pos: 1, lapsRemaining: 3, granterId: 'p1' }])
     expect(out.players[0].cash).toBe(2200) // p1 recebe $200
     expect(out.players[1].cash).toBe(1800)
   })
