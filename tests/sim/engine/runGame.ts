@@ -9,6 +9,7 @@ import { checkInvariants } from './invariants'
 import { checkConservation, checkAuctionClose } from './conservation'
 import { checkNarration, checkNoTruncation } from './narration'
 import { stepWithConvergence } from './convergence'
+import type { GameState } from '@/game/turn/types'
 import type { SimAction, SimFailure, SimResult } from './types'
 import { sampleWealth, type WealthSample } from './wealth'
 
@@ -68,7 +69,23 @@ function gameEnded(session: SimSession): boolean {
   return session.game.phase === 'ended'
 }
 
-export function runGame(seed: number, playerCount: number, roundCap: number = DEFAULT_ROUND_CAP): SimResult {
+/**
+ * Observador de transição, opcional. Recebe TODA mudança de estado da partida — a do
+ * despacho escolhido e a do fecho por relógio lógico —, na ordem em que ocorreram.
+ *
+ * Existe para medir o que o `SimResult` não carrega e não deveria carregar: um estudo A/B
+ * pontual (o da D-078 comparou os limiares 3 e 6 nas mesmas seeds) precisa de contagens que
+ * só fazem sentido para ele, e enfiá-las no resultado padrão deixaria o campo morto no lote
+ * do CI para sempre. Como é `undefined` por default, o caminho do CI não muda.
+ */
+export type SimObserver = (prev: GameState, next: GameState) => void
+
+export function runGame(
+  seed: number,
+  playerCount: number,
+  roundCap: number = DEFAULT_ROUND_CAP,
+  observe?: SimObserver,
+): SimResult {
   const t0 = Date.now()
   const playerIds = Array.from({ length: playerCount }, (_, i) => `p${i + 1}`)
   const session = createSimSession(seed, playerIds)
@@ -90,6 +107,7 @@ export function runGame(seed: number, playerCount: number, roundCap: number = DE
       const beforeAuctionClose = session.game
       closeExhaustedAuctions(session)
       if (session.game !== beforeAuctionClose) {
+        observe?.(beforeAuctionClose, session.game)
         const { violations, mechanisms } = checkAuctionClose(beforeAuctionClose, session.game)
         addCoverage(coverage, mechanisms)
         if (violations.length > 0) {
@@ -107,6 +125,7 @@ export function runGame(seed: number, playerCount: number, roundCap: number = DE
       // encontrar divergência nenhuma; "as contas oscilam" (CARD 04) é o sintoma exato de uma.
       const step = stepWithConvergence(before, action, session.ctx)
       session.game = step.host
+      observe?.(before, session.game)
       actionsExecuted++
       if (step.violations.length > 0) {
         const detail = step.violations.map((v) => `[${v.code}] ${v.detail}`).join('; ')
