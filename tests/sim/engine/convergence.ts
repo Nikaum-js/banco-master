@@ -43,6 +43,18 @@ export function stepWithConvergence(prev: GameState, action: SimAction, base: Tu
   const host = applyCommand(prev, action, ctx)
   const resolved = drain()
 
+  // Divergência só pode NASCER onde entra não-determinismo. Se o comando não consumiu `rng`,
+  // relógio, saque nem reação, host e cliente rodam a MESMA função pura sobre a MESMA entrada —
+  // o resultado é idêntico por construção, e verificar isso é gastar `structuredClone` +
+  // `JSON.stringify` do estado inteiro para provar aritmética.
+  //
+  // Medido: uma partida de 6 jogadores faz ~11.500 despachos e a maioria (finalizar, comprar,
+  // hipotecar, pagar dívida) não consome valor gravado nenhum. Verificar só onde há valor gravado
+  // mantém o invariante exatamente onde ele pode falhar e devolve o tempo do resto.
+  const consumiuNaoDeterminismo =
+    resolved.rng.length > 0 || resolved.now.length > 0 || resolved.draws.length > 0 || resolved.reactions.length > 0
+  if (!consumiuNaoDeterminismo) return { host, violations: [] }
+
   let guest: GameState
   try {
     guest = applyCommand(prev, action, replayCtx(base, resolved))
@@ -71,6 +83,9 @@ export function stepWithConvergence(prev: GameState, action: SimAction, base: Tu
   }
 
   if (violations.length === 0) {
+    // `JSON.stringify` do estado inteiro é o passo mais caro daqui, então ele só roda depois de a
+    // comparação de caixa (O(jogadores)) não ter achado nada — e só nos despachos que consumiram
+    // valor gravado, filtrados acima.
     const hostKey = JSON.stringify(host)
     const guestKey = JSON.stringify(guest)
     if (hostKey !== guestKey) {

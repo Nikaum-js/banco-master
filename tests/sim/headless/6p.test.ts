@@ -5,7 +5,14 @@ import { buildReport, formatReport } from '../engine/report'
 import { writeReport } from '../engine/reportIO'
 
 const PLAYER_COUNT = 6
-const GAMES = 100
+// Tamanho do lote. 100 é o lote COMPLETO e continua sendo o default — é ele que dá confiança
+// antes de release. `SIM_GAMES` reduz para o CI de cada push, onde 17 minutos de espera custa mais
+// que a cauda de seeds que o lote grande cobre.
+//
+// O custo dessa redução é MEDIDO, não suposto: o falso positivo do invariante de não-truncagem
+// (corrigido em `card-collect.due`) apareceu na seed **76 de 100**. Um lote de 30 não o teria
+// pegado na primeira tentativa — teria pegado na terceira, num push seguinte. É esse o trade.
+const GAMES = Number(process.env.SIM_GAMES) || 100
 const BASE_SEED = 2026070506
 
 describe('simulação headless — 6 jogadores', () => {

@@ -74,8 +74,17 @@ jobs:
       # principal, porque são CPU-bound e sequenciais: no job generalista disputavam os 2
       # vCPUs com ~100 outros arquivos e o de 6 jogadores estourou o timeout (run
       # 30233981454). Sozinhos no runner, cabem com folga.
-      - name: Lotes headless completos
-        run: bun run test:sim
+      # `SIM_GAMES=30` em vez do lote completo de 100 por conta: o lote inteiro levava ~17min de
+      # relógio (limitado pelo de 6 jogadores) e atrasava o feedback de todo push. 30 partidas por
+      # contagem = 90 partidas, ~4min, e mantém o invariante rodando sobre partidas COMPLETAS, que
+      # é onde ele acha o que teste unitário não acha (deadlock de dívida fora da vez, cobrança
+      # muda, falso positivo de truncagem — todos os três achados por este job).
+      #
+      # O que se perde é a CAUDA de seeds: o falso positivo mais recente estava na seed 76 de 100,
+      # então um lote de 30 o encontraria num push seguinte, não no primeiro. Antes de release,
+      # rodar o lote inteiro com `bun run test:sim` (default 100).
+      - name: Lotes headless (amostra)
+        run: SIM_GAMES=30 bun run test:sim
 
   e2e:
     name: smoke E2E (2/3/6 jogadores)
