@@ -1,7 +1,7 @@
 // Resolver de economia (003) — handler de property/airport/utility injetado na
 // resolução do turno (002). Retorna null para outros kinds (cai no registry default).
 import type { ResolveCtx, ResolutionOutcome } from '../turn/resolution'
-import { ownerOf, isMortgaged, groupOwnedCount, groupSize, countOwned } from './titles'
+import { ownerOf, isMortgaged, groupOwnedCount, groupSize, countOwned, groupHasSkyscraper } from './titles'
 import { rentCity, rentAirport, rentUtility, diceValue } from './rent'
 
 export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
@@ -20,14 +20,19 @@ export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
 
   // aluguel devido (FR-006..009)
   let amount = 0
-  if (square.kind === 'airport') amount = rentAirport(countOwned(state, 'airport', owner))
-  else if (square.kind === 'utility') amount = rentUtility(countOwned(state, 'utility', owner), diceValue(roll))
-  else {
+  if (square.kind === 'airport') {
+    amount = rentAirport(countOwned(state, 'airport', owner)) * (state.titles[pos].hangar ? 2 : 1) // Hangar dobra (011, §13.6)
+  } else if (square.kind === 'utility') {
+    amount = rentUtility(countOwned(state, 'utility', owner), diceValue(roll))
+  } else {
     const t = state.titles[pos]
-    amount = rentCity(square.rent, groupOwnedCount(state, square.group, owner), groupSize(square.group), {
-      houses: t.houses,
-      hotel: t.hotel,
-    })
+    amount = rentCity(
+      square.rent,
+      groupOwnedCount(state, square.group, owner),
+      groupSize(square.group),
+      { houses: t.houses, hotel: t.hotel, hotel2: t.hotel2, skyscraper: t.skyscraper },
+      groupHasSkyscraper(state, square.group),
+    )
   }
 
   const payer = state.players.find((p) => p.id === playerId)
