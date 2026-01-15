@@ -1,129 +1,160 @@
-// Casca das telas de ENTRADA (home, identidade, sala, reentrada) — a "sala de mapas" do
-// Atlas da Meia-Noite. Antes, essas telas pintavam um `bg-coffee-950` chapado por cima do
-// graticule que o body já desenha e reusavam a casca de modal do jogo (faixa dourada de
-// ModalHeader) — genérico e fora do mundo do tabuleiro. Aqui o palco é TRANSPARENTE (a
-// carta náutica do fundo aparece) e vira uma CENA VIVA: rotas com aviões em voo, um
-// horizonte de cidade fechando o rodapé com janelas piscando, balão subindo, nuvens à
-// deriva, marcos de cidades e coordenadas de carta — tudo em latão apagado, atrás do
-// conteúdo. O painel (.entry-panel, index.css) carrega as marcas de registro dos cantos —
-// o mesmo cromo das casas do tabuleiro.
-//
-// Movimento: CSS Motion Path (`offset-path`/`.entry-flyer`) — SMIL dinâmico congela no
-// Chromium. Tudo decorativo: some sob `prefers-reduced-motion` (voadores) ou congela de
-// forma composta (nuvens), e nada disso entra na árvore de acessibilidade.
+// Casca das telas de ENTRADA (home, identidade, sala, reentrada). O cenário acompanha o
+// tema do app: Atlas recebe uma carta de ESPAÇO AÉREO (rotas, radar, pista e aeronaves);
+// Neon reutiliza sua metrópole arcade. Essa escolha acontece aqui porque as telas depois
+// da home também passam por `EntryStage` — deixar o palco fixo no Atlas vazava um tema no
+// outro.
 import { createContext, useContext, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { useMotion } from '@/game/ui/motion'
+import { useBoardTheme } from '@/game/ui/theme/boardTheme'
+import { NeonBackdrop } from './home/NeonBackdrop'
 
-// ---------------------------------------------------------------------
-// Rosa dos ventos — anéis graduados + estrela de 8 pontas, gerada por rotação.
-// ---------------------------------------------------------------------
-export function CompassRose({ size, className }: { size?: number | string; className?: string }) {
-  const ticks = Array.from({ length: 72 }, (_, i) => i * 5)
+const RADAR_TICKS = Array.from({ length: 48 }, (_, i) => i * 7.5)
+const RUNWAY_LIGHTS = [578, 628, 680, 734, 790, 848] as const
+
+function RadarScope({ x, y, scale }: { x: number; y: number; scale: number }) {
   return (
-    <svg viewBox="0 0 200 200" width={size} height={size} fill="none" stroke="currentColor" className={className} aria-hidden="true">
-      <circle cx="100" cy="100" r="97" strokeWidth="0.7" />
-      <circle cx="100" cy="100" r="88" strokeWidth="0.5" strokeDasharray="1.5 3.5" />
-      <circle cx="100" cy="100" r="58" strokeWidth="0.5" />
-      <g strokeWidth="0.6">
-        {ticks.map((a) => (
-          <line key={a} x1="100" y1={a % 45 === 0 ? 6.5 : 9.5} x2="100" y2="13" transform={`rotate(${a} 100 100)`} />
+    <g transform={`translate(${x} ${y}) scale(${scale})`} stroke="currentColor">
+      <circle r="160" strokeWidth="1" opacity="0.23" />
+      <circle r="112" strokeWidth="0.8" strokeDasharray="3 7" opacity="0.18" />
+      <circle r="62" strokeWidth="0.8" opacity="0.18" />
+      <path d="M-160 0H160M0-160V160M-113-113 113 113M113-113-113 113" strokeWidth="0.65" opacity="0.12" />
+      <g opacity="0.27">
+        {RADAR_TICKS.map((angle) => (
+          <line
+            key={angle}
+            x1="0"
+            y1="-160"
+            x2="0"
+            y2={angle % 45 === 0 ? -149 : -154}
+            transform={`rotate(${angle})`}
+          />
         ))}
       </g>
-      {[0, 90, 180, 270].map((a) => (
-        <path key={a} d="M100 16 106 94l-6 6-6-6Z" strokeWidth="0.8" transform={`rotate(${a} 100 100)`} />
-      ))}
-      {[45, 135, 225, 315].map((a) => (
-        <path key={a} d="M100 44l4.5 51.5-4.5 4.5-4.5-4.5Z" strokeWidth="0.7" transform={`rotate(${a} 100 100)`} />
-      ))}
-      <circle cx="100" cy="100" r="3.2" strokeWidth="0.8" />
-    </svg>
-  )
-}
-
-// ---------------------------------------------------------------------
-// Aviões — silhueta de avião em line art, centrada e apontando +x,
-// com rastro de condensação — pronta pra seguir rota com `offset-rotate: auto`.
-// ---------------------------------------------------------------------
-function PlaneMark({ scale = 1 }: { scale?: number }) {
-  return (
-    <g transform={`scale(${scale})`}>
-      <line x1="-46" y1="0" x2="-30" y2="0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeDasharray="2 5" opacity="0.35" />
-      <line x1="-28" y1="0" x2="-14" y2="0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeDasharray="3 4" opacity="0.6" />
-      <g transform="rotate(90)">
-        <g transform="translate(-16 -16)">
-          <path
-            d="M16 3c1.3 1.9 1.4 3.9 1.4 5.9v5.3L29 19.9v2.9l-11.6-3.1v5.2l3.5 2.8v2.1L16 28.5l-4.9 1.3v-2.1l3.5-2.8v-5.2L3 22.8v-2.9l11.6-5.7V8.9c0-2 .1-4 1.4-5.9Z"
-            fill="currentColor"
-            stroke="none"
-          />
-        </g>
+      <path d="M0 0 16-156A157 157 0 0 1 96-126Z" fill="currentColor" fillOpacity="0.035" stroke="none" />
+      <g fill="currentColor" stroke="none" opacity="0.38">
+        <circle cx="-76" cy="-54" r="3" />
+        <circle cx="46" cy="-96" r="2.5" />
+        <circle cx="104" cy="28" r="3" />
       </g>
     </g>
   )
 }
 
-// Céu de rotas — três arcos pontilhados com escalas marcadas e um avião em voo por
-// rota. Os `begin` negativos largam cada avião já no meio do caminho — a cena nasce
-// em movimento, não em fila.
-const ROUTES = [
+// Aeronave top-down: fuselagem, asas enflechadas, estabilizadores, turbinas, janelas,
+// cockpit, luzes de navegação e duas trilhas de condensação. O pai segue a rota; só o
+// miolo faz a oscilação curta de atitude, mantendo a animação em transform/opacity.
+function AirlinerMark({ scale }: { scale: number }) {
+  const windows = [-28, -16, -4, 8, 20, 32]
+  return (
+    <g transform={`scale(${scale})`}>
+      <g className="entry-aircraft__airframe">
+        <g className="entry-aircraft__wake" stroke="currentColor" strokeLinecap="round">
+          <path d="M-126-3H-48" strokeWidth="1.4" strokeDasharray="18 10" />
+          <path d="M-126 3H-48" strokeWidth="1.4" strokeDasharray="18 10" />
+        </g>
+
+        <g fill="var(--color-ink-900)" fillOpacity="0.88" stroke="currentColor" strokeLinejoin="round">
+          <path d="M-9-3-27-34-14-36 20-5 39-3 21-1Z" strokeWidth="1.2" />
+          <path d="M-9 3-27 34-14 36 20 5 39 3 21 1Z" strokeWidth="1.2" />
+          <path d="M-36-3-49-17-40-19-24-4Z" strokeWidth="1.1" />
+          <path d="M-36 3-49 17-40 19-24 4Z" strokeWidth="1.1" />
+          <path
+            d="M-54-4.5C-37-7 33-7 50-4.2L61 0 50 4.2C33 7-37 7-54 4.5L-61 1.2V-1.2Z"
+            strokeWidth="1.4"
+          />
+          <ellipse cx="5" cy="-14" rx="7.5" ry="3.8" strokeWidth="1.1" />
+          <ellipse cx="5" cy="14" rx="7.5" ry="3.8" strokeWidth="1.1" />
+        </g>
+
+        <g fill="currentColor" stroke="none" opacity="0.68">
+          {windows.map((cx) => (
+            <g key={cx}>
+              <circle cx={cx} cy="-4.7" r="1.05" />
+              <circle cx={cx} cy="4.7" r="1.05" />
+            </g>
+          ))}
+          <path d="M43-4.5 50-3.4 53-1.6 43-2Z" />
+          <path d="M43 4.5 50 3.4 53 1.6 43 2Z" />
+        </g>
+
+        <circle className="entry-aircraft__beacon" cx="-27" cy="-34" r="2.4" fill="var(--color-signal-glow)" />
+        <circle className="entry-aircraft__beacon entry-aircraft__beacon--alt" cx="-27" cy="34" r="2.4" fill="var(--color-starlight)" />
+      </g>
+    </g>
+  )
+}
+
+const FLIGHT_ROUTES = [
   {
-    d: 'M-40 640C260 520 420 700 690 560S1150 300 1500 380',
-    dur: '75s',
-    begin: '-20s',
-    scale: 1.25,
-    opacity: 0.42,
-    cities: [
-      [150, 595],
-      [480, 610],
-      [910, 455],
-      [1265, 352],
+    d: 'M-170 700C170 615 360 750 640 605S1070 300 1580 410',
+    duration: '58s',
+    delay: '-23s',
+    rest: '39%',
+    scale: 1.04,
+    opacity: 0.52,
+    waypoints: [
+      [126, 647],
+      [398, 682],
+      [832, 490],
+      [1220, 348],
     ],
   },
   {
-    d: 'M1480 175C1180 255 980 115 720 205S260 415 -60 325',
-    dur: '105s',
-    begin: '-64s',
-    scale: 0.85,
-    opacity: 0.3,
-    cities: [
-      [1180, 222],
-      [790, 180],
-      [380, 330],
-    ],
-  },
-  {
-    d: 'M-60 110C300 40 720 190 1060 100S1330 150 1520 90',
-    dur: '92s',
-    begin: '-48s',
-    scale: 0.72,
-    opacity: 0.26,
-    cities: [
-      [320, 76],
-      [880, 138],
+    d: 'M1570 72C1240 142 1015 42 740 96S280 210-150 132',
+    duration: '78s',
+    delay: '-34s',
+    rest: '48%',
+    scale: 0.78,
+    opacity: 0.44,
+    waypoints: [
+      [1290, 124],
+      [940, 72],
+      [602, 132],
+      [220, 188],
     ],
   },
 ] as const
 
-function SkyRoutes({ className }: { className?: string }) {
+function AirspaceRoutes({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" fill="none" className={className} aria-hidden="true">
-      {ROUTES.map((r) => (
-        <g key={r.d}>
-          <path d={r.d} stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 9" strokeLinecap="round" opacity="0.14" />
-          {r.cities.map(([x, y]) => (
-            <g key={`${x}-${y}`} opacity="0.16" stroke="currentColor">
-              <circle cx={x} cy={y} r="3" fill="currentColor" stroke="none" />
-              <circle cx={x} cy={y} r="8" strokeWidth="1" strokeDasharray="2 3" />
+    <svg
+      viewBox="0 0 1440 900"
+      preserveAspectRatio="xMidYMid slice"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
+      {FLIGHT_ROUTES.map((route, index) => (
+        <g key={route.d}>
+          <path
+            d={route.d}
+            stroke="currentColor"
+            strokeWidth={index === 0 ? 1.8 : 1.25}
+            strokeDasharray={index === 0 ? '3 10' : '2 12'}
+            strokeLinecap="round"
+            opacity={index === 0 ? 0.22 : 0.15}
+          />
+          {route.waypoints.map(([x, y]) => (
+            <g key={`${x}-${y}`} transform={`translate(${x} ${y})`} stroke="currentColor" opacity="0.28">
+              <circle r="9" strokeWidth="0.9" strokeDasharray="2 3" />
+              <circle r="2.6" fill="currentColor" stroke="none" />
+              <path d="M-14 0H-9M9 0h5M0-14v5M0 9v5" strokeWidth="0.8" />
             </g>
           ))}
           <g
-            className="entry-flyer"
-            opacity={r.opacity}
-            style={{ offsetPath: `path('${r.d}')`, offsetRotate: 'auto', animationDuration: r.dur, animationDelay: r.begin }}
+            className="entry-flyer entry-aircraft"
+            opacity={route.opacity}
+            style={{
+              offsetPath: `path('${route.d}')`,
+              offsetRotate: 'auto',
+              offsetDistance: route.rest,
+              animationDuration: route.duration,
+              animationDelay: route.delay,
+            }}
           >
-            <PlaneMark scale={r.scale} />
+            <AirlinerMark scale={route.scale} />
           </g>
         </g>
       ))}
@@ -131,209 +162,48 @@ function SkyRoutes({ className }: { className?: string }) {
   )
 }
 
-// ---------------------------------------------------------------------
-// Horizonte de cidades — a linha do rodapé da carta. Substituiu a "trilha de
-// tabuleiro" (fileira de casas com um peão passeando em cima): peça de jogo
-// desenhada em tamanho grande atrás da interface competia com o cartão de
-// embarque e lia como sobra de layout, não como cenário. Silhueta de cidade é
-// AMBIENTE — diz "Cidades do Mundo" sem imitar o tabuleiro.
-//
-// As janelas acesas piscam em ritmos diferentes (`.entry-window`), com o atraso
-// vindo do mesmo gerador determinístico que planta os prédios: o skyline é o
-// mesmo em todo carregamento (não pisca de forma diferente a cada render).
-// ---------------------------------------------------------------------
-
-// LCG minúsculo — aleatório REPETÍVEL. `Math.random` no corpo do componente
-// redesenharia a cidade a cada render.
-function seeded(seed: number): () => number {
-  let s = seed
-  return () => {
-    s = (s * 1664525 + 1013904223) % 4294967296
-    return s / 4294967296
-  }
-}
-
-interface Building {
-  x: number
-  w: number
-  h: number
-  spire: boolean
-  windows: { x: number; y: number; delay: number }[]
-}
-
-// Uma fileira de prédios cobrindo a largura da carta: largura e altura sorteadas
-// numa faixa, janelas em grade dentro de cada prédio (só uma fração acesa).
-function skyline(seed: number, count: number, minH: number, maxH: number): Building[] {
-  const rnd = seeded(seed)
-  const out: Building[] = []
-  let x = -40
-  for (let i = 0; i < count; i++) {
-    const w = 46 + Math.round(rnd() * 66)
-    const h = minH + Math.round(rnd() * (maxH - minH))
-    const windows: { x: number; y: number; delay: number }[] = []
-    for (let wy = 14; wy < h - 10; wy += 17) {
-      for (let wx = 9; wx < w - 12; wx += 15) {
-        if (rnd() > 0.45) windows.push({ x: wx, y: wy, delay: Math.round(rnd() * 9000) })
-      }
-    }
-    out.push({ x, w, h, spire: rnd() > 0.8, windows })
-    x += w + 4 + Math.round(rnd() * 16)
-    if (x > 1500) break
-  }
-  return out
-}
-
-const SKYLINE_FAR = skyline(20260727, 26, 90, 210)
-const SKYLINE_NEAR = skyline(41112, 20, 130, 300)
-
-function CityBand({ buildings, base, opacity }: { buildings: Building[]; base: number; opacity: number }) {
+function AviationChart({ className }: { className?: string }) {
   return (
-    <g opacity={opacity}>
-      {buildings.map((b) => (
-        <g key={`${b.x}-${b.h}`} transform={`translate(${b.x} ${base - b.h})`}>
-          <rect width={b.w} height={b.h + 40} fill="var(--color-ink-950)" fillOpacity="0.55" />
-          <rect width={b.w} height={b.h} stroke="currentColor" strokeWidth="1.1" fill="none" />
-          {b.spire && <path d={`M${b.w / 2} 0v-26`} stroke="currentColor" strokeWidth="1.1" />}
-          {b.windows.map((w) => (
-            <rect
-              key={`${w.x}-${w.y}`}
-              className="entry-window"
-              x={w.x}
-              y={w.y}
-              width="6"
-              height="8"
-              fill="currentColor"
-              style={{ animationDelay: `${w.delay}ms` }}
-            />
-          ))}
-        </g>
-      ))}
-    </g>
-  )
-}
-
-function CityHorizon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice" fill="none" className={className} aria-hidden="true">
-      {/* brilho de cidade subindo do horizonte */}
+    <svg
+      viewBox="0 0 1440 900"
+      preserveAspectRatio="xMidYMid slice"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
       <defs>
-        <linearGradient id="entry-glow" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0%" stopColor="currentColor" stopOpacity="0.16" />
+        <linearGradient id="atlas-runway-glow" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.12" />
           <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <rect x="0" y="560" width="1440" height="340" fill="url(#entry-glow)" />
-      <CityBand buildings={SKYLINE_FAR} base={830} opacity={0.2} />
-      <CityBand buildings={SKYLINE_NEAR} base={900} opacity={0.34} />
-    </svg>
-  )
-}
 
-// ---------------------------------------------------------------------
-// Cenário do atlas — balão subindo, nuvens à deriva, marcos de cidades e as
-// coordenadas de carta (Equador, paralelos) que amarram tudo no vocabulário
-// de navegação.
-// ---------------------------------------------------------------------
-function BalloonMark({ scale = 1 }: { scale?: number }) {
-  return (
-    <g transform={`scale(${scale}) translate(-16 -16)`} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 2.8c5.6 0 9.4 3.7 9.4 8.5 0 4.9-4.2 8.2-6.6 11.2h-5.6C10.8 19.5 6.6 16.2 6.6 11.3c0-4.8 3.8-8.5 9.4-8.5Z" />
-      <path d="M12.6 3.6c-1.7 3.2-1.7 15.7.6 18.9M19.4 3.6c1.7 3.2 1.7 15.7-.6 18.9M16 2.8v19.7" />
-      <path d="M13 22.5l-.5 3M19 22.5l.5 3" />
-      <rect x="12" y="25.5" width="8" height="3.9" rx="1" />
-    </g>
-  )
-}
-
-function CloudMark({ scale = 1 }: { scale?: number }) {
-  return (
-    <g transform={`scale(${scale})`}>
-      <path
-        d="M6 18c-5-1.5-5.5-9 1-10.5.5-5.5 9-7.5 12.5-3 4.5-4.5 12-1.5 11.5 4 5 .5 5.5 8 .5 9.5Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </g>
-  )
-}
-
-// Marcos de cidade — torre, pirâmide e farol, plantados nas escalas das rotas:
-// é o "Cidades do Mundo" desenhado na carta.
-function TowerMark() {
-  return (
-    <g stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 2v3M11.5 28 16 5l4.5 23M9 28h14M12.4 19.5h7.2M13.7 12.5h4.6" />
-    </g>
-  )
-}
-function PyramidMark() {
-  return (
-    <g stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3.5 27 16 5.5 28.5 27Z" />
-      <path d="M16 5.5 20.5 27" />
-    </g>
-  )
-}
-function LighthouseMark() {
-  return (
-    <g stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12.6 11.8 10.6 27h10.8l-2-15.2" />
-      <path d="M12.1 16.2h7.8M11.5 20.8h9" />
-      <path d="M12.6 11.8V8.4h6.8v3.4" />
-      <path d="M11.6 8.4 16 4.6l4.4 3.8" />
-      <path d="M7.8 27h16.4" />
-      <path d="M10.4 8.2 5.6 6.4M21.6 8.2l4.8-1.8" />
-    </g>
-  )
-}
-
-const CLOUDS = [
-  { base: 60, y: 108, scale: 2, dur: '150s', delay: '-30s', opacity: 0.12 },
-  { base: 430, y: 248, scale: 1.4, dur: '190s', delay: '-110s', opacity: 0.1 },
-  { base: 40, y: 606, scale: 1.7, dur: '170s', delay: '-70s', opacity: 0.1 },
-] as const
-
-function AtlasScenery({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" fill="none" className={className} aria-hidden="true">
-      {/* Equador e paralelos — só traço e graduação, SEM <text>: axe mede contraste até
-          de texto SVG decorativo, e rótulo apagado de propósito nunca passa no gate. */}
-      <g stroke="currentColor" opacity="0.08">
-        <path d="M0 460H1440" strokeWidth="1" strokeDasharray="3 12" />
-        <path d="M0 190H1440M0 730H1440" strokeWidth="0.8" strokeDasharray="2 18" />
-        <path d="M28 452v16M24 456h12M28 182v16M28 722v16" strokeWidth="1.2" />
+      <g stroke="currentColor" opacity="0.1">
+        <path d="M0 180H1440M0 450H1440M0 720H1440" strokeWidth="0.8" strokeDasharray="3 15" />
+        <path d="M230 0V900M720 0V900M1210 0V900" strokeWidth="0.7" strokeDasharray="2 18" />
+        <path d="M0 440h18M0 450h30M0 460h18M1410 440h30M1422 450h18M1410 460h30" />
       </g>
 
-      {/* marcos das cidades, ancorados nas escalas das rotas */}
-      <g opacity="0.22">
-        <g transform="translate(1243 306) scale(1.5)">
-          <TowerMark />
-        </g>
-        <g transform="translate(358 268) scale(1.35)">
-          <PyramidMark />
-        </g>
-        <g transform="translate(128 528) scale(1.4)">
-          <LighthouseMark />
-        </g>
+      <RadarScope x={118} y={116} scale={0.9} />
+      <RadarScope x={1320} y={782} scale={1.22} />
+
+      <g stroke="currentColor" opacity="0.2">
+        <path d="M472 920 676 548M968 920 764 548" strokeWidth="1.3" />
+        <path d="M530 814H910M565 750H875M600 686H840M635 622H805" strokeWidth="0.8" />
+        <path d="M720 916V558" strokeWidth="1.2" strokeDasharray="24 18" />
+        <path d="M689 566h62M696 578h48" strokeWidth="3" />
       </g>
-
-      {/* nuvens à deriva — o pai anima (varredura), o filho posiciona */}
-      {CLOUDS.map((c) => (
-        <g key={`${c.base}-${c.y}`} className="entry-drift" style={{ animationDuration: c.dur, animationDelay: c.delay }} opacity={c.opacity}>
-          <g transform={`translate(${c.base} ${c.y})`}>
-            <CloudMark scale={c.scale} />
-          </g>
-        </g>
-      ))}
-
-      {/* balão de ar quente — sobe a carta inteira e reentra por baixo */}
-      <g
-        className="entry-flyer"
-        opacity="0.28"
-        style={{ offsetPath: "path('M1250 980C1150 700 1290 420 1100 -90')", offsetRotate: '0deg', animationDuration: '130s', animationDelay: '-34s' }}
-      >
-        <BalloonMark scale={1.9} />
+      <path d="M430 900 675 540H765L1010 900Z" fill="url(#atlas-runway-glow)" />
+      <g fill="currentColor">
+        {RUNWAY_LIGHTS.map((y, index) => {
+          const spread = (y - 540) * 0.43
+          return (
+            <g key={y} className="entry-runway-light" style={{ animationDelay: `${index * 180}ms` }}>
+              <circle cx={720 - spread} cy={y} r="2.3" />
+              <circle cx={720 + spread} cy={y} r="2.3" />
+            </g>
+          )
+        })}
       </g>
     </svg>
   )
@@ -387,11 +257,12 @@ function CursorLantern({ x, y }: { x: MotionValue<number>; y: MotionValue<number
 }
 
 // ---------------------------------------------------------------------
-// Palco de tela cheia: transparente sobre o graticule do body, com a cena
-// decorativa fixa e o conteúdo centralizado (rola quando não cabe).
+// Palco de tela cheia com cenário escolhido pelo mesmo store que troca o tabuleiro.
+// O conteúdo é idêntico; somente a pele decorativa muda.
 // ---------------------------------------------------------------------
 export function EntryStage({ children }: { children: ReactNode }) {
   const { reduced } = useMotion()
+  const theme = useBoardTheme((state) => state.theme)
   const rawX = useMotionValue(0)
   const rawY = useMotionValue(0)
   const lampX = useMotionValue(-9999)
@@ -402,39 +273,46 @@ export function EntryStage({ children }: { children: ReactNode }) {
   const ly = useSpring(lampY, { stiffness: 90, damping: 22, mass: 0.5 })
 
   function track(e: ReactPointerEvent<HTMLDivElement>): void {
-    if (reduced || e.pointerType !== 'mouse') return
+    if (theme !== 'atlas' || reduced || e.pointerType !== 'mouse') return
     rawX.set((e.clientX / window.innerWidth) * 2 - 1)
     rawY.set((e.clientY / window.innerHeight) * 2 - 1)
     lampX.set(e.clientX)
     lampY.set(e.clientY)
   }
 
+  const content = (
+    <div className="relative min-h-full flex flex-col items-center justify-center gap-6 p-4 py-10 [@media(max-height:640px)]:gap-3 [@media(max-height:640px)]:py-4">
+      {children}
+    </div>
+  )
+
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto overscroll-contain" onPointerMove={track}>
-      <ParallaxCtx.Provider value={reduced ? null : { x: px, y: py }}>
-        {/* A cena inteira é ampliada de leve: o deslocamento do parallax nunca
-            descobre a borda da viewport. */}
-        <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-          <ParallaxLayer depth={10}>
-            <AtlasScenery className="absolute inset-0 w-full h-full text-brass" />
-          </ParallaxLayer>
-          <ParallaxLayer depth={20}>
-            <SkyRoutes className="absolute inset-0 w-full h-full text-brass" />
-          </ParallaxLayer>
-          <ParallaxLayer depth={30}>
-            <CompassRose size="min(72vmin, 560px)" className="absolute -right-[10vmin] -bottom-[14vmin] text-brass opacity-[0.1]" />
-            <CompassRose size="24vmin" className="absolute left-[3vmin] top-[5vmin] text-brass opacity-[0.06]" />
-          </ParallaxLayer>
-          <ParallaxLayer depth={38}>
-            <CityHorizon className="absolute inset-0 w-full h-full text-brass" />
-          </ParallaxLayer>
-          {!reduced && <CursorLantern x={lx} y={ly} />}
-        </div>
-        {/* Tela baixa aperta o ritmo vertical em vez de empurrar o painel pra fora
-            da dobra — o mesmo conteúdo, com menos ar entre os blocos. */}
-        <div className="relative min-h-full flex flex-col items-center justify-center gap-6 p-4 py-10 [@media(max-height:640px)]:gap-3 [@media(max-height:640px)]:py-4">
-          {children}
-        </div>
+    <div
+      className={cn(
+        'fixed inset-0 z-[70] overflow-y-auto overscroll-contain',
+        theme === 'neon' && 'neon-stage',
+      )}
+      onPointerMove={track}
+    >
+      <ParallaxCtx.Provider value={theme === 'atlas' && !reduced ? { x: px, y: py } : null}>
+        {theme === 'neon' ? (
+          <NeonBackdrop />
+        ) : (
+          <div
+            className="pointer-events-none fixed inset-0 overflow-hidden"
+            data-entry-backdrop="atlas"
+            aria-hidden="true"
+          >
+            <ParallaxLayer depth={9}>
+              <AviationChart className="absolute inset-0 h-full w-full text-brass" />
+            </ParallaxLayer>
+            <ParallaxLayer depth={24}>
+              <AirspaceRoutes className="absolute inset-0 h-full w-full text-brass" />
+            </ParallaxLayer>
+            {!reduced && <CursorLantern x={lx} y={ly} />}
+          </div>
+        )}
+        {content}
       </ParallaxCtx.Provider>
     </div>
   )

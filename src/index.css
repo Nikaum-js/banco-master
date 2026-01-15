@@ -1300,11 +1300,9 @@
     background-repeat: no-repeat;
   }
 
-  /* Decoração VOADORA das telas de entrada (aviões, token passeando) — segue a
-     rota via CSS Motion Path (SMIL dinâmico congela no Chromium). Puro enfeite:
-     sem suporte a offset-path, ou sob movimento reduzido, some inteira — nunca
-     empilha parada na origem nem congela no meio do caminho. Cada instância dá
-     seu path/duração/delay inline; delay NEGATIVO larga o voador já em rota. */
+  /* Aeronaves do Atlas seguem rotas via CSS Motion Path. Sem suporte ao path,
+     ficam ocultas para não empilhar na origem; com movimento reduzido permanecem
+     numa posição útil da rota, mas totalmente paradas. */
   .entry-flyer { display: none; }
   @supports (offset-path: path("M0 0h1")) {
     .entry-flyer {
@@ -1313,41 +1311,62 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .entry-flyer { display: none; }
+    .entry-flyer { animation: none; }
   }
   @keyframes entry-fly {
     from { offset-distance: 0%; }
     to   { offset-distance: 100%; }
   }
 
-  /* Nuvens à deriva — varrem a carta de oeste a leste num translate linear.
-     Sob movimento reduzido ficam PARADAS (visíveis na posição-base do filho),
-     diferente dos voadores: nuvem estática ainda compõe a cena. */
-  .entry-drift { animation: entry-drift linear infinite; }
-  @media (prefers-reduced-motion: reduce) {
-    .entry-drift { animation: none; }
+  .entry-aircraft__airframe {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: entry-aircraft-bank 6.2s ease-in-out infinite;
   }
-  @keyframes entry-drift {
-    from { transform: translateX(-280px); }
-    to   { transform: translateX(1720px); }
+  @keyframes entry-aircraft-bank {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    34% { transform: translateY(-1.8px) rotate(-1.5deg); }
+    72% { transform: translateY(1px) rotate(1deg); }
   }
 
-  /* Janelas do horizonte de cidade (entryShell/CityHorizon) — acendem e apagam em
-     ritmos próprios: o atraso vem inline, do mesmo gerador determinístico que planta
-     os prédios. Uma cidade que pisca junto pareceria um pisca-pisca de Natal. */
-  .entry-window {
-    opacity: 0.5;
-    animation: entry-window 11s var(--ease-standard) infinite;
+  .entry-aircraft__wake {
+    opacity: 0.28;
+    animation: entry-aircraft-wake 4.8s ease-in-out infinite;
   }
-  @keyframes entry-window {
-    0%, 38%   { opacity: 0.5; }
-    40%, 46%  { opacity: 0.08; }
-    48%, 74%  { opacity: 0.62; }
-    76%, 80%  { opacity: 0.16; }
-    82%, 100% { opacity: 0.5; }
+  @keyframes entry-aircraft-wake {
+    0%, 100% { opacity: 0.16; }
+    50% { opacity: 0.46; }
   }
+
+  .entry-aircraft__beacon {
+    animation: entry-aircraft-beacon 1.7s ease-in-out infinite;
+    filter: drop-shadow(0 0 3px currentColor);
+  }
+  .entry-aircraft__beacon--alt { animation-delay: 0.85s; }
+  @keyframes entry-aircraft-beacon {
+    0%, 78%, 100% { opacity: 0.22; }
+    84%, 92% { opacity: 1; }
+  }
+
+  .entry-runway-light {
+    opacity: 0.22;
+    animation: entry-runway-light 2.25s ease-in-out infinite;
+  }
+  @keyframes entry-runway-light {
+    0%, 100% { opacity: 0.16; }
+    42%, 58% { opacity: 0.62; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .entry-window { animation: none; }
+    .entry-aircraft__airframe,
+    .entry-aircraft__wake,
+    .entry-aircraft__beacon,
+    .entry-runway-light {
+      animation: none;
+    }
+    .entry-aircraft__wake { opacity: 0.26; }
+    .entry-aircraft__beacon { opacity: 0.7; }
+    .entry-runway-light { opacity: 0.32; }
   }
 
   /* Wordmark — varredura de luz de latão atravessando as letras a cada ciclo.
