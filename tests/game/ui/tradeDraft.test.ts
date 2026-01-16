@@ -94,12 +94,27 @@ describe('trade draft', () => {
     draft = apply(game, draft, { kind: 'toggle-transfer', party: 'from', pos: 3 })
 
     expect(draft.from.transfers).toEqual(new Set([3]))
-    // Transferir a imunidade sem receber nada é doação (§8.5) — a projeção explica o quanto falta.
-    expect(projectTradeDraft(game, draft).canPropose).toBe(false)
-    expect(projectTradeDraft(game, draft).counterpart).toMatchObject({ fromMissing: 8 })
-
-    draft = apply(game, draft, { kind: 'set-cash', party: 'to', amount: 20 })
+    // Transferir só imunidade, mesmo sem nada em troca, é livre (§8.5/D-058): imunidade
+    // não é patrimônio e evapora com a saída de quem a segura.
     expect(projectTradeDraft(game, draft).canPropose).toBe(true)
     expect(projectTradeDraft(game, draft).counterpart).toBeNull()
+  })
+
+  it('explica a doação pura e o esvaziamento na projeção (§8.5/D-058)', () => {
+    const game = fixture()
+    let draft = createTradeDraft(game, 'p1')
+
+    // Roma sem nada em troca → doação pura, sem número (o caixa de p1 segue intacto).
+    draft = apply(game, draft, { kind: 'toggle-property', party: 'from', pos: 1 })
+    expect(projectTradeDraft(game, draft).canPropose).toBe(false)
+    expect(projectTradeDraft(game, draft).counterpart).toMatchObject({ fromDonation: true, fromMissing: 0 })
+
+    // Junto com o caixa inteiro ($2.000 + Roma $60 + 2 tickets $200 = $2.260 → piso ⌈…/3⌉=$754),
+    // por $1: deixa de ser doação e vira esvaziamento — falta o que completa o piso.
+    draft = apply(game, draft, { kind: 'set-cash', party: 'from', amount: 2000 })
+    draft = apply(game, draft, { kind: 'set-tickets', party: 'from', amount: 2 })
+    draft = apply(game, draft, { kind: 'set-cash', party: 'to', amount: 1 })
+    expect(projectTradeDraft(game, draft).canPropose).toBe(false)
+    expect(projectTradeDraft(game, draft).counterpart).toMatchObject({ fromDonation: false, fromMissing: 753 })
   })
 })

@@ -87,13 +87,13 @@ export function FailureScreen({ variant, mode, roomId, occurrenceId, canRetry, o
             </Button>
           )}
           {mode === 'local' && (
-            <Button className="w-full" variant={canRetry ? 'secondary' : 'primary'} onClick={() => { window.location.href = '/?local=1' }}>
+            <Button className="w-full" variant={canRetry ? 'secondary' : 'primary'} onClick={() => { window.location.href = '/jogar?local=1' }}>
               <RefreshCw size={15} aria-hidden />
               Recomeçar
             </Button>
           )}
           {mode === 'entry' && (
-            <Button className="w-full" onClick={() => { window.location.href = '/' }}>
+            <Button className="w-full" onClick={() => { window.location.href = '/jogar' }}>
               <Home size={15} aria-hidden />
               Voltar ao início
             </Button>

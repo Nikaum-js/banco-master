@@ -6,11 +6,33 @@
   "git": {
     "deploymentEnabled": { "main": false }
   },
-  "rewrites": [{ "source": "/((?!assets/).*)", "destination": "/index.html" }],
+  "redirects": [
+    { "source": "/", "has": [{ "type": "query", "key": "room" }], "destination": "/jogar", "permanent": false },
+    { "source": "/", "has": [{ "type": "query", "key": "host" }], "destination": "/jogar", "permanent": false },
+    { "source": "/", "has": [{ "type": "query", "key": "local" }], "destination": "/jogar", "permanent": false },
+    { "source": "/", "has": [{ "type": "query", "key": "players" }], "destination": "/jogar", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/jogar", "destination": "/jogar.html" },
+    { "source": "/como-jogar", "destination": "/como-jogar.html" },
+    { "source": "/faq", "destination": "/faq.html" }
+  ],
   "headers": [
     {
-      "source": "/index.html",
+      "source": "/(index|jogar|como-jogar|faq|404)\\.html",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/(jogar|como-jogar|faq)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/(robots\\.txt|sitemap\\.xml)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }]
     },
     {
       "source": "/assets/(.*)",

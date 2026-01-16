@@ -310,71 +310,95 @@ const faceValue = (positions: number[], cash: number): number =>
     return sum + ('price' in sq ? (sq as { price: number }).price : 0)
   }, cash)
 
-function PanTokens({ positions, cash, tickets }: { positions: number[]; cash: number; tickets: number }) {
+// Molas compartilhadas da física da balança: o travessão e os pratos respondem juntos.
+const SCALE_SPRING = { type: 'spring', stiffness: 120, damping: 13 } as const
+// Balanço de repouso — a balança vazia oscila devagar, como se acabasse de ser tocada.
+const SWAY_TRANSITION = { repeat: Infinity, duration: 6, ease: 'easeInOut' } as const
+
+function PanTokens({ positions, cash, tickets, reduced }: { positions: number[]; cash: number; tickets: number; reduced: boolean }) {
   const shown = positions.slice(0, 5)
   const extra = positions.length - shown.length
+  // Cada item CAI no prato — a mola do travessão logo abaixo responde ao peso novo.
+  const drop = reduced
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 } }
+    : { initial: { y: -14, opacity: 0, scale: 0.7 }, animate: { y: 0, opacity: 1, scale: 1 } }
+  const landing = { type: 'spring', stiffness: 420, damping: 20 } as const
   return (
     <div className="flex items-end justify-center min-h-[20px] -mb-[3px]">
       {shown.map((pos, i) => (
-        <span key={pos} className={cn('relative', i > 0 && '-ml-2')} style={{ zIndex: i }}>
+        <motion.span key={pos} {...drop} transition={landing} className={cn('relative', i > 0 && '-ml-2')} style={{ zIndex: i }}>
           <DeedAvatar sq={BOARD[pos]} size={18} />
-        </span>
+        </motion.span>
       ))}
       {extra > 0 && (
         <span className="relative z-10 -ml-1 label text-cream text-nano bg-coffee-700 border border-coffee-500 rounded-full px-1 leading-tight">+{extra}</span>
       )}
       {cash > 0 && (
-        <span className={cn('relative z-10', (positions.length > 0) && '-ml-1')}>
+        <motion.span {...drop} transition={landing} className={cn('relative z-10', (positions.length > 0) && '-ml-1')}>
           <CoinIcon size={15} className="text-gold" />
-        </span>
+        </motion.span>
       )}
       {tickets > 0 && (
-        <span className={cn('relative z-10 flex items-end', (positions.length > 0 || cash > 0) && '-ml-0.5')}>
+        <motion.span {...drop} transition={landing} className={cn('relative z-10 flex items-end', (positions.length > 0 || cash > 0) && '-ml-0.5')}>
           <Bus size={14} className="text-gold" />
           {tickets > 1 && <span className="currency text-gold-glow text-nano leading-none ml-px">×{tickets}</span>}
-        </span>
+        </motion.span>
       )}
     </div>
   )
 }
 
-function Pan({ side, deg, positions, cash, tickets }: { side: 'left' | 'right'; deg: number; positions: number[]; cash: number; tickets: number }) {
+function Pan({ side, deg, sway, positions, cash, tickets, reduced }: {
+  side: 'left' | 'right'
+  deg: number
+  sway: boolean
+  positions: number[]
+  cash: number
+  tickets: number
+  reduced: boolean
+}) {
   const value = faceValue(positions, cash)
   return (
     <motion.div
-      animate={{ rotate: -deg }}
-      transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+      // Contra-rotaciona o travessão para o prato ficar nivelado; no repouso, espelha o balanço.
+      animate={sway ? { rotate: [0, -1.8, 0, 1.8, 0] } : { rotate: -deg }}
+      transition={sway ? SWAY_TRANSITION : SCALE_SPRING}
       style={{ transformOrigin: '50% 0%', [side === 'left' ? 'left' : 'right']: -46 }}
       className="absolute top-0 w-[92px] flex flex-col items-center"
     >
-      {/* argola + cordas em V + carga + prato + etiqueta de valor */}
+      {/* argola + correntes de contas + carga + prato + etiqueta de valor */}
       <span className="w-1.5 h-1.5 rounded-full border border-brass-glow -mt-[3px]" aria-hidden />
       <div className="relative w-[78px] h-[30px]">
+        {/* correntes: pontilhado redondo sobre curva suave = elos apanhando a luz */}
         <svg viewBox="0 0 78 30" className="absolute inset-0 w-full h-full" aria-hidden>
           <path
-            d="M39 1 L6 29 M39 1 L72 29"
+            d="M39 1 Q26 13 7 28 M39 1 Q52 13 71 28"
             stroke="var(--color-brass)"
-            strokeOpacity="0.7"
-            strokeWidth="1"
+            strokeOpacity="0.85"
+            strokeWidth="1.6"
             strokeLinecap="round"
+            strokeDasharray="0.1 3.2"
             fill="none"
           />
         </svg>
         <div className="absolute inset-x-0 bottom-0">
-          <PanTokens positions={positions} cash={cash} tickets={tickets} />
+          <PanTokens positions={positions} cash={cash} tickets={tickets} reduced={reduced} />
         </div>
       </div>
-      <span className="relative block w-[78px] h-[11px]" aria-hidden>
+      <span className="relative block w-[78px] h-[12px]" aria-hidden>
+        {/* poço côncavo: sombra externa + interna dão profundidade ao prato */}
         <span
-          className="absolute inset-0 rounded-b-full shadow-[0_4px_10px_-2px_rgba(2,6,16,0.7)]"
+          className="absolute inset-0 rounded-b-full shadow-[0_5px_12px_-2px_rgba(2,6,16,0.75),inset_0_2px_3px_rgba(2,6,16,0.4)]"
           style={{ background: 'var(--gradient-brass)' }}
         />
         {/* borda do prato apanha a luz — vira "aro" em vez de barra chapada */}
         <span className="absolute inset-x-[3px] top-0 h-[2px] rounded-full bg-brass-glow/70" />
+        {/* reflexo no fundo do poço */}
+        <span className="absolute left-[10px] bottom-[2px] w-[14px] h-[2px] rounded-full bg-brass-glow/35 blur-[1px]" />
       </span>
       <span
         className={cn(
-          'currency tabular-nums leading-none mt-1 px-1.5 py-0.5 rounded-full border',
+          'currency tabular-nums leading-none mt-1 px-1.5 py-0.5 rounded-full border transition-colors',
           value > 0 ? 'text-gold-glow border-brass/30 bg-coffee-950/50' : 'text-cream-muted/85 border-transparent',
         )}
         style={{ fontSize: '10px' }}
@@ -403,8 +427,9 @@ function TradeScale({
   // Os springs de inclinação abaixo (fiel, travessão, pratos) são fora do vocabulário
   // por design (D7 do plan, mesma categoria da exceção do fim de jogo): simulam uma
   // balança FÍSICA respondendo ao valor da proposta em tempo real — não são um enter/exit
-  // de tela, então não há fade/pop/slideUp que os substitua sem perder o efeito. Só o
-  // pulso ambiente do fecho (quando os pratos empatam) segue o freio de movimento reduzido.
+  // de tela, então não há fade/pop/slideUp que os substitua sem perder o efeito. Os
+  // ambientes (balanço de repouso, brilho do travessão, anel e halo do fecho) seguem
+  // TODOS o freio de movimento reduzido.
   const { reduced } = useMotion()
   const lv = faceValue(leftPositions, leftCash)
   const rv = faceValue(rightPositions, rightCash)
@@ -415,12 +440,18 @@ function TradeScale({
   const deg = tilt * 6
   const diff = Math.abs(rv - lv)
   const balanced = total > 0 && diff / total < 0.08
+  // Vazia, a balança oscila de leve — convida a pôr algo nos pratos; carregada, a mola assume.
+  const sway = total === 0 && !reduced
 
   return (
     <div className="flex-1 min-w-0 flex flex-col items-center">
       <div className="relative w-[280px] max-w-full h-[104px]" aria-hidden>
-        {/* halo quente atrás da balança (tira o "chapado" do fundo) */}
-        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-24 rounded-full bg-brass/10 blur-2xl" />
+        {/* halo quente atrás da balança — respira quando os pratos fecham */}
+        <motion.span
+          animate={balanced && !reduced ? { opacity: [0.55, 1, 0.55] } : { opacity: 0.55 }}
+          transition={balanced && !reduced ? { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } : { duration: 0.4 }}
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-24 rounded-full bg-brass/15 blur-2xl"
+        />
         {/* coluna torneada: remate em losango, fuste afunilado e plinto em degraus */}
         <span
           className="absolute left-1/2 -translate-x-1/2 top-0 w-2 h-2 rotate-45 rounded-[2px]"
@@ -432,15 +463,21 @@ function TradeScale({
         />
         <span className="absolute left-1/2 -translate-x-1/2 bottom-[4px] w-9 h-[4px] rounded-full" style={{ background: 'var(--gradient-brass)' }} />
         <span className="absolute left-1/2 -translate-x-1/2 bottom-0 w-14 h-[5px] rounded-full bg-brass-soft/80" />
-        {/* mostrador: arco graduado fixo sob o fulcro… */}
+        {/* mostrador: arco graduado fixo sob o fulcro (acende quando os lados pesam igual)… */}
         <svg aria-hidden viewBox="0 0 44 24" className="absolute left-1/2 -translate-x-1/2 top-[12px] w-[44px] h-[24px]">
-          <path d="M13.5 20.1 A20 20 0 0 0 30.5 20.1" stroke="var(--color-brass)" strokeOpacity="0.4" strokeWidth="1" fill="none" />
+          <path
+            d="M13.5 20.1 A20 20 0 0 0 30.5 20.1"
+            stroke={balanced ? 'var(--color-brass-glow)' : 'var(--color-brass)'}
+            strokeOpacity={balanced ? 0.9 : 0.4}
+            strokeWidth="1"
+            fill="none"
+          />
           <path d="M22 18.4 L22 22.2" stroke="var(--color-brass-glow)" strokeOpacity="0.7" strokeWidth="1.2" strokeLinecap="round" />
         </svg>
-        {/* …e o fiel, que amplifica a inclinação e cai no risco central quando os lados pesam igual */}
+        {/* …e o fiel, que amplifica a inclinação e cai no risco central quando fecham */}
         <motion.span
-          animate={{ rotate: deg * 4 }}
-          transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+          animate={sway ? { rotate: [0, 7, 0, -7, 0] } : { rotate: deg * 4 }}
+          transition={sway ? SWAY_TRANSITION : SCALE_SPRING}
           style={{ transformOrigin: '50% 0%', clipPath: 'polygon(0 0, 100% 0, 50% 100%)' }}
           className={cn(
             'absolute left-1/2 -translate-x-1/2 top-[14px] w-[3px] h-[19px] z-10 transition-colors',
@@ -449,17 +486,28 @@ function TradeScale({
         />
         {/* travessão com os dois pratos pendurados (pratos contra-rotacionam p/ ficar nivelados) */}
         <motion.div
-          animate={{ rotate: deg }}
-          transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+          animate={sway ? { rotate: [0, 1.8, 0, -1.8, 0] } : { rotate: deg }}
+          transition={sway ? SWAY_TRANSITION : SCALE_SPRING}
           style={{ transformOrigin: '50% 50%', background: 'var(--gradient-brass-shine)' }}
           className="absolute left-[46px] right-[46px] top-[12px] h-[4px] rounded-full"
         >
+          {/* brilho que varre o latão de tempos em tempos — metal polido, não barra chapada */}
+          {!reduced && (
+            <span className="absolute inset-0 overflow-hidden rounded-full">
+              <motion.span
+                animate={{ x: [-36, 220] }}
+                transition={{ repeat: Infinity, repeatDelay: 3.4, duration: 1.1, ease: 'easeInOut' }}
+                className="absolute inset-y-0 w-9"
+                style={{ background: 'linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-brass-glow) 85%, white) 50%, transparent)' }}
+              />
+            </span>
+          )}
           <span className="absolute -left-[3px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-brass-glow" />
           <span className="absolute -right-[3px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-brass-glow" />
-          <Pan side="left" deg={deg} positions={leftPositions} cash={leftCash} tickets={leftTickets} />
-          <Pan side="right" deg={deg} positions={rightPositions} cash={rightCash} tickets={rightTickets} />
+          <Pan side="left" deg={deg} sway={sway} positions={leftPositions} cash={leftCash} tickets={leftTickets} reduced={reduced} />
+          <Pan side="right" deg={deg} sway={sway} positions={rightPositions} cash={rightCash} tickets={rightTickets} reduced={reduced} />
         </motion.div>
-        {/* joia do fulcro — pulsa quando a balança fecha */}
+        {/* joia do fulcro — pulsa quando a balança fecha… */}
         <motion.span
           animate={balanced && !reduced ? { scale: [1, 1.25, 1], opacity: [1, 0.85, 1] } : { scale: 1, opacity: 1 }}
           transition={balanced && !reduced ? { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } : { type: 'spring', stiffness: 120, damping: 14 }}
@@ -468,6 +516,15 @@ function TradeScale({
             balanced ? 'shadow-[0_0_14px_var(--color-brass-glow)]' : 'shadow-[0_0_8px_var(--color-brass-glow)]',
           )}
         />
+        {/* …e emite um anel que se dissipa, como um sino visual do acordo fechado */}
+        {balanced && !reduced && (
+          <motion.span
+            initial={{ scale: 0.5, opacity: 0.55 }}
+            animate={{ scale: 2.4, opacity: 0 }}
+            transition={{ repeat: Infinity, duration: 2.2, ease: 'easeOut' }}
+            className="absolute left-1/2 -translate-x-1/2 top-[6px] w-4 h-4 rounded-full border border-brass-glow z-10"
+          />
+        )}
       </div>
     </div>
   )
@@ -726,16 +783,20 @@ function Composer({ onClose, proposerId }: { onClose: () => void; proposerId: st
         />
       </div>
 
-      {/* Piso de contrapartida (§8.5): recusa explicada COM o número que falta. Sem isso, o
-          botão desabilitado é indistinguível de bug — e é justamente quem está montando uma
-          proposta desequilibrada que precisa saber de quanto. */}
+      {/* Trava de esvaziamento (§8.5, D-058): recusa explicada COM o motivo. Sem isso, o
+          botão desabilitado é indistinguível de bug. Doação pura pede qualquer contrapartida;
+          esvaziamento diz quanto falta em valor real. */}
       {counterpart && (
         <p className="px-5 pt-3 label text-signal-glow normal-case leading-snug shrink-0" role="status">
           {counterpart.fromMissing > 0 && counterpart.toMissing > 0
-            ? `Os dois lados estão entregando muito para o que recebem: faltam ${money(counterpart.fromMissing)} do lado de ${meIdentity.name} e ${money(counterpart.toMissing)} do outro.`
+            ? `Essa troca esvaziaria os dois lados: faltam ${money(counterpart.fromMissing)} para você e ${money(counterpart.toMissing)} para ${themIdentity?.name ?? 'o outro lado'}.`
             : counterpart.fromMissing > 0
-              ? `Você está entregando demais para o que recebe: faltam ${money(counterpart.fromMissing)} em contrapartida.`
-              : `${themIdentity?.name ?? 'O outro lado'} entrega demais para o que recebe: faltam ${money(counterpart.toMissing)} em contrapartida.`}
+              ? `Essa troca esvaziaria você — quem entrega quase tudo precisa receber valor real: faltam ${money(counterpart.fromMissing)}.`
+              : counterpart.toMissing > 0
+                ? `Essa troca esvaziaria ${themIdentity?.name ?? 'o outro lado'} — quem entrega quase tudo precisa receber valor real: faltam ${money(counterpart.toMissing)}.`
+                : counterpart.fromDonation
+                  ? 'Você está entregando sem receber nada em troca — inclua qualquer contrapartida.'
+                  : `${themIdentity?.name ?? 'O outro lado'} entrega sem receber nada em troca — inclua qualquer contrapartida.`}
         </p>
       )}
 
