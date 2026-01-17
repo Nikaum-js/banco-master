@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { HomeScreen } from '@/net/ui/HomeScreen'
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
@@ -22,6 +22,27 @@ afterEach(() => {
 })
 
 describe('seletor visual do mapa na home', () => {
+  it('não pré-monta o segundo mapa durante a carga inicial', () => {
+    vi.useFakeTimers()
+    try {
+      render(
+        <HomeScreen
+          onCreate={vi.fn()}
+          onJoin={vi.fn()}
+          onLocal={vi.fn()}
+        />,
+      )
+
+      expect(document.querySelector('[data-entry-backdrop="fuligem"]')).toBeNull()
+
+      act(() => vi.advanceTimersByTime(2_000))
+
+      expect(document.querySelector('[data-entry-backdrop="fuligem"]')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('seleciona a Cidade da Fuligem como mapa jogável e preserva o formulário ao voltar', async () => {
     const onCreate = vi.fn()
     render(

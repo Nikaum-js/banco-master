@@ -3,13 +3,22 @@
 // Fuligem reutiliza seu pátio de fábricas. Essa escolha acontece aqui porque as telas depois
 // da home também passam por `EntryStage` — deixar o palco fixo no Atlas vazava um tema no
 // outro.
-import { createContext, useContext, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { createContext, lazy, Suspense, useContext, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from 'motion/react'
+import { importWithReload } from '@/app/lazyImportRecovery'
 import { cn } from '@/lib/utils'
 import { useMotion } from '@/game/ui/motion'
 import { useBoardTheme, useMapCatalog } from '@/game/ui/theme/boardTheme'
 import { AtlasCityscape } from './home/AtlasCityscape'
-import { FuligemBackdrop } from './home/FuligemBackdrop'
+
+type FuligemModule = typeof import('./home/FuligemBackdrop')
+let fuligemModule: Promise<{ default: FuligemModule['FuligemBackdrop'] }> | null = null
+const FuligemBackdrop = lazy(() => {
+  fuligemModule ??= importWithReload(() =>
+    import('./home/FuligemBackdrop').then((module) => ({ default: module.FuligemBackdrop })),
+  )
+  return fuligemModule
+})
 
 const RUNWAY_LIGHTS = [578, 628, 680, 734, 790, 848] as const
 
@@ -293,7 +302,9 @@ export function EntryStage({ children }: { children: ReactNode }) {
     >
       <ParallaxCtx.Provider value={theme === 'atlas' && !reduced ? { x: px, y: py } : null}>
         {theme === 'fuligem' ? (
-          <FuligemBackdrop />
+          <Suspense fallback={<div className="fuligem-sky pointer-events-none fixed inset-0" aria-hidden="true" />}>
+            <FuligemBackdrop />
+          </Suspense>
         ) : (
           <div
             className="pointer-events-none fixed inset-0 overflow-hidden"

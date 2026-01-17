@@ -28,7 +28,7 @@ describe('navegação da porta de entrada', () => {
     vi.restoreAllMocks()
   })
 
-  it('abre a criação de sala sem recarregar o documento', () => {
+  it('abre a criação de sala sem recarregar o documento', async () => {
     const pushState = vi.spyOn(window.history, 'pushState')
 
     render(
@@ -41,6 +41,7 @@ describe('navegação da porta de entrada', () => {
 
     expect(pushState).toHaveBeenCalledOnce()
     expect(window.location.search).toBe('?host=1')
-    expect(screen.getByText('Multiplayer indisponível')).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toBe('Preparando a mesa…')
+    expect(await screen.findByText('Multiplayer indisponível')).toBeTruthy()
   })
 })

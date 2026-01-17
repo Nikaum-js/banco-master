@@ -22,6 +22,7 @@
 // complexo principal na cor daquele jogador (estado → luz; sem timeline por janela).
 import { createContext, useContext, useId, type CSSProperties, type ReactNode } from 'react'
 import { useRoomStore } from '@/net/roomStore'
+import './fuligem.css'
 
 const PATTERN_W = 1440
 

@@ -1,295 +1,102 @@
-// Boot do multiplayer (spec 037, T018). Envolve o app: SEM `?host=1`/`?room=<id>` na URL,
-// renderiza o jogo single-player intocado (SC-007). Com eles, monta a sala online e só
-// devolve o jogo quando o `GameState` da partida chegou.
-//
-// Papéis (D-020): quem cria a sala é o host — a ÚNICA autoridade — e roda `createHost` no
-// próprio browser, ao lado do `client` que alimenta a UI. Convidados rodam só o `client`.
-//
-// Card 5 do review de arquitetura: a ORQUESTRAÇÃO saiu daqui para `net/roomSession.ts`
-// (máquina de fases, decisão de autoridade, escada de entrada, regra de reconexão). O que
-// resta é o que de fato é React: ler a URL, assinar a sessão e escolher a tela.
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { connectMultiplayer } from '@/net/connectStore'
-import { hostSeat } from '@/net/room'
-import { parseRoomLink, roomLink } from '@/net/session'
-import { createRoomSession, type RoomSession } from '@/net/roomSession'
-import { setActiveSession } from '@/net/activeSession'
-import { MatchErrorBoundary } from '@/app/MatchErrorBoundary'
-import {
-  createSupabaseTransport,
-  describeInfraError,
-  describeSupabaseConfiguration,
-  isSupabaseConfigured,
-} from '@/net/supabaseClient'
-import { resolveTelemetry } from '@/telemetry'
-import {
-  IdentityForm,
-  LobbyMessage,
-  OpeningAuction,
-  OpeningRolls,
-  ReentryForm,
-  RoomLobby,
-  TurnOrderReveal,
-} from './LobbyScreen'
+// A porta de entrada fica deliberadamente leve: a home decide a próxima rota sem importar
+// Supabase, lobby ou partida. O módulo pesado é carregado por intenção e preserva a navegação
+// client-side existente — nenhum botão volta a recarregar o documento.
+import { lazy, startTransition, Suspense, useCallback, useEffect, useState, type ReactNode } from 'react'
+import { importWithReload } from '@/app/lazyImportRecovery'
+import { parseRoomLink } from '@/net/session'
 import { HomeScreen } from './HomeScreen'
-import { SessionBadge } from './SessionBadge'
-import { Button } from '@/game/ui/primitives'
-import { OrientationGate } from '@/game/ui/OrientationGate'
-import type { AvatarId } from '@/boards/playerAvatarCatalog'
-import type { SkinId } from '@/boards/playerSkinCatalog'
-import { recallRoomPreset, rememberRoomPreset } from '@/net/roomPresets'
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
-import { coerceBoardId, type BoardId } from '@/lib/mapCatalog'
-import { useRoomStore } from '@/net/roomStore'
+import { coerceBoardId } from '@/lib/mapCatalog'
 
-const TICK_MS = 250 // o host fecha prazos vencidos (soft-close de leilão, janela de reação)
+type SessionModule = typeof import('./OnlineSessionGate')
+let sessionModule: Promise<{ default: SessionModule['OnlineSessionGate'] }> | null = null
 
-// 055/D-069: `?map=fuligem` carrega a escolha da home até `session.create` (a navegação
-// troca `location.search`, então o valor viaja pela URL) e também é a seleção EXPLÍCITA
-// da partida local de desenvolvimento. Sem o parâmetro, `null` — e o fallback é atlas.
-function mapParam(search: string): BoardId | null {
-  const value = new URLSearchParams(search).get('map')
-  return value === null ? null : coerceBoardId(value)
+function loadSessionGate(): Promise<{ default: SessionModule['OnlineSessionGate'] }> {
+  sessionModule ??= importWithReload(() =>
+    import('./OnlineSessionGate').then((module) => ({ default: module.OnlineSessionGate })),
+  )
+  return sessionModule
+}
+
+const OnlineSessionGate = lazy(loadSessionGate)
+
+function preloadSessionGate(): void {
+  void loadSessionGate()
+}
+
+function SessionLoading() {
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-ink-900 p-6">
+      <p role="status" className="label text-brass">Preparando a mesa…</p>
+    </div>
+  )
 }
 
 export function OnlineGate({ children }: { children: ReactNode }) {
   const [link, setLink] = useState(() => parseRoomLink(window.location.search))
-  // `?local=1` (ou o botão "jogar local") entrega o cliente único de sempre — o andaime de
-  // desenvolvimento e demonstração segue existindo, intacto (FR-029/SC-007). `?players=N`
-  // é o hook de boot do smoke E2E (036): também é partida local e NÃO pode ver a home,
-  // senão o gate desta spec quebraria a suíte de ponta a ponta que já existia.
   const [local, setLocal] = useState(() => {
-    const q = new URLSearchParams(window.location.search)
-    return q.has('local') || q.has('players')
+    const query = new URLSearchParams(window.location.search)
+    return query.has('local') || query.has('players')
   })
+
   const navigateEntry = useCallback((search: string) => {
+    if (search) preloadSessionGate()
     window.history.pushState(null, '', `${window.location.pathname}${search}`)
-    setLink(parseRoomLink(search))
+    startTransition(() => {
+      setLocal(false)
+      setLink(parseRoomLink(search))
+    })
   }, [])
 
-  // Partida local com seleção explícita de mapa (D-069): `?map=` aplica o catálogo/tema.
-  // Nas rotas de sala o valor de verdade continua sendo a sala publicada (roomStore).
+  const enterLocal = useCallback(() => {
+    preloadSessionGate()
+    startTransition(() => setLocal(true))
+  }, [])
+
   useEffect(() => {
-    const selected = mapParam(window.location.search)
-    if (selected) useBoardTheme.getState().setTheme(selected)
+    const selected = new URLSearchParams(window.location.search).get('map')
+    if (selected) useBoardTheme.getState().setTheme(coerceBoardId(selected))
   }, [local, link])
 
-  // Back/forward continua sendo navegação real, mas sem recarregar todo o bundle nem
-  // reconstruir a home antes da próxima tela de entrada.
   useEffect(() => {
     const syncRoute = () => {
       const search = window.location.search
       const query = new URLSearchParams(search)
-      setLocal(query.has('local') || query.has('players'))
-      setLink(parseRoomLink(search))
+      if (query.has('local') || query.has('players') || query.has('room') || query.has('host')) {
+        preloadSessionGate()
+      }
+      startTransition(() => {
+        setLocal(query.has('local') || query.has('players'))
+        setLink(parseRoomLink(search))
+      })
     }
     window.addEventListener('popstate', syncRoute)
     return () => window.removeEventListener('popstate', syncRoute)
   }, [])
 
-  if (local) {
-    return (
-      <OrientationGate>
-        <MatchErrorBoundary roomId={null}>{children}</MatchErrorBoundary>
-      </OrientationGate>
-    )
-  }
-  if (!link.roomId && !link.createHost) {
-    // Porta de entrada de verdade (FR-021): ninguém precisa saber o que é `?host=1`.
+  if (!local && !link.roomId && !link.createHost) {
     return (
       <HomeScreen
-        // O mapa selecionado na home vive no store do tema (é o mesmo eixo, D-069); a
-        // navegação o carrega na URL para sobreviver ao remonte da rota de criação.
         onCreate={() => {
           const map = useBoardTheme.getState().theme
           navigateEntry(map === 'atlas' ? '?host=1' : `?host=1&map=${map}`)
         }}
         onJoin={(roomId) => navigateEntry(`?room=${encodeURIComponent(roomId)}`)}
-        onLocal={() => setLocal(true)}
+        onLocal={enterLocal}
+        onSessionIntent={preloadSessionGate}
       />
     )
   }
-  if (!isSupabaseConfigured()) {
-    return (
-      <LobbyMessage
-        title="Multiplayer indisponível"
-        message={describeSupabaseConfiguration() ?? 'Não foi possível validar a configuração do multiplayer.'}
-        action={<Button onClick={() => navigateEntry('')}>Voltar ao início</Button>}
-      />
-    )
-  }
-  return <OnlineRoom roomId={link.roomId} onExit={() => navigateEntry('')}>{children}</OnlineRoom>
-}
-
-function OnlineRoom({
-  roomId,
-  onExit,
-  children,
-}: {
-  roomId: string | null
-  onExit: () => void
-  children: ReactNode
-}) {
-  // Hook de E2E (042, FR-025/e2e/errorBoundary.spec.ts) — mesmo espírito de `?players=N` (036):
-  // um jeito determinístico de provar a queda da CASCA sem depender de um bug de verdade. Só
-  // atua na 1ª chamada por navegação (a fronteira de último recurso captura e não remonta
-  // `OnlineRoom` de novo sozinha); "Reabrir a sala" navega para um link limpo, sem o parâmetro.
-  if (new URLSearchParams(window.location.search).has('e2eCrashCasca')) {
-    throw new Error('E2E: queda intencional da casca de sessão (042, FR-025)')
-  }
-  const [session] = useState<RoomSession>(() =>
-    createRoomSession({
-      createTransport: createSupabaseTransport, // a seam: em teste, entra o hub in-memory
-      connectStore: connectMultiplayer,
-      describeError: describeInfraError,
-      telemetry: resolveTelemetry(), // 044: nulo sem env/DEV — nenhuma requisição sai (FR-038)
-      initialRoomPreset: recallRoomPreset(),
-      onRoomPresetSelected: rememberRoomPreset,
-      initialBoardId: mapParam(window.location.search) ?? undefined,
-    }),
-  )
-  const state = useSyncExternalStore(session.subscribe, session.getState)
-  const entered = useRef(false)
-
-  // Fronteira de último recurso (042): acha a sessão sem prop-drilling por três componentes.
-  useEffect(() => {
-    setActiveSession(session)
-    return () => setActiveSession(null)
-  }, [session])
-
-  // Entrada por link (convidado OU host reabrindo). O guard sobrevive ao StrictMode.
-  useEffect(() => {
-    if (!roomId || entered.current) return
-    entered.current = true
-    void session.enter(roomId)
-  }, [roomId, session])
-
-  // Prazos em voo são fechados pelo host (congelam sozinhos na pausa — FR-017).
-  useEffect(() => {
-    const id = setInterval(() => session.tick(), TICK_MS)
-    return () => clearInterval(id)
-  }, [session])
-
-  // Soltar assinaturas e o store ao desmontar é seguro; DERRUBAR A CONEXÃO não é. Em dev, o
-  // StrictMode monta → desmonta → remonta: o cleanup fechava o canal recém-aberto e o guard
-  // de entrada impedia a reconexão, deixando o convidado preso em "Conectando…" para sempre.
-  // A conexão vive enquanto a aba viver. Achado pelo E2E de dois browsers (T036).
-  useEffect(() => () => session.dispose(), [session])
-
-  const { phase, room, error, busy } = state
-
-  // A prévia pública chega antes de o convidado ter assento ou GameState. `connectStore`
-  // só assume quando a partida existe; o lobby também precisa da sala para aplicar o mapa
-  // autoritativo e acender o cenário conforme os assentos ocupados.
-  useEffect(() => {
-    if (room) useRoomStore.getState().setRoom(room)
-  }, [room])
-
-  useEffect(() => () => useRoomStore.getState().setRoom(null), [])
-
-  if (phase === 'auction' && room) {
-    return (
-      <OpeningAuction
-        room={room}
-        myUid={state.uid ?? ''}
-        myBid={state.openingBid}
-        onBid={session.submitOpeningBid}
-      />
-    )
-  }
-
-  if (phase === 'rolling' && room) {
-    return (
-      <OpeningRolls
-        room={room}
-        myUid={state.uid ?? ''}
-        onRoll={session.submitOpeningRoll}
-      />
-    )
-  }
-
-  // Resultado aparece como transição, sem botão local: todas as telas embarcam sozinhas.
-  if (phase === 'reveal' && room) {
-    return <TurnOrderReveal room={room} />
-  }
-
-  if (phase === 'playing') {
-    return (
-      <>
-        <OrientationGate>
-          <MatchErrorBoundary roomId={room?.id ?? null}>{children}</MatchErrorBoundary>
-        </OrientationGate>
-        {room && <SessionBadge link={roomLink(room.id, window.location.origin)} />}
-      </>
-    )
-  }
-
-  // Partida em curso, sem assento (041, D-033) — sessão/dispositivo perdido não é mais beco.
-  if (phase === 'reentry') {
-    return <ReentryForm busy={busy} error={error} onSubmit={(code) => session.requestReentry(code)} />
-  }
-
-  if (phase === 'error') {
-    const msg =
-      error === 'already-started'
-        ? 'A partida desta sala já começou. Peça um novo link ao host.'
-        : error === 'ended'
-          ? 'Esta partida terminou e aguarda o host reabrir a sala.'
-          : String(error ?? 'Erro desconhecido.')
-    return (
-      <LobbyMessage
-        title="Não foi possível entrar"
-        message={msg}
-        action={<Button onClick={onExit}>Voltar ao início</Button>}
-      />
-    )
-  }
-
-  if (phase === 'identity') {
-    // Criar a sala troca a URL para o link dela — assim um F5 do host cai no fluxo de
-    // reentrada e reassume a autoridade (FR-015).
-    const createAndHost = (name: string, color: string, avatar: AvatarId, skin: SkinId): void => {
-      void session.create({ name, color, avatar, skin }).then((id) => {
-        if (id) window.history.replaceState(null, '', roomLink(id, window.location.origin))
-      })
-    }
-    return roomId ? (
-      <IdentityForm
-        title="Entrar na sala"
-        subtitle="Confirme seu nome e escolha como você aparece na mesa"
-        room={room}
-        cta="Confirmar e entrar"
-        busy={busy}
-        error={error}
-        onSubmit={(name, color, avatar, skin) => session.requestSeat({ name, color, avatar, skin })}
-      />
-    ) : (
-      <IdentityForm
-        title="Criar sala"
-        subtitle="Você será o host. Escolha seu nome e como vai aparecer na mesa"
-        room={null}
-        cta="Criar sala"
-        busy={busy}
-        error={error}
-        onSubmit={createAndHost}
-      />
-    )
-  }
-
-  if (!room) return <LobbyMessage title="Conectando…" message="Abrindo a sala." />
 
   return (
-    <RoomLobby
-      room={room}
-      myUid={state.uid ?? ''}
-      myReentryCode={state.myReentryCode}
-      isHost={hostSeat(room).uid === state.uid}
-      link={roomLink(room.id, window.location.origin)}
-      starting={busy}
-      onOpeningModeChange={session.setOpeningMode}
-      onBoardChange={session.setBoardId}
-      onStart={() => void session.startMatch()}
-      onKick={session.kick}
-    />
+    <Suspense fallback={<SessionLoading />}>
+      <OnlineSessionGate
+        local={local}
+        roomId={link.roomId}
+        onExit={() => navigateEntry('')}
+      >
+        {children}
+      </OnlineSessionGate>
+    </Suspense>
   )
 }

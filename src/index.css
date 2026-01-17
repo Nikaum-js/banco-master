@@ -1,9 +1,31 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@import "@fontsource/bebas-neue/400.css";
-@import "@fontsource-variable/inter";
-@import "@fontsource-variable/roboto-slab";
+/* O produto é PT-BR: declarar somente latin evita carregar no CSS crítico as regras e os
+   assets cirílicos, gregos e vietnamitas dos entrypoints genéricos do Fontsource. */
+@font-face {
+  font-family: "Bebas Neue";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("@fontsource/bebas-neue/files/bebas-neue-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2-variations");
+}
+
+@font-face {
+  font-family: "Roboto Slab Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/roboto-slab/files/roboto-slab-latin-wght-normal.woff2") format("woff2-variations");
+}
 
 /* =====================================================================
    Área segura — recorte físico do aparelho (notch, cantos arredondados,
@@ -6952,242 +6974,6 @@
     word-break: keep-all;
     hyphens: manual;
     text-wrap: balance;
-  }
-}
-
-/* =====================================================================
-   TELAS DE ENTRADA POR TEMA (src/net/ui/home/) — cada mapa tem a SUA home, e o
-   seletor de mapas troca as duas coisas juntas (mapa e pele são o mesmo eixo,
-   055/D-069). A do Atlas já vive nas regras acima (.entry-*, .pass-*, .flap-*,
-   .cta-*); aqui mora a da Cidade da Fuligem.
-   ===================================================================== */
-@layer components {
-  /* =================================================================
-     TEMA "fuligem" — a home da Cidade da Fuligem (055/D-069).
-
-     A cidade escura em planos vive no SVG do FuligemBackdrop (gerador
-     semeado, determinístico); aqui ficam só o céu, a névoa, a vinheta e
-     as animações do mundo — sopro de fumaça, chama do queimador, baliza,
-     brasa, carvão na correia, fornalha e trem —, todas por
-     transform/opacity, em amostra pequena (dezenas de elementos sobre
-     sete keyframes, nunca centenas de timelines — FR-012), congeláveis
-     sob movimento reduzido. Nada de fundo de tela cheia animado (a lição
-     do tema que este substituiu).
-     ================================================================= */
-  .fuligem-stage {
-    background-color: #0c0906;
-    color: #f0e7d4;
-  }
-  .fuligem-sky {
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 120% 60% at 50% 108%, rgb(217 130 46 / 0.15) 0%, transparent 58%),
-      linear-gradient(180deg, #0a0806 0%, #14100b 52%, #1d150d 78%, #241a10 100%);
-  }
-  /* FUMAÇA — UM keyframe para todo o mundo da Fuligem.
-     Uma pluma é um punhado de sopros com a MESMA animação e a fase deslocada por
-     delay negativo: é a defasagem que produz a coluna contínua, não uma timeline
-     por partícula. Altura, deriva, pico, duração e o quadro congelado entram por
-     custom property, então o cenário de tela cheia (1440×900) e o miolo do
-     tabuleiro (viewBox 100×100, boards/glyphs/patterns.tsx) reusam este mesmo
-     keyframe em escalas diferentes.
-     `transform-box: fill-box` é obrigatório: sem ele o `scale` do SVG orbitaria o
-     centro do viewBox inteiro em vez do próprio sopro. */
-  .fuligem-puff {
-    transform-box: fill-box;
-    transform-origin: 50% 50%;
-    opacity: 0;
-    animation: fuligem-puff var(--puff-dur, 12000ms) linear infinite;
-  }
-  @keyframes fuligem-puff {
-    0% { transform: translate(0, 0) scale(0.34); opacity: 0; }
-    14% { opacity: var(--puff-peak, 0.16); }
-    /* A cauda alta desvanece rápido, e não é só física: é o que deixa a base da coluna
-       ser opaca o bastante para LER como fumaça sem que o topo chegue velando o letreiro
-       e o formulário lá em cima (FR-011). */
-    58% { opacity: calc(var(--puff-peak, 0.16) * 0.4); }
-    100% {
-      transform: translate(var(--puff-drift, 48px), var(--puff-rise, -180px)) scale(2.1);
-      opacity: 0;
-    }
-  }
-  /* Queimador de gás: tremor rápido, mas pequeno, longe de texto e sem informação —
-     o único elemento do cenário em escala de segundo. Ciclo de 1,8s (alternate),
-     bem abaixo do limite de flash de 3Hz (FR-011). */
-  .fuligem-flare {
-    transform-box: fill-box;
-    transform-origin: 50% 100%;
-    animation: fuligem-flare 900ms ease-in-out infinite alternate;
-  }
-  @keyframes fuligem-flare {
-    from { transform: scale(0.84, 0.72); opacity: 0.5; }
-    to { transform: scale(1.08, 1.16); opacity: 0.82; }
-  }
-  .fuligem-flare-glow {
-    transform-box: fill-box;
-    transform-origin: 50% 50%;
-    animation: fuligem-flare 1500ms ease-in-out infinite alternate;
-  }
-  /* Baliza no topo das duas chaminés mais altas — mesmo critério de aeroporto.
-     Ciclo de 3,2s com subida suave: pisca, não estroba. */
-  .fuligem-beacon {
-    animation: fuligem-beacon 3200ms ease-in-out infinite;
-  }
-  @keyframes fuligem-beacon {
-    0%, 60%, 100% { opacity: 0.14; }
-    72%, 80% { opacity: 0.9; }
-  }
-  /* Brasa: oito faíscas subindo do pátio, o efeito mais barato do cenário. */
-  .fuligem-ember {
-    transform-box: fill-box;
-    transform-origin: 50% 50%;
-    opacity: 0;
-    animation: fuligem-ember var(--ember-dur, 22000ms) linear infinite;
-  }
-  @keyframes fuligem-ember {
-    0% { transform: translate(0, 0) scale(1); opacity: 0; }
-    12% { opacity: 0.5; }
-    74% { opacity: 0.22; }
-    100% {
-      transform: translate(var(--ember-drift, 60px), var(--ember-rise, -340px)) scale(0.35);
-      opacity: 0;
-    }
-  }
-  /* Carvão subindo a galeria da correia — translate ao longo da rampa; nunca
-     stroke-dashoffset, que repintaria o traço inteiro a cada quadro. */
-  .fuligem-coal {
-    animation: fuligem-coal var(--coal-dur, 10000ms) linear infinite;
-  }
-  @keyframes fuligem-coal {
-    from { transform: translate(0, 0); }
-    to { transform: translate(var(--coal-dx, 200px), var(--coal-dy, -120px)); }
-  }
-  /* Brasa da fornalha respirando no vão dos portões: luz, não deslocamento. */
-  .fuligem-forge {
-    animation: fuligem-forge 9s ease-in-out infinite;
-  }
-  @keyframes fuligem-forge {
-    0%, 100% { opacity: 0.07; }
-    50% { opacity: 0.16; }
-  }
-  /* Fornalha piscando: amostra pequena (delay %11), ciclo longo, sem flash. */
-  .fuligem-furnace {
-    animation: fuligem-furnace 7s steps(2, end) infinite;
-  }
-  @keyframes fuligem-furnace {
-    0%, 76% { opacity: 0.8; }
-    77%, 88% { opacity: 0.4; }
-    89%, 100% { opacity: 0.8; }
-  }
-  /* Trem de carga: um grupo só, uma travessia lenta do viewBox. */
-  .fuligem-train {
-    animation: fuligem-train 84s linear infinite;
-  }
-  @keyframes fuligem-train {
-    from { transform: translateX(0); }
-    to { transform: translateX(2100px); }
-  }
-  .fuligem-haze {
-    position: absolute;
-    inset: auto 0 0 0;
-    height: 46%;
-    background:
-      linear-gradient(180deg, transparent, rgb(20 16 11 / 0.5) 55%, rgb(12 9 6 / 0.82)),
-      radial-gradient(ellipse 90% 60% at 30% 100%, rgb(240 231 212 / 0.045), transparent 60%);
-  }
-  .fuligem-vignette {
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at center, transparent 44%, rgb(7 5 4 / 0.72) 100%);
-  }
-  /* Filete rebitado — o par do OrnamentRule do Atlas. */
-  .fuligem-rivet-rule {
-    height: 6px;
-    background:
-      radial-gradient(circle 2px at 8px 50%, var(--color-brass) 98%, transparent),
-      radial-gradient(circle 2px at calc(100% - 8px) 50%, var(--color-brass) 98%, transparent),
-      linear-gradient(var(--color-brass), var(--color-brass)) center / calc(100% - 28px) 1px;
-    background-repeat: no-repeat;
-    opacity: 0.7;
-  }
-  /* Portões do complexo: fechados no lobby, abertos na partida. A duração vem do
-     vocabulário de movimento — o freio de movimento reduzido a zera e o fato fica. */
-  .fuligem-gates rect {
-    transition: transform var(--motion-slow) var(--ease-emphasis);
-  }
-  .fuligem-gates[data-open] rect:first-child { transform: translateX(-26px); }
-  .fuligem-gates[data-open] rect:last-child { transform: translateX(26px); }
-
-  /* Placa fundida: sombra de estampa + halo de fornalha discreto. */
-  .fuligem-wordmark {
-    text-shadow: 0 2px 0 rgb(7 5 4 / 0.9), 0 0 26px rgb(217 130 46 / 0.26);
-  }
-  /* Palco de PARTIDA: a mesma cidade, atenuada — o tabuleiro é o foco. As
-     janelas do complexo seguem acesas nas cores dos assentos. */
-  .fuligem-backdrop--stage {
-    opacity: 0.4;
-  }
-  .fuligem-backdrop--stage .fuligem-vignette {
-    background: radial-gradient(ellipse at center, transparent 28%, rgb(7 5 4 / 0.92) 100%);
-  }
-
-  /* A cidade atrás do tabuleiro é só contexto. Mantém um quadro intermediário legível
-     da fumaça, mas não duplica as timelines da home/lobby sob uma mesa opaca. */
-  .fuligem-backdrop--static .fuligem-puff,
-  .fuligem-backdrop--static .fuligem-flare,
-  .fuligem-backdrop--static .fuligem-flare-glow,
-  .fuligem-backdrop--static .fuligem-beacon,
-  .fuligem-backdrop--static .fuligem-ember,
-  .fuligem-backdrop--static .fuligem-coal,
-  .fuligem-backdrop--static .fuligem-forge,
-  .fuligem-backdrop--static .fuligem-furnace,
-  .fuligem-backdrop--static .fuligem-train {
-    animation: none;
-  }
-  .fuligem-backdrop--static .fuligem-puff {
-    opacity: calc(var(--puff-peak, 0.16) * 0.85);
-    transform:
-      translate(
-        calc(var(--puff-drift, 48px) * var(--puff-t, 0)),
-        calc(var(--puff-rise, -180px) * var(--puff-t, 0))
-      )
-      scale(calc(0.34 + 1.76 * var(--puff-t, 0)));
-  }
-  .fuligem-backdrop--static .fuligem-flare { opacity: 0.7; }
-  .fuligem-backdrop--static .fuligem-beacon { opacity: 0.7; }
-  .fuligem-backdrop--static .fuligem-ember { opacity: 0.4; }
-
-  @media (prefers-reduced-motion: reduce) {
-    /* O fato permanece (fumaça presente, chama acesa, fornalha acesa, carvão na
-       correia, trem parado no cenário); só a interpolação some. */
-    .fuligem-puff,
-    .fuligem-flare,
-    .fuligem-flare-glow,
-    .fuligem-beacon,
-    .fuligem-ember,
-    .fuligem-coal,
-    .fuligem-forge,
-    .fuligem-furnace,
-    .fuligem-train {
-      animation: none;
-    }
-    /* A pluma congela COM A FORMA DA COLUNA, não empilhada na boca da chaminé:
-       `--puff-t` é a posição (0…1) que cada sopro ocupa no ciclo, então o quadro
-       parado é um quadro do meio da animação — fumaça, não bolha. */
-    .fuligem-puff {
-      opacity: calc(var(--puff-peak, 0.16) * 0.85);
-      transform:
-        translate(
-          calc(var(--puff-drift, 48px) * var(--puff-t, 0)),
-          calc(var(--puff-rise, -180px) * var(--puff-t, 0))
-        )
-        scale(calc(0.34 + 1.76 * var(--puff-t, 0)));
-    }
-    .fuligem-flare { opacity: 0.7; }
-    .fuligem-beacon { opacity: 0.7; }
-    .fuligem-ember { opacity: 0.4; }
-    .fuligem-forge { opacity: 0.12; }
   }
 }
 

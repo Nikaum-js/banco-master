@@ -1,72 +1,70 @@
-// Tela inicial (spec 038, US4 — FR-021). Antes desta spec, a única porta de entrada do
-// multiplayer era digitar `?host=1` / `?room=<id>` na barra de endereços — inviável para
-// qualquer pessoa fora do desenvolvimento.
-//
-// A ordem da tela é a mesma nos dois estilos (revisão de UI, referência: richup.io): NOME
-// primeiro, uma ação primária logo abaixo e a entrada por convite como caminho secundário.
-// O modo local continua existindo apenas como andaime por URL para desenvolvimento e testes.
-// O nome perguntado aqui é lembrado
-// (`rememberPlayerName`) e chega preenchido na tela de identidade. O campo de link some por
-// padrão: quem recebe um convite clica no link, não cola.
-//
-// A PELE vem do mapa ativo (`game/ui/theme/boardTheme.ts`), que é o MESMO eixo do mapa
-// jogável (055/D-069): selecionar o mapa na home troca palco, painel e movimento — e é o
-// valor que `OnlineGate` carrega até a criação da sala. A lógica (nome lembrado, extração
-// do id da sala, colar do clipboard) mora em `home/homeShared.ts`, uma vez só: as duas
-// homes desenham o mesmo formulário de jeitos diferentes.
+// A home inicial paga apenas pelo Atlas. A Cidade da Fuligem entra quando o seletor recebe
+// hover/foco/toque e permanece montada depois da primeira visita para preservar formulário
+// e eliminar o travamento das trocas seguintes.
+import { Activity, lazy, Suspense, useState } from 'react'
 import { motion } from 'motion/react'
-import { Activity, useEffect, useState } from 'react'
 import { Map } from 'lucide-react'
+import { importWithReload } from '@/app/lazyImportRecovery'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import { useBoardTheme, type BoardTheme } from '@/game/ui/theme/boardTheme'
 import { HomeAtlas } from './home/HomeAtlas'
-import { HomeFuligem } from './home/HomeFuligem'
 import { HOME_MAPS, useHomeForm, type HomeActions } from './home/homeShared'
+
+type FuligemModule = typeof import('./home/HomeFuligem')
+let fuligemModule: Promise<{ default: FuligemModule['HomeFuligem'] }> | null = null
+
+function loadHomeFuligem(): Promise<{ default: FuligemModule['HomeFuligem'] }> {
+  fuligemModule ??= importWithReload(() =>
+    import('./home/HomeFuligem').then((module) => ({ default: module.HomeFuligem })),
+  )
+  return fuligemModule
+}
+
+const HomeFuligem = lazy(loadHomeFuligem)
+
+function preloadTheme(theme: BoardTheme): Promise<void> {
+  if (theme === 'atlas') return Promise.resolve()
+  return loadHomeFuligem().then(() => undefined)
+}
 
 const SCREEN = {
   atlas: HomeAtlas,
   fuligem: HomeFuligem,
 } as const
 
+function ThemeLoading() {
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-ink-900 p-6">
+      <p role="status" className="label text-brass">Preparando o mapa…</p>
+    </div>
+  )
+}
+
 export function HomeScreen(actions: HomeActions) {
   const { reduced } = useMotion()
-  // A seleção da home É o mapa ativo do store (D-069) — é dele que `OnlineGate` lê o
-  // valor que grava na sala. Sala publicada continua vencendo (roomStore.setRoom).
-  const theme = useBoardTheme((s) => s.theme)
-  const setTheme = useBoardTheme((s) => s.setTheme)
+  const theme = useBoardTheme((state) => state.theme)
+  const setTheme = useBoardTheme((state) => state.setTheme)
   const [mountedThemes, setMountedThemes] = useState<BoardTheme[]>(() => [theme])
+  const [preparingTheme, setPreparingTheme] = useState<BoardTheme | null>(null)
   const [themeTransition, setThemeTransition] = useState<{
     target: BoardTheme
     phase: 'cover' | 'reveal'
   } | null>(null)
-  // Acima da troca de pele: nome, convite e gaveta permanecem intactos quando
-  // o seletor de mapa alterna Atlas ⇄ Fuligem.
-  const f = useHomeForm(actions)
+  const form = useHomeForm(actions)
 
-  // Cada palco tem mais de mil nós decorativos. Depois da primeira montagem, mantê-lo no
-  // DOM e tirá-lo apenas da renderização evita reconstruir todo o SVG a cada comparação.
-  // O segundo mapa é preparado quando o browser estiver ocioso, fora da interação.
-  useEffect(() => {
-    const mountAllThemes = () => {
-      setMountedThemes((current) => (
-        current.length === Object.keys(SCREEN).length ? current : ['atlas', 'fuligem']
-      ))
+  function prepareTheme(target: BoardTheme): void {
+    void preloadTheme(target)
+  }
+
+  async function changeMap(target: BoardTheme): Promise<void> {
+    if (target === theme || themeTransition || preparingTheme) return
+    setPreparingTheme(target)
+    try {
+      await preloadTheme(target)
+    } finally {
+      setPreparingTheme(null)
     }
-
-    if (typeof window.requestIdleCallback === 'function') {
-      const id = window.requestIdleCallback(mountAllThemes, { timeout: 1_500 })
-      return () => window.cancelIdleCallback(id)
-    }
-
-    const id = window.setTimeout(mountAllThemes, 800)
-    return () => window.clearTimeout(id)
-  }, [])
-
-  function changeMap(target: BoardTheme): void {
-    if (target === theme || themeTransition) return
-    setMountedThemes((current) => (
-      current.includes(target) ? current : [...current, target]
-    ))
+    setMountedThemes((current) => current.includes(target) ? current : [...current, target])
     if (reduced) {
       setTheme(target)
       return
@@ -77,8 +75,6 @@ export function HomeScreen(actions: HomeActions) {
   function advanceThemeTransition(): void {
     if (!themeTransition) return
     if (themeTransition.phase === 'cover') {
-      // A prévia só muda quando a cortina cobre tudo. Assim a fonte do mundo
-      // novo nunca recalcula a tela antiga diante da pessoa.
       setTheme(themeTransition.target)
       setThemeTransition({ ...themeTransition, phase: 'reveal' })
       return
@@ -102,11 +98,14 @@ export function HomeScreen(actions: HomeActions) {
               animate={{ opacity: 1 }}
               transition={reduced ? { duration: 0 } : { duration: MOTION.slow, ease: EASE.standard }}
             >
-              <Screen
-                f={f}
-                onChangeMap={changeMap}
-                mapChanging={active && themeTransition !== null}
-              />
+              <Suspense fallback={<ThemeLoading />}>
+                <Screen
+                  f={form}
+                  onChangeMap={(target) => void changeMap(target)}
+                  onMapIntent={prepareTheme}
+                  mapChanging={active && (preparingTheme !== null || themeTransition !== null)}
+                />
+              </Suspense>
             </motion.div>
           </Activity>
         )

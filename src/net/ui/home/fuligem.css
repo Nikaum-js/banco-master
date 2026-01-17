@@ -1,0 +1,211 @@
+/* Cidade da Fuligem e suas animações entram apenas quando o mapa é solicitado. */
+@layer components {
+  .fuligem-stage {
+    background-color: #0c0906;
+    color: #f0e7d4;
+  }
+
+  .fuligem-sky {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 120% 60% at 50% 108%, rgb(217 130 46 / 0.15) 0%, transparent 58%),
+      linear-gradient(180deg, #0a0806 0%, #14100b 52%, #1d150d 78%, #241a10 100%);
+  }
+
+  .fuligem-puff {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    opacity: 0;
+    animation: fuligem-puff var(--puff-dur, 12000ms) linear infinite;
+  }
+
+  @keyframes fuligem-puff {
+    0% { transform: translate(0, 0) scale(0.34); opacity: 0; }
+    14% { opacity: var(--puff-peak, 0.16); }
+    58% { opacity: calc(var(--puff-peak, 0.16) * 0.4); }
+    100% {
+      transform: translate(var(--puff-drift, 48px), var(--puff-rise, -180px)) scale(2.1);
+      opacity: 0;
+    }
+  }
+
+  .fuligem-flare {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: fuligem-flare 900ms ease-in-out infinite alternate;
+  }
+
+  @keyframes fuligem-flare {
+    from { transform: scale(0.84, 0.72); opacity: 0.5; }
+    to { transform: scale(1.08, 1.16); opacity: 0.82; }
+  }
+
+  .fuligem-flare-glow {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    animation: fuligem-flare 1500ms ease-in-out infinite alternate;
+  }
+
+  .fuligem-beacon {
+    animation: fuligem-beacon 3200ms ease-in-out infinite;
+  }
+
+  @keyframes fuligem-beacon {
+    0%, 60%, 100% { opacity: 0.14; }
+    72%, 80% { opacity: 0.9; }
+  }
+
+  .fuligem-ember {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    opacity: 0;
+    animation: fuligem-ember var(--ember-dur, 22000ms) linear infinite;
+  }
+
+  @keyframes fuligem-ember {
+    0% { transform: translate(0, 0) scale(1); opacity: 0; }
+    12% { opacity: 0.5; }
+    74% { opacity: 0.22; }
+    100% {
+      transform: translate(var(--ember-drift, 60px), var(--ember-rise, -340px)) scale(0.35);
+      opacity: 0;
+    }
+  }
+
+  .fuligem-coal {
+    animation: fuligem-coal var(--coal-dur, 10000ms) linear infinite;
+  }
+
+  @keyframes fuligem-coal {
+    from { transform: translate(0, 0); }
+    to { transform: translate(var(--coal-dx, 200px), var(--coal-dy, -120px)); }
+  }
+
+  .fuligem-forge {
+    animation: fuligem-forge 9s ease-in-out infinite;
+  }
+
+  @keyframes fuligem-forge {
+    0%, 100% { opacity: 0.07; }
+    50% { opacity: 0.16; }
+  }
+
+  .fuligem-furnace {
+    animation: fuligem-furnace 7s steps(2, end) infinite;
+  }
+
+  @keyframes fuligem-furnace {
+    0%, 76% { opacity: 0.8; }
+    77%, 88% { opacity: 0.4; }
+    89%, 100% { opacity: 0.8; }
+  }
+
+  .fuligem-train {
+    animation: fuligem-train 84s linear infinite;
+  }
+
+  @keyframes fuligem-train {
+    from { transform: translateX(0); }
+    to { transform: translateX(2100px); }
+  }
+
+  .fuligem-haze {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 46%;
+    background:
+      linear-gradient(180deg, transparent, rgb(20 16 11 / 0.5) 55%, rgb(12 9 6 / 0.82)),
+      radial-gradient(ellipse 90% 60% at 30% 100%, rgb(240 231 212 / 0.045), transparent 60%);
+  }
+
+  .fuligem-vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 44%, rgb(7 5 4 / 0.72) 100%);
+  }
+
+  .fuligem-rivet-rule {
+    height: 6px;
+    background:
+      radial-gradient(circle 2px at 8px 50%, var(--color-brass) 98%, transparent),
+      radial-gradient(circle 2px at calc(100% - 8px) 50%, var(--color-brass) 98%, transparent),
+      linear-gradient(var(--color-brass), var(--color-brass)) center / calc(100% - 28px) 1px;
+    background-repeat: no-repeat;
+    opacity: 0.7;
+  }
+
+  .fuligem-gates rect {
+    transition: transform var(--motion-slow) var(--ease-emphasis);
+  }
+
+  .fuligem-gates[data-open] rect:first-child { transform: translateX(-26px); }
+  .fuligem-gates[data-open] rect:last-child { transform: translateX(26px); }
+
+  .fuligem-wordmark {
+    text-shadow: 0 2px 0 rgb(7 5 4 / 0.9), 0 0 26px rgb(217 130 46 / 0.26);
+  }
+
+  .fuligem-backdrop--stage {
+    opacity: 0.4;
+  }
+
+  .fuligem-backdrop--stage .fuligem-vignette {
+    background: radial-gradient(ellipse at center, transparent 28%, rgb(7 5 4 / 0.92) 100%);
+  }
+
+  .fuligem-backdrop--static .fuligem-puff,
+  .fuligem-backdrop--static .fuligem-flare,
+  .fuligem-backdrop--static .fuligem-flare-glow,
+  .fuligem-backdrop--static .fuligem-beacon,
+  .fuligem-backdrop--static .fuligem-ember,
+  .fuligem-backdrop--static .fuligem-coal,
+  .fuligem-backdrop--static .fuligem-forge,
+  .fuligem-backdrop--static .fuligem-furnace,
+  .fuligem-backdrop--static .fuligem-train {
+    animation: none;
+  }
+
+  .fuligem-backdrop--static .fuligem-puff {
+    opacity: calc(var(--puff-peak, 0.16) * 0.85);
+    transform:
+      translate(
+        calc(var(--puff-drift, 48px) * var(--puff-t, 0)),
+        calc(var(--puff-rise, -180px) * var(--puff-t, 0))
+      )
+      scale(calc(0.34 + 1.76 * var(--puff-t, 0)));
+  }
+
+  .fuligem-backdrop--static .fuligem-flare { opacity: 0.7; }
+  .fuligem-backdrop--static .fuligem-beacon { opacity: 0.7; }
+  .fuligem-backdrop--static .fuligem-ember { opacity: 0.4; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fuligem-puff,
+    .fuligem-flare,
+    .fuligem-flare-glow,
+    .fuligem-beacon,
+    .fuligem-ember,
+    .fuligem-coal,
+    .fuligem-forge,
+    .fuligem-furnace,
+    .fuligem-train {
+      animation: none;
+    }
+
+    .fuligem-puff {
+      opacity: calc(var(--puff-peak, 0.16) * 0.85);
+      transform:
+        translate(
+          calc(var(--puff-drift, 48px) * var(--puff-t, 0)),
+          calc(var(--puff-rise, -180px) * var(--puff-t, 0))
+        )
+        scale(calc(0.34 + 1.76 * var(--puff-t, 0)));
+    }
+
+    .fuligem-flare { opacity: 0.7; }
+    .fuligem-beacon { opacity: 0.7; }
+    .fuligem-ember { opacity: 0.4; }
+    .fuligem-forge { opacity: 0.12; }
+  }
+}

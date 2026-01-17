@@ -70,10 +70,12 @@ function Wordmark() {
 export function HomeAtlas({
   f,
   onChangeMap,
+  onMapIntent,
   mapChanging,
 }: {
   f: HomeForm
   onChangeMap: (theme: BoardTheme) => void
+  onMapIntent: (theme: BoardTheme) => void
   mapChanging: boolean
 }) {
   const { reduced } = useMotion()
@@ -96,6 +98,7 @@ export function HomeAtlas({
         reduced={reduced}
         skin="atlas"
         onChangeMap={onChangeMap}
+        onMapIntent={onMapIntent}
         mapChanging={mapChanging}
       />
     </EntryStage>

@@ -54,10 +54,12 @@ function PlateWordmark() {
 export function HomeFuligem({
   f,
   onChangeMap,
+  onMapIntent,
   mapChanging,
 }: {
   f: HomeForm
   onChangeMap: (theme: BoardTheme) => void
+  onMapIntent: (theme: BoardTheme) => void
   mapChanging: boolean
 }) {
   const { reduced } = useMotion()
@@ -80,6 +82,7 @@ export function HomeFuligem({
           reduced={reduced}
           skin="fuligem"
           onChangeMap={onChangeMap}
+          onMapIntent={onMapIntent}
           mapChanging={mapChanging}
         />
 

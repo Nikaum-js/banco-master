@@ -67,6 +67,7 @@ export interface HomeActions {
   onCreate: () => void
   onJoin: (roomId: string) => void
   onLocal: () => void
+  onSessionIntent?: () => void
 }
 
 /** Cidades do tabuleiro de verdade — letreiro, ticker e mapa da home saem daqui. */
@@ -83,7 +84,7 @@ export const CITIES = ATLAS_BOARD.filter((s): s is PropertySquare => s.kind === 
   price: s.price,
 }))
 
-export function useHomeForm({ onCreate, onJoin, onLocal }: HomeActions) {
+export function useHomeForm({ onCreate, onJoin, onLocal, onSessionIntent }: HomeActions) {
   const [name, setName] = useState(() => recallPlayerName())
   const [joinOpen, setJoinOpen] = useState(false)
   const [link, setLink] = useState('')
@@ -123,6 +124,7 @@ export function useHomeForm({ onCreate, onJoin, onLocal }: HomeActions) {
     pasteFailed,
     pasteLink,
     gate,
+    prepareSession: onSessionIntent ?? (() => {}),
     create: () => go(onCreate),
     local: () => go(onLocal),
     join: () => roomId && go(() => onJoin(roomId)),

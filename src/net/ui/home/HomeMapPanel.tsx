@@ -160,12 +160,14 @@ export function HomeMapPanel({
   reduced,
   skin,
   onChangeMap,
+  onMapIntent,
   mapChanging,
 }: {
   f: HomeForm
   reduced: boolean
   skin: HomeMapSkin
   onChangeMap: (theme: BoardTheme) => void
+  onMapIntent: (theme: BoardTheme) => void
   mapChanging: boolean
 }) {
   const theme: BoardTheme = skin
@@ -195,6 +197,9 @@ export function HomeMapPanel({
               title={`Selecionar ${nextMap.name}`}
               aria-label={`Selecionar o mapa ${nextMap.name}`}
               disabled={mapChanging}
+              onPointerEnter={() => onMapIntent(nextTheme)}
+              onPointerDown={() => onMapIntent(nextTheme)}
+              onFocus={() => onMapIntent(nextTheme)}
               onClick={() => onChangeMap(nextTheme)}
             >
               <Map size={21} aria-hidden />
@@ -238,7 +243,13 @@ export function HomeMapPanel({
                   autoFocus
                   className={inputClass}
                 />
-                <Button onClick={f.create} className="home-map-panel__primary px-5">
+                <Button
+                  onPointerEnter={f.prepareSession}
+                  onPointerDown={f.prepareSession}
+                  onFocus={f.prepareSession}
+                  onClick={f.create}
+                  className="home-map-panel__primary px-5"
+                >
                   Criar sala
                   <ArrowRight size={16} aria-hidden />
                 </Button>
@@ -250,6 +261,9 @@ export function HomeMapPanel({
               className="home-map-panel__invite"
               aria-expanded={f.joinOpen}
               aria-controls={f.joinOpen ? fieldId : undefined}
+              onPointerEnter={f.prepareSession}
+              onPointerDown={f.prepareSession}
+              onFocus={f.prepareSession}
               onClick={f.toggleJoin}
             >
               <Link2 size={15} aria-hidden />
@@ -297,6 +311,9 @@ export function HomeMapPanel({
                       />
                       <Button
                         disabled={!f.roomId}
+                        onPointerEnter={f.prepareSession}
+                        onPointerDown={f.prepareSession}
+                        onFocus={f.prepareSession}
                         onClick={f.join}
                         className="home-map-panel__join"
                       >

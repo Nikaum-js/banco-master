@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useEffect } from 'react'
 import { EntryStage } from '@/net/ui/entryShell'
@@ -42,7 +42,7 @@ describe('isolamento visual das telas de entrada', () => {
     expect(screen.getByTestId('entry-content')).toBeTruthy()
   })
 
-  it('Fuligem monta somente o pátio de fábricas e a troca não remonta o conteúdo', () => {
+  it('Fuligem monta somente o pátio de fábricas e a troca não remonta o conteúdo', async () => {
     render(
       <EntryStage>
         <ContentMarker />
@@ -55,7 +55,9 @@ describe('isolamento visual das telas de entrada', () => {
     expect(document.querySelector('[data-entry-backdrop="atlas"]')).toBeNull()
     expect(document.querySelector('[data-entry-cityscape="atlas"]')).toBeNull()
     expect(document.querySelector('[data-entry-car]')).toBeNull()
-    expect(document.querySelector('[data-entry-backdrop="fuligem"]')).toBeTruthy()
+    await waitFor(() => {
+      expect(document.querySelector('[data-entry-backdrop="fuligem"]')).toBeTruthy()
+    })
     expect(screen.getByTestId('entry-content')).toBeTruthy()
     // A verificação de DESEMPENHO da troca de mapa: trocar a pele nunca pode
     // remontar a subárvore de conteúdo (contrato herdado do tema anterior).
