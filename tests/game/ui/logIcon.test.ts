@@ -31,8 +31,8 @@ describe('logIcon — exaustividade por kind (040, FR-021/FR-024/FR-026)', () =>
     expect(logIcon('jail-fine')).not.toBeNull()
   })
 
-  it('ALL_LOG_KINDS cobre exatamente as 37 variantes — sem sobra nem falta', () => {
-    expect(ALL_LOG_KINDS.length).toBe(37)
-    expect(new Set(ALL_LOG_KINDS).size).toBe(37) // sem duplicata
+  it('ALL_LOG_KINDS cobre exatamente as 38 variantes — sem sobra nem falta', () => {
+    expect(ALL_LOG_KINDS.length).toBe(38) // +reaction-blocked (058/US2)
+    expect(new Set(ALL_LOG_KINDS).size).toBe(38) // sem duplicata
   })
 })

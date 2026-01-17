@@ -43,6 +43,7 @@ export function logIcon(kind: LogEntry['kind']): ReactNode {
     case 'hostile-takeover':
     case 'evict':
     case 'swap':
+    case 'reaction-blocked': // 058/US2 — jogada de força: carta atravessou a mesa e mudou um destino
       return <GavelIcon size={11} />
     case 'go':
     case 'rent':

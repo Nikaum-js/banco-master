@@ -206,3 +206,54 @@ describe('perspectiva de carta (043, US5) — a mão para de trafegar', () => {
     expect(seenByOwner).toContain('boicote-1') // o dono recebe a cópia privada, íntegra
   })
 })
+
+// 058/US2 — o fato da reação anulada chega a TODOS os participantes.
+//
+// A pergunta que este bloco fecha: a espécie nova é pública, ou a divisão de perspectiva a
+// redige junto com a mão? Sem isto, a correção do log valeria só para quem reagiu — e o
+// relato original ("a carta do adversário não fez efeito") é exatamente sobre o que os
+// OUTROS veem.
+//
+// A resposta é estrutural: `splitSnapshot` redige `hand` e `decks`, e nada mais. O teste
+// prende essa propriedade, para que um dia alguém que resolva redigir o log por
+// perspectiva descubra aqui, e não numa mesa.
+describe('reação anulada é pública (058/US2)', () => {
+  it('o fato sobrevive à divisão de perspectiva, íntegro, para qualquer viewer', async () => {
+    const { splitSnapshot, mergeSnapshot } = await import('@/net/perspective')
+    const { createSeedState } = await import('@/game/setup')
+    const { createRoom, joinRoom, SEAT_COLORS } = await import('@/net/room')
+
+    const game = createSeedState(['p1', 'p2', 'p3'])
+    game.log.push({
+      kind: 'reaction-blocked',
+      who: 'p2',
+      attackerId: 'p1',
+      effect: 'aquisicaoHostil',
+      reaction: 'diplomacia',
+      targetPos: 1,
+      targetPlayer: null,
+    })
+
+    let room = createRoom('reacao-publica', { uid: 'u1', name: 'Ana', color: SEAT_COLORS[0] })
+    for (const [i, nome] of [['u2', 'Pedro'], ['u3', 'Caio']].entries()) {
+      const guest = joinRoom(room, { uid: nome[0], name: nome[1], color: SEAT_COLORS[i + 1] })
+      if (!guest.ok) throw new Error(guest.reason)
+      room = guest.room
+    }
+
+    const { publicGame, secrets } = splitSnapshot(game, room)
+    const original = game.log.find((e) => e.kind === 'reaction-blocked')
+
+    // Já no estado PÚBLICO — o que trafega — o fato está inteiro.
+    expect(publicGame.log.find((e) => e.kind === 'reaction-blocked')).toEqual(original)
+
+    // E na visão remontada de cada assento, inclusive quem não é parte do episódio.
+    for (const seat of room.seats) {
+      const visto = mergeSnapshot(publicGame, { hands: { [seat.uid]: secrets.hands[seat.uid] } }, room)
+      expect(
+        visto.log.find((e) => e.kind === 'reaction-blocked'),
+        `perspectiva de ${seat.name}`,
+      ).toEqual(original)
+    }
+  })
+})

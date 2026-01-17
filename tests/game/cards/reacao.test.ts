@@ -103,3 +103,59 @@ describe('Bunker Fiscal — reação a imposto (US2)', () => {
     expect(pago.resolution).toBeNull()
   })
 })
+
+// 058/US2 — a reação USADA era o único desfecho do jogo sem fato nenhum no log. A ofensiva
+// era cancelada (correto), a Diplomacia saía da mão (correto) e a mesa não via nada: para
+// quem jogou a carta cara, ela simplesmente "não fez efeito". Mesmo molde dos seis furos
+// que a D-063 listou — um ramo correto e silencioso.
+describe('Reação anulada vira fato no log (058/US2)', () => {
+  function ataqueComDiplomacia(): GameState {
+    const g = createSeedState(['p1', 'p2'])
+    g.players[0].hand.push('aquisicao-hostil-1')
+    g.titles[1].ownerId = 'p2'
+    g.titles[3].ownerId = 'p2'
+    g.players[1].hand.push('diplomacia-1')
+    return playHandCard(g, 'p1', 'aquisicao-hostil-1', defaultPorts, 1)
+  }
+
+  it('usar Diplomacia registra quem reagiu, quem atacou, o efeito e o alvo', () => {
+    const out = respondReaction(ataqueComDiplomacia(), true, defaultPorts)
+    const fatos = out.log.filter((e) => e.kind === 'reaction-blocked')
+    expect(fatos).toHaveLength(1)
+    const fato = fatos[0]
+    if (fato.kind !== 'reaction-blocked') throw new Error('espécie errada')
+    expect(fato.who).toBe('p2') // o autor do fato é quem REAGIU
+    expect(fato.attackerId).toBe('p1')
+    expect(fato.effect).toBe('aquisicaoHostil')
+    expect(fato.targetPos).toBe(1)
+    expect(fato.targetPlayer).toBeNull()
+  })
+
+  it('recusar NÃO registra reação — "não reagiu" é distinguível de "usou Diplomacia"', () => {
+    const out = respondReaction(ataqueComDiplomacia(), false, defaultPorts)
+    expect(out.log.some((e) => e.kind === 'reaction-blocked')).toBe(false)
+    expect(out.log.some((e) => e.kind === 'hostile-takeover')).toBe(true) // a ofensiva aconteceu
+  })
+
+  it('nada é registrado enquanto a janela de reação está aberta', () => {
+    expect(ataqueComDiplomacia().log.some((e) => e.kind === 'reaction-blocked')).toBe(false)
+  })
+
+  it('a ofensiva cancelada NÃO produz também o fato dela', () => {
+    const out = respondReaction(ataqueComDiplomacia(), true, defaultPorts)
+    expect(out.log.some((e) => e.kind === 'hostile-takeover')).toBe(false)
+  })
+
+  it('ofensiva sem propriedade-alvo nomeia o JOGADOR e deixa a posição nula', () => {
+    const g = createSeedState(['p1', 'p2'])
+    g.players[0].hand.push('imposto-federal-1')
+    g.players[1].hand.push('diplomacia-1')
+    const aberto = playHandCard(g, 'p1', 'imposto-federal-1', defaultPorts, undefined, 'p2')
+    expect(aberto.resolution?.kind).toBe('reaction-diplomacia')
+    const out = respondReaction(aberto, true, defaultPorts)
+    const fato = out.log.find((e) => e.kind === 'reaction-blocked')
+    if (fato?.kind !== 'reaction-blocked') throw new Error('fato ausente')
+    expect(fato.targetPlayer).toBe('p2')
+    expect(fato.targetPos).toBeNull()
+  })
+})

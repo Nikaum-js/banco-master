@@ -92,6 +92,8 @@ export const ALL_LOG_KINDS = [
   // D-063 — seis regras que moviam caixa sem emitir fato nenhum:
   'tax-man', 'hostile-takeover', 'audit', 'evict', 'card-collect', 'swap',
   'loan-interest', 'loan-interest-short', 'loan-due', 'loan-due-short',
+  // 058/US2 — a reação USADA era o único desfecho do jogo sem fato nenhum.
+  'reaction-blocked',
   'legacy',
 ] as const
 
@@ -162,6 +164,25 @@ export type LogEntry =
   // sem eles não se distingue pagamento completo de truncado — e foi exatamente essa confusão
   // que fez o invariante de não-truncagem acusar falso positivo em quem tinha o valor exato.
   | { kind: 'card-collect'; who: string; name: string; delta: number; due: number; counterpartId: string }
+  // Reação que ANULOU uma ofensiva (058/US2, §10.6). `who` é o REATOR — o autor do fato é
+  // quem jogou a carta que produziu o desfecho, e o desfecho é o cancelamento.
+  //
+  // Sem isto, usar Diplomacia era indistinguível de bug: a ofensiva não logava (foi
+  // cancelada) e a reação também não, então a mesa via a carta cara do atacante sair da mão
+  // e nada acontecer. `effect` é o id CANÔNICO do efeito ofensivo ('aquisicaoHostil'), nunca
+  // o rótulo em português — a frase é composta pela apresentação, como em todo o resto.
+  //
+  // Público só a partir daqui: a janela de reação vaza a EXISTÊNCIA da carta (§10.3), e o
+  // uso a torna uma jogada como outra qualquer. Antes do uso, nada é registrado.
+  | {
+      kind: 'reaction-blocked'
+      who: string // reator
+      attackerId: string
+      effect: string // id canônico do efeito cancelado
+      reaction: string // id canônico da reação usada ('diplomacia')
+      targetPos: number | null // propriedade alvo, quando a ofensiva tem uma
+      targetPlayer: string | null // jogador alvo, quando a ofensiva mira gente
+    }
   | { kind: 'legacy'; who: string; what: string } // NUNCA emitida por reducer — só normalização de snapshot velho (FR-022)
 
 export interface TempEffect {

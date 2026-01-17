@@ -111,6 +111,22 @@ export function respondReaction(state: GameState, use: boolean, ports: TurnPorts
         reactor.hand = removeFromHand(reactor.hand, dip)
         s.decks.tesouro.push(dip)
       }
+      // 058/US2 — O RAMO QUE NÃO NARRAVA NADA. A ofensiva é cancelada, então ela não emite
+      // fato; a Diplomacia saía da mão em silêncio. Para a mesa, a carta mais cara do
+      // adversário simplesmente não fazia efeito — o relato literal da jogatina.
+      //
+      // O fato vai AQUI, e não em `findReactionCard`: ele não depende de saber QUAL carta
+      // era (numa perspectiva sem visão da mão do reator, `dip` é `null`), só de que a
+      // reação foi usada — que é exatamente o que a resolução já afirma.
+      logEvent(s, {
+        kind: 'reaction-blocked',
+        who: r.reactorId,
+        attackerId: r.attackerId,
+        effect: r.effect,
+        reaction: 'diplomacia',
+        targetPos: r.targetPos,
+        targetPlayer: r.targetPlayer,
+      })
     } else {
       applyOffensive(s, r.effect, r.attackerId, r.targetPos, r.targetPlayer, ports, r.targetPos2) // recusa: aplica
     }

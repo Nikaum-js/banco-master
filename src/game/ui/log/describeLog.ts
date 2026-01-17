@@ -7,6 +7,7 @@ import type { DebtCause, LogEntry } from '@/game/economy/types'
 import { identityOf, type PlayerIdentity } from '@/net/identity'
 import type { Room } from '@/net/room'
 import { activeLabels } from '@/game/ui/theme/boardTheme'
+import { CARD_LABEL } from '@/game/ui/cards/cardMeta'
 
 export type LogFragment =
   | { t: 'text'; text: string }
@@ -253,6 +254,24 @@ export function describeLogEntry(entry: LogEntry, room: Room | null): LogSentenc
       return entry.delta < 0
         ? [who(room, entry.who), text(` pagou `), money(-entry.delta), text(entry.counterpartId === 'bank' ? ' (' : ' a '), ...(entry.counterpartId === 'bank' ? [text(`${entry.name})`)] : [who(room, entry.counterpartId), text(` (${entry.name})`)])]
         : [who(room, entry.who), text(` recebeu `), money(entry.delta), text(` (${entry.name})`)]
+    // 058/US2 — a narrativa nomeia os quatro elementos que o jogador precisa ligar:
+    // quem reagiu, com quê, contra quem, e sobre o quê. O alvo entra como PROPRIEDADE
+    // quando a ofensiva tem uma (Aquisição, Confisco, Boicote, Permuta) e como JOGADOR
+    // quando ela mira gente (Imposto Federal, Embargo) — nunca inventado quando não há.
+    case 'reaction-blocked': {
+      const reacao = CARD_LABEL[entry.reaction] ?? entry.reaction
+      const ofensiva = CARD_LABEL[entry.effect] ?? entry.effect
+      const alvo: LogSentence =
+        entry.targetPos !== null ? [text(' contra '), place(entry.targetPos)]
+        : entry.targetPlayer !== null ? [text(' contra '), who(room, entry.targetPlayer)]
+        : []
+      return [
+        who(room, entry.who),
+        text(` usou ${reacao} e anulou ${ofensiva} de `),
+        who(room, entry.attackerId),
+        ...alvo,
+      ]
+    }
     case 'legacy':
       return [text(entry.what)] // FR-022: texto solto, sem resolução de identidade nem ícone
     default:

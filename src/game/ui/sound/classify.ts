@@ -88,6 +88,7 @@ export function logKey(e: LogEntry): string {
     case 'loan-interest-short': return [e.kind, e.who, e.amount, e.creditorId, e.shortfall].join('|')
     case 'loan-due': return [e.kind, e.who, e.amount, e.creditorId, e.principal, e.interest].join('|')
     case 'loan-due-short': return [e.kind, e.who, e.amount, e.creditorId, e.shortfall].join('|')
+    case 'reaction-blocked': return [e.kind, e.who, e.attackerId, e.effect, e.reaction, e.targetPos, e.targetPlayer].join('|')
     case 'legacy': return [e.kind, e.who, e.what].join('|')
     default: return assertNever(e)
   }
@@ -181,6 +182,7 @@ export function classifyLogEntry(e: LogEntry): SoundCue | null {
     case 'card-collect':
     case 'evict':
     case 'sell-to-bank':
+    case 'reaction-blocked': // 058/US2 — mudo: o cue `reaction` já toca na ABERTURA da janela
     case 'legacy':
       return null
     default: return assertNever(e)

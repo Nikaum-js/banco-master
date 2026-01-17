@@ -61,6 +61,10 @@ export function namesIn(e: LogEntry): string[] {
     case 'evict':
     case 'swap': return [e.who, e.victimId]
     case 'audit': return [e.who, e.targetId]
+    // 058/US2 — a reacao anulada nomeia os dois lados: quem reagiu e quem atacou. Nao move
+    // caixa (e esse o ponto dela), mas nomear os dois mantem o invariante honesto sobre
+    // quem o fato cobre.
+    case 'reaction-blocked': return [e.who, e.attackerId]
     case 'card-collect': return e.counterpartId === 'bank' ? [e.who] : [e.who, e.counterpartId]
     // Fatos de um só protagonista. `who === 'bank'` não nomeia jogador nenhum — e é por isso
     // que `auction-unsold`/`lot-unsold` não cobrem ninguém: ali não há Δcaixa a explicar.

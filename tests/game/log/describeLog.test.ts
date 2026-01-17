@@ -41,6 +41,7 @@ function sampleFor(kind: LogKind): LogEntry {
     case 'evict': return { kind, who: 'p1', pos: 1, victimId: 'p2' }
     case 'card-collect': return { kind, who: 'p2', name: 'Aniversario', delta: -50, due: 50, counterpartId: 'p1' }
     case 'swap': return { kind, who: 'p1', posGiven: 1, posTaken: 3, victimId: 'p2' }
+    case 'reaction-blocked': return { kind, who: 'p2', attackerId: 'p1', effect: 'aquisicaoHostil', reaction: 'diplomacia', targetPos: 1, targetPlayer: null }
     case 'legacy': return { kind, who: 'p1', what: 'evento antigo' }
   }
 }
@@ -81,6 +82,33 @@ describe('describeLogEntry — contrato do descritor (040, §2)', () => {
       const sentence = describeLogEntry(sampleFor(kind), null)
       expect(textOf(sentence)).not.toMatch(PLAYER_ID_PATTERN)
     }
+  })
+
+  // 058/US2 — a frase precisa nomear os quatro elementos, senao o log volta a nao explicar
+  // por que a carta do atacante "nao fez efeito".
+  it('058: a reacao anulada nomeia reator, reacao, ofensiva, atacante e alvo', () => {
+    const comPropriedade = textOf(describeLogEntry(sampleFor('reaction-blocked'), ROOM))
+    expect(comPropriedade).toContain('Beto')      // reator
+    expect(comPropriedade).toContain('Diplomacia')
+    expect(comPropriedade).toContain('anulou')
+    expect(comPropriedade).toContain('Aquisição Hostil')
+    expect(comPropriedade).toContain('Ana')       // atacante
+    expect(comPropriedade).toContain('#1')        // propriedade alvo
+
+    // Ofensiva que mira GENTE (Imposto Federal, Embargo): nomeia o jogador, sem inventar casa.
+    const comJogador = textOf(describeLogEntry(
+      { kind: 'reaction-blocked', who: 'p2', attackerId: 'p1', effect: 'impostoFederal', reaction: 'diplomacia', targetPos: null, targetPlayer: 'p2' },
+      ROOM,
+    ))
+    expect(comJogador).toContain('Imposto Federal')
+    expect(comJogador).not.toMatch(/#\d+/)
+
+    // Sem alvo nenhum: a frase para no atacante, sem " contra " orfao.
+    const semAlvo = textOf(describeLogEntry(
+      { kind: 'reaction-blocked', who: 'p2', attackerId: 'p1', effect: 'boicote', reaction: 'diplomacia', targetPos: null, targetPlayer: null },
+      ROOM,
+    ))
+    expect(semAlvo).not.toContain('contra')
   })
 
   it('FR-017: sem sala, jogador cai no fallback "Jogador N"', () => {
