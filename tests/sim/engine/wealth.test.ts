@@ -108,8 +108,12 @@ describe('sampleWealth', () => {
   })
 })
 
+// Timeout explícito pelo mesmo motivo do `determinism.test.ts`: é uma partida COMPLETA de
+// até 1500 rodadas dentro do run generalista, disputando dois vCPUs com ~130 outros arquivos.
+// Reprovou no CI por relógio (5s), não por resultado, depois que a 050 alongou as partidas
+// sob política aleatória.
 describe('runGame — coleta da curva numa partida real', () => {
-  it('uma amostra por rodada fechada, e a última é rodada COMPLETA (não o estado de vitória)', () => {
+  it('uma amostra por rodada fechada, e a última é rodada COMPLETA (não o estado de vitória)', { timeout: 60_000 }, () => {
     const r = runGame(20260705 + 300000, 3, 1500)
     expect(r.outcome).toBe('ok')
     // Uma amostra por rodada contada: é o que torna `sampleAtDecile` uma leitura de progresso.

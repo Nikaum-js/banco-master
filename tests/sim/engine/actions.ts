@@ -89,6 +89,15 @@ function candidateTrades(game: GameState): { fromId: string; trade: Trade }[] {
         const price = tradeBalance(game, withProp).from.missing
         const paid: Trade = { ...withProp, toCash: price }
         if (price > 0 && price <= to.cash && validateTrade(game, paid)) out.push({ fromId: from.id, trade: paid })
+        // Troca de propriedade por propriedade — o movimento clássico do gênero, e o único
+        // que redistribui tabuleiro sem depender de caixa. Faltava no harness, e é ele que
+        // devolve a convergência nas mesas de 6, onde o dinheiro fica espalhado demais para
+        // a forma paga acontecer com frequência.
+        const theirs = tradableProps(game, to.id)
+        if (theirs.length > 0) {
+          const swap: Trade = { ...withProp, toProps: [theirs[0]] }
+          if (validateTrade(game, swap)) out.push({ fromId: from.id, trade: swap })
+        }
       }
     }
   }

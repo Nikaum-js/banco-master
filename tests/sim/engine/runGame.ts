@@ -20,9 +20,16 @@ function addCoverage(coverage: Record<string, number>, mechanisms: string[]): vo
 // correto pela regra (§9.1) mas prolonga a sobrevivência bem mais que um jogador humano
 // decidiria. O teto de 1500 cobria o benchmark anterior, mas a progressão parcial de
 // construção (D-050) reduz o aluguel máximo de países incompletos: cinco seeds válidas
-// passaram do limite e terminaram entre 1568 e 1930 rodadas. 2000 mantém a salvaguarda
+// passaram do limite e terminaram entre 1568 e 1930 rodadas. 2000 manteve a salvaguarda
 // finita sem classificar essas partidas completas como deadlock.
-const DEFAULT_ROUND_CAP = 2000
+//
+// 3000 desde a 050: a contrapartida mínima (§8.5/D-055) reduz quanta propriedade muda de
+// mão por rodada sob política aleatória — doar deixou de ser legal, e comprar exige caixa
+// que o bot nem sempre tem. O harness ganhou as duas formas que faltavam (compra no piso e
+// troca propriedade-por-propriedade), o que devolveu a maior parte da convergência, mas a
+// seed 2026070570 de 2 jogadores ainda fecha em 2028 rodadas. Ela TERMINA — não é deadlock,
+// é a mesma classe de caso que já forçou 300 → 1500 → 2000.
+const DEFAULT_ROUND_CAP = 3000
 const SAFETY_TICK_FACTOR = 60 // salvaguarda contra loop sem progresso de rodada (não é o teto de regra)
 
 function fail(
