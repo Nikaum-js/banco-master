@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { grantLoan, payOffLoan, chargeLoanInterest, activeLoanFor } from '@/game/emprestimos/emprestimos'
+import { grantLoan, proposeLoan, respondLoan, payOffLoan, chargeLoanInterest, activeLoanFor } from '@/game/emprestimos/emprestimos'
 import { payDebt, declareBankruptcy } from '@/game/falencia/falencia'
 import { advance } from '@/game/turn/turnMachine'
 import { createSeedState, defaultPorts } from '@/game/store'
@@ -71,6 +71,67 @@ describe('Empréstimos — conceder/validar (US1)', () => {
   })
 })
 
+describe('Empréstimos — solicitação e aceite do credor (§15.2/§15.3)', () => {
+  it('proposeLoan abre a proposta (déficit) sem mover dinheiro', () => {
+    const g = withDebt('p2', 500)
+    g.players[0].cash = 100 // déficit 400
+    const after = proposeLoan(g, 'p1', 'p2')
+    expect(after.pendingLoan).toEqual({ debtorId: 'p1', creditorId: 'p2', principal: 400 })
+    expect(after.players[0].cash).toBe(100) // nada movido ainda
+    expect(after.players[1].cash).toBe(2000)
+    expect(after.loans).toHaveLength(0)
+  })
+
+  it('proposeLoan no-op: fora da dívida, auto-pedido, credor sem caixa, já com empréstimo', () => {
+    const semDebt = createSeedState(['p1', 'p2'])
+    expect(proposeLoan(semDebt, 'p1', 'p2')).toBe(semDebt)
+
+    const base = withDebt('p2', 500)
+    base.players[0].cash = 100
+    expect(proposeLoan(base, 'p1', 'p1')).toBe(base) // credor = devedor
+
+    const semCaixa = withDebt('p2', 500)
+    semCaixa.players[0].cash = 100
+    semCaixa.players[1].cash = 100 // credor não cobre o déficit 400
+    expect(proposeLoan(semCaixa, 'p1', 'p2')).toBe(semCaixa)
+
+    const jaTem = withDebt('p2', 500)
+    jaTem.players[0].cash = 100
+    jaTem.loans.push({ debtorId: 'p1', creditorId: 'p3', principal: 50, ratePct: 10 })
+    expect(proposeLoan(jaTem, 'p1', 'p2')).toBe(jaTem)
+  })
+
+  it('respondLoan(aceita) concede à taxa do credor e fecha a proposta', () => {
+    let g = withDebt('p2', 500)
+    g.players[0].cash = 100
+    g = proposeLoan(g, 'p1', 'p2')
+    const after = respondLoan(g, true, 30) // credor define 30%
+    expect(after.pendingLoan).toBeNull()
+    expect(after.players[0].cash).toBe(500) // 100 + 400
+    expect(after.players[1].cash).toBe(2000 - 400)
+    expect(after.loans[0]).toEqual({ debtorId: 'p1', creditorId: 'p2', principal: 400, ratePct: 30 })
+  })
+
+  it('respondLoan(recusa) fecha a proposta sem mover dinheiro', () => {
+    let g = withDebt('p2', 500)
+    g.players[0].cash = 100
+    g = proposeLoan(g, 'p1', 'p2')
+    const after = respondLoan(g, false, 20)
+    expect(after.pendingLoan).toBeNull()
+    expect(after.players[0].cash).toBe(100)
+    expect(after.players[1].cash).toBe(2000)
+    expect(after.loans).toHaveLength(0)
+  })
+
+  it('respondLoan com taxa inválida mantém a proposta aberta', () => {
+    let g = withDebt('p2', 500)
+    g.players[0].cash = 100
+    g = proposeLoan(g, 'p1', 'p2')
+    expect(respondLoan(g, true, 5)).toBe(g) // < 10
+    expect(respondLoan(g, true, 60)).toBe(g) // > 50
+  })
+})
+
 describe('Empréstimos — juros no GO e quitação (US2)', () => {
   it('SC-002: chargeLoanInterest cobra juros simples (devedor−/credor+)', () => {
     const g = withLoan({ debtorId: 'p1', creditorId: 'p2', principal: 500, ratePct: 20 })
@@ -79,6 +140,7 @@ describe('Empréstimos — juros no GO e quitação (US2)', () => {
     chargeLoanInterest(g, 'p1') // 20% de 500 = 100
     expect(g.players[0].cash).toBe(200)
     expect(g.players[1].cash).toBe(1100)
+    expect(g.log.some((e) => e.who === 'p1' && /juros/.test(e.what))).toBe(true) // feedback do débito (021)
   })
 
   it('SC-002: juros sem caixa pós-bônus → abre dívida ao credor', () => {
@@ -152,6 +214,18 @@ describe('Empréstimos — falência §9.3 (US3)', () => {
     const after = declareBankruptcy(g, ctx)
     expect(after.titles[1].ownerId).toBe('p2') // credor da dívida (§9.2)
     expect(after.loans).toHaveLength(0)
+  })
+
+  it('§9.1: declarar falência é no-op enquanto solvente; elimina quando insolvente', () => {
+    // Solvente: caixa já cobre a dívida (liquidationValue ≥ dívida) → no-op.
+    const solvente = withDebt('p2', 100)
+    solvente.players[0].cash = 200
+    expect(declareBankruptcy(solvente, ctx)).toBe(solvente)
+
+    // Insolvente: sem ativos e caixa < dívida (liquidationValue < dívida) → elimina.
+    const insolvente = withDebt('p2', 100)
+    insolvente.players[0].cash = 40
+    expect(declareBankruptcy(insolvente, ctx).players[0].eliminated).toBe(true)
   })
 
   it('R8: empréstimo some quando o CREDOR é eliminado', () => {
