@@ -32,17 +32,25 @@ function sampleFor(kind: LogKind): LogEntry {
     case 'unmortgage': return { kind, who: 'p1', pos: 1, cost: 33 }
     case 'auction-won': return { kind, who: 'bank', pos: 1, amount: 60, winnerId: 'p1' }
     case 'auction-unsold': return { kind, who: 'bank', pos: 1 }
-    case 'lot-won': return { kind, who: 'bank', pos: 1, amount: 60, winnerId: 'p1', origin: 'scarcity' }
+    case 'lot-won': return { kind, who: 'bank', pos: 1, amount: 60, winnerId: 'p1', origin: 'bankruptcy' }
     case 'lot-unsold': return { kind, who: 'bank', pos: 1, origin: 'scarcity' }
     case 'free-parking': return { kind, who: 'p1', amount: 500 }
     case 'jail-fine': return { kind, who: 'p1', amount: 50 }
-    case 'debt-paid': return { kind, who: 'p1', amount: 50 }
+    case 'debt-paid': return { kind, who: 'p1', amount: 50, creditorId: 'p2' }
     case 'bankruptcy': return { kind, who: 'p1' }
-    case 'trade': return { kind, who: 'p1', toId: 'p2' }
+    case 'concede': return { kind, who: 'p1' }
+    case 'trade': return { kind, who: 'p1', toId: 'p2', fromDelta: -100, toDelta: 100 }
     case 'loan-interest': return { kind, who: 'p1', amount: 10, creditorId: 'p2' }
     case 'loan-interest-short': return { kind, who: 'p1', amount: 5, creditorId: 'p2', shortfall: 5 }
     case 'loan-due': return { kind, who: 'p1', amount: 110, creditorId: 'p2', principal: 100, interest: 10 }
     case 'loan-due-short': return { kind, who: 'p1', amount: 40, creditorId: 'p2', shortfall: 70 }
+    case 'sell-to-bank': return { kind, who: 'p1', pos: 1, amount: 0 }
+    case 'debt-open': return { kind, who: 'p1', amount: 7, creditorId: 'p2', cause: 'obligation' }
+    case 'tax-man': return { kind, who: 'p1', pos: 1, amount: 200, due: 200 }
+    case 'hostile-takeover': return { kind, who: 'p1', pos: 1, amount: 66, victimId: 'p2' }
+    case 'audit': return { kind, who: 'p1', targetId: 'p2', amount: 120 }
+    case 'evict': return { kind, who: 'p1', pos: 1, victimId: 'p2' }
+    case 'card-collect': return { kind, who: 'p2', name: 'Aniversario', delta: -50, counterpartId: 'p1' }
     case 'legacy': return { kind, who: 'p1', what: 'evento antigo' }
   }
 }
@@ -67,7 +75,7 @@ describe('LogEntry — forma do evento (040, FR-001..006)', () => {
       const sample = sampleFor(kind)
       expect(sample.kind).toBe(kind)
     }
-    expect(ALL_LOG_KINDS.length).toBe(28)
+    expect(ALL_LOG_KINDS.length).toBe(36)
   })
 
   it('round-trip JSON é idêntico — nenhum campo perde tipo/valor (invariante 4)', () => {
@@ -179,7 +187,7 @@ describe('LogEntry — famílias antes silenciosas (040, FR-007..013, SC-008)', 
     expect(g.log.at(-1)).toMatchObject({ kind: 'auction-unsold', who: 'bank', pos: 1 })
   })
 
-  it('lot-won / lot-unsold: `origin` sobrevive mesmo com `landAuction` esvaziado no fecho', () => {
+  it('lot-won / lot-unsold: os dois fatos são emitidos no fecho que esvazia o pregão', () => {
     let g = createSeedState(['p1', 'p2'])
     g.landAuction = {
       lots: [
@@ -187,13 +195,13 @@ describe('LogEntry — famílias antes silenciosas (040, FR-007..013, SC-008)', 
         { pos: 5, currentBid: 0, highBidder: null, deadline: 0 },
       ],
       bidders: ['p1', 'p2'],
-      origin: 'scarcity',
-      bankruptId: null,
+      bankruptId: 'p3',
+    origin: 'bankruptcy',
     }
     g = closeLandAuction(g)
-    expect(g.landAuction).toBeNull() // esvaziado — e o evento já tinha capturado `origin`
-    expect(g.log.some((e) => e.kind === 'lot-won' && e.who === 'bank' && e.pos === 3 && e.amount === 40 && e.winnerId === 'p2' && e.origin === 'scarcity')).toBe(true)
-    expect(g.log.some((e) => e.kind === 'lot-unsold' && e.who === 'bank' && e.pos === 5 && e.origin === 'scarcity')).toBe(true)
+    expect(g.landAuction).toBeNull() // esvaziado — os eventos já foram montados
+    expect(g.log.some((e) => e.kind === 'lot-won' && e.who === 'bank' && e.pos === 3 && e.amount === 40 && e.winnerId === 'p2')).toBe(true)
+    expect(g.log.some((e) => e.kind === 'lot-unsold' && e.who === 'bank' && e.pos === 5)).toBe(true)
   })
 
   it('free-parking: coleta do pote', () => {

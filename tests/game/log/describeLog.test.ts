@@ -21,17 +21,25 @@ function sampleFor(kind: LogKind): LogEntry {
     case 'unmortgage': return { kind, who: 'p1', pos: 1, cost: 33 }
     case 'auction-won': return { kind, who: 'bank', pos: 1, amount: 60, winnerId: 'p1' }
     case 'auction-unsold': return { kind, who: 'bank', pos: 1 }
-    case 'lot-won': return { kind, who: 'bank', pos: 1, amount: 60, winnerId: 'p1', origin: 'scarcity' }
+    case 'lot-won': return { kind, who: 'bank', pos: 1, amount: 60, winnerId: 'p1', origin: 'bankruptcy' }
     case 'lot-unsold': return { kind, who: 'bank', pos: 1, origin: 'scarcity' }
     case 'free-parking': return { kind, who: 'p1', amount: 500 }
     case 'jail-fine': return { kind, who: 'p1', amount: 50 }
-    case 'debt-paid': return { kind, who: 'p1', amount: 50 }
+    case 'debt-paid': return { kind, who: 'p1', amount: 50, creditorId: 'p2' }
     case 'bankruptcy': return { kind, who: 'p1' }
-    case 'trade': return { kind, who: 'p1', toId: 'p2' }
+    case 'concede': return { kind, who: 'p1' }
+    case 'trade': return { kind, who: 'p1', toId: 'p2', fromDelta: -100, toDelta: 100 }
     case 'loan-interest': return { kind, who: 'p1', amount: 10, creditorId: 'p2' }
     case 'loan-interest-short': return { kind, who: 'p1', amount: 5, creditorId: 'p2', shortfall: 5 }
     case 'loan-due': return { kind, who: 'p1', amount: 110, creditorId: 'p2', principal: 100, interest: 10 }
     case 'loan-due-short': return { kind, who: 'p1', amount: 40, creditorId: 'p2', shortfall: 70 }
+    case 'sell-to-bank': return { kind, who: 'p1', pos: 1, amount: 0 }
+    case 'debt-open': return { kind, who: 'p1', amount: 7, creditorId: 'p2', cause: 'obligation' }
+    case 'tax-man': return { kind, who: 'p1', pos: 1, amount: 200, due: 200 }
+    case 'hostile-takeover': return { kind, who: 'p1', pos: 1, amount: 66, victimId: 'p2' }
+    case 'audit': return { kind, who: 'p1', targetId: 'p2', amount: 120 }
+    case 'evict': return { kind, who: 'p1', pos: 1, victimId: 'p2' }
+    case 'card-collect': return { kind, who: 'p2', name: 'Aniversario', delta: -50, counterpartId: 'p1' }
     case 'legacy': return { kind, who: 'p1', what: 'evento antigo' }
   }
 }

@@ -70,9 +70,17 @@ export function logKey(e: LogEntry): string {
     case 'lot-unsold': return [e.kind, e.who, e.pos, e.origin].join('|')
     case 'free-parking': return [e.kind, e.who, e.amount].join('|')
     case 'jail-fine': return [e.kind, e.who, e.amount].join('|')
-    case 'debt-paid': return [e.kind, e.who, e.amount].join('|')
+    case 'sell-to-bank': return [e.kind, e.who, e.pos, e.amount].join('|')
+    case 'debt-open': return [e.kind, e.who, e.amount, e.creditorId, e.cause].join('|')
+    case 'debt-paid': return [e.kind, e.who, e.amount, e.creditorId].join('|')
     case 'bankruptcy': return [e.kind, e.who].join('|')
-    case 'trade': return [e.kind, e.who, e.toId].join('|')
+    case 'concede': return [e.kind, e.who].join('|')
+    case 'trade': return [e.kind, e.who, e.toId, e.fromDelta, e.toDelta].join('|')
+    case 'tax-man': return [e.kind, e.who, e.pos, e.amount, e.due].join('|')
+    case 'hostile-takeover': return [e.kind, e.who, e.pos, e.amount, e.victimId].join('|')
+    case 'audit': return [e.kind, e.who, e.targetId, e.amount].join('|')
+    case 'evict': return [e.kind, e.who, e.pos, e.victimId].join('|')
+    case 'card-collect': return [e.kind, e.who, e.name, e.delta, e.counterpartId].join('|')
     case 'loan-interest': return [e.kind, e.who, e.amount, e.creditorId].join('|')
     case 'loan-interest-short': return [e.kind, e.who, e.amount, e.creditorId, e.shortfall].join('|')
     case 'loan-due': return [e.kind, e.who, e.amount, e.creditorId, e.principal, e.interest].join('|')
@@ -119,6 +127,16 @@ export function classifyLogEntry(e: LogEntry): SoundCue | null {
     case 'loan-due-short': return 'loan-interest'
     case 'bus-ticket-gain': return 'busticket-gain'
     case 'bankruptcy': return 'bankruptcy'
+    // §9.6/D-057: saída voluntária é o MESMO desfecho sonoro da falência — o assento esvazia.
+    case 'concede': return 'bankruptcy'
+    // D-063: a abertura de dívida é o momento em que a cobrança vira problema, e o cue
+    // 'debt' já existia — só era disparado pela borda de `resolution`, que NÃO cobre dívida
+    // de jogador fora da vez (D-061), porque ali o slot muda sem o turno mudar.
+    case 'debt-open': return 'debt'
+    // Fiscal (§13.8): som de imposto, que é o que ele é — cobrança do banco.
+    case 'tax-man': return 'tax-paid'
+    case 'audit': return 'tax-paid'
+    case 'hostile-takeover': return 'hostile-takeover'
     case 'card-draw': return 'card-draw'
     // Leilão comum: família muda (antes 100% silenciosa — closeAuction nunca soava,
     // T023/040) — 'auction-close' já existe como cue e nunca tinha dono; sem conflito
@@ -134,6 +152,10 @@ export function classifyLogEntry(e: LogEntry): SoundCue | null {
     //   lot-won/lot-unsold → fecho do PREGÃO inteiro já soa 'auction-close' uma vez
     //     (Canal 1); soar por LOTE dobraria no lote que fecha o pregão.
     // 'roll': cue vem de `cueForRoll(lastRoll)`, que sabe dupla/Speed/Ônibus; o log não.
+    //   card-collect (D-063) → é o MESMO fato de carta que `card-immediate`, visto do outro lado
+    //     da cobrança; soar aqui tocaria N vezes numa carta que cobra de TODOS (FR-007).
+    //   evict (D-063) → não move dinheiro, e o Canal 1 já soa a demolição pelo delta de construção.
+    //   sell-to-bank (§6.4/D-062) → o Canal 1 já soa pelo delta de `mortgaged`, que CAI aqui.
     // Os demais: sem cue apropriado nesta fatia — decisão explícita, não esquecimento (SC-009).
     case 'build':
     case 'build-hangar':
@@ -149,6 +171,9 @@ export function classifyLogEntry(e: LogEntry): SoundCue | null {
     case 'card-immediate':
     case 'debt-paid':
     case 'trade':
+    case 'card-collect':
+    case 'evict':
+    case 'sell-to-bank':
     case 'legacy':
       return null
     default: return assertNever(e)

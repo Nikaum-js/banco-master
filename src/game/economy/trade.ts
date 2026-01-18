@@ -10,8 +10,7 @@ import { meetsCounterpart } from './appraisal'
 import { cityLevel } from './construction'
 import { transferKeepFee } from './mortgage'
 import { hasImmunity } from './imunidade'
-import { activePlayer } from '../turn/turnMachine'
-import { liquidationValue } from '../falencia/falencia'
+import { debtorOf, liquidationValue } from '../falencia/falencia'
 import { logEvent } from '../log'
 
 // `Trade` vive em ./types (024, p/ o GameState referenciar sem ciclo).
@@ -100,10 +99,10 @@ export function validateTrade(state: GameState, trade: Trade): boolean {
   if (!validImmunityGrants(state, trade.toImmunities, toId, toProps)) return false
   if (!validImmunityTransfers(state, trade.fromImmunityTransfers, fromId)) return false // §8.4 transferência
   if (!validImmunityTransfers(state, trade.toImmunityTransfers, toId)) return false
-  // Contrapartida mínima (§8.5, D-055): entregar ativos e não receber metade do valor de volta
-  // é doação, e doação decide a partida fora do tabuleiro. Dinheiro pago não conta contra quem
-  // paga — ver `appraisal.ts`. Independente da proteção de credor logo abaixo: aquela cuida do
-  // devedor em cobrança, esta cuida da mesa inteira, a qualquer momento.
+  // Trava de esvaziamento (§8.5, D-058): troca é livre em qualquer proporção; só doação pura
+  // e a troca que reduz o patrimônio a menos de um terço são recusadas — ver `appraisal.ts`.
+  // Independente da proteção de credor logo abaixo: aquela cuida do devedor em cobrança, esta
+  // cuida da mesa inteira, a qualquer momento.
   if (!meetsCounterpart(state, trade)) return false
   const fin = finalCash(state, trade)
   if (!fin || fin.from < 0 || fin.to < 0) return false // taxas deixariam alguém negativo
@@ -111,7 +110,7 @@ export function validateTrade(state: GameState, trade: Trade): boolean {
   // ativo) só vale se ele CONTINUAR capaz de cobrir a dívida após a troca — bloqueia doar
   // ativos antes de declarar falência; trocas que levantam caixa seguem válidas.
   if (state.resolution?.kind === 'debt') {
-    const debtorId = activePlayer(state).id
+    const debtorId = debtorOf(state)! // D-061 — o devedor pode não ser o jogador da vez
     if ((fromId === debtorId || toId === debtorId) && liquidationValue(applyTrade(state, trade), debtorId) < state.resolution.amount)
       return false
   }
@@ -187,7 +186,18 @@ export function acceptTrade(state: GameState, proposalId: number): GameState {
   if (!validateTrade(state, trade)) return state // obsoleta → no-op (pode recusar)
   const s = executeTrade(state, trade)
   s.tradeHistory = [...s.tradeHistory, trade].slice(-12) // 027 — registro (bounded)
-  logEvent(s, { kind: 'trade', who: trade.fromId, toId: trade.toId }) // 027/040
+  // Δcaixa REAL dos dois lados (D-063), medido, não recalculado da proposta: a taxa de
+  // transferência de hipotecada (§6.3) sai do caixa de quem RECEBE o título, e um leitor do log
+  // não tem como derivar isso de `fromCash`/`toCash`. Δcaixa sem valor no log é indistinguível
+  // de um bug — e uma troca move o caixa de duas pessoas de uma vez.
+  const cashOf = (g: GameState, id: string): number => g.players.find((p) => p.id === id)?.cash ?? 0
+  logEvent(s, {
+    kind: 'trade',
+    who: trade.fromId,
+    toId: trade.toId,
+    fromDelta: cashOf(s, trade.fromId) - cashOf(state, trade.fromId),
+    toDelta: cashOf(s, trade.toId) - cashOf(state, trade.toId),
+  }) // 027/040/D-063
   s.tradeProposals = s.tradeProposals.filter((candidate) => candidate.id !== proposalId)
   return s
 }

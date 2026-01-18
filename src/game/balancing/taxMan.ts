@@ -8,6 +8,7 @@ import { roll, type RNG } from '../turn/dice'
 import { ownerOf, isMortgaged } from '../economy/titles'
 import { rentDue } from '../economy/rent'
 import { isBoycotted } from '../economy/tempEffects'
+import { logEvent } from '../log'
 
 export function rollTaxMan(state: GameState, rng: RNG): void {
   if (state.phase !== 'playing') return
@@ -27,5 +28,14 @@ export function rollTaxMan(state: GameState, rng: RNG): void {
   const amount = rentDue(state, sq.pos, owner, r)
 
   const ownerP = state.players.find((p) => p.id === owner) // cobra mesmo se for o jogador da vez (§13.8)
-  if (ownerP) ownerP.cash -= Math.min(ownerP.cash, amount) // banco (removido); paga o que houver (sem negativo)
+  if (!ownerP) return
+  const charged = Math.min(ownerP.cash, amount) // banco (removido); paga o que houver (sem negativo)
+  ownerP.cash -= charged
+  // O FATO, que faltava (D-063). Esta cobrança acontece na PASSAGEM DE TURNO e atinge um dono
+  // que quase nunca é o jogador da vez — é a única regra do jogo assim. Sem esta linha, o
+  // jogador vê o caixa cair sozinho e não tem nada no histórico para ligar causa e efeito;
+  // foi exatamente o que produziu três relatos de bug financeiro distintos. `due` vai junto de
+  // `amount` porque a diferença entre os dois é a informação: cobrança truncada por falta de
+  // caixa é um fato diferente de cobrança paga por inteiro (§9.1 — o Fiscal não abre dívida).
+  logEvent(state, { kind: 'tax-man', who: owner, pos: sq.pos, amount: charged, due: amount })
 }

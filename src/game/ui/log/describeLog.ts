@@ -3,7 +3,7 @@
 // tipados, não string — contrato §2) a partir dos campos do evento + a identidade da sala.
 // Pura: `room` é parâmetro, nunca hook (4.5 do research) — é o que torna SC-001 (zero id na
 // frase) verificável por inspeção da estrutura, sem montar React.
-import type { LogEntry } from '@/game/economy/types'
+import type { DebtCause, LogEntry } from '@/game/economy/types'
 import { identityOf, type PlayerIdentity } from '@/net/identity'
 import type { Room } from '@/net/room'
 
@@ -91,6 +91,26 @@ function buildingNoun(level: number): string {
   return 'arranha-céu'
 }
 
+// De onde a dívida veio (D-063). Frase, não jargão: o jogador precisa reconhecer a cobrança
+// que acabou de acontecer, não o nome interno do caso.
+function debtCausePhrase(cause: DebtCause): string {
+  switch (cause) {
+    case 'rent': return 'não cobriu o aluguel'
+    case 'tax': return 'não cobriu o imposto'
+    case 'bunker-tax': return 'recusou o Bunker Fiscal sem cobrir o imposto'
+    case 'loan-interest': return 'não cobriu os juros do empréstimo'
+    case 'loan-due': return 'não cobriu o vencimento do empréstimo'
+    case 'obligation': return 'não cobriu a obrigação'
+  }
+}
+
+// Caixa movido na troca (D-063). Só aparece quando houve movimento: uma troca puramente de
+// propriedades não ganha um "(+$0 / -$0)" que só polui.
+function tradeCashPhrase(fromDelta: number, toDelta: number): LogSentence {
+  if (fromDelta === 0 && toDelta === 0) return []
+  return [text(' ('), money(fromDelta), text(' / '), money(toDelta), text(')')]
+}
+
 export function describeLogEntry(entry: LogEntry, room: Room | null): LogSentence {
   switch (entry.kind) {
     case 'roll':
@@ -123,6 +143,10 @@ export function describeLogEntry(entry: LogEntry, room: Room | null): LogSentenc
       return [who(room, entry.who), text(' hipotecou '), place(entry.pos), text(' e recebeu '), money(entry.amount)]
     case 'unmortgage':
       return [who(room, entry.who), text(' desipotecou '), place(entry.pos), text(' pagando '), money(entry.cost)]
+    // §6.4/D-062 — a frase diz "sem receber nada" de propósito: o jogador precisa ver que o
+    // zero foi a regra, não uma cobrança que falhou.
+    case 'sell-to-bank':
+      return [who(room, entry.who), text(' devolveu '), place(entry.pos), text(' hipotecada ao banco, sem receber nada')]
     case 'auction-won':
       return [text('Leilão: '), who(room, entry.winnerId), text(' arrematou '), place(entry.pos), text(' por '), money(entry.amount)]
     case 'auction-unsold':
@@ -135,12 +159,20 @@ export function describeLogEntry(entry: LogEntry, room: Room | null): LogSentenc
       return [who(room, entry.who), text(' coletou '), money(entry.amount), text(' do centro do tabuleiro')]
     case 'jail-fine':
       return [who(room, entry.who), text(' pagou '), money(entry.amount), text(' de fiança')]
+    case 'debt-open':
+      return entry.creditorId
+        ? [who(room, entry.who), text(` ${debtCausePhrase(entry.cause)} e ficou devendo `), money(entry.amount), text(' a '), who(room, entry.creditorId)]
+        : [who(room, entry.who), text(` ${debtCausePhrase(entry.cause)} e ficou devendo `), money(entry.amount), text(' ao banco')]
     case 'debt-paid':
-      return [who(room, entry.who), text(' pagou dívida '), money(entry.amount)]
+      return entry.creditorId
+        ? [who(room, entry.who), text(' pagou dívida '), money(entry.amount), text(' a '), who(room, entry.creditorId)]
+        : [who(room, entry.who), text(' pagou dívida '), money(entry.amount), text(' ao banco')]
     case 'bankruptcy':
       return [who(room, entry.who), text(' faliu')]
+    case 'concede':
+      return [who(room, entry.who), text(' desistiu e deixou a partida')]
     case 'trade':
-      return [who(room, entry.who), text(' ↔ '), who(room, entry.toId), text(': troca aceita')]
+      return [who(room, entry.who), text(' ↔ '), who(room, entry.toId), text(': troca aceita'), ...tradeCashPhrase(entry.fromDelta, entry.toDelta)]
     case 'loan-interest':
       return [who(room, entry.who), text(' pagou '), money(entry.amount), text(' de juros a '), who(room, entry.creditorId)]
     case 'loan-interest-short':
@@ -149,6 +181,22 @@ export function describeLogEntry(entry: LogEntry, room: Room | null): LogSentenc
       return [who(room, entry.who), text(' quitou o empréstimo no vencimento: '), money(entry.principal), text(' + '), money(entry.interest), text(' de juros a '), who(room, entry.creditorId)]
     case 'loan-due-short':
       return [who(room, entry.who), text(' não cobriu o vencimento do empréstimo de '), who(room, entry.creditorId), text(' e ficou devendo '), money(entry.shortfall)]
+    // Fiscal (§13.8) — a frase diz explicitamente que é o Fiscal e QUAL propriedade, porque o
+    // débito chega na vez de outra pessoa: sem os dois, o jogador não tem como ligar causa e efeito.
+    case 'tax-man':
+      return entry.amount < entry.due
+        ? [text('Fiscal parou em '), place(entry.pos), text(': '), who(room, entry.who), text(' pagou '), money(entry.amount), text(' ao banco — todo o caixa que tinha')]
+        : [text('Fiscal parou em '), place(entry.pos), text(': '), who(room, entry.who), text(' pagou '), money(entry.amount), text(' ao banco')]
+    case 'hostile-takeover':
+      return [who(room, entry.who), text(' tomou '), place(entry.pos), text(' de '), who(room, entry.victimId), text(' por '), money(entry.amount)]
+    case 'audit':
+      return [who(room, entry.who), text(' auditou '), who(room, entry.targetId), text(': '), money(entry.amount), text(' ao centro do tabuleiro')]
+    case 'evict':
+      return [who(room, entry.who), text(' despejou uma casa de '), who(room, entry.victimId), text(' em '), place(entry.pos)]
+    case 'card-collect':
+      return entry.delta < 0
+        ? [who(room, entry.who), text(` pagou `), money(-entry.delta), text(entry.counterpartId === 'bank' ? ' (' : ' a '), ...(entry.counterpartId === 'bank' ? [text(`${entry.name})`)] : [who(room, entry.counterpartId), text(` (${entry.name})`)])]
+        : [who(room, entry.who), text(` recebeu `), money(entry.delta), text(` (${entry.name})`)]
     case 'legacy':
       return [text(entry.what)] // FR-022: texto solto, sem resolução de identidade nem ícone
     default:
