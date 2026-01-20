@@ -14,10 +14,12 @@
 //   2. o baralho vivo não existe fora do anfitrião, então a conta quebraria em 7 dos 8 clientes
 //      de uma mesa cheia (o anfitrião é a exceção conhecida: ele roda a autoridade).
 //
-// A composição impressa é a única fonte que TODO cliente tem, e é igual do primeiro ao último
-// turno. É a chance de PARTIDA, não a chance condicional — e é isso que se quer ensinar.
+// O catálogo e os pesos canônicos de raridade são as únicas fontes que TODO cliente tem, e são
+// iguais do primeiro ao último turno. É a chance estática do sorteio, não a chance condicional
+// do baralho vivo — e é isso que se quer ensinar.
 import { CARD_DEFS } from '@/game/cards/catalog'
 import type { DeckId, Rarity } from '@/game/cards/types'
+import { RARITY_WEIGHT } from '@/game/cards/decks'
 import { cardDesc, cardLabel } from './cardMeta'
 
 /** Um efeito na vitrine — a unidade que a lista ordena. */
@@ -58,14 +60,23 @@ export function deckOdds(deck: DeckId): DeckOdds {
 
   const total = defs.reduce((sum, d) => sum + d.copies, 0)
 
+  // A CHANCE É PONDERADA, e não `copies / total`. O baralho é embaralhado por peso
+  // (`weightedShuffle`, Efraimidis–Spirakis), no qual a probabilidade de uma carta sair primeiro
+  // é `peso / soma dos pesos`. Dividir cópias pelo total mostrava a COMPOSIÇÃO do baralho e a
+  // chamava de probabilidade — dois números diferentes, e a vitrine exibia o errado. Era por isso
+  // que lendária e comum apareciam empatadas em 5,6%: em composição elas empatam mesmo; em chance
+  // de saque, nunca.
+  const peso = (d: (typeof defs)[number]) => RARITY_WEIGHT[d.rarity] * d.copies
+  const somaPesos = defs.reduce((sum, d) => sum + peso(d), 0)
+
   const rows: DeckOddsRow[] = defs.map((d) => ({
     effect: d.effect,
     title: cardLabel(d.effect),
     desc: cardDesc(d.effect),
     rarity: d.rarity,
     copies: d.copies,
-    // `total` 0 só aconteceria com baralho inteiro deferido; evita NaN na vitrine.
-    probability: total === 0 ? 0 : d.copies / total,
+    // `somaPesos` 0 só aconteceria com baralho inteiro deferido; evita NaN na vitrine.
+    probability: somaPesos === 0 ? 0 : peso(d) / somaPesos,
   }))
 
   rows.sort((a, b) => (

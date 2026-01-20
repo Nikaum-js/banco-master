@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { shuffle } from '@/game/cards/decks'
+import { cardWeight, shuffle } from '@/game/cards/decks'
 import { cardResolve } from '@/game/cards/draw'
 import { createSeedState } from '@/game/setup'
 import type { TurnPorts } from '@/game/turn/resolution'
@@ -43,6 +43,12 @@ describe('Decks e saque (US1)', () => {
   it('shuffle é determinístico com o mesmo rng', () => {
     const rng = (): number => 0.42
     expect(shuffle(['a', 'b', 'c', 'd'], rng)).toEqual(shuffle(['a', 'b', 'c', 'd'], rng))
+  })
+
+  it('peso de saque segue estritamente a raridade, sem exceção por modo', () => {
+    expect(cardWeight('aquisicao-hostil-1')).toBe(1) // lendária de mão
+    expect(cardWeight('boom-economico-1')).toBe(4) // rara imediata
+    expect(cardWeight('erro-banco-1')).toBe(14) // comum imediata
   })
 
   it('T018: GameState estendido (decks/mão/contadores) é serializável', () => {

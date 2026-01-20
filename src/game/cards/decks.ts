@@ -13,17 +13,26 @@ export function shuffle(ids: string[], rng: RNG): string[] {
   return a
 }
 
-// Peso de saque por carta: EVENTOS (imediatos) saem com frequência; cartas de MÃO
-// são raras (e lendárias raríssimas). Quanto maior o peso, mais cedo tende a sair.
-function cardWeight(id: string): number {
-  const c = cardById(id)
-  if (c.mode === 'imediato') return 14 // evento — comum no saque
-  return c.rarity === 'lendaria' ? 1 : 3 // carta de mão: rara; lendária raríssima
+// PESO DE SAQUE POR CARTA — regido pela RARIDADE, e é isso que faz o rótulo valer.
+//
+// Antes o peso era regido pelo `mode`: `imediato` valia 14, e carta de mão valia 1 (lendária) ou
+// 3. Consequência: Boom Econômico, que é RARA mas é evento imediato, pesava 14 — igual a uma
+// comum. O sistema de raridade da §10.2 promete hierarquia de chance e o peso entregava outra
+// coisa, então "Rara" e "Comum" apareciam com a mesma probabilidade.
+//
+// Agora a raridade é o eixo único: lendária sai menos que rara, que sai menos que comum, para
+// TODA carta, sem exceção por modo. O efeito prático de "evento é comum, carta de mão é rara"
+// continua valendo, porque no catálogo todas as comuns são imediatas e todas as lendárias são de
+// mão — a intenção antiga sobrevive como consequência, em vez de ser a causa.
+export const RARITY_WEIGHT = { lendaria: 1, rara: 4, comum: 14 } as const
+
+export function cardWeight(id: string): number {
+  return RARITY_WEIGHT[cardById(id).rarity]
 }
 
 // Embaralhamento PONDERADO (Efraimidis–Spirakis): a chave de cada carta é
-// rng()^(1/peso). Eventos (peso alto) tendem ao topo; cartas de mão tendem ao fundo
-// → o jogador pega muito mais EVENTO do que carta, sem mudar a composição do deck.
+// rng()^(1/peso). Comuns tendem ao topo; raras e lendárias tendem ao fundo, sem mudar
+// a composição do deck.
 export function weightedShuffle(ids: string[], rng: RNG): string[] {
   return ids
     .map((id) => ({ id, key: Math.pow(rng() || 1e-9, 1 / cardWeight(id)) }))

@@ -74,9 +74,14 @@ describe('deckOdds — ordenação (FR-004)', () => {
   })
 
   it('a mais rara do Acaso vem primeiro e a mais provável por último', () => {
+    // Os números são PONDERADOS (peso lendária 1 · rara 4 · comum 14), não `copies / total`:
+    // o baralho é embaralhado por peso, então composição e chance de saque são coisas distintas.
+    // Soma de pesos do Acaso = 4×1 + 4×4 + 13×14 = 202.
     const { rows } = deckOdds('acaso')
-    expect(rows[0].probability).toBeCloseTo(1 / 21, 10)
-    expect(rows[rows.length - 1].probability).toBeCloseTo(2 / 21, 10)
+    expect(rows[0].rarity).toBe('lendaria')
+    expect(rows[0].probability).toBeCloseTo(1 / 202, 10)
+    expect(rows[rows.length - 1].rarity).toBe('comum')
+    expect(rows[rows.length - 1].probability).toBeCloseTo(28 / 202, 10)
   })
 })
 
@@ -87,8 +92,8 @@ describe('deckOdds — cópias agrupadas (FR-003)', () => {
     const rows = deckOdds('acaso').rows.filter((r) => r.effect === 'atalho')
     expect(rows).toHaveLength(1)
     expect(rows[0].copies).toBe(2)
-    expect(rows[0].probability).toBeCloseTo(2 / 21, 10)
     expect(rows[0].rarity).toBe('comum')
+    expect(rows[0].probability).toBeCloseTo(28 / 202, 10) // 2 cópias × peso 14 / 202
   })
 
   it('nenhum efeito aparece duas vezes na vitrine', () => {
@@ -169,8 +174,8 @@ describe('raridade É probabilidade — a invariante da D-074', () => {
         if (ORDEM[a.rarity] > ORDEM[b.rarity]) {
           expect(
             a.probability,
-            `${a.title} (${a.rarity}) não pode ser mais provável que ${b.title} (${b.rarity})`,
-          ).toBeLessThanOrEqual(b.probability)
+            `${a.title} (${a.rarity}) tem de ser MENOS provável que ${b.title} (${b.rarity})`,
+          ).toBeLessThan(b.probability)
         }
       }
     }
