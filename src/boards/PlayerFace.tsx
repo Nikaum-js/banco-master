@@ -17,6 +17,7 @@ export function PlayerFace({
   color,
   size = 24,
   active = false,
+  showActiveRing = true,
   asleep = false,
   avatar,
   skin,
@@ -25,6 +26,7 @@ export function PlayerFace({
   color: string
   size?: number | string
   active?: boolean
+  showActiveRing?: boolean
   asleep?: boolean
   avatar?: AvatarId
   skin?: SkinId
@@ -63,7 +65,7 @@ export function PlayerFace({
         <PlayerSkinArtwork id={resolvedSkin} color={head} layer="front" />
       </g>
 
-      {active && (
+      {active && showActiveRing && (
         <circle
           className="face-active-ring"
           cx="80"

@@ -1,8 +1,9 @@
 // Telas de sala (spec 037, T018; redesenho no lançamento) — nome + cor + avatar + assentos
 // + iniciar. Vocabulário visual: a "sala de mapas" do `entryShell` (o mesmo mundo do
 // tabuleiro — graticule, latão, marcas de registro).
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, Chip } from '@/game/ui/primitives'
+import { Dice } from '@/game/ui/dice'
 import { PlayerFace } from '@/boards/PlayerFace'
 import { DEFAULT_AVATAR, type AvatarId } from '@/boards/playerAvatarCatalog'
 import { DEFAULT_SKIN, type SkinId } from '@/boards/playerSkinCatalog'
@@ -438,6 +439,10 @@ function OpeningDie({ value }: { value: number }) {
   )
 }
 
+// Segura o foco no jogador que acabou de rolar enquanto o dado 3D tomba na face
+// sorteada (tumble de ~1,05s do tabuleiro) — só depois o foco passa ao próximo.
+const OPENING_REVEAL_HOLD_MS = 1500
+
 export function OpeningRolls({
   room,
   myUid,
@@ -450,6 +455,35 @@ export function OpeningRolls({
   const rolled = room.seats.filter((seat) => seat.openingRoll !== null)
   const current = room.seats.find((seat) => seat.openingRoll === null)
   const inFlight = current?.openingRollResolvesAt != null
+
+  // Mesmos dados 3D do tabuleiro (`game/ui/dice`), mesma coreografia: o clique abre a
+  // janela pública (D-051) e os dados chacoalham; quando a autoridade revela o
+  // resultado (`openingRoll` sai de null), o tumble dispara e pousa na face certa —
+  // em TODAS as telas, não só na de quem clicou.
+  const [reveal, setReveal] = useState<{ uid: string; rollKey: number } | null>(null)
+  const prevRolled = useRef<Record<string, boolean> | null>(null)
+  const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    const seen: Record<string, boolean> = {}
+    for (const seat of room.seats) seen[seat.uid] = seat.openingRoll !== null
+    const before = prevRolled.current
+    prevRolled.current = seen
+    if (before === null) return // primeiro snapshot (entrada/reconexão): sem replay
+    const justRolled = room.seats.find((seat) => seat.openingRoll !== null && before[seat.uid] === false)
+    if (!justRolled) return
+    setReveal((r) => ({ uid: justRolled.uid, rollKey: (r?.rollKey ?? 0) + 1 }))
+    if (revealTimer.current) clearTimeout(revealTimer.current)
+    revealTimer.current = setTimeout(() => setReveal(null), OPENING_REVEAL_HOLD_MS)
+  }, [room.seats])
+  useEffect(() => () => {
+    if (revealTimer.current) clearTimeout(revealTimer.current)
+  }, [])
+
+  const revealSeat = reveal ? room.seats.find((seat) => seat.uid === reveal.uid) ?? null : null
+  const focus = revealSeat ?? current ?? null
+  const focusRoll = revealSeat?.openingRoll ?? null
+  const focusSum = focusRoll ? focusRoll[0] + focusRoll[1] : 0
+
   const leader = rolled.reduce<Room['seats'][number] | null>((best, seat) => {
     if (!best) return seat
     const bestTotal = (best.openingRoll?.[0] ?? 0) + (best.openingRoll?.[1] ?? 0)
@@ -465,31 +499,35 @@ export function OpeningRolls({
       className="opening-rolls-frame"
       bodyClassName="opening-rolls-layout"
     >
-      {current && (
+      {focus && (
         <section
-          className={`opening-rolls-focus ${inFlight ? 'opening-rolls-focus--moving' : ''}`}
+          className={`opening-rolls-focus ${inFlight && !revealSeat ? 'opening-rolls-focus--moving' : ''}`}
           role="status"
           aria-live="polite"
         >
           <div className="opening-rolls-focus__player">
-            <PlayerFace color={current.color} avatar={current.avatar} skin={current.skin} size={48} />
+            <PlayerFace color={focus.color} avatar={focus.avatar} skin={focus.skin} size={48} />
             <div>
-              <span className="label text-brass">Vez de jogar</span>
+              <span className="label text-brass">{revealSeat ? 'Na mesa' : 'Vez de jogar'}</span>
               <p className="display text-xl text-starlight">
-                {inFlight ? `${current.name} está rolando` : `${current.name} joga agora`}
+                {revealSeat
+                  ? `${focus.name} tirou ${focusSum}`
+                  : inFlight ? `${focus.name} está rolando` : `${focus.name} joga agora`}
               </p>
             </div>
           </div>
 
           <span
-            className={`opening-roll opening-rolls-dice ${inFlight ? 'opening-rolls-dice--moving' : ''}`}
+            className={`opening-rolls-dice ${inFlight && !revealSeat ? 'opening-rolls-dice--moving' : ''}`}
             role="img"
-            aria-label={inFlight
-              ? `Dados de ${current.name} em movimento`
-              : `Dados de ${current.name} aguardando arremesso`}
+            aria-label={revealSeat
+              ? `Dados de ${focus.name}: ${focusRoll?.[0]} e ${focusRoll?.[1]}, soma ${focusSum}`
+              : inFlight
+                ? `Dados de ${focus.name} em movimento`
+                : `Dados de ${focus.name} aguardando arremesso`}
           >
-            <OpeningDie value={3} />
-            <OpeningDie value={5} />
+            <Dice value={focusRoll?.[0] ?? 3} rollKey={reveal?.rollKey ?? 0} />
+            <Dice value={focusRoll?.[1] ?? 5} rollKey={reveal?.rollKey ?? 0} />
           </span>
         </section>
       )}

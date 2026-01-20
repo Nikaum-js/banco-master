@@ -64,3 +64,13 @@ describe('feedback do bônus de GO', () => {
     expect(audio.play).toHaveBeenCalledWith('go-bonus')
   })
 })
+
+describe('apresentação do jogador da vez', () => {
+  it('não desenha o anel pontilhado no avatar central', () => {
+    useGameStore.setState({ game: createSeedState(['p1', 'p2']) })
+
+    const { container } = render(<DiceArena />)
+
+    expect(container.querySelector('.face-active-ring')).toBeNull()
+  })
+})

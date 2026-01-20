@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Room } from '@/net/room'
 import { OpeningRolls } from '@/net/ui/LobbyScreen'
@@ -63,35 +63,48 @@ describe('disputa de Maior dado', () => {
   })
 
   it('anuncia o mesmo arremesso para toda a mesa e só depois libera o próximo', () => {
-    const inFlight = rollingRoom([
-      {
-        ...seats[0],
-        openingRollStartedAt: 1_000,
-        openingRollResolvesAt: 2_400,
-      },
-      seats[1],
-    ])
-    const { rerender } = render(
-      <OpeningRolls room={inFlight} myUid="guest" onRoll={vi.fn()} />,
-    )
+    vi.useFakeTimers()
+    try {
+      const inFlight = rollingRoom([
+        {
+          ...seats[0],
+          openingRollStartedAt: 1_000,
+          openingRollResolvesAt: 2_400,
+        },
+        seats[1],
+      ])
+      const { rerender } = render(
+        <OpeningRolls room={inFlight} myUid="guest" onRoll={vi.fn()} />,
+      )
 
-    expect(screen.getByRole('status').textContent).toContain('Nikaum está rolando')
-    expect(screen.getByRole('img', { name: 'Dados de Nikaum em movimento' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Rolar meus dados' })).toBeNull()
+      expect(screen.getByRole('status').textContent).toContain('Nikaum está rolando')
+      expect(screen.getByRole('img', { name: 'Dados de Nikaum em movimento' })).toBeTruthy()
+      expect(screen.queryByRole('button', { name: 'Rolar meus dados' })).toBeNull()
 
-    const next = rollingRoom([
-      {
-        ...seats[0],
-        openingRoll: [5, 3],
-        openingRollStartedAt: null,
-        openingRollResolvesAt: null,
-      },
-      seats[1],
-    ])
-    rerender(<OpeningRolls room={next} myUid="guest" onRoll={vi.fn()} />)
+      const next = rollingRoom([
+        {
+          ...seats[0],
+          openingRoll: [5, 3],
+          openingRollStartedAt: null,
+          openingRollResolvesAt: null,
+        },
+        seats[1],
+      ])
+      rerender(<OpeningRolls room={next} myUid="guest" onRoll={vi.fn()} />)
 
-    expect(screen.getByText('Nikaum lidera com 8')).toBeTruthy()
-    expect(screen.getByText('Ana joga agora')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Rolar meus dados' })).toBeTruthy()
+      // Reveal: o foco FICA em quem rolou enquanto o dado 3D tomba na face
+      // sorteada — o resultado é anunciado antes de o foco passar adiante.
+      expect(screen.getByText('Nikaum lidera com 8')).toBeTruthy()
+      expect(screen.getByRole('status').textContent).toContain('Nikaum tirou 8')
+      expect(screen.getByRole('button', { name: 'Rolar meus dados' })).toBeTruthy()
+
+      // Vencido o tempo do tumble, o foco libera o próximo da fila.
+      act(() => {
+        vi.advanceTimersByTime(1_600)
+      })
+      expect(screen.getByText('Ana joga agora')).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
