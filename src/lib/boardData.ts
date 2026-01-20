@@ -1,8 +1,9 @@
 // =====================================================================
 // Banco Master — Tabuleiro tema "Países do Mundo"
 // 48 casas no padrão SRS §2.1 / decisão D-017 (4 cantos + 28 propriedades
-// + 4 aeroportos + 3 utilidades + 3 Surpresa + 3 Tesouro + 2 impostos +
-// 1 espaço Bus Ticket). Inspirado no Monopoly Mega Edition.
+// + 4 aeroportos + 3 utilidades + 3 Acaso + 3 Tesouro + 2 impostos +
+// 1 espaço Bus Ticket). 9 países: 2 premium (4 cidades), 3 regular (3),
+// 2 médios (2), 1 novo premium (Rússia, 4). Inspirado no Monopoly Mega Edition.
 // Posições começam em 0 (GO, canto inferior direito) e vão no sentido
 // horário, encerrando na casa 47 (Paris). Cantos em 0/12/24/36.
 //
@@ -16,17 +17,18 @@
 
 export type GroupKey =
   | 'brown' | 'skyblue' | 'pink' | 'orange'
-  | 'red' | 'yellow' | 'green' | 'navy'
+  | 'red' | 'yellow' | 'green' | 'navy' | 'purple'
 
-// Cada grupo é um PAÍS. Propriedades dentro do grupo são cidades daquele
-// país. Grupos premium (laranja/vermelho/amarelo/verde) têm 4 cidades; os
-// demais têm 3. A "cor" do grupo segue no schema só pra preservar o slot;
-// visualmente o grupo é identificado pela bandeira-avatar (vide FlagAvatar).
+// 9 países no total. Premium (4 cidades): Brasil e EUA. Novos médios (2):
+// Alemanha e China. Novo premium: Rússia (4). Regulares (3): demais.
+// A "cor" do grupo preserva o slot no schema; visualmente identificado
+// pela bandeira-avatar (vide FlagAvatar).
 export const GROUPS: Record<GroupKey, { name: string; bg: string; token: string }> = {
   brown:   { name: 'Itália',       bg: 'bg-group-brown',   token: 'group-brown' },
   skyblue: { name: 'Egito',        bg: 'bg-group-skyblue', token: 'group-skyblue' },
   pink:    { name: 'Japão',        bg: 'bg-group-pink',    token: 'group-pink' },
-  orange:  { name: 'Índia',        bg: 'bg-group-orange',  token: 'group-orange' },
+  purple:  { name: 'Espanha',      bg: 'bg-group-purple',  token: 'group-purple' },
+  orange:  { name: 'Alemanha',     bg: 'bg-group-orange',  token: 'group-orange' },
   red:     { name: 'China',        bg: 'bg-group-red',     token: 'group-red' },
   yellow:  { name: 'Brasil',       bg: 'bg-group-yellow',  token: 'group-yellow' },
   green:   { name: 'EUA',          bg: 'bg-group-green',   token: 'group-green' },
@@ -41,7 +43,7 @@ export type SquareKind =
   | 'property'
   | 'airport'
   | 'utility'
-  | 'surpresa'
+  | 'acaso'
   | 'tesouro'
   | 'tax'
   | 'bus-ticket'
@@ -80,7 +82,7 @@ export interface TaxSquare extends SquareBase {
   amount: number
 }
 
-export type SurpresaSquare   = SquareBase & { kind: 'surpresa' }
+export type AcasoSquare      = SquareBase & { kind: 'acaso' }
 export type TesouroSquare    = SquareBase & { kind: 'tesouro' }
 export type BusTicketSquare  = SquareBase & { kind: 'bus-ticket' }
 export type CornerGoSquare   = SquareBase & { kind: 'corner-go' }
@@ -90,7 +92,7 @@ export type CornerGoToJail   = SquareBase & { kind: 'corner-gotojail' }
 
 export type Square =
   | PropertySquare | AirportSquare | UtilitySquare | TaxSquare
-  | SurpresaSquare | TesouroSquare | BusTicketSquare
+  | AcasoSquare | TesouroSquare | BusTicketSquare
   | CornerGoSquare | CornerJailSq | CornerParkingSq | CornerGoToJail
 
 // ---------------------------------------------------------------------
