@@ -448,10 +448,6 @@ a:hover {
      dois em #070605 a cidade virava uma mancha só. */
   --fx-mill-far: #241b13;
   --fx-mill-near: #0e0a07;
-  --fx-plate: #1a140f;
-  --fx-plate-corner: #241a12;
-  --fx-plate-edge: #3a2c20;
-  --fx-felt: #120d09;
 }
 
 /* Vinte e uma das vinte e três voltas de ambiente (sopros, brasas, chama,
@@ -481,8 +477,8 @@ a:hover {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgb(12 9 6 / 0.42) 0%, rgb(12 9 6 / 0.16) 30%, rgb(12 9 6 / 0.6) 82%, var(--color-ink-900) 100%),
-    radial-gradient(ellipse 62% 74% at 20% 46%, rgb(12 9 6 / 0.8), rgb(12 9 6 / 0.45) 52%, transparent 76%);
+    linear-gradient(180deg, rgb(12 9 6 / 0.42) 0%, rgb(12 9 6 / 0.16) 28%, rgb(12 9 6 / 0.62) 84%, var(--color-ink-900) 100%),
+    radial-gradient(ellipse 70% 88% at 20% 52%, rgb(12 9 6 / 0.88), rgb(12 9 6 / 0.58) 54%, transparent 80%);
 }
 
 .fx-hero__say {
@@ -539,235 +535,52 @@ a:hover {
   margin-top: 1.6rem;
 }
 
+/* A régua fica logo acima da mesa, onde a luz da forja escapa: medida, ela ficava
+   a 4,62:1 — passa AA por 0,12, e essa margem é frágil demais para uma imagem que
+   pode ser trocada. Um tom acima devolve folga sem mexer na hierarquia. */
 .fx-hero__say .mk-facts {
   max-width: 34rem;
   margin-top: 1.5rem;
 }
 
+.fx-hero__say .mk-facts li {
+  color: color-mix(in srgb, var(--color-starlight) 72%, var(--color-starlight-muted));
+}
+
 /* O tabuleiro: proporção fixa recortada por baixo — a mesa continua depois da
    dobra. Em tela estreita ele é AMPLIADO e sangra pelos dois lados, porque a
    180px de altura o anel de casas vira um fio. */
+/* A MESA DE VERDADE fecha a dobra: a captura do jogo rodando, ancorada pela
+   borda de baixo e sangrando para fora do enquadramento — a mesa continua
+   depois da dobra, como uma mesa continua depois da beirada da foto. A moldura
+   é o filete de instrumento do sistema, fina, sem canto arredondado: não é um
+   card, é a borda da própria mesa. */
 .fx-hero__table {
   position: relative;
   z-index: 1;
-  margin-top: clamp(0.25rem, 1.5vh, 1rem);
-  overflow: clip;
+  margin: 0;
+  align-self: end;
+  animation: fx-table-settle 900ms var(--ease-emphasis) 220ms both;
 }
 
-/* Largura amarrada à ALTURA da janela (`vh`) e não só à largura: numa tela larga
-   e baixa um tabuleiro de 100% de largura teria 600px de altura e a faixa só
-   mostraria a fileira da frente. Amarrado ao vh ele encolhe junto com a dobra. */
-.fx-hero__table-svg {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  translate: -50% 0;
-  display: block;
-  width: min(100%, 132vh);
-  height: auto;
-}
-
-/* ---------- O momento autoral: a chegada, em seis tempos ----------
-   1. o tabuleiro se monta da borda da frente para trás
-   2. a cidade sobe e as fornalhas acendem
-   3. os dados caem e param
-   4. o peão sai do GO e anda os cinco passos
-   5. a Sorte Grande reage
-   6. o letreiro fecha o momento
-   Sob movimento reduzido TODAS elas são canceladas (bloco no fim do arquivo):
-   a composição fica inteira, parada e legível. */
-@keyframes fx-board-in {
+@keyframes fx-table-settle {
   from {
     opacity: 0;
-    transform: translateY(30px) scale(0.965);
-    clip-path: inset(100% 0 0 0);
-  }
-  55% {
-    opacity: 1;
-  }
-  to {
-    opacity: 1;
-    transform: none;
-    clip-path: inset(0 0 0 0);
+    transform: translateY(3.5rem) scale(0.985);
   }
 }
 
-.fx-board {
-  animation: fx-board-in 900ms var(--ease-emphasis) 120ms both;
-}
-
-@keyframes fx-mills-in {
-  from {
-    opacity: 0;
-    transform: translateY(22px);
-  }
-}
-
-.fx-mills--far {
-  animation: fx-mills-in 700ms var(--ease-emphasis) 60ms both;
-}
-
-.fx-mills--near {
-  animation: fx-mills-in 760ms var(--ease-emphasis) 200ms both;
-}
-
-/* A luz da forja: acende no tempo 2 e depois só respira. */
-@keyframes fx-ignite {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes fx-forge-breathe {
-  0%,
-  100% {
-    opacity: 0.72;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.fx-forge {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  animation:
-    fx-ignite 900ms var(--ease-standard) 620ms both,
-    fx-forge-breathe 9s ease-in-out 1.6s infinite;
-}
-
-/* Os dados: caem, quicam uma vez e param. Só transform. */
-@keyframes fx-die-a {
-  from {
-    opacity: 0;
-    transform: translate(58px, -120px) rotate(-140deg) scale(0.7);
-  }
-  40% {
-    opacity: 1;
-  }
-  62% {
-    transform: translate(0, -14px) rotate(6deg) scale(1.04);
-  }
-  80% {
-    transform: translate(0, 2px) rotate(-3deg) scale(0.99);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes fx-die-b {
-  from {
-    opacity: 0;
-    transform: translate(-46px, -132px) rotate(170deg) scale(0.68);
-  }
-  40% {
-    opacity: 1;
-  }
-  66% {
-    transform: translate(0, -18px) rotate(-9deg) scale(1.05);
-  }
-  84% {
-    transform: translate(0, 3px) rotate(4deg) scale(0.99);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.fx-die {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-}
-
-.fx-die--a {
-  animation: fx-die-a 820ms var(--ease-emphasis) 1000ms both;
-}
-
-.fx-die--b {
-  animation: fx-die-b 880ms var(--ease-emphasis) 1080ms both;
-}
-
-/* O peão: dois e três dão cinco. Cinco saltos, um por casa, com a pausa curta
-   entre eles — o passo é o que faz parecer peça de mesa e não sprite deslizando.
-   Os deslocamentos são os CENTROS REAIS das casas 0→5 do tabuleiro projetado. */
-@keyframes fx-walk {
-  0% {
-    transform: translate(0, 0);
-  }
-  8% {
-    transform: translate(-57px, -13px);
-  }
-  16%,
-  20% {
-    transform: translate(-113.9px, 0);
-  }
-  28% {
-    transform: translate(-158px, -13px);
-  }
-  36%,
-  40% {
-    transform: translate(-203.3px, 0);
-  }
-  48% {
-    transform: translate(-248px, -13px);
-  }
-  56%,
-  60% {
-    transform: translate(-292.7px, 0);
-  }
-  68% {
-    transform: translate(-337px, -13px);
-  }
-  76%,
-  80% {
-    transform: translate(-382px, 0);
-  }
-  88% {
-    transform: translate(-427px, -13px);
-  }
-  96%,
-  100% {
-    transform: translate(-471.4px, 0);
-  }
-}
-
-/* O `transform` do CSS SUBSTITUI o atributo `transform` do SVG — não compõe com
-   ele. Por isso a posição de partida do peão mora no atributo, numa camada, e a
-   caminhada anima a camada de dentro: misturar as duas teria jogado a peça para
-   fora do tabuleiro. Mesma separação nos dados e na engrenagem. */
-.fx-walker__body {
-  animation: fx-walk 1500ms var(--ease-standard) 1750ms both;
-}
-
-@keyframes fx-walker-land {
-  from {
-    opacity: 0;
-    transform: scale(0.5);
-  }
-}
-
-.fx-walker__pop {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  animation: fx-walker-land 320ms var(--ease-emphasis) 1620ms both;
-}
-
-/* Tempo 5: a Sorte Grande reage ao dado que passou por perto. */
-@keyframes fx-luck-flash {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  40% {
-    opacity: 1;
-  }
-}
-
-.fx-luck {
-  animation: fx-luck-flash 900ms var(--ease-standard) 3100ms 2 both;
+.fx-hero__table img {
+  width: min(100%, 72rem);
+  max-width: none;
+  margin-inline: auto;
+  border: 1px solid color-mix(in srgb, var(--color-brass) 30%, var(--color-ink-500));
+  border-bottom: 0;
+  border-radius: var(--radius-sharp) var(--radius-sharp) 0 0;
+  /* a luz da forja escapando por baixo da mesa */
+  box-shadow:
+    0 -12px 38px -22px rgb(217 130 46 / 0.26),
+    0 -2px 0 0 color-mix(in srgb, var(--color-brass) 18%, transparent);
 }
 
 /* ---------- Ambiente: o mundo continua depois da chegada ----------
@@ -880,19 +693,6 @@ a:hover {
   animation: fx-train 46s linear -38s infinite;
 }
 
-/* A engrenagem do miolo: presença de instrumento, não animação. */
-@keyframes fx-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.fx-gear {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  animation: fx-spin 180s linear infinite;
-}
-
 /* Chegada do letreiro — a mesma gramática, escalonada. */
 @keyframes fx-arrive {
   from {
@@ -918,59 +718,27 @@ a:hover {
    de bairro em cima e rebites nas quinas — o mesmo componente que o jogo
    desenha em `.board-square` sob o tema Fuligem.
    ===================================================================== */
-.fx-path__list {
+/* =====================================================================
+   CAPÍTULO 1 — TRÊS PASSOS
+   Sem caixa, sem faixa e sem ornamento: três colunas de tipografia separadas
+   por um filete, com o número em slab tabular. A informação aqui é a SEQUÊNCIA,
+   e sequência se lê pela numeração e pelo espaço, não por um card.
+   ===================================================================== */
+.fx-steps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(1rem, 2.5vw, 1.75rem);
+  gap: clamp(1.75rem, 4vw, 3.5rem);
   margin-top: 2.75rem;
   padding-left: 0;
   list-style: none;
 }
 
-.fx-plate {
-  position: relative;
-  padding: 1.5rem 1.35rem 1.5rem;
-  border: 1px solid color-mix(in srgb, var(--color-ink-400) 62%, transparent);
-  border-radius: var(--radius-sharp);
-  background:
-    linear-gradient(170deg, color-mix(in srgb, var(--color-ink-700) 82%, transparent), var(--color-ink-950));
-  box-shadow: var(--shadow-card);
-  transition:
-    transform var(--motion-base) var(--ease-emphasis),
-    border-color var(--motion-base) var(--ease-standard),
-    box-shadow var(--motion-base) var(--ease-standard);
+.fx-steps > li {
+  padding-top: 1.1rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-ink-400) 62%, transparent);
 }
 
-/* Rebites de ferro nas quatro quinas — a placa de fábrica do tema. */
-.fx-plate::after {
-  content: "";
-  position: absolute;
-  inset: 5px;
-  pointer-events: none;
-  --rivet: color-mix(in srgb, var(--color-brass) 46%, transparent);
-  background:
-    radial-gradient(circle 1.6px at 5px 5px, var(--rivet) 98%, transparent),
-    radial-gradient(circle 1.6px at calc(100% - 5px) 5px, var(--rivet) 98%, transparent),
-    radial-gradient(circle 1.6px at 5px calc(100% - 5px), var(--rivet) 98%, transparent),
-    radial-gradient(circle 1.6px at calc(100% - 5px) calc(100% - 5px), var(--rivet) 98%, transparent);
-  background-repeat: no-repeat;
-}
-
-.fx-plate:hover {
-  transform: translateY(-4px);
-  border-color: color-mix(in srgb, var(--color-brass) 40%, var(--color-ink-500));
-  box-shadow: var(--shadow-lift);
-}
-
-.fx-plate__stripe {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 6px;
-  background: var(--plate-hue, var(--color-brass));
-  opacity: 0.9;
-}
-
-.fx-plate__num {
+.fx-steps__num {
   display: block;
   font-family: var(--font-slab);
   font-variant-numeric: tabular-nums;
@@ -980,64 +748,21 @@ a:hover {
   color: var(--color-brass);
 }
 
-.fx-plate h3 {
-  margin-top: 0.5rem;
-  font-size: 1.45rem;
+.fx-steps h3 {
+  margin-top: 0.55rem;
+  font-size: clamp(1.4rem, 2.2vw, 1.75rem);
   letter-spacing: 0.05em;
 }
 
-.fx-plate p {
-  margin-top: 0.55rem;
-  font-size: 0.9rem;
+.fx-steps p {
+  margin-top: 0.6rem;
+  font-size: 0.92rem;
   color: var(--color-starlight-muted);
 }
 
-.fx-plate p b {
+.fx-steps p b {
   color: var(--color-starlight);
   font-weight: 600;
-}
-
-/* O trilho e o peão que percorre as três casas. Sem enhancement o peão está no
-   destino — a informação (três paradas ligadas por um trilho) é do desenho, não
-   da animação. */
-/* `clip` porque o trilho É o limite do percurso: o invólucro do peão tem a
-   largura do trilho e anda uma largura inteira, então a CAIXA dele termina fora
-   — o que empurrava a página 886px para a direita. Recortar no trilho é a
-   fronteira do componente, não conserto de estouro. */
-.fx-path__rail {
-  position: relative;
-  height: 26px;
-  margin-top: 1.5rem;
-  overflow: clip;
-}
-
-.fx-path__rail svg {
-  display: block;
-  width: 100%;
-  height: 24px;
-}
-
-/* O invólucro tem a LARGURA DO TRILHO — é ele que anda, e é por isso que o
-   `translateX` em porcentagem mede o trilho. A peça dentro tem tamanho fixo:
-   sem isso o SVG estica para os 1088px do invólucro e o rosto vai parar no meio
-   do nada. */
-.fx-path__pawn {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 26px;
-  transform: translateX(calc(100% - 26px));
-}
-
-.fx-path__pawn svg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: block;
-  width: 26px;
-  height: 26px;
-  filter: drop-shadow(0 2px 3px rgb(7 5 4 / 0.7));
 }
 
 /* =====================================================================
@@ -1347,6 +1072,16 @@ a:hover {
 }
 
 /* A brasa da fornalha subindo do rodapé — a última luz da página. */
+@keyframes fx-forge-breathe {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .fx-finale__glow {
   position: absolute;
   inset: auto 0 -30% 0;
@@ -1618,21 +1353,6 @@ a:hover {
    ===================================================================== */
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
-    @keyframes fx-pawn-run {
-      from {
-        transform: translateX(0);
-      }
-      to {
-        transform: translateX(calc(100% - 26px));
-      }
-    }
-
-    .fx-path__pawn {
-      animation: fx-pawn-run linear both;
-      animation-timeline: view();
-      animation-range: entry 30% cover 62%;
-    }
-
     /* Deslocamento curto entre as provas: a sobreposição ganha profundidade
        quando as duas camadas não sobem na mesma velocidade. */
     @keyframes fx-shot-drift {
@@ -1711,13 +1431,10 @@ a:hover {
 }
 
 @media (max-width: 760px) {
-  .fx-path__list {
+  .fx-steps {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
     max-width: 32rem;
-  }
-
-  .fx-path__rail {
-    display: none;
   }
 
   .fx-proof__stack {
@@ -1730,10 +1447,11 @@ a:hover {
     margin-right: 0;
   }
 
-  /* O tabuleiro AMPLIA em tela estreita: a 375px de largura o anel inteiro
-     viraria um fio de 2px. Sangrar pelos lados devolve escala de mesa. */
-  .fx-hero__table-svg {
-    width: 168%;
+  /* Em tela estreita a mesa SANGRA pelos dois lados: a 375px de largura o
+     tabuleiro inteiro viraria uma miniatura ilegível. */
+  .fx-hero__table img {
+    width: 150%;
+    margin-left: -25%;
   }
 
   .fx-deed__specs > div {
@@ -1784,41 +1502,22 @@ a:hover {
    Os tokens já zeram as durações (tokens.css); aqui as animações são
    CANCELADAS, e não apenas encurtadas, porque `animation-delay` sobrevive à
    duração zero: sem isto o letreiro passaria meio segundo invisível antes de
-   aparecer de estalo. Cada elemento fica no estado FINAL — cidade acesa,
-   tabuleiro montado, dados parados, peão na casa de destino, fumaça no meio da
-   coluna —, então o que se perde é a interpolação, nunca o quadro.
+   aparecer de estalo. Cada elemento fica no estado FINAL: cidade acesa, mesa
+   assentada, fumaça no meio da coluna. O que se perde é a interpolação, nunca
+   o quadro.
    ===================================================================== */
 @media (prefers-reduced-motion: reduce) {
-  .fx-board,
   .fx-mills--far,
   .fx-mills--near,
-  .fx-die,
-  .fx-walker__pop,
-  .fx-luck,
   .fx-flare,
   .fx-flare-glow,
   .fx-beacon,
   .fx-ember,
   .fx-train,
-  .fx-gear,
   .fx-finale__glow,
+  .fx-hero__table,
   .fx-hero__say [data-arrive] {
     animation: none;
-  }
-
-  .fx-forge {
-    animation: none;
-    opacity: 0.9;
-  }
-
-  /* O peão fica onde os dados o levaram: a última casa do percurso. */
-  .fx-walker__body {
-    animation: none;
-    transform: translate(-471.4px, 0);
-  }
-
-  .fx-luck {
-    opacity: 0.85;
   }
 
   .fx-flare {

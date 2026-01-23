@@ -1,20 +1,21 @@
 <!doctype html>
 <!--
   Landing pública (051 · redesenho 2026-07) — contrato de direção (Impeccable):
-  THESIS: a mesa da Cidade da Fuligem ACENDE na frente do visitante — a landing é a
-  primeira jogada, não uma página sobre o jogo. Recusa o arranjo institucional que
+  THESIS: a mesa da Cidade da Fuligem acende na frente do visitante, e o que ele vê
+  é O PRODUTO RODANDO, não um desenho dele. Recusa o arranjo institucional que
   estava aqui (texto à esquerda + screenshot emoldurado à direita) e o grid SaaS.
   OWN-WORLD: "Fundição da Meia-Noite" — carvão quente (ink-950 #0c0906) como chão da
   página inteira, luz de fornalha (#d9822e/#ffb36b) como único acento estrutural,
-  placa de ferro rebitada como container, Bebas display, Inter corpo, Roboto Slab
-  numérico. O azul do Atlas volta APENAS na escritura do outro tabuleiro.
+  Bebas display, Inter corpo, Roboto Slab numérico. Sem card, sem ornamento
+  decorativo, sem peça desenhada à mão: quem carrega o mundo é o cenário da cidade
+  (SVG) e a captura real da partida. O azul do Atlas volta APENAS na escritura do
+  outro tabuleiro.
   STORY: em 5s o visitante entende — tabuleiro imobiliário online entre amigos, sala
   privada por link, 2 a 8 pessoas; acredita vendo a mesa real; age em "Jogar agora".
-  FIRST VIEWPORT: cidade industrial no horizonte com fumaça e trem; letreiro, tagline,
-  proposta e o par de CTAs sobre ela; o tabuleiro em perspectiva subindo da borda de
-  baixo, com dados rolando e um peão saindo do GO.
-  FORM: coreografia de entrada em seis tempos (tabuleiro monta → cidade acende →
-  dados rolam → peão anda → trem cruza → letreiro fecha), depois só ambiente lento.
+  FIRST VIEWPORT: cidade industrial no horizonte com fumaça, brasa, chama e trem;
+  letreiro, tagline, proposta e o par de CTAs sobre ela; a MESA REAL da Fuligem
+  assentando na borda de baixo e sangrando para fora do enquadramento.
+  FORM: o cenário vive em volta o tempo todo; a mesa assenta uma vez, na chegada.
 -->
 <html lang="pt-BR" data-world="fuligem">
   <head>
@@ -57,7 +58,7 @@
     <meta property="og:image" content="%SITE_URL%/og.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Tabuleiro da Cidade da Fuligem em perspectiva, com a cidade industrial acesa ao fundo" />
+    <meta property="og:image:alt" content="Partida na Cidade da Fuligem, com a cidade industrial acesa ao fundo" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Magnata Imobiliário: jogo de tabuleiro online com amigos" />
     <meta
@@ -212,200 +213,23 @@
           </ul>
         </div>
 
-        <!-- Camada 3 — o tabuleiro. Desenhado a partir das 40 casas reais da Fuligem:
-             mesma ordem, mesmas cores de bairro, mesmos cantos. -->
-        <div class="fx-hero__table" aria-hidden="true">
-          <svg class="fx-hero__table-svg" viewBox="0 0 1200 500" preserveAspectRatio="xMidYMin slice" focusable="false">
-            <defs>
-              <radialGradient id="fx-forge">
-                <stop offset="0%" stop-color="var(--color-brass-glow)" stop-opacity="0.42" />
-                <stop offset="100%" stop-color="var(--color-brass-glow)" stop-opacity="0" />
-              </radialGradient>
-              <clipPath id="fx-felt-clip">
-                <path d="M400.7 117.8L799.3 117.8L972.2 373.4L227.8 373.4Z" />
-              </clipPath>
-            </defs>
-            <g class="fx-board">
-              <path d="M400.7 117.8L799.3 117.8L972.2 373.4L227.8 373.4Z" fill="var(--fx-felt)"/>
-              <!-- o miolo é a PRÓPRIA cidade vista de dentro do anel: o mesmo
-                   recorte que o tabuleiro do jogo desenha no centro da mesa -->
-              <g clip-path="url(#fx-felt-clip)">
-                <g fill="#1b1410" opacity="0.9">
-                  <path d="M300 330h58v-40h-11v-34h-7v34h-40Z" />
-                  <path d="M372 330h74v-56l-11-12-11 12-11-12-11 12-11-12-8 9Z" />
-                  <path d="M330 296h6v-46h-6Z" />
-                  <path d="M462 330h50v-64h-9v-40h-6v40h-35Z" />
-                  <path d="M526 330h86v-48l-13-14-12 14-13-14-12 14-13-14-11 12Z" />
-                  <path d="M628 330h44v-70h-8v-32h-6v32h-30Z" />
-                  <path d="M688 330h78v-52l-12-13-12 13-12-13-12 13-12-13-16 17Z" />
-                  <path d="M782 330h56v-44h-10v-36h-6v36h-40Z" />
-                  <path d="M854 330h62v-50l-12-13-12 13-13-13-12 13-13-14Z" />
-                </g>
-                <g fill="var(--color-brass)" opacity="0.22">
-                  <rect x="310" y="308" width="30" height="7" />
-                  <rect x="386" y="302" width="48" height="6" />
-                  <rect x="472" y="306" width="26" height="7" />
-                  <rect x="540" y="300" width="58" height="6" />
-                  <rect x="638" y="310" width="22" height="7" />
-                  <rect x="700" y="300" width="52" height="6" />
-                  <rect x="792" y="306" width="34" height="7" />
-                  <rect x="866" y="302" width="40" height="6" />
-                </g>
-                <path d="M228 332h744" stroke="#0a0705" stroke-width="3" />
-                <ellipse class="fx-forge" cx="600" cy="336" rx="330" ry="66" fill="url(#fx-forge)" />
-              </g>
-              <!-- engrenagem do miolo: presença de instrumento, ciclo longuíssimo -->
-              <g transform="translate(600 250)" opacity="0.16"><g class="fx-gear">
-                <circle r="52" fill="none" stroke="var(--color-brass)" stroke-width="3" />
-                <circle r="20" fill="none" stroke="var(--color-brass)" stroke-width="3" />
-                <path d="M0 -60v14M0 46v14M-60 0h14M46 0h14M-42.4 -42.4l9.9 9.9M32.5 32.5l9.9 9.9M42.4 -42.4l-9.9 9.9M-32.5 32.5l-9.9 9.9" stroke="var(--color-brass)" stroke-width="7" />
-              </g></g>
-              <path d="M972.2 373.4L1100.2 373.4L1188 470L1037.5 470Z" fill="var(--fx-plate-corner)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M889.5 373.4L972.2 373.4L1037.5 470L940.3 470Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M806.8 373.4L889.5 373.4L940.3 470L843 470Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M724.1 373.4L806.8 373.4L843 470L745.8 470Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M641.4 373.4L724.1 373.4L745.8 470L648.6 470Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M558.6 373.4L641.4 373.4L648.6 470L551.4 470Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M475.9 373.4L558.6 373.4L551.4 470L454.2 470Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M393.2 373.4L475.9 373.4L454.2 470L357 470Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M310.5 373.4L393.2 373.4L357 470L259.7 470Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M227.8 373.4L310.5 373.4L259.7 470L162.5 470Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M99.8 373.4L227.8 373.4L162.5 470L12 470Z" fill="var(--fx-plate-corner)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M143.8 325.1L260.6 325.1L227.8 373.4L99.8 373.4Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M180.6 284.5L288 284.5L260.6 325.1L143.8 325.1Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M212 250L311.3 250L288 284.5L180.6 284.5Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M239 220.3L331.4 220.3L311.3 250L212 250Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M262.5 194.5L348.9 194.5L331.4 220.3L239 220.3Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M283.1 171.8L364.2 171.8L348.9 194.5L262.5 194.5Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M301.3 151.7L377.8 151.7L364.2 171.8L283.1 171.8Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M317.6 133.8L389.9 133.8L377.8 151.7L301.3 151.7Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M332.2 117.8L400.7 117.8L389.9 133.8L317.6 133.8Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M352 96L415.5 96L400.7 117.8L332.2 117.8Z" fill="var(--fx-plate-corner)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M415.5 96L456.5 96L445 117.8L400.7 117.8Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M456.5 96L497.5 96L489.3 117.8L445 117.8Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M497.5 96L538.5 96L533.6 117.8L489.3 117.8Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M538.5 96L579.5 96L577.9 117.8L533.6 117.8Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M579.5 96L620.5 96L622.1 117.8L577.9 117.8Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M620.5 96L661.5 96L666.4 117.8L622.1 117.8Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M661.5 96L702.5 96L710.7 117.8L666.4 117.8Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M702.5 96L743.5 96L755 117.8L710.7 117.8Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M743.5 96L784.5 96L799.3 117.8L755 117.8Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M784.5 96L848 96L867.8 117.8L799.3 117.8Z" fill="var(--fx-plate-corner)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M799.3 117.8L867.8 117.8L882.4 133.8L810.1 133.8Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M810.1 133.8L882.4 133.8L898.7 151.7L822.2 151.7Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M822.2 151.7L898.7 151.7L916.9 171.8L835.8 171.8Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M835.8 171.8L916.9 171.8L937.5 194.5L851.1 194.5Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M851.1 194.5L937.5 194.5L961 220.3L868.6 220.3Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M868.6 220.3L961 220.3L988 250L888.7 250Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M888.7 250L988 250L1019.4 284.5L912 284.5Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M912 284.5L1019.4 284.5L1056.2 325.1L939.4 325.1Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-<path d="M939.4 325.1L1056.2 325.1L1100.2 373.4L972.2 373.4Z" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/>
-              <path d="M889.5 373.4L972.2 373.4L989.6 399.2L903 399.2Z" fill="var(--color-group-brown)" opacity="0.92"/>
-<path d="M724.1 373.4L806.8 373.4L816.5 399.2L729.9 399.2Z" fill="var(--color-group-brown)" opacity="0.92"/>
-<path d="M475.9 373.4L558.6 373.4L556.7 399.2L470.1 399.2Z" fill="var(--color-group-skyblue)" opacity="0.92"/>
-<path d="M310.5 373.4L393.2 373.4L383.5 399.2L297 399.2Z" fill="var(--color-group-skyblue)" opacity="0.92"/>
-<path d="M227.8 373.4L310.5 373.4L297 399.2L210.4 399.2Z" fill="var(--color-group-skyblue)" opacity="0.92"/>
-<path d="M225.5 325.1L260.6 325.1L227.8 373.4L189.4 373.4Z" fill="var(--color-group-pink)" opacity="0.92"/>
-<path d="M255.8 284.5L288 284.5L260.6 325.1L225.5 325.1Z" fill="var(--color-group-pink)" opacity="0.92"/>
-<path d="M281.5 250L311.3 250L288 284.5L255.8 284.5Z" fill="var(--color-group-pink)" opacity="0.92"/>
-<path d="M323 194.5L348.9 194.5L331.4 220.3L303.7 220.3Z" fill="var(--color-group-orange)" opacity="0.92"/>
-<path d="M368.2 133.8L389.9 133.8L377.8 151.7L354.9 151.7Z" fill="var(--color-group-orange)" opacity="0.92"/>
-<path d="M380.2 117.8L400.7 117.8L389.9 133.8L368.2 133.8Z" fill="var(--color-group-orange)" opacity="0.92"/>
-<path d="M405.4 110.9L448.6 110.9L445 117.8L400.7 117.8Z" fill="var(--color-group-red)" opacity="0.92"/>
-<path d="M448.6 110.9L491.9 110.9L489.3 117.8L445 117.8Z" fill="var(--color-group-red)" opacity="0.92"/>
-<path d="M535.1 110.9L578.4 110.9L577.9 117.8L533.6 117.8Z" fill="var(--color-group-red)" opacity="0.92"/>
-<path d="M621.6 110.9L664.9 110.9L666.4 117.8L622.1 117.8Z" fill="var(--color-group-yellow)" opacity="0.92"/>
-<path d="M664.9 110.9L708.1 110.9L710.7 117.8L666.4 117.8Z" fill="var(--color-group-yellow)" opacity="0.92"/>
-<path d="M751.4 110.9L794.6 110.9L799.3 117.8L755 117.8Z" fill="var(--color-group-yellow)" opacity="0.92"/>
-<path d="M799.3 117.8L819.8 117.8L831.8 133.8L810.1 133.8Z" fill="var(--color-group-green)" opacity="0.92"/>
-<path d="M822.2 151.7L845.1 151.7L860.1 171.8L835.8 171.8Z" fill="var(--color-group-green)" opacity="0.92"/>
-<path d="M851.1 194.5L877 194.5L896.3 220.3L868.6 220.3Z" fill="var(--color-group-green)" opacity="0.92"/>
-<path d="M912 284.5L944.2 284.5L974.5 325.1L939.4 325.1Z" fill="var(--color-group-platinum)" opacity="0.92"/>
-<path d="M939.4 325.1L974.5 325.1L1010.6 373.4L972.2 373.4Z" fill="var(--color-group-platinum)" opacity="0.92"/>
-              <path d="M868.1 414.7l2.7 3.1l-2.7 3.1l-2.7 -3.1Z" fill="var(--color-signal)" opacity="0.85"/>
-<path d="M686.7 419.6l2.7 -4.0l2.7 4.0Z" fill="none" stroke="var(--color-brass)" stroke-width="0.81" opacity="0.85"/>
-<path d="M596.9 417.8h6.3M598.0 416.0v3.6M600 416.0v3.6M602.0 416.0v3.6" stroke="var(--color-brass)" stroke-width="0.72" opacity="0.8"/>
-<rect x="418.8" y="415.8" width="5.0" height="4.0" rx="1.5" fill="var(--color-brass-glow)" opacity="0.7"/>
-<rect x="270.0" y="232.2" width="7.8" height="4.8" rx="1.2" fill="none" stroke="var(--color-brass-glow)" stroke-width="0.96" opacity="0.8"/>
-<path d="M310.4 182.8h9.2M312.0 180.2v5.3M315 180.2v5.3M318.0 180.2v5.3" stroke="var(--color-brass)" stroke-width="1.06" opacity="0.8"/>
-<path d="M327.7 164.3l4.2 -6.3l4.2 6.3Z" fill="none" stroke="var(--color-brass)" stroke-width="1.26" opacity="0.85"/>
-<path d="M514.8 100.8l4.9 5.7l-4.9 5.7l-4.9 -5.7Z" fill="var(--color-signal)" opacity="0.85"/>
-<path d="M594.3 106.5h11.3M596.4 103.3v6.5M600 103.3v6.5M603.6 103.3v6.5" stroke="var(--color-brass)" stroke-width="1.30" opacity="0.8"/>
-<path d="M722.8 109.7l4.9 -7.3l4.9 7.3Z" fill="none" stroke="var(--color-brass)" stroke-width="1.46" opacity="0.85"/>
-<rect x="849.1" y="139.2" width="8.0" height="6.6" rx="1.5" fill="var(--color-brass-glow)" opacity="0.7"/>
-<path d="M881.0 185.4l4.0 -5.9l4.0 5.9Z" fill="none" stroke="var(--color-brass)" stroke-width="1.19" opacity="0.85"/>
-<path d="M921.9 234.6h8.4M923.4 232.2v4.8M926.1 232.2v4.8M928.8 232.2v4.8" stroke="var(--color-brass)" stroke-width="0.96" opacity="0.8"/>
-<path d="M951.5 262.7l3.4 3.9l-3.4 3.9l-3.4 -3.9Z" fill="var(--color-signal)" opacity="0.85"/>
-              <!-- cantos: GO, Prisão, Sorte Grande, Vá pra Prisão -->
-              <g stroke-linecap="round" stroke-linejoin="round" fill="none">
-                <g transform="translate(1071 418)" stroke="var(--color-brass-glow)" stroke-width="3.4">
-                  <path d="M14 -10L-4 -10M14 10L-4 10" />
-                  <path d="M4 -19L-9 -10L4 -1M4 1L-9 10L4 19" />
-                </g>
-                <g transform="translate(129 418)" stroke="var(--color-brass)" stroke-width="3">
-                  <path d="M-15 12v-14a15 15 0 0 1 30 0v14Z" />
-                  <path d="M-5 -1v13M5 -1v13" />
-                </g>
-                <g class="fx-luck" transform="translate(375 106)" fill="var(--color-brass)" stroke="none">
-                  <rect x="-11" y="1" width="9" height="5" rx="1" />
-                  <rect x="-1" y="1" width="9" height="5" rx="1" />
-                  <rect x="-6" y="-5" width="9" height="5" rx="1" />
-                </g>
-                <g transform="translate(825 106)" stroke="var(--color-signal)" stroke-width="2.4">
-                  <circle cx="-7" cy="2" r="5" />
-                  <circle cx="7" cy="-2" r="5" />
-                  <path d="M-3.5 0.6l7 -2.4" />
-                </g>
-              </g>
-              <!-- os dados: caem, quicam e param em 2 e 3 -->
-              <g>
-                <g transform="translate(556 254)"><g class="fx-die fx-die--a">
-                  <rect x="-19" y="-19" width="38" height="38" rx="6" fill="#efe7d6" stroke="#0c0906" stroke-opacity="0.5" />
-                  <circle cx="-8" cy="-8" r="3.4" fill="#0c0906" />
-                  <circle cx="8" cy="8" r="3.4" fill="#0c0906" />
-                </g></g>
-                <g transform="translate(618 268)"><g class="fx-die fx-die--b">
-                  <rect x="-18" y="-18" width="36" height="36" rx="6" fill="#efe7d6" stroke="#0c0906" stroke-opacity="0.5" />
-                  <circle cx="-8" cy="-8" r="3.2" fill="#0c0906" />
-                  <circle cx="0" cy="0" r="3.2" fill="#0c0906" />
-                  <circle cx="8" cy="8" r="3.2" fill="#0c0906" />
-                </g></g>
-              </g>
-              <!-- peões: o rosto do jogador, nunca um círculo numerado -->
-              <g transform="translate(219 304)">
-                <circle r="10" fill="var(--color-group-skyblue)" stroke="#0c0906" stroke-width="1.5" />
-                <circle cx="-3.4" cy="-2" r="1.5" fill="#0c0906" />
-                <circle cx="3.4" cy="-2" r="1.5" fill="#0c0906" />
-                <path d="M-4 2.6a5 5 0 0 0 8 0" stroke="#0c0906" stroke-width="1.6" fill="none" stroke-linecap="round" />
-              </g>
-              <g transform="translate(557 107)">
-                <circle r="8" fill="var(--color-group-green)" stroke="#0c0906" stroke-width="1.4" />
-                <circle cx="-2.8" cy="-1.6" r="1.2" fill="#0c0906" />
-                <circle cx="2.8" cy="-1.6" r="1.2" fill="#0c0906" />
-                <path d="M-3.2 2a4 4 0 0 0 6.4 0" stroke="#0c0906" stroke-width="1.4" fill="none" stroke-linecap="round" />
-              </g>
-              <g transform="translate(868 162)">
-                <circle r="9" fill="var(--color-group-purple)" stroke="#0c0906" stroke-width="1.4" />
-                <circle cx="-3" cy="-1.8" r="1.3" fill="#0c0906" />
-                <circle cx="3" cy="-1.8" r="1.3" fill="#0c0906" />
-                <path d="M-3.6 2.3a4.5 4.5 0 0 0 7.2 0" stroke="#0c0906" stroke-width="1.5" fill="none" stroke-linecap="round" />
-              </g>
-              <!-- o peão da vez: sai do GO e anda os cinco passos que os dados deram -->
-              <g class="fx-walker" transform="translate(1071 418)">
-                <g class="fx-walker__body"><g class="fx-walker__pop">
-                  <circle r="13" fill="var(--color-group-yellow)" stroke="#0c0906" stroke-width="1.8" />
-                  <circle cx="-4.4" cy="-2.6" r="1.9" fill="#0c0906" />
-                  <circle cx="4.4" cy="-2.6" r="1.9" fill="#0c0906" />
-                  <path d="M-5.2 3.4a6.5 6.5 0 0 0 10.4 0" stroke="#0c0906" stroke-width="2" fill="none" stroke-linecap="round" />
-                </g></g>
-              </g>
-            </g>
-          </svg>
-        </div>
+        <!-- Camada 3: a MESA DE VERDADE. Nada desenhado por mim entra aqui — é a
+             captura do jogo rodando, ancorada pela borda de baixo para a mesa
+             continuar depois da dobra. É a imagem LCP: nunca lazy. -->
+        <figure class="fx-hero__table">
+          <img
+            src="/src/marketing/assets/fuligem-mesa.webp"
+            alt="Partida na Cidade da Fuligem: bairro fechado com oficinas, fábrica e Torre de Ferro, uma propriedade hipotecada e a Sorte Grande acumulada em R$ 1.850"
+            width="1440"
+            height="900"
+            fetchpriority="high"
+            decoding="async"
+          />
+        </figure>
       </section>
 
       <!-- ==================== Capítulo 1 — três casas ==================== -->
-      <section class="mk-section fx-path" aria-labelledby="como-funciona">
+      <section class="mk-section" aria-labelledby="como-funciona">
         <div class="mk-container">
           <hr class="mk-rule" aria-hidden="true" />
           <h2 id="como-funciona">Três casas até alguém dever aluguel</h2>
@@ -413,28 +237,25 @@
             Não existe fila, matchmaking nem estranho na sua mesa: a partida acontece entre
             quem recebe o link.
           </p>
-          <ol class="fx-path__list">
-            <li class="fx-plate">
-              <span class="fx-plate__stripe" style="--plate-hue: var(--color-group-brown)" aria-hidden="true"></span>
-              <span class="fx-plate__num" aria-hidden="true">01</span>
+          <ol class="fx-steps">
+            <li>
+              <span class="fx-steps__num" aria-hidden="true">01</span>
               <h3>Crie a sala</h3>
               <p>
                 Escolha nome, cor, avatar e o <b>tabuleiro</b>. Você é o host: define o
                 Ritual de Largada e dá a largada quando a turma chegar.
               </p>
             </li>
-            <li class="fx-plate">
-              <span class="fx-plate__stripe" style="--plate-hue: var(--color-group-orange)" aria-hidden="true"></span>
-              <span class="fx-plate__num" aria-hidden="true">02</span>
+            <li>
+              <span class="fx-steps__num" aria-hidden="true">02</span>
               <h3>Mande o link</h3>
               <p>
                 A sala é <b>privada</b>: só entra quem tem o endereço. Cole no grupo e veja
                 os assentos acenderem, de 2 a 8 jogadores.
               </p>
             </li>
-            <li class="fx-plate">
-              <span class="fx-plate__stripe" style="--plate-hue: var(--color-group-platinum)" aria-hidden="true"></span>
-              <span class="fx-plate__num" aria-hidden="true">03</span>
+            <li>
+              <span class="fx-steps__num" aria-hidden="true">03</span>
               <h3>Dispute o tabuleiro</h3>
               <p>
                 Compre, construa, cobre aluguel e <b>negocie sem trilhos</b> até sobrar um
@@ -442,19 +263,6 @@
               </p>
             </li>
           </ol>
-          <div class="fx-path__rail" aria-hidden="true">
-            <svg viewBox="0 0 900 24" preserveAspectRatio="none" focusable="false">
-              <path d="M12 12H888" stroke="var(--color-brass)" stroke-opacity="0.34" stroke-width="2" stroke-dasharray="10 9" />
-            </svg>
-            <span class="fx-path__pawn">
-              <svg viewBox="0 0 24 24" width="26" height="26" focusable="false">
-                <circle cx="12" cy="12" r="10" fill="var(--color-group-yellow)" stroke="#0c0906" stroke-width="1.6" />
-                <circle cx="8.6" cy="10" r="1.5" fill="#0c0906" />
-                <circle cx="15.4" cy="10" r="1.5" fill="#0c0906" />
-                <path d="M8 14.4a5 5 0 0 0 8 0" stroke="#0c0906" stroke-width="1.7" fill="none" stroke-linecap="round" />
-              </svg>
-            </span>
-          </div>
         </div>
       </section>
 
@@ -494,7 +302,7 @@
                 <h3>Construção</h3>
                 <p>
                   Dá para começar a construir com uma casa só do bairro; fechar o grupo
-                  destrava a escada inteira — oficina, fábrica, complexo e torre.
+                  destrava a escada inteira: oficina, fábrica, complexo e torre.
                 </p>
               </div>
             </li>
@@ -514,7 +322,7 @@
                 <h3>Empréstimos</h3>
                 <p>
                   Capital entre jogadores, com juros cobrados a cada volta. Quem empresta
-                  assume o risco — e herda o espólio se o devedor quebrar.
+                  assume o risco, e herda o espólio se o devedor quebrar.
                 </p>
               </div>
             </li>
@@ -558,7 +366,7 @@
           <hr class="mk-rule" aria-hidden="true" />
           <h2 id="temas">Dois tabuleiros, as mesmas regras</h2>
           <p class="mk-section__intro">
-            O host escolhe o mapa ao criar a sala — e ainda pode trocar no lobby, enquanto
+            O host escolhe o mapa ao criar a sala, e ainda pode trocar no lobby, enquanto
             ninguém entrou no Ritual de Largada.
           </p>
           <div class="fx-boards__grid">
@@ -582,7 +390,7 @@
               </ul>
               <dl class="fx-deed__specs">
                 <div><dt>Ferrovias</dt><dd>4 estações, com Estação de Carga no lugar do hangar</dd></div>
-                <div><dt>Minas</dt><dd>Ferro, carvão, estanho e cobre — no lugar das utilidades</dd></div>
+                <div><dt>Minas</dt><dd>Ferro, carvão, estanho e cobre, no lugar das utilidades</dd></div>
                 <div><dt>Desvio pela Ferrovia</dt><dd>Caiu numa estação sua? Embarque até outra que também seja</dd></div>
                 <div><dt>Sorte Grande</dt><dd>O pote do centro, que só sai para quem parar nele</dd></div>
               </dl>
@@ -624,17 +432,6 @@
           <div class="fx-proof__stack">
             <figure class="fx-shot fx-shot--main">
               <img
-                src="/src/marketing/assets/fuligem-mesa.webp"
-                alt="Partida na Cidade da Fuligem: a Vila Bonfim fechada com oficinas, fábrica e Torre de Ferro, uma propriedade hipotecada e a Sorte Grande acumulada em R$ 1.850"
-                width="1440"
-                height="900"
-                loading="lazy"
-                decoding="async"
-              />
-              <figcaption>Bairro fechado, escada de construção inteira e uma hipoteca à vista</figcaption>
-            </figure>
-            <figure class="fx-shot fx-shot--inset">
-              <img
                 src="/src/marketing/assets/fuligem-leilao.webp"
                 alt="Leilão ao vivo do Magnata Imobiliário: título Represa em disputa, maior lance de R$ 420 e a progressão de aluguel ao lado"
                 width="1440"
@@ -644,7 +441,7 @@
               />
               <figcaption>O pregão, com o cronômetro correndo</figcaption>
             </figure>
-            <figure class="fx-shot">
+            <figure class="fx-shot fx-shot--inset">
               <img
                 src="/src/marketing/assets/negociacao.webp"
                 alt="Compositor de negociação do Magnata Imobiliário com uma proposta sendo montada entre dois jogadores"
