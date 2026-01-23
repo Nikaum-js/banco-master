@@ -4,13 +4,13 @@
 // multiplicadores e knobs globais do tema. Tunável após playtest (SRS §3/§5/§13).
 export const THEME = {
   INITIAL_CASH: 2000, // SRS §3.1 (D-017: 1.500 → 2.000 com 48 casas)
-  BANK: { houses: 40, hotels: 16, skyscrapers: 4 }, // estoque global (D-017 + Skyscraper 011)
   PARKING_SEED: 500, // pote do Free Parking — semente/reabastecimento (007/D-006)
 
   GO_PASS: 200, // passar pelo GO = $200; CAIR exatamente no GO = $400 (2×) — substitui o GO Progressivo
 
   HOUSE_RENT_MULT: [5, 15, 45, 80] as const, // aluguel = base × mult (1..4 casas)
-  HOTEL_RENT_MULT: 100, // hotel e 2º hotel (§14.4: 2º hotel não muda o aluguel)
+  HOTEL_RENT_MULT: 100, // 1º hotel
+  HOTEL2_RENT_MULT: 175, // 2º hotel — cobra MAIS que o 1º (§14.4); degrau real, não escassez
   SKYSCRAPER_RENT_MULT: 250, // Skyscraper — aluguel fixo, o maior da propriedade (011/§13.7)
 
   AIRPORT_RENT: [25, 50, 100, 200] as const, // por nº de aeroportos do dono (§2.4)

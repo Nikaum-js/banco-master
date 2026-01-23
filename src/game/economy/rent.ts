@@ -13,7 +13,8 @@ function majority(size: number): number {
 
 // Multiplicadores de aluguel por construção — valores oficiais do tema (fonte única: theme.ts).
 const HOUSE_RENT_MULT = THEME.HOUSE_RENT_MULT // 1..4 casas
-const HOTEL_RENT_MULT = THEME.HOTEL_RENT_MULT // hotel e 2º hotel (§14.4: 2º hotel não muda o aluguel)
+const HOTEL_RENT_MULT = THEME.HOTEL_RENT_MULT // 1º hotel
+const HOTEL2_RENT_MULT = THEME.HOTEL2_RENT_MULT // 2º hotel — cobra mais que o 1º (§14.4)
 const SKYSCRAPER_RENT_MULT = THEME.SKYSCRAPER_RENT_MULT // aluguel fixo do Skyscraper (011, §13.7)
 
 // Aluguel de cidade. Com construção (004), a tabela de construção × (0.7 parcial | 1.0 completo)
@@ -30,7 +31,11 @@ export function rentCity(
   const triple = (v: number): number => (groupHasSkyscraper ? v * 3 : v) // ×3 nas demais do grupo
   const complete = ownedInGroup >= size
   if (build && (build.hotel || build.houses > 0)) {
-    const table = build.hotel ? base * HOTEL_RENT_MULT : base * HOUSE_RENT_MULT[build.houses - 1]
+    const table = build.hotel2
+      ? base * HOTEL2_RENT_MULT // 2º hotel cobra mais que o 1º (§14.4)
+      : build.hotel
+        ? base * HOTEL_RENT_MULT
+        : base * HOUSE_RENT_MULT[build.houses - 1]
     return triple(complete ? table : Math.round(table * 0.7)) // grupo parcial (maioria) → 70%
   }
   if (complete) return triple(base * 2) // grupo completo → 200% (§5.1)
