@@ -17,6 +17,7 @@ export type VisualLabSurface =
   | 'airport'
   | 'utility'
   | 'hand-panel'
+  | 'players'
   | 'primitives'
 
 interface VisualLabCaseDefinition {
@@ -49,6 +50,7 @@ export const VISUAL_LAB_CASES = [
   { id: 'trade-invalid', category: 'Negociação', label: 'Proposta inválida', description: 'Estado alterado depois do envio da proposta.', surface: 'trade' },
 
   { id: 'estate-auction', category: 'Pregão', label: 'Espólio de falido', description: 'Três lotes do falido concorrendo ao mesmo tempo.', surface: 'land-auction' },
+  { id: 'scarcity-auction-6', category: 'Pregão', label: 'Escassez com seis lotes', description: 'Grade cheia, nomes longos e maior licitante de nome longo.', surface: 'land-auction' },
 
   { id: 'debt-short', category: 'HUD de decisão', label: 'Dívida sem caixa', description: 'Cobertura parcial, empréstimo e falência.', surface: 'hud' },
   { id: 'debt-payable', category: 'HUD de decisão', label: 'Dívida pagável', description: 'Caixa suficiente para quitar imediatamente.', surface: 'hud' },
@@ -56,6 +58,12 @@ export const VISUAL_LAB_CASES = [
   { id: 'reaction-diplomacy', category: 'HUD de decisão', label: 'Reação: Diplomacia', description: 'Resposta a uma carta ofensiva.', surface: 'hud' },
   { id: 'reaction-bunker', category: 'HUD de decisão', label: 'Reação: Bunker Fiscal', description: 'Resposta a uma cobrança fiscal.', surface: 'hud' },
   { id: 'endgame', category: 'HUD de decisão', label: 'Fim de jogo', description: 'Vencedor e classificação completa.', surface: 'hud' },
+
+  { id: 'loans-many', category: 'Estados visíveis', label: 'Vários empréstimos', description: 'Dois contratos entre pares distintos, nenhum do jogador da vez.', surface: 'players' },
+  { id: 'loan-single', category: 'Estados visíveis', label: 'Empréstimo único', description: 'Um contrato, com o dispositivo local no papel de devedor.', surface: 'players' },
+  { id: 'immunities-both', category: 'Estados visíveis', label: 'Imunidades', description: 'Por propriedade, permanente e total temporária no mesmo jogador.', surface: 'players' },
+  { id: 'effects-many', category: 'Estados visíveis', label: 'Efeitos ativos', description: 'Mesa, jogador e propriedade — os três alcances de uma vez.', surface: 'players' },
+  { id: 'states-crowded', category: 'Estados visíveis', label: 'Oito jogadores, tudo ativo', description: 'Pior caso de densidade do painel.', surface: 'players' },
 
   { id: 'lottery', category: 'Avisos', label: 'Prêmio da loteria', description: 'Celebração com valor e confete.', surface: 'notice' },
   { id: 'hostile-takeover', category: 'Avisos', label: 'Aquisição Hostil', description: 'Aviso informativo para a vítima.', surface: 'notice' },
@@ -66,6 +74,11 @@ export const VISUAL_LAB_CASES = [
   { id: 'property-mortgaged', category: 'Títulos e venda', label: 'Cidade: hipotecada', description: 'Estado hipotecado e ação de desipoteca.', surface: 'property' },
   { id: 'airport-hangar', category: 'Títulos e venda', label: 'Aeroporto: hangar', description: 'Hangar construído e ação de venda.', surface: 'airport' },
   { id: 'utility-owned', category: 'Títulos e venda', label: 'Utilidade própria', description: 'Multiplicadores, hipoteca e gestão.', surface: 'utility' },
+  { id: 'airport-free', category: 'Títulos e venda', label: 'Aeroporto: sem dono', description: 'Título livre — a posse é dita, não inferida.', surface: 'airport' },
+  { id: 'airport-owned', category: 'Títulos e venda', label: 'Aeroporto: com dono', description: 'Proprietário nomeado no título.', surface: 'airport' },
+  { id: 'airport-mortgaged', category: 'Títulos e venda', label: 'Aeroporto: hipotecado', description: 'Dono e hipoteca ao mesmo tempo.', surface: 'airport' },
+  { id: 'utility-free', category: 'Títulos e venda', label: 'Utilidade: sem dono', description: 'Título livre — a posse é dita, não inferida.', surface: 'utility' },
+  { id: 'utility-mortgaged', category: 'Títulos e venda', label: 'Utilidade: hipotecada', description: 'Dono e hipoteca ao mesmo tempo.', surface: 'utility' },
 
   { id: 'primitives', category: 'Sistema visual', label: 'Primitivos', description: 'Botões, chips e estado vazio canônicos.', surface: 'primitives' },
 ] as const satisfies readonly VisualLabCaseDefinition[]
@@ -87,8 +100,9 @@ function setTitle(game: GameState, pos: number, ownerId: string | null, patch: P
   game.titles[pos] = { ...DEFAULT_TITLE, ...game.titles[pos], ownerId, ...patch }
 }
 
-function baseGame(): GameState {
-  const game = createSeedState(['p1', 'p2', 'p3'], Date.now() - 22 * 60_000)
+function baseGame(playerCount = 3): GameState {
+  const ids = Array.from({ length: playerCount }, (_, i) => `p${i + 1}`)
+  const game = createSeedState(ids, Date.now() - 22 * 60_000)
   game.players[0].cash = 1_143
   game.players[0].pos = 5
   game.players[0].busTickets = 2
@@ -115,7 +129,9 @@ function resetEphemeralUI(): void {
 }
 
 export function prepareVisualLabCase(id: VisualLabCaseId): void {
-  const game = baseGame()
+  // Só o caso de densidade quer a mesa cheia: oito linhas é o pior caso do painel, e
+  // montá-lo em todos os casos mudaria o enquadramento dos outros trinta.
+  const game = baseGame(id === 'states-crowded' ? 8 : 3)
   const now = Date.now()
   resetEphemeralUI()
 
@@ -203,6 +219,24 @@ export function prepareVisualLabCase(id: VisualLabCaseId): void {
       }]
       useTradeUI.setState({ open: false, selectedProposalId: 1 })
       break
+    case 'scarcity-auction-6': {
+      // Pregão de ESCASSEZ com a grade cheia (D-078). Os seis lotes saem do tabuleiro
+      // ativo, com lances e prazos distintos — é o estado em que a caixa mais aperta.
+      const livres = Object.keys(game.titles).map(Number).slice(0, 6)
+      for (const pos of livres) setTitle(game, pos, null)
+      game.landAuction = {
+        bankruptId: null,
+        origin: 'scarcity',
+        bidders: ['p1', 'p2', 'p3'],
+        lots: livres.map((pos, i) => ({
+          pos,
+          currentBid: i === 0 ? 420 : i === 1 ? 180 : 0,
+          highBidder: i === 0 ? 'p2' : i === 1 ? 'p1' : null,
+          deadline: now + 24_000 - i * 3_100,
+        })),
+      }
+      break
+    }
     case 'estate-auction':
       for (const pos of [25, 26, 27]) setTitle(game, pos, null)
       game.landAuction = {
@@ -280,6 +314,65 @@ export function prepareVisualLabCase(id: VisualLabCaseId): void {
       break
     case 'utility-owned':
       setTitle(game, 14, 'p1')
+      break
+    // 058/US1 — os três estados de posse que aeroporto e utilidade nunca disseram.
+    case 'airport-free':
+      setTitle(game, 6, null)
+      break
+    case 'airport-owned':
+      setTitle(game, 6, 'p2')
+      break
+    case 'airport-mortgaged':
+      setTitle(game, 6, 'p2', { mortgaged: true })
+      break
+    case 'utility-free':
+      setTitle(game, 14, null)
+      break
+    case 'utility-mortgaged':
+      setTitle(game, 14, 'p2', { mortgaged: true })
+      break
+
+    // 058/US3–US5 — os estados que o painel de jogadores passou a mostrar por inteiro.
+    case 'loans-many':
+      game.activeSeat = 0 // a vez é de p1, que não é parte de contrato nenhum
+      game.loans = [
+        { debtorId: 'p2', creditorId: 'p3', principal: 400, ratePct: 20, lapsElapsed: 0 },
+        { debtorId: 'p3', creditorId: 'p2', principal: 250, ratePct: 45, lapsElapsed: 2 },
+      ]
+      break
+    case 'loan-single':
+      game.loans = [{ debtorId: 'p1', creditorId: 'p2', principal: 300, ratePct: 30, lapsElapsed: 1 }]
+      break
+    case 'immunities-both':
+      game.immunities = [
+        { beneficiaryId: 'p2', granterId: 'p1', pos: 1, lapsRemaining: 3 },
+        { beneficiaryId: 'p2', granterId: 'p3', pos: 3, lapsRemaining: null },
+      ]
+      game.tempEffects = [{ kind: 'imunidade-total', ownerId: 'p2', pos: null, lapsRemaining: 1 }]
+      break
+    case 'effects-many':
+      game.tempEffects = [
+        { kind: 'estatizacao', ownerId: 'p1', pos: null, lapsRemaining: 1 },
+        { kind: 'embargo', ownerId: 'p1', pos: null, lapsRemaining: 2, targetId: 'p3' },
+        { kind: 'boicote', ownerId: 'p2', pos: 5, lapsRemaining: 2 },
+        { kind: 'valorizacao', ownerId: 'p3', pos: 25, lapsRemaining: 1 },
+      ]
+      break
+    case 'states-crowded':
+      game.loans = [
+        { debtorId: 'p2', creditorId: 'p3', principal: 400, ratePct: 20, lapsElapsed: 0 },
+        { debtorId: 'p3', creditorId: 'p1', principal: 900, ratePct: 50, lapsElapsed: 2 },
+      ]
+      game.immunities = [
+        { beneficiaryId: 'p2', granterId: 'p1', pos: 1, lapsRemaining: 2 },
+        { beneficiaryId: 'p3', pos: 3, lapsRemaining: null },
+      ]
+      game.tempEffects = [
+        { kind: 'estatizacao', ownerId: 'p1', pos: null, lapsRemaining: 1 },
+        { kind: 'embargo', ownerId: 'p1', pos: null, lapsRemaining: 2, targetId: 'p2' },
+        { kind: 'boicote', ownerId: 'p2', pos: 5, lapsRemaining: 2 },
+        { kind: 'imunidade-total', ownerId: 'p3', pos: null, lapsRemaining: 1 },
+      ]
       break
     case 'primitives':
       break

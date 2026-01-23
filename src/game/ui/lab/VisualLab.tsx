@@ -10,7 +10,7 @@ import { HandCardLayer } from '@/game/ui/cards/HandCardLayer'
 import { HandPanel } from '@/game/ui/cards/HandPanel'
 import { NoticeLayer } from '@/game/ui/NoticeLayer'
 import { GameHUD } from '@/game/ui/GameHUD'
-import { AirportPopover, PropertyPopover, UtilityPopover } from '@/boards/shared'
+import { AirportPopover, PlayersPanel, PropertyPopover, UtilityPopover } from '@/boards/shared'
 import { Button, Chip, EmptyState } from '@/game/ui/primitives'
 import {
   prepareVisualLabCase,
@@ -95,6 +95,14 @@ function VisualStage({ item }: { item: VisualLabCase }) {
       return (
         <div className="visual-lab__panel-sample">
           <HandPanel />
+        </div>
+      )
+    // 058 — os estados visíveis (empréstimos, imunidades, efeitos) moram no painel de
+    // jogadores, e é o painel REAL que entra aqui, não uma cópia de laboratório.
+    case 'players':
+      return (
+        <div className="visual-lab__panel-sample">
+          <PlayersPanel />
         </div>
       )
     case 'primitives':

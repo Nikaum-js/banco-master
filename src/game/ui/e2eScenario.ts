@@ -297,3 +297,83 @@ function applyE2EAcoesScenario(): void {
 }
 
 applyE2EAcoesScenario()
+
+// `?scenario=estados` (058) — a mesa com TODOS os estados que a jogatina disse não
+// conseguir ler, ao mesmo tempo: dois empréstimos entre pares distintos (nenhum deles do
+// jogador da vez), imunidade negociada por propriedade, Imunidade Total, e quatro efeitos
+// ativos de alcances diferentes. Aeroporto e utilidade em três posses (livre, comprado,
+// hipotecado) para a inspeção dos popovers.
+//
+// `&players=8` aperta o painel no pior caso de densidade.
+//
+// Mesmo andaime dos demais: só ativa com o parâmetro, nenhum reducer é tocado, e o estado
+// plantado é exatamente o que o motor produziria — `loans`, `immunities` e `tempEffects`
+// são as mesmas formas que `grantLoan`, a troca e `addTempEffect` gravam.
+function applyE2EEstadosScenario(): void {
+  if (typeof window === 'undefined') return
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('scenario') !== 'estados') return
+
+  const quantos = Math.min(Math.max(Number(params.get('players')) || 4, 3), 8)
+  const ids = Array.from({ length: quantos }, (_, i) => `p${i + 1}`)
+  const g = createSeedState(ids, Date.now() - 65_000)
+  g.round = 9
+  g.activeSeat = 0 // a vez é de p1, que NÃO é parte de nenhum dos empréstimos
+
+  // Dois contratos entre pares distintos — o limite do §15.3 é um por DEVEDOR, não por
+  // mesa. O de p3 está na última volta: é o que o resumo compacto precisa destacar.
+  g.loans = [
+    { debtorId: 'p2', creditorId: 'p3', principal: 400, ratePct: 20, lapsElapsed: 0 },
+    { debtorId: 'p3', creditorId: 'p2', principal: 250, ratePct: 45, lapsElapsed: 2 },
+  ]
+
+  // As DUAS naturezas de imunidade ao mesmo tempo, no mesmo jogador: é exatamente o caso
+  // que o indicador booleano anterior tornava indistinguível.
+  const cidades = BOARD.filter((sq) => sq.kind === 'property').map((sq) => sq.pos)
+  g.immunities = [
+    { beneficiaryId: 'p2', granterId: 'p1', pos: cidades[0], lapsRemaining: 3 },
+    { beneficiaryId: 'p2', granterId: 'p3', pos: cidades[1], lapsRemaining: null }, // permanente
+  ]
+  g.tempEffects = [
+    { kind: 'estatizacao', ownerId: 'p1', pos: null, lapsRemaining: 1 },
+    { kind: 'embargo', ownerId: 'p1', pos: null, lapsRemaining: 2, targetId: 'p3' },
+    { kind: 'boicote', ownerId: 'p2', pos: cidades[2], lapsRemaining: 2 },
+    { kind: 'imunidade-total', ownerId: 'p2', pos: null, lapsRemaining: 1 },
+  ]
+
+  // Aeroporto e utilidade nas três posses — os popovers que não diziam dono nenhum.
+  const aeroportos = BOARD.filter((sq) => sq.kind === 'airport').map((sq) => sq.pos)
+  const utilidades = BOARD.filter((sq) => sq.kind === 'utility').map((sq) => sq.pos)
+  if (aeroportos[0] !== undefined) g.titles[aeroportos[0]] = { ...g.titles[aeroportos[0]], ownerId: 'p2' }
+  if (aeroportos[1] !== undefined) g.titles[aeroportos[1]] = { ...g.titles[aeroportos[1]], ownerId: 'p3', mortgaged: true }
+  if (utilidades[0] !== undefined) g.titles[utilidades[0]] = { ...g.titles[utilidades[0]], ownerId: 'p2' }
+  if (utilidades[1] !== undefined) g.titles[utilidades[1]] = { ...g.titles[utilidades[1]], ownerId: 'p3', mortgaged: true }
+  // aeroportos[2] e utilidades[2] ficam LIVRES de propósito: o estado "sem dono" também
+  // precisa ser inspecionável, e era o que nenhum popover dizia.
+
+  useGameStore.setState({ game: g })
+
+  const NOMES = ['Ana', 'Pedro', 'Beatriz Nascimento', 'Caio', 'Dora', 'Elis', 'Fábio', 'Gabi']
+  let room = createRoom('estados-visuais', {
+    uid: 'estados-p1',
+    name: NOMES[0],
+    color: SEAT_COLORS[0],
+    avatar: 'prism-face',
+    skin: 'cartola',
+  }, { boardId: params.get('map') === 'fuligem' ? 'fuligem' : 'atlas' })
+  for (let i = 1; i < quantos; i++) {
+    const guest = joinRoom(room, {
+      uid: `estados-p${i + 1}`,
+      name: NOMES[i],
+      color: SEAT_COLORS[i],
+      avatar: i % 2 === 0 ? 'totem-face' : 'prism-face',
+      skin: i % 2 === 0 ? 'aviador' : 'astronauta',
+    })
+    if (!guest.ok) throw new Error(`Cenário de estados inválido: ${guest.reason}`)
+    room = guest.room
+  }
+  useRoomStore.getState().setRoom({ ...room, status: 'playing' })
+  useRoomStore.setState({ myUid: 'estados-p2' }) // o dispositivo é do DEVEDOR de um contrato
+}
+
+applyE2EEstadosScenario()
