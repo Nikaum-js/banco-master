@@ -39,7 +39,7 @@ export interface Player {
   nextPurchaseDiscount: number // 0 normal; 0,2 após Investidor Anjo — 006
 }
 
-export type AwaitingChoice = 'onibus' | 'triple' | null
+export type AwaitingChoice = 'onibus' | 'triple' | 'bus-ride' | null
 
 export interface Turn {
   state: TurnState
