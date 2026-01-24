@@ -4,28 +4,25 @@
 
 # Magnata Imobiliário
 
-**Jogo de tabuleiro imobiliário multiplayer, online, para até 8 pessoas — direto no navegador, sem instalar nada.**
+</div>
 
-Clone web do gênero Monopoly/[Richup.io](https://richup.io), tema "Cidades do Mundo".
-Sem IA, sem bots: só gente.
+Jogo de tabuleiro imobiliário para até 8 pessoas, online, direto no navegador. Tema "Cidades do Mundo".
 
 [![CI](https://github.com/Nikaum-js/magnata-imobiliario/actions/workflows/ci.yml/badge.svg)](https://github.com/Nikaum-js/magnata-imobiliario/actions/workflows/ci.yml)
 [![Deploy](https://github.com/Nikaum-js/magnata-imobiliario/actions/workflows/deploy.yml/badge.svg)](https://github.com/Nikaum-js/magnata-imobiliario/actions/workflows/deploy.yml)
-
-</div>
 
 ---
 
 ## Índice
 
-- [O que é](#o-que-é)
-- [O que tem de diferente](#o-que-tem-de-diferente)
+- [Como uma partida funciona](#como-uma-partida-funciona)
+- [As mecânicas](#as-mecânicas)
 - [Stack](#stack)
 - [Rodando localmente](#rodando-localmente)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Scripts](#scripts)
 - [Arquitetura](#arquitetura)
-- [Multiplayer: como a partida se mantém em pé](#multiplayer-como-a-partida-se-mantém-em-pé)
+- [Multiplayer](#multiplayer)
 - [Testes](#testes)
 - [Documentação](#documentação)
 - [Deploy](#deploy)
@@ -33,61 +30,71 @@ Sem IA, sem bots: só gente.
 
 ---
 
-## O que é
+## Como uma partida funciona
 
-Uma partida acontece assim: alguém cria uma sala, compartilha o link, e até **8 jogadores** sentam
-à mesa. O **anfitrião** roda a autoridade da partida no próprio navegador; os demais são clientes
-que recebem os comandos aceitos e reproduzem o mesmo resultado. Não existe servidor de jogo — o
-Supabase entra como **transporte e persistência**, não como árbitro.
+Alguém cria uma sala e compartilha o link. Até oito pessoas sentam à mesa. Nada de instalar, nada
+de conta.
 
-O tabuleiro tem **48 casas**: 10 países com cidades, 4 aeroportos, 2 utilidades, impostos, Acaso,
-Tesouro, Prisão, Férias e o espaço de Bus Ticket.
+Quem cria a sala é o **anfitrião**, e é o navegador dele que roda a autoridade da partida: valida
+cada jogada, aplica, e conta aos outros o que aconteceu. Os demais são clientes que reproduzem
+exatamente o mesmo resultado. Não existe servidor de jogo — o Supabase serve de transporte e de
+memória, não de árbitro.
 
-## O que tem de diferente
+O tabuleiro tem 48 casas: dez países com suas cidades, quatro aeroportos, duas utilidades,
+impostos, Acaso, Tesouro, Prisão, Férias e o espaço de Bus Ticket. São 8 jogadores humanos, sem IA
+e sem bots.
 
-O Monopoly clássico tem problemas estruturais conhecidos: quem joga primeiro chega antes às
-propriedades, construção exige país completo (então um jogador não-cooperativo trava todos), quem
-perde os territórios fica funcionalmente eliminado mas continua na mesa, e o resultado se decide
-nos primeiros 15 minutos enquanto a partida dura horas. Cada mecânica abaixo existe contra um
-desses problemas — e cada uma tem uma decisão registrada dizendo por quê.
+## As mecânicas
 
-| Mecânica | O que faz |
-|---|---|
-| **Construção com país parcial** | Constrói com 1 cidade só; o aluguel escala pela posse (50%→100%). Ninguém trava ninguém. |
-| **Loteria (Férias)** | Impostos e multas acumulam no centro. Quem para nas Férias leva o pote. |
-| **Ritual de Largada** | O anfitrião escolhe: leilão secreto (que financia a Loteria) ou maior dado, rolado à vista da mesa. |
-| **Empréstimos entre jogadores** | Juros de 10–50% cobrados a cada passagem pelo GO; vencem em 3 voltas. Quem empresta assume risco real. |
-| **Pregão de terrenos** | Quando restam ≤3 terrenos sem dono, todos vão a leilão simultâneo — 24s por lote, cronômetro visível. Fecha o tabuleiro e acelera o fim. |
-| **Espólio do falido** | O patrimônio de quem quebra vai a pregão em vez de voltar de graça ao banco. |
-| **Cartas com raridade** | 39 cartas em 2 baralhos, 3 raridades. Cartas de mão são **privadas**, não-negociáveis, limite de 3. |
-| **Cartas ofensivas** | Aquisição Hostil, Confisco Geral, Imposto Federal, Boicote, Permuta Forçada, Embargo de Obras — e a Diplomacia para reagir. |
-| **Hangar, 2º hotel, arranha-céu** | Degraus de construção além do hotel, para o dinheiro tardio ter onde ir. |
-| **Bus Tickets** | Item de mão separado das cartas: pula para outra casa do mesmo lado do tabuleiro. Negociável. |
-| **Desistência** | Sai da partida por vontade própria, sem precisar estar insolvente. |
-| **Dívida com devedor nomeado** | Cobrança entre jogadores nunca é truncada: o que falta fica devido, e o devedor liquida — mesmo fora da vez dele. |
+Jogo de tabuleiro imobiliário tem três jeitos clássicos de dar errado, e cada mecânica daqui nasceu
+contra um deles.
 
-E duas ausências deliberadas: **não há timer de turno** (mataria a negociação) e **desconexão não
-pune** — a partida pausa e espera.
+**O primeiro é o jogador travado.** Quem fica sem território perde o poder de negociar e vira
+espectador de uma partida que ainda vai durar horas. Aqui dá para **construir com um país
+incompleto** — basta ter uma cidade, e o aluguel escala conforme a posse, de 50% a 100%. Ninguém
+depende da boa vontade de um adversário para evoluir. A **Loteria** acumula todo imposto e multa no
+centro do tabuleiro e entrega o pote a quem parar nas Férias, o que dá a quem está atrás uma
+chance real de virada. E o **Incentivo Fiscal** paga por propriedade hipotecada, ou seja: rende
+justamente para quem está mal.
+
+**O segundo é a partida que se decide cedo e não acaba.** Quando restam três terrenos sem dono ou
+menos, todos vão a **pregão simultâneo** — 24 segundos por lote, cronômetro à vista. Fecha o
+tabuleiro, faz o aluguel circular e apressa o fim. Quando alguém quebra, o **espólio** dele também
+vai a pregão em vez de voltar de graça ao banco. E quem simplesmente não quer mais jogar pode
+**desistir**, sem precisar estar insolvente para isso.
+
+**O terceiro é a falta de coisa para fazer com dinheiro no fim.** Depois do hotel vêm o **segundo
+hotel**, o **arranha-céu** e o **Hangar** nos aeroportos. **Empréstimos entre jogadores** cobram
+juros de 10% a 50% a cada passagem pelo GO e vencem em três voltas — quem empresta corre risco de
+verdade, com o patrimônio do devedor como garantia.
+
+Por cima disso, 39 cartas em dois baralhos e três raridades. As de mão são **privadas** — os outros
+veem só o contador —, não podem ser negociadas, e a mão tem limite de três. Entre elas as
+ofensivas: Aquisição Hostil, Confisco Geral, Imposto Federal, Boicote, Permuta Forçada, Embargo de
+Obras. Nenhuma pode ser recusada, exceto com uma Diplomacia na mão.
+
+Duas ausências que também são decisões: **não existe timer de turno**, porque cronômetro mata
+negociação; e **desconexão não pune** — a partida pausa e espera, sem prazo.
 
 ## Stack
 
 | Camada | Escolha |
 |---|---|
-| UI | **React 19** + **TypeScript** (strict) |
-| Build | **Vite** (multi-página: landing + app) |
-| Estilo | **Tailwind CSS 4** (`@theme`), CSS custom properties |
-| Estado | **Zustand** |
-| Animação | **Motion**, com `prefers-reduced-motion` respeitado |
-| Ícones | **Lucide** |
-| Realtime + persistência | **Supabase** (Realtime broadcast, Postgres, RLS) |
-| Testes | **Vitest** + Testing Library + **Playwright** |
-| Monitoramento | **Sentry** (opcional) |
-| Runtime/gerenciador | **Bun** |
-| Hospedagem | **Vercel** |
+| UI | React 19 + TypeScript (strict) |
+| Build | Vite, multi-página (landing separada do app) |
+| Estilo | Tailwind CSS 4 (`@theme`) + CSS custom properties |
+| Estado | Zustand |
+| Animação | Motion, respeitando `prefers-reduced-motion` |
+| Ícones | Lucide |
+| Realtime e persistência | Supabase (broadcast, Postgres, RLS) |
+| Testes | Vitest + Testing Library + Playwright |
+| Monitoramento | Sentry (opcional) |
+| Runtime | Bun |
+| Hospedagem | Vercel |
 
 ## Rodando localmente
 
-Requer [Bun](https://bun.sh) (versão em `.bun-version`).
+Precisa do [Bun](https://bun.sh) — a versão está em `.bun-version`.
 
 ```bash
 git clone git@github.com:Nikaum-js/magnata-imobiliario.git
@@ -96,24 +103,21 @@ bun install
 bun run dev
 ```
 
-Abre em `http://localhost:5173`. As rotas:
+Sobe em `http://localhost:5173`:
 
 | Rota | O que é |
 |---|---|
-| `/` | Landing pública (HTML estático, zero JS de aplicação) |
+| `/` | Landing pública — HTML estático, zero JS de aplicação |
 | `/play` | O jogo |
 | `/how-to-play` | Guia de regras |
 | `/faq` | Perguntas frequentes |
 
-**Sem configurar o Supabase o jogo roda**, em modo local: `/play?local=1` entrega um cliente único
-que joga por todos os assentos — é assim que se desenvolve e se testa a regra. Multiplayer de
-verdade precisa das variáveis abaixo.
-
-Atalho útil em desenvolvimento: `?players=2|3|6` escolhe a contagem de jogadores no modo local.
+**Dá para jogar sem configurar nada.** `/play?local=1` entrega um cliente único que joga por todos
+os assentos — é assim que se desenvolve e se testa regra. Multiplayer de verdade precisa das
+variáveis abaixo. Em desenvolvimento, `?players=2|3|6` escolhe quantos jogadores entram no modo
+local.
 
 ## Variáveis de ambiente
-
-Copie `.env.example` para `.env`:
 
 ```bash
 cp .env.example .env
@@ -122,26 +126,26 @@ cp .env.example .env
 | Variável | Obrigatória | Para quê |
 |---|---|---|
 | `VITE_SUPABASE_URL` | só p/ multiplayer | URL do projeto Supabase |
-| `VITE_SUPABASE_ANON_KEY` | só p/ multiplayer | Chave **publishable/anon**. É pública por design (vai no bundle, protegida por RLS) — **nunca** use `service_role` aqui |
+| `VITE_SUPABASE_ANON_KEY` | só p/ multiplayer | Chave publishable/anon. É pública por design — vai no bundle e é protegida por RLS. Nunca use `service_role` aqui |
 | `VITE_SENTRY_DSN` | não | Sem DSN, nenhum código de monitoramento roda |
 | `VITE_TELEMETRY` | não | `1` liga a contagem anônima de partidas. Em desenvolvimento nunca envia |
 
-As migrations do banco vivem em [`supabase/migrations/`](supabase/migrations/) — seis, aplicadas em
-ordem. O procedimento de operação está no [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
+As migrations ficam em [`supabase/migrations/`](supabase/migrations/) — seis, aplicadas em ordem. O
+procedimento de operação está no [runbook](docs/RUNBOOK.md).
 
 ## Scripts
 
 ```bash
-bun run dev           # servidor de desenvolvimento
+bun run dev           # desenvolvimento
 bun run build         # typecheck + build de produção
-bun run preview       # serve o build (com o 404 real, igual à Vercel)
+bun run preview       # serve o build, com o 404 real (igual à Vercel)
 
 bun run lint          # ESLint
 bun run typecheck     # tsc -b
 
 bun run test          # Vitest em watch
 bunx vitest run       # suíte completa, uma vez
-bun run test:sim      # lotes headless de simulação (2/3/6 jogadores)
+bun run test:sim      # lotes headless de simulação
 bun run test:e2e      # Playwright
 
 bun run sim:batch     # lote de simulação com relatório
@@ -151,154 +155,140 @@ bun run attack        # sonda de segurança contra a autoridade
 
 ## Arquitetura
 
-A regra do jogo é um **motor puro**. Nenhum reducer conhece React, rede ou relógio: recebe estado
-e contexto, devolve estado novo. É isso que permite rodar a mesma regra no navegador do anfitrião,
-no cliente de cada jogador e em milhares de partidas simuladas — sem nenhuma cópia.
+A regra do jogo é um motor puro. Nenhum reducer conhece React, rede ou relógio: recebe estado e
+contexto, devolve estado novo. É isso que permite rodar a mesma regra no navegador do anfitrião, no
+cliente de cada jogador e em milhares de partidas simuladas, sem nenhuma cópia.
 
 ```
 src/
-├─ game/              O MOTOR — puro, serializável, testável em node
+├─ game/              o motor — puro, serializável, roda em node
 │  ├─ turn/           máquina de estados do turno, dados, resolução de casa
 │  ├─ economy/        compra, aluguel, construção, hipoteca, leilão, troca, obrigações
 │  ├─ cards/          catálogo, saque, efeitos, ofensivas, reação
 │  ├─ emprestimos/    empréstimos entre jogadores
 │  ├─ falencia/       dívida, falência, desistência, fim de jogo
 │  ├─ balancing/      Loteria, bônus de GO
-│  ├─ commands.ts     TABELA ÚNICA de despacho e de "quem é o ator de cada comando"
-│  ├─ setup.ts        PONTO ÚNICO de composição (portas, resolvers, RNG, relógio)
-│  ├─ theme.ts        FONTE ÚNICA dos valores econômicos
-│  └─ ui/             componentes e view-models (puros, testáveis sem montar React)
-├─ net/               transporte, autoridade do anfitrião, cliente, perspectiva, sala
+│  ├─ commands.ts     tabela única de despacho e de quem é o ator de cada comando
+│  ├─ setup.ts        ponto único de composição (portas, resolvers, RNG, relógio)
+│  ├─ theme.ts        fonte única dos valores econômicos
+│  └─ ui/             componentes e view-models
+├─ net/               transporte, autoridade, cliente, perspectiva, sala
 ├─ boards/            tabuleiro, tokens, bandeiras, escrituras
 ├─ marketing/         landing, guia, FAQ (HTML + CSS, sem JS de aplicação)
 └─ lib/               dados do tabuleiro, formatação
 ```
 
-Três invariantes que explicam o resto do código:
+Três regras explicam o resto do código.
 
-**1. Uma pergunta, uma resposta.** Quando dois lugares precisam concordar, existe uma tabela e dois
+**Uma pergunta, uma resposta.** Quando dois lugares precisam concordar, existe uma tabela e dois
 consumidores — nunca duas listas. `commands.ts` responde "quem pode fazer isto?" tanto para a
-autoridade (que descarta comando de remetente ilegítimo) quanto para a interface (que só oferece o
-controle a quem é o ator). Uma segunda lista sairia de sincronia no primeiro comando novo.
+autoridade, que descarta comando de remetente ilegítimo, quanto para a interface, que só oferece o
+controle a quem é o ator. Uma segunda lista sairia de sincronia no primeiro comando novo.
 
-**2. Não-determinismo entra pela porta.** Nenhum reducer chama `Math.random()` ou `Date.now()`. RNG,
-relógio e saque de carta são injetados; o anfitrião **grava** cada valor consumido e o cliente
-**reproduz** os gravados. É isso que faz host e clientes convergirem byte a byte.
+**Não-determinismo entra pela porta.** Nenhum reducer chama `Math.random()` ou `Date.now()`. RNG,
+relógio e saque de carta são injetados; o anfitrião grava cada valor consumido e o cliente
+reproduz os gravados. É o que faz os dois lados convergirem byte a byte.
 
-**3. Toda mudança de caixa tem causa registrada.** Nenhuma regra move dinheiro em silêncio. Quatro
+**Toda mudança de caixa tem causa registrada.** Nenhuma regra move dinheiro em silêncio. Quatro
 relatos de bug financeiro do playtest tinham a mesma origem — uma cobrança correta que o jogo não
-explicava — e o remédio foi tornar o silêncio impossível.
+explicava — e a correção foi tornar o silêncio impossível.
 
-## Multiplayer: como a partida se mantém em pé
+## Multiplayer
 
-O anfitrião é a **autoridade**: valida cada comando, aplica, e difunde o comando *aceito* com o
-não-determinismo gravado. Os clientes são **pessimistas** — não aplicam nada antes da confirmação,
-então nunca mostram um estado que a mesa não viu.
+O anfitrião valida, aplica e difunde o comando aceito junto com o não-determinismo gravado. Os
+clientes são pessimistas: não aplicam nada antes da confirmação, então nunca mostram um estado que
+a mesa não viu.
 
-O que isso precisou resolver, e resolve:
+O que isso precisou resolver:
 
-- **Identidade atestada pelo servidor.** Quem envia um comando é quem o Supabase diz que é, não
-  quem o cliente afirma ser. Comando em nome de assento alheio é recusado no servidor.
-- **Mão de cartas não trafega.** O estado é dividido em parte pública (com o comprimento certo e
-  `null` no lugar de carta alheia) e parte secreta por assento. Inspecionar o próprio cliente não
-  revela a carta de ninguém.
-- **Durabilidade antes do avanço.** Nenhum comando aceito avança a partida sem estar gravado; se a
-  gravação falhar de forma persistente, a partida **pausa** em vez de seguir sobre um estado que um
-  reload faria regredir.
-- **Lacuna de sequência se recupera sozinha.** O cliente que perde uma difusão detecta o buraco e
-  se reconcilia pelo snapshot, com espera crescente.
-- **Reentrada por código.** Cada assento tem um código curto que reanexa de qualquer aparelho —
-  celular sem bateria, navegador limpo, aba anônima encerrada.
-- **Desconexão pausa, não pune.** Sem timeout: a mesa espera. Quem já foi eliminado é exceção — a
+- **Identidade vem do servidor.** Quem envia um comando é quem o Supabase diz que é, não quem o
+  cliente afirma ser. Comando em nome de assento alheio é recusado no servidor.
+- **Mão de cartas não trafega.** O estado se divide em parte pública, com o comprimento certo e
+  `null` no lugar de carta alheia, e parte secreta por assento. Abrir o próprio cliente não revela
+  a carta de ninguém.
+- **Nada avança sem estar gravado.** Se a gravação falhar de forma persistente, a partida pausa em
+  vez de seguir sobre um estado que um reload faria regredir.
+- **Lacuna de sequência se resolve sozinha.** Quem perde uma difusão detecta o buraco e se
+  reconcilia pelo snapshot, com espera crescente.
+- **Reentrada por código.** Cada assento tem um código curto que reanexa de qualquer aparelho:
+  celular sem bateria, navegador limpo, aba anônima fechada.
+- **Desconexão pausa, não pune.** Sem timeout — a mesa espera. Quem já foi eliminado é exceção: a
   ausência dele nunca trava a partida.
 
 ## Testes
 
-**1.211 testes** em 139 arquivos, em quatro camadas com propósitos diferentes:
+São 1.211 testes em 139 arquivos, em quatro camadas com propósitos diferentes.
+
+Os **unitários** (`tests/game`) cobrem cada regra do SRS isolada, e a exaustividade é imposta pelo
+tipo: um evento de log novo sem frase, ícone e som não compila. Os de **rede** (`tests/net`)
+verificam o transporte contra um Supabase falso — convergência, anti-spoof, reconexão, pausa,
+revanche, privacidade de cartas. O **E2E** (`e2e/`) roda navegador de verdade com 2, 3 e 6
+jogadores, mais acessibilidade e fronteira de erro.
+
+A camada mais valiosa é a **simulação** (`tests/sim`): partidas completas com política aleatória e
+seed fixa, e cada despacho passa por sete invariantes. Conservação pergunta se o dinheiro fecha, e
+recomputa cada mecanismo de forma independente. Narração pergunta se todo jogador com mudança de
+caixa foi nomeado por algum fato daquele mesmo despacho. Não-truncagem verifica que nenhuma
+obrigação entre jogadores foi apagada no caminho. Convergência aplica o comando pelos dois lados,
+anfitrião e cliente, e compara. Os outros três olham estrutura, ação inválida e terminação — se a
+partida travar, o teto estoura e o teste falha.
+
+Vale registrar a lição que produziu metade desses invariantes: **conservação e explicabilidade são
+propriedades diferentes.** A suíte verificava a primeira e passava em milhares de partidas enquanto
+quatro bugs financeiros chegavam do playtest. O dinheiro fechava; ninguém conseguia explicar por
+quê. Pior: um dos oráculos calculava o valor esperado copiando a fórmula do próprio reducer, o que
+não é independência — é a mesma afirmação escrita duas vezes, e ela concorda consigo mesma para
+sempre.
 
 ```bash
 bunx vitest run        # tudo
-bun run test:sim       # só os lotes de simulação
-bun run test:e2e       # só o smoke de navegador
+bun run test:sim       # só a simulação
+bun run test:e2e       # só o navegador
 ```
-
-| Camada | O que prova |
-|---|---|
-| **Unitários** (`tests/game`) | Cada regra do SRS, isolada. Exaustividade por tipo: um `LogKind` novo sem frase, ícone e som **não compila**. |
-| **Rede** (`tests/net`) | Conformidade do transporte contra um Supabase falso, convergência, anti-spoof, reconexão, pausa, revanche, perspectiva de cartas. |
-| **Simulação** (`tests/sim`) | Partidas completas de 2/3/6 jogadores, com política aleatória e seed fixa, contra sete invariantes. |
-| **E2E** (`e2e/`) | Smoke real de navegador em 2/3/6 jogadores, acessibilidade e fronteira de erro. |
-
-A simulação é o instrumento mais valioso do repositório e vale explicar. Cada despacho é verificado
-contra:
-
-| Invariante | Pergunta que responde |
-|---|---|
-| **Conservação** | O dinheiro fecha? Cada mecanismo é recomputado de forma independente. |
-| **Narração** | Todo jogador com Δcaixa é **nomeado** por um fato do mesmo despacho? |
-| **Não-truncagem** | Nenhuma obrigação a jogador foi apagada no caminho? |
-| **Convergência** | Host e cliente chegam ao mesmo estado, byte a byte? |
-| **Estrutura** | Ladder de construção, posse, mão e fila de obrigações bem-formadas. |
-| **Ação inválida** | Comando ilegal é sempre no-op? Sondado a cada turno. |
-| **Terminação** | A partida acaba? Deadlock estoura o teto e falha. |
-
-> A lição que produziu metade desses invariantes: **conservação e explicabilidade são propriedades
-> diferentes.** A suíte verificava a primeira e passava em milhares de partidas enquanto quatro bugs
-> financeiros chegavam do playtest — o dinheiro fechava, e ninguém conseguia explicar por quê. Pior,
-> um dos oráculos recomputava o esperado copiando a fórmula do próprio reducer, o que não é
-> independência: é a mesma afirmação escrita duas vezes, e ela concorda consigo mesma para sempre.
 
 ## Documentação
 
-O repositório é **spec-driven** ([GitHub Spec Kit](https://github.com/github/spec-kit)):
-**51 specs**, **67 decisões** registradas. A hierarquia é deliberada e não tem sobreposição.
+O repositório é spec-driven, com [GitHub Spec Kit](https://github.com/github/spec-kit): 51 specs e
+67 decisões registradas. Cada camada tem um papel, sem sobreposição.
 
 | Camada | Onde | O que é |
 |---|---|---|
-| **Princípios** | [`.specify/memory/constitution.md`](.specify/memory/constitution.md) | Os 7 princípios não-negociáveis |
-| **Regra** | [`docs/SRS.md`](docs/SRS.md) | Fonte de verdade absoluta do comportamento |
-| **Vocabulário** | [`CONTEXT.md`](CONTEXT.md) | Glossário do domínio — os nomes, nunca a regra |
-| **Decisões** | [`docs/adr/`](docs/adr/README.md) | Uma ADR por decisão, id `D-0xx` estável, com o custo aceito |
-| **Produto** | [`docs/PRD.md`](docs/PRD.md) · [`docs/MILESTONES.md`](docs/MILESTONES.md) | Requisitos e marcos |
-| **Design** | [`DESIGN.md`](DESIGN.md) | Sistema visual "Atlas da Meia-Noite" |
-| **Operação** | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | Migrations, secrets, deploy, incidentes |
-| **Feature** | [`specs/<nome>/`](specs/) | spec, plan, tasks e contratos de cada fatia |
+| Princípios | [`constitution.md`](.specify/memory/constitution.md) | Os sete princípios não-negociáveis |
+| Regra | [`docs/SRS.md`](docs/SRS.md) | Fonte de verdade do comportamento |
+| Vocabulário | [`CONTEXT.md`](CONTEXT.md) | Glossário do domínio: os nomes, nunca a regra |
+| Decisões | [`docs/adr/`](docs/adr/README.md) | Uma por decisão, id estável, com o custo aceito |
+| Produto | [`PRD`](docs/PRD.md) · [`marcos`](docs/MILESTONES.md) | Requisitos e planejamento |
+| Design | [`DESIGN.md`](DESIGN.md) | O sistema visual "Atlas da Meia-Noite" |
+| Operação | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | Migrations, secrets, deploy, incidentes |
+| Feature | [`specs/`](specs/) | Spec, plan, tasks e contratos de cada fatia |
 
-Não existe, de propósito, um `ARCHITECTURE.md` ou `ROADMAP.md` global: entidades, invariantes
-técnicas e design detalhado vivem no `plan.md` da própria feature. **Regra nunca nasce numa spec** —
-comportamento que contrarie o SRS exige ADR e bump do SRS *antes* de virar requisito.
+Não existe um `ARCHITECTURE.md` global, e isso é de propósito: entidades, invariantes técnicas e
+design detalhado vivem no `plan.md` da própria feature. Regra nunca nasce numa spec — comportamento
+que contrarie o SRS exige uma decisão registrada e bump do SRS antes de virar requisito.
 
-Uma ADR aqui registra o custo, não só a escolha. Quando o pregão de terrenos foi removido, a
-decisão media o preço (`+292` propriedades paradas em mesas de 3, `+768` em mesas de 6); quando foi
-restaurado, a nova decisão explicou por que o remédio anterior tratava o sintoma errado. Decisão sem
-custo declarado é decisão que ninguém consegue revisar depois.
+As decisões registram o custo, não só a escolha. Quando o pregão de terrenos foi removido, a
+decisão media o preço: 292 propriedades a mais paradas com o banco em mesas de três, 768 em mesas
+de seis. Quando ele voltou, a decisão nova explicou por que o remédio anterior tratava o sintoma
+errado. Decisão sem custo declarado é decisão que ninguém consegue revisar depois.
 
 ## Deploy
 
-Hospedado na **Vercel**. O auto-deploy nativo em `main` está **desligado** por
-[`vercel.json`](vercel.json): produção é promovida pelo workflow
-[`deploy.yml`](.github/workflows/deploy.yml) **só depois de o CI fechar verde**. Deploy que não
-passou pelo gate não existe.
+Roda na Vercel, e o auto-deploy nativo em `main` está **desligado** por
+[`vercel.json`](vercel.json). Produção é promovida pelo workflow
+[`deploy.yml`](.github/workflows/deploy.yml), e só depois de o CI fechar verde.
 
-O CI ([`ci.yml`](.github/workflows/ci.yml)) roda em três jobs paralelos: lint + tipos + testes +
-build; lote de simulação seedada; e smoke E2E de 2/3/6 jogadores.
+O [CI](.github/workflows/ci.yml) roda em jobs paralelos: lint, tipos, testes e build; lote de
+simulação seedada; smoke de navegador com 2, 3 e 6 jogadores; acessibilidade sobre o build; e uma
+partida semeada até o fim de jogo.
 
 ## Contribuindo
 
 O fluxo por feature é `/speckit-specify → clarify → plan → tasks → implement`. Antes de abrir uma
-spec, a leitura obrigatória é: constitution → SRS (busca pelo termo da feature) → ADRs relacionadas
-→ specs com dependência.
+spec, a leitura obrigatória é: constitution, SRS (busca pelo termo da feature), decisões
+relacionadas e specs com dependência.
 
-Convenções que a suíte e os hooks cobram:
-
-- **Commits em inglês**, padrão emoji + conventional commits (`✨ feat(scope): …`).
-- **Bun**, sempre — o `bun.lock` é o lockfile do projeto.
-- Idioma do produto e da documentação: **português (Brasil)**. Rotas e commits em inglês.
-- Nenhum `LogKind`, comando ou efeito de carta novo passa sem tratamento exaustivo — o TypeScript
+- Commits em inglês, emoji + conventional commits (`✨ feat(scope): …`).
+- Bun sempre — `bun.lock` é o lockfile do projeto.
+- Produto e documentação em português. Rotas e commits em inglês.
+- Evento de log, comando ou efeito de carta novo não passa sem tratamento exaustivo. O TypeScript
   recusa antes do teste.
-
----
-
-<div align="center">
-<sub>Feito com atenção desproporcional aos detalhes.</sub>
-</div>
