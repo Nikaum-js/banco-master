@@ -13,7 +13,7 @@
 // empréstimo vive no LoanPanel lateral. Sem nada pendente → não renderiza.
 import { type ReactNode, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Crown, HandCoins, Landmark, ShieldAlert } from 'lucide-react'
+import { HandCoins, Landmark, ShieldAlert } from 'lucide-react'
 import { PlayerFace } from '@/boards/shared'
 import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
 import { useGameStore } from '@/game/store'
@@ -23,7 +23,7 @@ import { WaitingBar } from '@/net/ui/WaitingBar'
 import { isBankrupt } from '@/game/falencia/falencia'
 import { eligibleLenders, interestOf, loanShortfall } from '@/game/emprestimos/emprestimos'
 import { activeHudView } from '@/game/ui/panels/activeHudView'
-import { Confetti } from '@/game/ui/NoticeLayer'
+import { EndGameScreen } from '@/game/ui/EndGameScreen'
 import { Button, Chip } from '@/game/ui/primitives'
 import type { LoanRequest } from '@/game/economy/types'
 import { money as fmt } from '@/lib/money'
@@ -153,60 +153,19 @@ export function GameHUD() {
 
   const activeColor = colorOfPlayer(game.players, active.id) ?? 'var(--color-brass)'
 
-  // ---- Fim de jogo — celebração do vencedor (confete + coroa, estilo loteria) ----
+  // ---- Fim de jogo — classificação completa (044, US2/D-038) ----
+  // Substitui a antiga celebração isolada do vencedor: toda tela agora mostra a mesma
+  // classificação, do 1º ao último (FR-001), derivada de `matchSummary(game)` dentro do
+  // próprio `EndGameScreen`. O botão de saída mantém o comportamento de sempre — online
+  // não tem revanche (spec 038, FR-027); local pode recomeçar.
   if (hud?.kind === 'winner') {
-    const winner = game.players.find((p) => !p.eliminated)
     return (
       <AnimatePresence>
-        <motion.div
-          key="winner"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-hidden bg-coffee-950/65 backdrop-blur-[2px]"
-        >
-          <Confetti />
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0, y: 10 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 18 }}
-            className="relative text-center px-6 select-none"
-          >
-            <motion.div
-              initial={{ scale: 0, rotate: -25 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 12, delay: 0.12 }}
-              className="flex justify-center mb-3"
-            >
-              <Crown size={76} className="text-gold" style={{ filter: 'drop-shadow(0 4px 14px color-mix(in srgb, var(--color-brass) 65%, transparent))' }} />
-            </motion.div>
-            <p className="label text-gold tracking-[var(--tracking-caps)]">VENCEDOR</p>
-            <motion.p
-              initial={{ scale: 0.4, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 11, delay: 0.2 }}
-              className="display leading-none mt-2"
-              style={{ fontSize: 64, ...GOLD_TEXT }}
-            >
-              {winner ? <PlayerName playerId={winner.id} /> : '—'}
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.3 }}
-              className="mt-8 inline-block"
-            >
-              {/* Online, "novo jogo" não existe: a partida é da sala e o host não reinicia
-                  a mesa (spec 038, FR-027) — o caminho é voltar ao início e criar outra. */}
-              <Button
-                onClick={() => (online ? (window.location.search = '') : resetGame())}
-                className="px-6 py-2.5 text-base shadow-[0_4px_16px_-4px_color-mix(in_srgb,var(--color-brass)_60%,transparent)]"
-              >
-                {online ? 'Voltar ao início' : 'Novo jogo'}
-              </Button>
-            </motion.div>
-          </motion.div>
-        </motion.div>
+        <EndGameScreen
+          game={game}
+          online={online}
+          onExit={() => (online ? (window.location.search = '') : resetGame())}
+        />
       </AnimatePresence>
     )
   }

@@ -38,9 +38,9 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 
 **Meta**: o ramo `winner` do HUD vira o resumo da partida.
 
-- [ ] **T012** [P] [US2] `src/game/ui/EndGameScreen.tsx` (FR-001, FR-002, FR-005, FR-006, FR-007, FR-010): consome `matchSummary(game)`. Cabeçalho com o vencedor (coroa + `PlayerName`, reusando o que o `GameHUD:157` já tem); tabela de classificação com posição, jogador, patrimônio, propriedades e rodada da queda; rodapé com rodadas e duração. `partial: true` → agrupa eliminados sem afirmar posição e diz por quê (FR-009). Sem prazo, sem contagem regressiva.
-- [ ] **T013** `src/game/ui/GameHUD.tsx` (linha ~157): o ramo `hud?.kind === 'winner'` passa a renderizar `<EndGameScreen/>`. O botão de saída mantém o comportamento atual — online: voltar ao início; local: novo jogo (FR-008, spec 038 FR-027).
-- [ ] **T014** [test-first] `tests/ui/endGame/endGameScreen.test.tsx` (jsdom, pragma na 1ª linha — padrão da 042): mesa de 3 com duas falências → três linhas na ordem certa; vencedor em 1º; eliminado mostra rodada da queda; `partial` mostra o aviso e nenhuma posição inventada; duração ausente aparece como indisponível, nunca como `0ms`.
+- [x] **T012** [P] [US2] `src/game/ui/EndGameScreen.tsx` (FR-001, FR-002, FR-005, FR-006, FR-007, FR-010): consome `matchSummary(game)`. Cabeçalho com o vencedor (coroa + `PlayerName`, reusando o que o `GameHUD:157` já tem); tabela de classificação com posição, jogador, patrimônio, propriedades e rodada da queda; rodapé com rodadas e duração. `partial: true` → agrupa eliminados sem afirmar posição e diz por quê (FR-009). Sem prazo, sem contagem regressiva.
+- [x] **T013** `src/game/ui/GameHUD.tsx` (linha ~157): o ramo `hud?.kind === 'winner'` passa a renderizar `<EndGameScreen/>`. O botão de saída mantém o comportamento atual — online: voltar ao início; local: novo jogo (FR-008, spec 038 FR-027).
+- [x] **T014** [test-first] `tests/ui/endGame/endGameScreen.test.tsx` (jsdom, pragma na 1ª linha — padrão da 042): mesa de 3 com duas falências → três linhas na ordem certa; vencedor em 1º; eliminado mostra rodada da queda; `partial` mostra o aviso e nenhuma posição inventada; duração ausente aparece como indisponível, nunca como `0ms`.
 - [ ] **T015** `e2e/` **manual**: rodar `?players=2`, levar até a falência e conferir a tela na interface real. (Automatizado na Fase 7.)
 
 **Checkpoint**: **SC-004**, **SC-005**, **SC-006** provados headless. US2 fechada.
