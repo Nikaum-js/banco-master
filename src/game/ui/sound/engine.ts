@@ -2,7 +2,8 @@
 // lazy (criado no 1º play), GainNode master para volume/mute, buffers cacheados,
 // throttle anti-spam por cue. `play` é não-bloqueante e NUNCA lança (FR-019/FR-020).
 // Antes do 1º gesto do usuário, `play` é no-op (política de autoplay — FR-015).
-import { CUE_SRC, type SoundCue } from './cues'
+import { CUE_SRC, CUE_VARIANTS, type SoundCue } from './cues'
+import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 
 const MIN_GAP_MS = 70 // janela de coalescência por cue (FR-009)
 
@@ -11,7 +12,7 @@ let master: GainNode | null = null
 let unlocked = false
 let vol = 1
 let mut = false
-const buffers = new Map<SoundCue, Promise<AudioBuffer | null>>()
+const buffers = new Map<string, Promise<AudioBuffer | null>>()
 const lastAt = new Map<SoundCue, number>()
 
 function ensureCtx(): AudioContext | null {
@@ -37,18 +38,25 @@ export function setMasterGain(volume: number, muted: boolean): void {
   if (master) master.gain.value = mut ? 0 : vol
 }
 
+// A identidade sonora acompanha o MAPA (055/D-069): variante `<mapa>--<cue>` quando
+// existe, senão o asset base. O mapa nunca muda mid-game, então resolver na hora do
+// play é estável — e o cache passa a ser por URL, não por cue.
+function srcFor(cue: SoundCue): string | undefined {
+  return CUE_VARIANTS[useBoardTheme.getState().theme]?.[cue] ?? CUE_SRC[cue]
+}
+
 // Cacheia a PROMISE (não o buffer): plays concorrentes do mesmo cue antes do 1º
 // decode terminar compartilham o mesmo fetch, e asset ausente não re-fetcha.
 function load(cue: SoundCue, c: AudioContext): Promise<AudioBuffer | null> {
-  const cached = buffers.get(cue)
-  if (cached) return cached
-  const url = CUE_SRC[cue]
+  const url = srcFor(cue)
   if (!url) return Promise.resolve(null)
+  const cached = buffers.get(url)
+  if (cached) return cached
   const p = fetch(url)
     .then((res) => res.arrayBuffer())
     .then((arr) => c.decodeAudioData(arr))
     .catch(() => null) // asset ausente/inválido: silencioso (FR-019)
-  buffers.set(cue, p)
+  buffers.set(url, p)
   return p
 }
 

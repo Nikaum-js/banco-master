@@ -10,7 +10,9 @@
 // atenuado via CSS (.stage-backdrop__city). Movimento reduzido e o layout
 // empilhado (<=1100px) já são tratados pelas classes `entry-*` e pelo bloco
 // `.stage-backdrop` do index.css.
+import { useEffect } from 'react'
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
+import { play } from '@/game/ui/sound/engine'
 import { AtlasCityscape } from '@/net/ui/home/AtlasCityscape'
 import { FuligemBackdrop } from '@/net/ui/home/FuligemBackdrop'
 import { AirlinerMark } from '@/net/ui/entryShell'
@@ -85,6 +87,12 @@ function StageRoutes({ className }: { className?: string }) {
 // mesa durante a partida, atrás do tabuleiro.
 export function StageBackdrop() {
   const theme = useBoardTheme((state) => state.theme)
+  // Sirene breve na abertura dos portões (055/US3): toca UMA vez, quando o palco da
+  // partida monta no mapa Fuligem. Cue sem asset (Atlas) é no-op por contrato do engine.
+  useEffect(() => {
+    if (theme === 'fuligem') play('match-start')
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só na montagem do palco
+  }, [])
   if (theme === 'fuligem') {
     return (
       <div className="stage-backdrop" aria-hidden="true">

@@ -119,7 +119,7 @@ function MillBand({ list, base, ink, className, opacity }: {
 
 // O COMPLEXO PRINCIPAL — a fábrica do lobby, com oito seções de janela (uma por assento).
 // Sem sala (home), as seções ficam apagadas: vidro escuro.
-function MainWorks({ seatColors }: { seatColors: (string | null)[] }) {
+function MainWorks({ seatColors, gatesOpen }: { seatColors: (string | null)[]; gatesOpen: boolean }) {
   const x = 470
   const base = 700
   const w = 500
@@ -128,8 +128,9 @@ function MainWorks({ seatColors }: { seatColors: (string | null)[] }) {
     <g transform={`translate(${x} ${base - h})`}>
       <rect width={w} height={h + 20} fill="#070605" />
       <path d={sawtooth(w)} fill="#070605" />
-      {/* portões centrais — os que "se abrem" na transição de início (CSS) */}
-      <g className="fuligem-gates">
+      {/* portões centrais — abrem na transição lobby → partida (CSS, congela sob
+          movimento reduzido: o fato "aberto/fechado" permanece via data-open) */}
+      <g className="fuligem-gates" data-open={gatesOpen ? '' : undefined}>
         <rect x={w / 2 - 34} y={h - 62} width={32} height={62} fill="#0f0c09" stroke="var(--color-brass)" strokeOpacity="0.35" strokeWidth="1.5" />
         <rect x={w / 2 + 2} y={h - 62} width={32} height={62} fill="#0f0c09" stroke="var(--color-brass)" strokeOpacity="0.35" strokeWidth="1.5" />
       </g>
@@ -207,7 +208,9 @@ function CargoTrain() {
 export function FuligemBackdrop({ className }: { className?: string }) {
   // Só o lobby/partida têm sala; na home o seletor devolve null e as seções ficam apagadas.
   const seats = useRoomStore((s) => s.room?.seats)
+  const status = useRoomStore((s) => s.room?.status)
   const seatColors = Array.from({ length: 8 }, (_, i) => seats?.[i]?.color ?? null)
+  const gatesOpen = status !== undefined && status !== 'lobby'
 
   return (
     <div
@@ -225,7 +228,7 @@ export function FuligemBackdrop({ className }: { className?: string }) {
         <CargoTrain />
         <line x1="0" y1="700" x2="1440" y2="700" stroke="#0a0807" strokeWidth="3" />
         <MillBand list={NEAR} base={760} ink="#070605" opacity={0.96} />
-        <MainWorks seatColors={seatColors} />
+        <MainWorks seatColors={seatColors} gatesOpen={gatesOpen} />
         <PowerPoles />
       </svg>
       <div className="fuligem-haze" />

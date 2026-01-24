@@ -5,7 +5,8 @@ import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 're
 import { createPortal } from 'react-dom'
 
 import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare } from '@/lib/boardData'
-import { BOARD } from '@/lib/boardData'
+import { activeBoard } from '@/game/ui/theme/boardTheme'
+import { BOARD as ENGINE_BOARD, type GroupKey } from '@/lib/boardData'
 import { useGameStore } from '@/game/store'
 import { useLocalView, useRoomStore } from '@/net/roomStore'
 import { cityLevel } from '@/game/economy/construction'
@@ -130,6 +131,17 @@ export function ClassicSquare({
   const ownerId = useGameStore((s) => s.game.titles[square.pos]?.ownerId)
   const room = useRoomStore((s) => s.room)
   const ownerColor = ownerId ? identityOf(room, ownerId).color : undefined
+  // Bairro Completo conecta as propriedades (055/FR-009, só na Fuligem): dono de todas
+  // as casas do grupo ganha o trilho de conexão na borda externa. Derivado do estado
+  // real; o esqueleto de grupos vem do motor (igual nos dois mapas).
+  const groupComplete = useGameStore((s) => {
+    if (square.kind !== 'property') return false
+    const owner = s.game.titles[square.pos]?.ownerId
+    if (!owner) return false
+    const group = (square as PropertySquare).group as GroupKey
+    return ENGINE_BOARD.every((q) => q.kind !== 'property' || q.group !== group || s.game.titles[q.pos]?.ownerId === owner)
+  })
+  const fuligemMap = activeCatalog().id === 'fuligem'
   // Feedback de posse (044, T020/FR-029): a troca de dono da célula não tinha NENHUM
   // aviso visual — cor aparecia/sumia de golpe. `key={ownerColor}` remonta o grupo a cada
   // transferência (compra, leilão, aquisição hostil) e o `pop` do vocabulário entra por cima.
@@ -168,6 +180,24 @@ export function ClassicSquare({
             />
           </>
         </motion.div>
+      )}
+      {/* Trilho de conexão do Bairro Completo (Fuligem): uma barra contínua na
+          borda EXTERNA, na cor do dono — as casas vizinhas do grupo desenham a
+          mesma barra e o conjunto lê como um só ramal. Estado, nunca decoração. */}
+      {fuligemMap && groupComplete && ownerColor && (
+        <div
+          className="absolute pointer-events-none z-30"
+          data-group-linked
+          aria-hidden
+          style={{
+            ...(side === 'bottom' ? { left: -1, right: -1, bottom: 0, height: 4 }
+              : side === 'top' ? { left: -1, right: -1, top: 0, height: 4 }
+              : side === 'left' ? { top: -1, bottom: -1, left: 0, width: 4 }
+              : { top: -1, bottom: -1, right: 0, width: 4 }),
+            background: `repeating-linear-gradient(${side === 'left' || side === 'right' ? '180deg' : '90deg'}, ${ownerColor} 0 6px, color-mix(in srgb, ${ownerColor} 35%, var(--color-ink-abyss)) 6px 9px)`,
+            boxShadow: `0 0 8px color-mix(in srgb, ${ownerColor} 60%, transparent)`,
+          }}
+        />
       )}
       {/* Bandeira-avatar do país — fincada na borda INTERNA (voltada
           pro centro do tabuleiro); metade dentro da célula, metade
@@ -488,6 +518,10 @@ export function HangarMark({ pos }: { pos: number }) {
 export function MortgageMark({ pos }: { pos: number }) {
   const mortgaged = useGameStore((s) => s.game.titles[pos]?.mortgaged)
   if (!mortgaged) return null
+  // Na Fuligem a luz se apaga E entra a placa de fábrica "HIPOTECADA" — texto e
+  // listra de manutenção, nunca só o escurecimento (FR-009, dicromacia §12.6).
+  const fuligem = activeCatalog().id === 'fuligem'
+  const side = sideOf(pos)
   return (
     <div
       className="absolute inset-0 pointer-events-none z-[25]"
@@ -497,6 +531,24 @@ export function MortgageMark({ pos }: { pos: number }) {
         boxShadow: 'inset 0 0 14px 3px rgba(0,0,0,0.6)',
       }}
     >
+      {fuligem && (
+        <span
+          className="absolute left-1/2 top-1/2 label"
+          style={{
+            transform: `translate(-50%, -50%) rotate(${side === 'left' ? 90 : side === 'right' ? -90 : 0}deg)`,
+            fontSize: '7px',
+            letterSpacing: '0.14em',
+            padding: '1.5px 4px',
+            color: 'var(--color-starlight)',
+            background: 'repeating-linear-gradient(45deg, rgb(7 5 4 / 0.95) 0 5px, rgb(74 62 49 / 0.95) 5px 10px)',
+            border: '1px solid var(--color-ink-400)',
+            borderRadius: '2px',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          HIPOTECADA
+        </span>
+      )}
     </div>
   )
 }
@@ -505,7 +557,7 @@ export function MortgageMark({ pos }: { pos: number }) {
 // (utilidades), boicote/imunidade-temp (casa específica). Pulsa pra chamar atenção.
 export function EffectMark({ pos }: { pos: number }) {
   const effects = useGameStore((s) => s.game.tempEffects)
-  const sq = BOARD[pos]
+  const sq = activeBoard()[pos]
   let badge: { tag: string; tone: 'logo' | 'gold'; title: string } | null = null
   for (const e of effects) {
     if (e.kind === 'apagao' && sq.kind === 'airport') badge = { tag: 'A', tone: 'logo', title: `${activeLabels().hangar} inativo pela Greve` }
@@ -549,7 +601,7 @@ function effectRow(e: TempEffect, i: number): {
   key: string; label: string; desc: string; detail: string; tag: string; laps: number; tone: 'logo' | 'gold'
 } {
   const laps = `${e.lapsRemaining} ${e.lapsRemaining === 1 ? 'volta' : 'voltas'}`
-  const place = BOARD[e.pos ?? 0]?.name ?? '—'
+  const place = activeBoard()[e.pos ?? 0]?.name ?? '—'
   switch (e.kind) {
     case 'apagao': return { key: `a${i}`, label: `Greve (${activeLabels().hangar})`, desc: `${activeLabels().hangar} inativa · ${laps}`, detail: `${activeLabels().hangar} inativa`, tag: 'A', laps: e.lapsRemaining, tone: 'logo' }
     case 'greve': return { key: `g${i}`, label: 'Greve (Utilidades)', desc: `Utilidades sem aluguel · ${laps}`, detail: 'Utilidades sem aluguel', tag: 'G', laps: e.lapsRemaining, tone: 'logo' }
@@ -1240,6 +1292,25 @@ function PotCard({ pot }: { pot: number }) {
         {pot.toLocaleString('pt-BR')}
       </motion.p>
 
+      {/* Na Fuligem o pote é FÍSICO (FR-009): a pilha de moedas cresce com o valor —
+          o número continua sendo o canal principal; a pilha é redundância visível. */}
+      {activeCatalog().id === 'fuligem' && pot > 0 && (
+        <div className="mt-1.5 flex items-end justify-center gap-[3px]" aria-hidden>
+          {Array.from({ length: Math.min(8, Math.max(1, Math.floor(pot / 400) + 1)) }, (_, i) => (
+            <span
+              key={i}
+              className="inline-block rounded-[1px]"
+              style={{
+                width: 7,
+                height: 4 + ((i * 5) % 9),
+                background: 'linear-gradient(180deg, var(--color-brass-glow), var(--color-brass-soft))',
+                boxShadow: '0 1px 0 rgb(7 5 4 / 0.8)',
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       <p className="label text-cream-muted mt-2 text-micro">
         {pot > 0 ? `Pare em ${activeLabels().lottery} e leve tudo` : 'Impostos e multas acumulam aqui'}
       </p>
@@ -1352,7 +1423,7 @@ function LogSentenceView({ sentence }: { sentence: ReturnType<typeof describeLog
           case 'player':
             return <span key={i} className="font-semibold" style={{ color: f.identity.color }}>{f.identity.name}</span>
           case 'place':
-            return <span key={i}>{BOARD[f.pos]?.name ?? `#${f.pos}`}</span>
+            return <span key={i}>{activeBoard()[f.pos]?.name ?? `#${f.pos}`}</span>
           case 'text':
             return <span key={i}>{f.text}</span>
           default:

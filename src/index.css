@@ -6241,6 +6241,14 @@
     background-repeat: no-repeat;
     opacity: 0.7;
   }
+  /* Portões do complexo: fechados no lobby, abertos na partida. A duração vem do
+     vocabulário de movimento — o freio de movimento reduzido a zera e o fato fica. */
+  .fuligem-gates rect {
+    transition: transform var(--motion-slow) var(--ease-emphasis);
+  }
+  .fuligem-gates[data-open] rect:first-child { transform: translateX(-26px); }
+  .fuligem-gates[data-open] rect:last-child { transform: translateX(26px); }
+
   /* Placa fundida: sombra de estampa + halo de fornalha discreto. */
   .fuligem-wordmark {
     text-shadow: 0 2px 0 rgb(7 5 4 / 0.9), 0 0 26px rgb(217 130 46 / 0.26);
