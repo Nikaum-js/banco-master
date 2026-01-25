@@ -3,7 +3,7 @@
 import { BOARD } from '@/lib/boardData'
 import type { Square, PropertySquare } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
-import { buildCost } from '../economy/construction'
+import { buildCost, cityLevel, HANGAR_COST } from '../economy/construction'
 import { activePlayer, completeResolution, advanceSeat, type TurnCtx } from '../turn/turnMachine'
 import { activeLoanFor } from '../emprestimos/emprestimos'
 
@@ -22,9 +22,10 @@ export function liquidationValue(state: GameState, playerId: string): number {
     const t = state.titles[sq.pos]
     if (!t || t.ownerId !== playerId) continue
     if (sq.kind === 'property') {
-      const units = t.hotel ? 5 : t.houses
+      const units = cityLevel(t) // 0–7: casas/hotel/2º hotel/Skyscraper, cada nível = buildCost
       v += Math.round((units * buildCost(sq as PropertySquare)) / 2) // venda de construção (metade)
     }
+    if (sq.kind === 'airport' && t.hangar) v += Math.round(HANGAR_COST / 2) // venda do Hangar
     if (!t.mortgaged) v += Math.round(priceOf(sq) / 2) // hipoteca das não-hipotecadas
   }
   return v
@@ -74,6 +75,14 @@ export function declareBankruptcy(state: GameState, ctx: TurnCtx): GameState {
     const t = s.titles[sq.pos]
     if (!t || t.ownerId !== debtor.id) continue
     if (sq.kind === 'property') {
+      if (t.skyscraper) {
+        s.bank.skyscrapers += 1 // Skyscraper volta ao estoque (011)
+        t.skyscraper = false
+      }
+      if (t.hotel2) {
+        s.bank.hotels += 1 // 2º hotel volta ao estoque (011)
+        t.hotel2 = false
+      }
       if (t.hotel) {
         s.bank.hotels += 1
         t.hotel = false
@@ -81,7 +90,8 @@ export function declareBankruptcy(state: GameState, ctx: TurnCtx): GameState {
       s.bank.houses += t.houses // construções voltam ao banco (§9.2/§15.5)
       t.houses = 0
     }
-    t.ownerId = heirId // credor do empréstimo (§9.3) ou da dívida (§9.2); banco se null. Hipoteca preservada.
+    // Hangar de aeroporto NÃO é desfeito: segue o aeroporto ao herdeiro (§13.6).
+    t.ownerId = heirId // credor do empréstimo (§9.3) ou da dívida (§9.2); banco se null. Hipoteca/Hangar preservados.
   }
   if (heirId) {
     const heir = s.players.find((p) => p.id === heirId)
