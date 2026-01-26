@@ -718,6 +718,92 @@
   }
 
   /* =================================================================
+     Telas de entrada (home/lobby) — a "sala de mapas" do Atlas.
+     O painel é uma prancha do atlas: tinta com brilho de latão no topo
+     e MARCAS DE REGISTRO nos cantos — o mesmo cromo das casas do
+     tabuleiro (.board-square::before), em escala de cartão.
+     ================================================================= */
+  .entry-panel {
+    position: relative;
+    border: 1px solid var(--color-ink-500);
+    border-radius: var(--radius-card);
+    background:
+      radial-gradient(110% 55% at 50% 0%, color-mix(in srgb, var(--color-brass) 8%, transparent) 0%, transparent 55%),
+      linear-gradient(180deg, color-mix(in srgb, var(--color-ink-800) 94%, transparent) 0%, color-mix(in srgb, var(--color-ink-900) 97%, transparent) 100%);
+    box-shadow:
+      inset 0 1px 0 0 rgb(238 242 251 / 0.06),
+      var(--shadow-dropdown);
+    backdrop-filter: blur(3px);
+  }
+  .entry-panel::before {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    pointer-events: none;
+    --tick: color-mix(in srgb, var(--color-brass) 50%, transparent);
+    background:
+      linear-gradient(var(--tick), var(--tick)) left top    / 10px 1px,
+      linear-gradient(var(--tick), var(--tick)) left top    / 1px 10px,
+      linear-gradient(var(--tick), var(--tick)) right top   / 10px 1px,
+      linear-gradient(var(--tick), var(--tick)) right top   / 1px 10px,
+      linear-gradient(var(--tick), var(--tick)) left bottom / 10px 1px,
+      linear-gradient(var(--tick), var(--tick)) left bottom / 1px 10px,
+      linear-gradient(var(--tick), var(--tick)) right bottom/ 10px 1px,
+      linear-gradient(var(--tick), var(--tick)) right bottom/ 1px 10px;
+    background-repeat: no-repeat;
+  }
+
+  /* Decoração VOADORA das telas de entrada (aviões, token passeando) — segue a
+     rota via CSS Motion Path (SMIL dinâmico congela no Chromium). Puro enfeite:
+     sem suporte a offset-path, ou sob movimento reduzido, some inteira — nunca
+     empilha parada na origem nem congela no meio do caminho. Cada instância dá
+     seu path/duração/delay inline; delay NEGATIVO larga o voador já em rota. */
+  .entry-flyer { display: none; }
+  @supports (offset-path: path("M0 0h1")) {
+    .entry-flyer {
+      display: inline;
+      animation: entry-fly linear infinite;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .entry-flyer { display: none; }
+  }
+  @keyframes entry-fly {
+    from { offset-distance: 0%; }
+    to   { offset-distance: 100%; }
+  }
+
+  /* Nuvens à deriva — varrem a carta de oeste a leste num translate linear.
+     Sob movimento reduzido ficam PARADAS (visíveis na posição-base do filho),
+     diferente dos voadores: nuvem estática ainda compõe a cena. */
+  .entry-drift { animation: entry-drift linear infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .entry-drift { animation: none; }
+  }
+  @keyframes entry-drift {
+    from { transform: translateX(-280px); }
+    to   { transform: translateX(1720px); }
+  }
+
+  /* Input das telas de entrada — vão de tinta funda com foco em latão. */
+  .entry-input {
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sharp);
+    background-color: color-mix(in srgb, var(--color-ink-950) 72%, transparent);
+    border: 1px solid var(--color-ink-500);
+    color: var(--color-starlight);
+    transition: border-color var(--motion-base) var(--ease-standard),
+                box-shadow var(--motion-base) var(--ease-standard);
+  }
+  .entry-input::placeholder {
+    color: color-mix(in srgb, var(--color-starlight-muted) 85%, transparent);
+  }
+  .entry-input:focus {
+    border-color: color-mix(in srgb, var(--color-brass) 60%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-brass) 30%, transparent);
+  }
+
+  /* =================================================================
      Texto das casas: nunca extrapolar a célula.
      Nomes compostos quebram só nos ESPAÇOS (nunca no meio da palavra —
      antes "Shenzhen" virava "SHENZHE-N"). Palavra única longa que não cabe
