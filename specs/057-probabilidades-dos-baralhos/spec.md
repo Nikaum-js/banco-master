@@ -24,7 +24,7 @@ Resolvidas por SRS, ADR e código real — sem pergunta pendente ao usuário:
 
 | Ambiguidade | Resolução | Fonte |
 |---|---|---|
-| A probabilidade sai do baralho VIVO ou da composição impressa? | **Da composição impressa (catálogo estático).** O baralho chega ao cliente como *contagem*: o conteúdo não trafega para quem não é anfitrião. Ler o estado vivo daria número indisponível fora do anfitrião **e** revelaria o que já saiu | SRS §10.3 + [D-037](../../docs/adr/D-037-estado-por-perspectiva-a-mao-nao-trafega.md) |
+| A probabilidade sai do baralho VIVO ou da composição impressa? | **Do catálogo estático e dos pesos canônicos de raridade.** A chance é `peso × cópias / soma dos pesos`; o baralho vivo continua proibido. Seu conteúdo não trafega para quem não é anfitrião, e ler o estado vivo revelaria o que já saiu | SRS §10.2–10.3 + [D-037](../../docs/adr/D-037-estado-por-perspectiva-a-mao-nao-trafega.md) + [D-074](../../docs/adr/D-074-raridade-de-carta-nao-inverte-probabilidade.md) |
 | Mostrar carta a carta ou agrupar cópias? | **Agrupar por efeito.** O catálogo tem `copies` por carta base (ex.: Aquisição Hostil ×2); listar as 21 unidades repetiria linha idêntica e esconderia justamente a informação pedida (qual efeito é mais provável) | `src/game/cards/catalog.ts` |
 | Empate de chance quebra como? | Cartas com a mesma chance são muitas (11 comuns do Acaso têm 1 cópia cada). Desempate estável por **raridade decrescente**, depois por **nome** — sem isso a ordem varia entre renders e a lista parece embaralhada | decisão desta spec |
 | Onde vêm título e texto de cada efeito? | `CARD_LABEL` e `CARD_DESC` em `cardMeta.ts`, que já é fonte única de modais e do painel "Minhas Cartas" | spec 029 |
@@ -127,10 +127,11 @@ números do modal são idênticos aos do início; e que a projeção não lê `G
 
 - **FR-001**: clicar na casa de **Acaso** ou de **Tesouro** no tabuleiro MUST abrir um modal
   informativo com a vitrine de probabilidades daquele baralho.
-- **FR-002**: a vitrine MUST derivar as chances **exclusivamente** do catálogo estático de cartas,
-  e MUST NOT ler o baralho, o descarte ou qualquer mão de `GameState`.
+- **FR-002**: a vitrine MUST derivar as chances **exclusivamente** do catálogo estático de cartas
+  e dos pesos canônicos de raridade da D-074, e MUST NOT ler o baralho, o descarte ou qualquer
+  mão de `GameState`.
 - **FR-003**: a vitrine MUST agrupar por efeito, somando as cópias, e MUST exibir a contagem de
-  cópias e a chance resultante de cada efeito.
+  cópias e a chance ponderada resultante de cada efeito.
 - **FR-004**: a lista MUST estar ordenada por chance **crescente**, com desempate estável por
   raridade decrescente e depois por nome.
 - **FR-005**: a vitrine MUST cobrir **todos** os efeitos com `status: 'implementado'` do baralho, e
