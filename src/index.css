@@ -2061,53 +2061,67 @@
     stroke-width: 0.9;
     filter: drop-shadow(0 0 5px rgb(167 107 245 / 0.4));
   }
-  .home-map-panel__stats {
+  .home-map-panel__manifest {
     position: relative;
     z-index: 1;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.5rem;
-  }
-  .home-map-panel__stats div {
     min-width: 0;
-    padding: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-height: 4.25rem;
+    padding: 0.68rem 0.82rem;
     border: 1px solid color-mix(in srgb, var(--home-map-accent) 18%, transparent);
     background:
       linear-gradient(135deg, color-mix(in srgb, var(--home-map-accent) 7%, transparent), transparent 65%),
       color-mix(in srgb, var(--color-ink-950) 38%, transparent);
   }
-  .home-map-panel__stats svg {
-    width: 0.95rem;
-    height: 0.95rem;
-    margin-bottom: 0.42rem;
-    color: var(--home-map-accent);
-    opacity: 0.88;
+  .home-map-panel__manifest::after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    min-width: 1.5rem;
+    margin-left: 0.25rem;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--home-map-accent) 40%, transparent), transparent);
   }
-  .home-map-panel__stats strong,
-  .home-map-panel__stats span {
+  .home-map-panel__manifest-seal {
+    width: 2.55rem;
+    height: 2.55rem;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--home-map-accent) 48%, transparent);
+    border-radius: 50%;
+    color: var(--home-map-accent);
+    box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--color-ink-950) 76%, transparent);
+    transform: rotate(-8deg);
+  }
+  .home-map-panel__manifest-seal svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    stroke-width: 1.5;
+  }
+  .home-map-panel__manifest-copy {
+    min-width: 0;
+  }
+  .home-map-panel__manifest-copy strong,
+  .home-map-panel__manifest-copy span {
     display: block;
   }
-  .home-map-panel__stats strong {
+  .home-map-panel__manifest-copy strong {
     color: var(--home-map-hot);
     font-family: var(--font-display);
     font-size: 1.05rem;
     font-weight: 400;
-    line-height: 1;
-  }
-  .home-map-panel__stats span {
-    margin-top: 0.26rem;
-    color: color-mix(in srgb, var(--color-starlight-muted) 68%, transparent);
-    font-family: var(--font-label);
-    font-size: 0.43rem;
-    letter-spacing: 0.08em;
+    line-height: 1.05;
+    letter-spacing: 0.035em;
     text-transform: uppercase;
   }
-  .home-map-panel__stats .home-map-panel__stat-text {
+  .home-map-panel__manifest-copy span {
+    margin-top: 0.32rem;
+    color: color-mix(in srgb, var(--color-starlight-muted) 68%, transparent);
     font-family: var(--font-label);
-    margin-top: 0.18rem;
-    font-size: 0.52rem;
-    font-weight: 700;
-    letter-spacing: 0.01em;
+    font-size: 0.46rem;
+    letter-spacing: 0.11em;
     text-transform: uppercase;
   }
   .home-map-panel__availability {

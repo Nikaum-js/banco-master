@@ -2,12 +2,10 @@ import { AnimatePresence, motion } from 'motion/react'
 import {
   ArrowLeft,
   ArrowRight,
-  Globe2,
+  Compass,
   Link2,
   LockKeyhole,
   Map,
-  Radio,
-  Users,
 } from 'lucide-react'
 import { Button } from '@/game/ui/primitives'
 import { EASE, MOTION } from '@/game/ui/motion'
@@ -16,9 +14,7 @@ import { cn } from '@/lib/utils'
 import { EntryPanel } from '../entryShell'
 import {
   HOME_MAPS,
-  MAX_PLAYERS,
   NAME_MAX,
-  STATS,
   type HomeForm,
 } from './homeShared'
 
@@ -114,22 +110,15 @@ function CityNetwork({ skin }: { skin: HomeMapSkin }) {
   )
 }
 
-function MapFacts() {
+function MapManifest() {
   return (
-    <div className="home-map-panel__stats">
-      <div>
-        <Globe2 aria-hidden />
-        <strong>{STATS.countries}</strong>
-        <span>países</span>
+    <div className="home-map-panel__manifest">
+      <div className="home-map-panel__manifest-seal" aria-hidden="true">
+        <Compass />
       </div>
-      <div>
-        <Users aria-hidden />
-        <strong>{MAX_PLAYERS}</strong>
-        <span>jogadores</span>
-      </div>
-      <div>
-        <Radio aria-hidden />
-        <strong className="home-map-panel__stat-text">Multiplayer</strong>
+      <div className="home-map-panel__manifest-copy">
+        <strong>Jogue grátis.</strong>
+        <span>Sem anúncios. Sem instalar.</span>
       </div>
     </div>
   )
@@ -202,7 +191,7 @@ export function HomeMapPanel({
           </div>
 
           {map.playable ? (
-            <MapFacts />
+            <MapManifest />
           ) : (
             <div className="home-map-panel__availability">
               <LockKeyhole aria-hidden />

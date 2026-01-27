@@ -32,7 +32,8 @@ describe('seletor visual do mapa na home', () => {
     fireEvent.change(input, { target: { value: 'Nikaum' } })
 
     expect(screen.queryByText('Novos mapas em breve')).toBeNull()
-    expect(screen.getByText('Multiplayer')).toBeTruthy()
+    expect(screen.getByText('Jogue grátis.')).toBeTruthy()
+    expect(screen.getByText('Sem anúncios. Sem instalar.')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', {
       name: 'Pré-visualizar o mapa Metrópole Neon',
     }))
