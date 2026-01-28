@@ -6,6 +6,28 @@
 @import "@fontsource-variable/roboto-slab";
 
 /* =====================================================================
+   Área segura — recorte físico do aparelho (notch, cantos arredondados,
+   barra de gestos). VOCABULÁRIO ÚNICO: nada no app lê `env()` direto.
+
+   Por que existe: a partida é servida em PAISAGEM (SRS §12.6), e é
+   justamente deitado que o notch do iPhone come uma das LATERAIS — que é
+   onde moram as gavetas de painel. Sem isto, o `--stage-pad: 4px` de
+   740×360 encosta a gaveta no recorte e o nome do jogador cai atrás do
+   vidro. A barra de gestos faz o mesmo com a borda de baixo.
+
+   `env()` só devolve valor diferente de zero com `viewport-fit=cover` no
+   meta viewport — que os cinco HTML de entrada declaram. Em navegador de
+   desktop, e em qualquer aparelho sem recorte, os quatro valem 0 e nada
+   nesta folha muda de posição: o piso do `max()` continua mandando.
+   ===================================================================== */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+/* =====================================================================
    Design tokens — "Atlas da Meia-Noite"
    Identidade Magnata Imobiliário · carta náutica noturna: tinta azul-profunda,
    latão de instrumento, luzes de cidade. (Substitui o "Café Coado".)
@@ -1120,11 +1142,46 @@
   }
 
   /* Em ponteiro de toque, o alvo inteiro respeita a régua de 44px da skill.
-     O desenho interno pode continuar compacto; o hit area é que não encolhe. */
+     O desenho interno pode continuar compacto; o hit area é que não encolhe.
+
+     `.board-square-button` fica de fora porque a casa do tabuleiro é um
+     DIAGRAMA: a posição dela carrega a informação, e alargar a casa para 44px
+     redesenharia o tabuleiro — o que esta tarefa proíbe. É a exceção
+     "essencial" da WCAG 2.5.8, não um esquecimento.
+
+     A ALTURA é o que se pode forçar em todo mundo sem consequência: numa
+     coluna, crescer para baixo não empurra vizinho. A LARGURA não — forçar
+     44px de caixa em todo botão inflaria linhas que o desenho mantém
+     apertadas de propósito (a do jogador é o caso). Quem precisa de área
+     horizontal usa `.hit-44` abaixo, que cresce a ÁREA sem crescer a CAIXA. */
   @media (pointer: coarse) {
     button:not(.board-square-button) {
       min-block-size: 44px;
     }
+  }
+
+  /* Área de toque de 44×44 sem inflar o layout — o botão continua do tamanho
+     que o desenho pede e a área clicável se estende por um pseudo-elemento
+     centrado. É a técnica que a linha do jogador já usava (`player-row__quit`,
+     §12.6); aqui ela vira vocabulário, em vez de um truque local repetido.
+
+     Tamanho ABSOLUTO centrado, não inset relativo: com o `inset: -11px` fixo que
+     esta base usava, a área só chega a 44px se a caixa medir exatamente 22 — um
+     botão de 20px parava em 42 (reprovado, medido) e um de 36 ia a 58 (exagero).
+     `max(100%, 44px)` parte do tamanho REAL, garante o piso e nunca encolhe a
+     área de quem já passa da régua. */
+  .hit-44 {
+    position: relative;
+  }
+
+  .hit-44::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-start: 50%;
+    inline-size: max(100%, 44px);
+    block-size: max(100%, 44px);
+    transform: translate(-50%, -50%);
   }
 }
 
@@ -2251,7 +2308,13 @@
        paisagem estreita) derivam daqui, em vez de repetir a conta três vezes e deixar uma
        para trás. Nenhuma superfície reserva altura aqui: a cobrança de dívida reservava
        (D-056) e o tabuleiro pulava para cima ao abrir; agora ela mora no miolo (D-066). */
-    --stage-vh: calc(100svh - var(--stage-pad) * 2);
+    /* A altura útil desconta o recorte de cima e de baixo além do padding: em
+       paisagem com barra de gestos, `100svh` ainda conta a faixa que o sistema
+       reserva, e o tabuleiro (um QUADRADO derivado desta medida) crescia por
+       baixo dela. Descontar aqui conserta a altura e a largura de uma vez. */
+    --stage-vh: calc(
+      100svh - var(--stage-pad) * 2 - var(--safe-top) - var(--safe-bottom)
+    );
     position: relative;
     width: 100%;
     min-height: 100svh;
@@ -2262,7 +2325,13 @@
       minmax(var(--side-min), 1fr);
     align-items: center;
     gap: 10px;
-    padding: var(--stage-pad);
+    /* O padding é o piso; o recorte físico soma por cima dele. Deitado, é o
+       lado ESQUERDO ou DIREITO que ganha o notch — e é lá que fica a gaveta. */
+    padding:
+      calc(var(--stage-pad) + var(--safe-top))
+      calc(var(--stage-pad) + var(--safe-right))
+      calc(var(--stage-pad) + var(--safe-bottom))
+      calc(var(--stage-pad) + var(--safe-left));
     isolation: isolate;
   }
 
@@ -2801,8 +2870,40 @@
     .debt-call__label-short { display: inline; }
   }
 
+  /* Canto inferior esquerdo, respeitando o recorte físico do aparelho. Deitado é
+     esse lado que pode receber o notch, e a barra de gestos come a base. */
   .audio-control {
-    bottom: 0.75rem;
+    bottom: calc(0.75rem + var(--safe-bottom));
+    left: calc(0.75rem + var(--safe-left));
+  }
+
+  /* Em paisagem estreita o canto inferior esquerdo é da GAVETA: fixo ali, o
+     controle pousava em cima do painel — medido em 667×375, o botão cobria o "T"
+     de "TABULEIRO EM PAZ" no cartão de Efeitos Ativos.
+     Mover o controle não resolve (o rodapé do meio é do "Rolar dados", e as duas
+     colunas laterais vão de ponta a ponta): quem tem de ceder é a GAVETA. Ela
+     reserva no fim da própria rolagem a faixa que o controle ocupa, e aí o
+     conteúdo do painel nunca termina embaixo dele. */
+  @media (orientation: landscape) and (max-width: 1100px),
+    (orientation: landscape) and (max-height: 560px) {
+    /* Só a gaveta que fica DEBAIXO do controle de áudio reserva a faixa — 3,25rem
+       são 14% de uma tela de 360px, e cobrar isso da coluna da direita seria
+       gastar altura à toa.
+       `:has(.player-row)` e não `:first-child`: a gaveta não é o primeiro filho
+       de `.board-stage` (medido — `:first-child` não casa com nenhuma das duas,
+       e por isso a primeira versão desta regra não teve efeito nenhum). Aqui o
+       alvo é dito pelo que a coluna CONTÉM, que é o que de fato a identifica. */
+    .side-panel:has(.player-row) {
+      padding-bottom: calc(3.25rem + var(--safe-bottom));
+    }
+  }
+
+  /* Toque não tem hover: o slider nasce visível e o volume deixa de depender de
+     apertar o mudo primeiro. */
+  @media (pointer: coarse) {
+    .audio-control__slider {
+      display: block;
+    }
   }
 
   /* Prazo do empréstimo (§15.6): a frase que explica o que o vencimento faz.
@@ -3110,11 +3211,9 @@
       background-color var(--motion-base) var(--ease-standard);
   }
 
-  .player-row__quit::after {
-    content: "";
-    position: absolute;
-    inset: -0.6875rem;
-  }
+  /* A área de toque vem de `.hit-44` (classe no JSX), não de um `::after` próprio:
+     o inset fixo de `-0.6875rem` que morava aqui errava por 2px — 11px só chegam a
+     44 se a caixa medir exatamente 22, e o botão real mede 20 na gaveta. */
 
   .player-row__quit:hover:not(:disabled),
   .player-row__quit:focus-visible {
@@ -3669,7 +3768,10 @@
     .board-frame {
       width: min(
         var(--stage-vh),
-        calc(100vw - var(--side-min) * 2 - var(--stage-pad) * 2 - 20px)
+        calc(
+          100vw - var(--side-min) * 2 - var(--stage-pad) * 2 - 20px
+          - var(--safe-left) - var(--safe-right)
+        )
       );
       height: auto;
     }
@@ -3712,13 +3814,23 @@
       justify-content: space-between;
     }
 
+    /* O caixa ganha FILEIRA PRÓPRIA em vez de flutuar sobre a linha.
+       Antes ele era `position: absolute` à direita e a identidade reservava
+       espaço com `padding-right: 4.75rem`. Numa gaveta de 180px a coluna de
+       identidade mede 76px — exatamente o tamanho da reserva —, então a
+       largura útil do nome ficava em ZERO: "Jogador 1" era renderizado numa
+       caixa de 0×14 e simplesmente não existia na tela, e o botão de desistir
+       ao lado dele era espremido a 2px de largura.
+       Empilhar resolve os dois de uma vez e sem número mágico: ninguém
+       reserva espaço para ninguém. */
     .side-panel .player-row {
       min-height: 0;
       grid-template-columns: 0.875rem 2.25rem minmax(0, 1fr);
       grid-template-areas:
         "seat portrait identity"
-        "seat portrait meta";
-      grid-template-rows: auto auto;
+        "seat portrait meta"
+        "seat money    money";
+      grid-template-rows: auto auto auto;
       align-content: center;
       gap: 0.25rem 0.5rem;
       padding: 0.5rem 0.5rem 0.5rem 0;
@@ -3741,7 +3853,6 @@
 
     .side-panel .player-row__identity {
       width: auto;
-      padding-right: 4.75rem;
     }
 
     .side-panel .player-row__headline {
@@ -3758,21 +3869,23 @@
       justify-content: flex-start;
       flex-wrap: wrap;
       gap: 0.3125rem;
-      padding-right: 4.75rem;
     }
 
     .side-panel .player-row__signals {
       margin-left: 0;
     }
 
+    /* Estático, na fileira que o grid acima reservou: fora do fluxo ele
+       obrigava a identidade a reservar espaço por ele, e era essa reserva que
+       zerava o nome. Continua alinhado à direita — o alinhamento é a leitura
+       de dinheiro, e ele não depende de estar flutuando. */
     .side-panel .player-row__money {
-      position: absolute;
-      top: 50%;
-      right: 0.5rem;
       min-width: 0;
-      align-items: flex-end;
+      flex-direction: row;
+      align-items: baseline;
+      justify-content: flex-end;
+      gap: 0.25rem;
       text-align: right;
-      transform: translateY(-50%);
     }
 
     .side-panel .player-row__money > p {
@@ -5436,14 +5549,33 @@
     gap: 0.9rem;
     padding: 0.9rem 0.25rem 0.25rem 1.35rem;
   }
+  /* `repeat(8, …)` fixo brigava com o piso de toque: em ponteiro grosso o
+     `min-block-size: 44px` do botão, somado ao `aspect-ratio: 1` daqui, dava
+     44px de LARGURA a uma trilha que num 320px media 28,8px. As oito bolas se
+     sobrepunham — encostadas, sem os 8px de respiro, e um toque podia acertar a
+     cor vizinha. Com `auto-fit` a trilha nunca é menor que o alvo: cabem cinco
+     por fileira num 320px e as oito continuam todas visíveis, em duas fileiras,
+     sem sobreposição e sem sumir com nenhuma cor. */
   .identity-color-grid {
     display: grid;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(2.75rem, 1fr));
+    /* 0,625rem e não 0,5rem: a bola escolhida cresce 8% (`scale: 1.08`), e o
+       transform entra no teste de acerto — com 8px de gap o respiro real entre
+       ela e a vizinha caía para 6px. */
+    gap: 0.625rem;
   }
   .identity-color-swatch {
     position: relative;
     min-width: 0;
+    /* Tamanho DEFINIDO, não herdado do esticamento da trilha: dependendo do
+       stretch, `aspect-ratio: 1` sobre uma caixa sem conteúdo calcula altura a
+       partir de uma largura que só existe por acidente de layout. Com a largura
+       declarada, a bola tem o mesmo tamanho em toda trilha e o teto de 3rem
+       garante os 8px de respiro entre vizinhas (trilha mínima 2,75rem + 0,5rem
+       de gap). */
+    inline-size: 100%;
+    max-inline-size: 3rem;
+    justify-self: center;
     aspect-ratio: 1;
     border: 1px solid color-mix(in srgb, var(--identity-color) 62%, var(--color-ink-950));
     border-radius: 50%;
@@ -5566,9 +5698,16 @@
       padding-inline: 0.6rem;
       font-size: 0.64rem;
     }
+    /* Passaporte comprimido no celular — o retrato é o maior bloco isolado da
+       tela e o que menos custa encolher: ele ILUSTRA a escolha, enquanto as
+       oito cores e os dois seletores são a escolha em si.
+       Isto existe porque as bolas de cor passaram a respeitar os 44px de alvo
+       e, com isso, ocupam duas fileiras num 390px — 55px a mais. Sem devolver
+       essa altura, o "Criar sala" saía da primeira tela e o formulário passava
+       a exigir rolagem que antes não exigia. */
     .identity-passport {
       min-height: 0;
-      padding: 0.75rem 0.5rem 1rem;
+      padding: 0.5rem 0.5rem 0.6rem;
       border-right: 0;
       border-bottom: 1px solid color-mix(in srgb, var(--color-brass) 20%, transparent);
     }
@@ -5576,23 +5715,31 @@
       inset: 8px;
     }
     .identity-passport__portrait {
-      width: 7rem;
-      height: 7rem;
+      width: 5.25rem;
+      height: 5.25rem;
     }
     .avatar-concept-lab {
-      margin-top: 0.8rem;
+      margin-top: 0.45rem;
+    }
+    .avatar-concept-lab__preview {
+      gap: 0.3rem;
     }
     .avatar-concept-lab__pickers {
       width: min(100%, 13rem);
     }
     .identity-controls {
-      padding: 1rem 0 0;
+      padding: 0.55rem 0 0;
+      gap: 0.6rem;
     }
+    /* Justamente onde o toque manda, este bloco forçava OITO colunas de 1,8rem
+       (28,8px) — mais estreitas que o próprio alvo de 44px, que é o que fazia
+       as bolas se sobreporem. Mesma regra do bloco base: a trilha nunca é
+       menor que o alvo, e o número de colunas é o que couber. */
     .identity-color-grid {
-      grid-template-columns: repeat(8, minmax(1.8rem, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(2.75rem, 1fr));
     }
     .identity-passport > .avatar-concept-lab__preview {
-      margin-top: 0.65rem;
+      margin-top: 0.4rem;
     }
     .identity-passport__name {
       margin-bottom: 0;

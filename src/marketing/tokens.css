@@ -6,6 +6,15 @@
    Só entra token que as páginas públicas de fato usam.
    ===================================================================== */
 :root {
+  /* ---------- Área segura (espelha `src/index.css`) ----------
+     Mesmo contrato do jogo: nada nas páginas públicas lê `env()` direto, e
+     sem recorte físico os quatro valem 0. Aqui servem à barra fixa do topo e
+     ao rodapé, que encostam nas bordas em celular deitado. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
   /* ---------- Escala tinta (background → texto) ---------- */
   --color-ink-100: #cfd9ec;
   --color-ink-200: #a3b2cf;

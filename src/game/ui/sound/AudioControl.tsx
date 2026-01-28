@@ -7,16 +7,18 @@ export function AudioControl() {
   const muted = useAudioPrefs((s) => s.muted)
   const volume = useAudioPrefs((s) => s.volume)
 
-  // `audio-control` só carrega o posicionamento vertical (index.css). Ele já precisou subir
+  // `audio-control` carrega posicionamento e área segura (index.css). Ele já precisou subir
   // para não cobrir a cobrança de dívida, que ocupava a base da tela (D-056); desde a D-066 a
   // cobrança mora no miolo do tabuleiro e a base voltou a ser só dele.
   return (
-    <div className="audio-control group fixed left-3 z-[55] flex items-center gap-2">
+    <div className="audio-control group fixed z-[55] flex items-center gap-2">
       <button
         type="button"
         aria-label={muted ? 'Ativar som' : 'Silenciar'}
         onClick={() => useAudioPrefs.getState().setMuted(!muted)}
-        className="grid h-9 w-9 place-items-center rounded-full bg-coffee-950/70 text-cream shadow-md backdrop-blur transition hover:bg-coffee-950/90"
+        // 44×44 de verdade, não 36: em ponteiro grosso o botão de ícone era o
+        // caso que o piso só-de-altura deixava passar (medido em 740×360: 36×44).
+        className="grid h-11 w-11 place-items-center rounded-full bg-coffee-950/70 text-cream shadow-md backdrop-blur transition hover:bg-coffee-950/90"
       >
         {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
       </button>
@@ -33,7 +35,12 @@ export function AudioControl() {
           setVolume(v)
         }}
         aria-label="Volume"
-        className="hidden h-9 w-28 cursor-pointer accent-gold group-focus-within:block group-hover:block"
+        // Em ponteiro FINO o slider continua aparecendo no hover/foco — o canto fica
+        // limpo até alguém se interessar. Em ponteiro GROSSO não existe hover, e
+        // revelar só no foco significava que a única forma de chegar ao volume era
+        // apertar o mudo antes: mudar o volume exigia silenciar. Lá ele nasce
+        // visível (`audio-control__slider`, index.css).
+        className="audio-control__slider hidden h-11 w-28 cursor-pointer accent-gold group-focus-within:block group-hover:block"
       />
     </div>
   )
