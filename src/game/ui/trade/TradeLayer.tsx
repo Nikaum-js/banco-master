@@ -23,6 +23,7 @@ import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
 import { CoinIcon } from '@/game/ui/icons'
 import { Button, EmptyState } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
+import { useMotion } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n))
@@ -159,7 +160,10 @@ function GrantRow({ pos, laps, onToggle, onSetLaps }: { pos: number; laps: numbe
   const on = laps !== undefined
   return (
     <div className={cn('flex flex-col gap-1.5 px-2 py-1.5 rounded-[var(--radius-sharp)] border transition-colors', on ? 'border-gold bg-gold/15' : 'border-coffee-500 bg-coffee-900')}>
-      <button type="button" onClick={onToggle} className="flex items-center gap-2 w-full text-left">
+      {/* 044/T031: sem padding próprio, esta linha tinha ~18px de alvo de toque (a altura
+          do ToggleDot) — abaixo do mínimo de 24px. `min-h-6` garante o piso sem mexer no
+          tamanho do texto/dot visível. */}
+      <button type="button" onClick={onToggle} className="flex items-center gap-2 w-full min-h-6 text-left">
         <ToggleDot on={on} />
         <span className="flex-1 min-w-0 truncate text-cream text-xs">Conceder em {BOARD[pos].name}</span>
       </button>
@@ -170,8 +174,10 @@ function GrantRow({ pos, laps, onToggle, onSetLaps }: { pos: number; laps: numbe
               key={n}
               type="button"
               onClick={() => onSetLaps(n)}
+              // 044/T031: `text-micro` (9px) + `py-1` ficava perto de 19px de alvo —
+              // `min-h-6` fecha os 24px mínimos sem aumentar o texto.
               className={cn(
-                'label text-micro px-2 py-1 rounded-[var(--radius-sharp)] border transition-colors',
+                'label text-micro px-2 py-1 min-h-6 inline-flex items-center rounded-[var(--radius-sharp)] border transition-colors',
                 laps === n ? 'bg-gold text-coffee-900 border-gold' : 'bg-coffee-700 text-cream-muted border-coffee-500 hover:border-gold/60',
               )}
             >
@@ -182,7 +188,7 @@ function GrantRow({ pos, laps, onToggle, onSetLaps }: { pos: number; laps: numbe
             type="button"
             onClick={() => onSetLaps(null)}
             className={cn(
-              'label text-micro px-2 py-1 rounded-[var(--radius-sharp)] border transition-colors',
+              'label text-micro px-2 py-1 min-h-6 inline-flex items-center rounded-[var(--radius-sharp)] border transition-colors',
               laps === null ? 'bg-gold text-coffee-900 border-gold' : 'bg-coffee-700 text-cream-muted border-coffee-500 hover:border-gold/60',
             )}
           >
@@ -241,7 +247,7 @@ function CashField({ value, max, onChange }: { value: number; max: number; onCha
             value={value || ''}
             placeholder="0"
             onChange={(e) => onChange(clamp(Number(e.target.value) || 0, 0, max))}
-            className="w-full bg-transparent outline-none currency tabular-nums text-gold-glow text-sm placeholder:text-cream-muted/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="w-full bg-transparent outline-none currency tabular-nums text-gold-glow text-sm placeholder:text-cream-muted/85 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
         </span>
         <button
@@ -268,7 +274,7 @@ function TicketField({ value, max, onChange }: { value: number; max: number; onC
       <Bus size={14} className="text-gold shrink-0" />
       <span className="label text-cream-muted flex-1 min-w-0 truncate">Bus Tickets</span>
       <button type="button" className={stepBtn} disabled={value <= 0} onClick={() => onChange(value - 1)} aria-label="Menos um ticket">−</button>
-      <span className={cn('currency text-sm tabular-nums w-5 text-center leading-none', value > 0 ? 'text-gold-glow' : 'text-cream-muted/60')}>{value}</span>
+      <span className={cn('currency text-sm tabular-nums w-5 text-center leading-none', value > 0 ? 'text-gold-glow' : 'text-cream-muted/85')}>{value}</span>
       <button type="button" className={stepBtn} disabled={value >= max} onClick={() => onChange(value + 1)} aria-label="Mais um ticket">+</button>
       <span className="label text-cream-muted text-nano shrink-0">de {max}</span>
     </div>
@@ -352,7 +358,7 @@ function Pan({ side, deg, positions, cash, tickets }: { side: 'left' | 'right'; 
       <span
         className={cn(
           'currency tabular-nums leading-none mt-1 px-1.5 py-0.5 rounded-full border',
-          value > 0 ? 'text-gold-glow border-brass/30 bg-coffee-950/50' : 'text-cream-muted/50 border-transparent',
+          value > 0 ? 'text-gold-glow border-brass/30 bg-coffee-950/50' : 'text-cream-muted/85 border-transparent',
         )}
         style={{ fontSize: '10px' }}
       >
@@ -377,6 +383,12 @@ function TradeScale({
   rightCash: number
   rightTickets?: number
 }) {
+  // Os springs de inclinação abaixo (fiel, travessão, pratos) são fora do vocabulário
+  // por design (D7 do plan, mesma categoria da exceção do fim de jogo): simulam uma
+  // balança FÍSICA respondendo ao valor da proposta em tempo real — não são um enter/exit
+  // de tela, então não há fade/pop/slideUp que os substitua sem perder o efeito. Só o
+  // pulso ambiente do fecho (quando os pratos empatam) segue o freio de movimento reduzido.
+  const { reduced } = useMotion()
   const lv = faceValue(leftPositions, leftCash)
   const rv = faceValue(rightPositions, rightCash)
   const total = lv + rv
@@ -404,7 +416,7 @@ function TradeScale({
         <span className="absolute left-1/2 -translate-x-1/2 bottom-[4px] w-9 h-[4px] rounded-full" style={{ background: 'var(--gradient-brass)' }} />
         <span className="absolute left-1/2 -translate-x-1/2 bottom-0 w-14 h-[5px] rounded-full bg-brass-soft/80" />
         {/* mostrador: arco graduado fixo sob o fulcro… */}
-        <svg viewBox="0 0 44 24" className="absolute left-1/2 -translate-x-1/2 top-[12px] w-[44px] h-[24px]">
+        <svg aria-hidden viewBox="0 0 44 24" className="absolute left-1/2 -translate-x-1/2 top-[12px] w-[44px] h-[24px]">
           <path d="M13.5 20.1 A20 20 0 0 0 30.5 20.1" stroke="var(--color-brass)" strokeOpacity="0.4" strokeWidth="1" fill="none" />
           <path d="M22 18.4 L22 22.2" stroke="var(--color-brass-glow)" strokeOpacity="0.7" strokeWidth="1.2" strokeLinecap="round" />
         </svg>
@@ -432,8 +444,8 @@ function TradeScale({
         </motion.div>
         {/* joia do fulcro — pulsa quando a balança fecha */}
         <motion.span
-          animate={balanced ? { scale: [1, 1.25, 1], opacity: [1, 0.85, 1] } : { scale: 1, opacity: 1 }}
-          transition={balanced ? { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } : { type: 'spring', stiffness: 120, damping: 14 }}
+          animate={balanced && !reduced ? { scale: [1, 1.25, 1], opacity: [1, 0.85, 1] } : { scale: 1, opacity: 1 }}
+          transition={balanced && !reduced ? { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } : { type: 'spring', stiffness: 120, damping: 14 }}
           className={cn(
             'absolute left-1/2 -translate-x-1/2 top-[10px] w-2 h-2 rounded-full bg-brass-glow z-20',
             balanced ? 'shadow-[0_0_14px_var(--color-brass-glow)]' : 'shadow-[0_0_8px_var(--color-brass-glow)]',
@@ -631,6 +643,8 @@ function Composer({ onClose }: { onClose: () => void }) {
                 key={p.id}
                 type="button"
                 title={p.id}
+                aria-label={`Trocar com ${p.id}`}
+                aria-pressed={p.id === toId}
                 onClick={() => pickRecipient(p.id)}
                 className={cn('rounded-full p-0.5 border transition-colors', p.id === toId ? 'border-gold bg-gold/15' : 'border-transparent hover:border-gold/50')}
               >

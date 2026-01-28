@@ -12,7 +12,9 @@ Tema inicial: "Cidades do Mundo". Base extensível para outros temas no futuro.
 
 ## 2. Fase atual
 
-**Implementação (M3 — multiplayer).** A discovery terminou: specs 001–037 estão implementadas, o motor e a UI single-player estão fechados e a fundação multiplayer está viva sobre o Supabase. A spec ativa é a **038** (perspectiva de jogador local, identidade real, roteamento).
+**Lançamento (M4).** As specs 001–042 e a **044** estão implementadas: motor fechado, multiplayer vivo sobre o Supabase, fronteira de erro, e o polimento de lançamento (fim de jogo com classificação, acessibilidade AA no caminho de jogo, paisagem em tablet/celular, telemetria anônima, gates de CI e deploy na Vercel).
+
+**O que falta não é código: é operação.** Aplicar as três migrations em produção, ligar o projeto na Vercel e promover o primeiro deploy — passo a passo em [`docs/RUNBOOK.md`](./docs/RUNBOOK.md). A spec **043** (identidade de transporte) segue aberta numa worktree própria e ainda não foi integrada.
 
 Comportamento esperado:
 
@@ -99,5 +101,5 @@ Detalhe em [`docs/adr/README.md`](docs/adr/README.md).
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-[`specs/038-partida-online-jogavel/plan.md`](./specs/038-partida-online-jogavel/plan.md)
+[`specs/044-polimento-lancamento/plan.md`](./specs/044-polimento-lancamento/plan.md)
 <!-- SPECKIT END -->

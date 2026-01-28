@@ -1,12 +1,19 @@
 // Notificações informativas (030, §12.2). Loteria (ex-"Free Parking") = celebração
 // com confete (sem modal); Aquisição Hostil sofrida = modal. Dispensa por clique
 // (a loteria também some sozinha após alguns segundos). Não bloqueia o turno.
-import { useEffect } from 'react'
+//
+// 044/T024 (US3/D-039): as duas são INFORMATIVAS — nenhuma decide a partida, então Esc
+// fecha as duas (`dismissible`). A loteria não passa pelo `Overlay` (backdrop custom,
+// sem ModalShell), então chama `useDialogA11y` direto pra ganhar o mesmo trap/Esc/
+// restauração de foco sem duplicar a lógica.
+import { useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useGameStore } from '@/game/store'
 import { BOARD } from '@/lib/boardData'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
+import { useDialogA11y } from '@/game/ui/a11y/dialog'
+import { useMotion, MOTION } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 
 const propName = (pos: number) => BOARD[pos]?.name ?? `#${pos}`
@@ -36,7 +43,11 @@ const CONFETTI_PIECES = Array.from({ length: 130 }, (_, i) => ({
 
 // Confete caindo do topo — peças coloridas com posição/rotação/tempo aleatórios.
 // Exportado: reusado na celebração do vencedor (GameHUD, fim de jogo).
+// Sob movimento reduzido, o confete SOME (D7 do plan, exemplo literal do freio): é
+// decoração, não o fato — quem ganhou e quanto continuam na tela sem ele.
 export function Confetti() {
+  const { reduced } = useMotion()
+  if (reduced) return null
   const pieces = CONFETTI_PIECES
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -58,6 +69,9 @@ export function NoticeLayer() {
   const notice = useGameStore((s) => s.game.notice)
   const dispatch = useGameStore((s) => s.dispatch)
   const dismissNotice = (): void => dispatch({ kind: 'dismiss-notice' })
+  const { reduced } = useMotion()
+  const lotteryRef = useRef<HTMLDivElement>(null)
+  useDialogA11y(lotteryRef, { active: notice?.kind === 'free-parking', dismissible: true, onDismiss: dismissNotice })
 
   // A loteria some sozinha depois de alguns segundos (além do clique).
   useEffect(() => {
@@ -73,27 +87,32 @@ export function NoticeLayer() {
       {notice?.kind === 'free-parking' && (
         <motion.div
           key="lottery"
+          ref={lotteryRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Prêmio da loteria"
+          tabIndex={-1}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: MOTION.base }}
           onClick={() => dismissNotice()}
-          className="fixed inset-0 z-[67] flex items-center justify-center overflow-hidden bg-coffee-950/55 backdrop-blur-[1px] cursor-pointer"
+          className="fixed inset-0 z-[67] flex items-center justify-center overflow-hidden bg-coffee-950/55 backdrop-blur-[1px] cursor-pointer outline-none"
         >
           <Confetti />
           <motion.div
-            initial={{ scale: 0.8, opacity: 0, y: 10 }}
+            initial={reduced ? false : { scale: 0.8, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 18 }}
+            transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 18 }}
             className="relative text-center px-6 select-none"
           >
             <p className="display text-cream leading-tight tracking-wide" style={{ fontSize: '36px', textShadow: '0 3px 14px rgba(0,0,0,0.6)' }}>
               <span className="text-gold-glow">{notice.playerId}</span> ganhou na loteria!
             </p>
             <motion.p
-              initial={{ scale: 0.4, opacity: 0 }}
+              initial={reduced ? false : { scale: 0.4, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 11, delay: 0.18 }}
+              transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 260, damping: 11, delay: 0.18 }}
               className="currency leading-none mt-3"
               style={{
                 fontSize: '68px',
@@ -112,7 +131,7 @@ export function NoticeLayer() {
       )}
 
       {notice?.kind === 'hostile-takeover' && (
-        <Overlay key="takeover" z={67} onClick={() => dismissNotice()}>
+        <Overlay key="takeover" z={67} onClick={() => dismissNotice()} dismissible>
           <ModalShell className="w-[360px] max-w-[92vw]">
             <ModalHeader tone="signal" title="Aquisição Hostil" />
             <div className="p-4">

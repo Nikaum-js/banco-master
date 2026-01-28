@@ -23,6 +23,8 @@ import { buildCost } from '@/game/economy/construction'
 import { GavelIcon, CoinIcon, HouseIcon, HotelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
+import { useModalTitleId } from '@/game/ui/a11y/dialog'
+import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 
 // Botão de ação do modal — casca fina sobre o primitivo Button (flex-1).
@@ -63,6 +65,70 @@ function ArrowGlyph({ flip = false }: { flip?: boolean }) {
   )
 }
 
+// Carta revelada — componente PRÓPRIO (não inline no JSX de ModalLayer) por necessidade,
+// não por gosto: 044/T024, `useModalTitleId()` só resolve o id certo quando chamado por um
+// componente que é DESCENDENTE do `Overlay` que o gerou (Context resolve por posição na
+// árvore de fibers, não por aninhamento textual do JSX) — inline aqui leria o contexto de
+// FORA do Overlay (sempre `null`), do mesmo jeito que `ModalHeader` (que já é componente
+// à parte) resolve certo.
+function CardRevealCard({
+  view,
+  reduced,
+  onConfirm,
+}: {
+  view: Extract<ModalView, { kind: 'card-reveal' }>
+  reduced: boolean
+  onConfirm: () => void
+}) {
+  const titleId = useModalTitleId()
+  return (
+    <motion.div
+      initial={reduced ? false : { opacity: 0, scale: 0.9, y: 10, rotateZ: -2 }}
+      animate={{ opacity: 1, scale: 1, y: 0, rotateZ: 0 }}
+      exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 10 }}
+      transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 26 }}
+      onClick={(e) => e.stopPropagation()}
+      className="w-[300px] max-w-[90vw] bg-coffee-800 rounded-[var(--radius-modal)] overflow-hidden border-2"
+      style={{ borderColor: RARITY_COLOR[view.rarity], boxShadow: `var(--shadow-dropdown), 0 0 22px color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 45%, transparent)` }}
+    >
+      {/* Faixa da raridade */}
+      <div
+        className="px-4 py-2.5 flex items-center justify-between"
+        style={{ background: `linear-gradient(180deg, ${RARITY_COLOR[view.rarity]} 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 75%, var(--color-ink-950)) 100%)` }}
+      >
+        <span className="display text-coffee-950 text-sm leading-none tracking-[var(--tracking-caps)] uppercase">{view.deckId === 'acaso' ? 'Acaso' : 'Tesouro'}</span>
+        <span className="label text-coffee-950/85 text-micro">{RARITY_LABEL[view.rarity]}</span>
+      </div>
+
+      {/* Corpo — véu radial na cor da raridade atrás do título */}
+      <div
+        className="px-5 pt-7 pb-5 flex flex-col items-center gap-5"
+        style={{
+          background: `radial-gradient(90% 55% at 50% 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 10%, transparent) 0%, transparent 62%)`,
+        }}
+      >
+        <h2 id={titleId ?? undefined} className="display text-cream text-3xl leading-[0.95] text-center">{cardLabel(view.effect)}</h2>
+        <div className="w-full">
+          <div className="flex items-center gap-2 justify-center mb-2">
+            <span className="h-px flex-1 bg-coffee-500/50" />
+            <span className="label text-gold text-micro">O que faz</span>
+            <span className="h-px flex-1 bg-coffee-500/50" />
+          </div>
+          <p className="text-cream text-sm leading-snug text-center">{CARD_DESC[view.effect] ?? 'Carta sorteada.'}</p>
+        </div>
+      </div>
+
+      {/* Rodapé */}
+      <div className="px-4 py-3 border-t-2 border-coffee-950 bg-coffee-900/60">
+        <p className="label text-cream-muted text-center mb-2 text-micro">vai para a sua mão</p>
+        <div className="flex">
+          <ActionBtn onClick={onConfirm}>Guardar na mão</ActionBtn>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 // Cartão central — casca fina sobre o ModalShell canônico.
 function Card({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
@@ -92,6 +158,7 @@ const MODAL_WAITING = {
 } as const
 
 export function ModalLayer() {
+  const { reduced } = useMotion()
   const game = useGameStore((s) => s.game)
   const dispatch = useGameStore((s) => s.dispatch)
   const placeBid = (playerId: string, amount: number): void => dispatch({ kind: 'place-bid', playerId, amount })
@@ -102,7 +169,13 @@ export function ModalLayer() {
   const confirmCardReveal = (): void => dispatch({ kind: 'confirm-card-reveal' })
   const spendBusTicket = (dest: number): void => dispatch({ kind: 'use-bus-ticket', dest })
   const busArmed = useBusTicketUI((s) => s.armed)
+  // 044/T070 (FR-031): `boarding` fica true do clique na parada até a viagem terminar de
+  // decorar. Sem isso, `canUseBusTicket(game)` — que já reflete o ticket gasto e o turno já
+  // avançado — derrubaria `showBusArmed` no MESMO frame do dispatch, fechando o seletor
+  // antes de a animação de embarque sequer aparecer.
+  const busBoarding = useBusTicketUI((s) => s.boarding)
   const disarmBus = useBusTicketUI((s) => s.disarm)
+  const setBusBoarding = useBusTicketUI((s) => s.setBoarding)
 
   const view = activeModal(game)
   const local = useLocalView()
@@ -114,8 +187,10 @@ export function ModalLayer() {
   const activePlayer = game.players[game.turnOrder[game.activeSeat]]
   // Seletor de uso de ticket GUARDADO: aberto pelo HUD. Usável antes de rolar OU no fim do turno (034).
   // Elegibilidade vem do MOTOR (`canUseBusTicket`): a cópia que morava aqui não checava
-  // `paused`, então com o jogo pausado o seletor abria e o clique era no-op.
-  const showBusArmed = busArmed && canUseBusTicket(game)
+  // `paused`, então com o jogo pausado o seletor abria e o clique era no-op. `|| busBoarding`
+  // mantém o seletor na tela enquanto a viagem ainda está decorando por cima do estado já
+  // avançado (T070) — sem isso o modal sumiria no instante do dispatch.
+  const showBusArmed = busArmed && (canUseBusTicket(game) || busBoarding)
 
   return (
     <AnimatePresence>
@@ -128,7 +203,9 @@ export function ModalLayer() {
             fromPos={activePlayer.pos}
             title="Usar Bus Ticket"
             subtitle="Vá para uma casa do mesmo lado"
-            onPick={(pos) => { spendBusTicket(pos); disarmBus() }}
+            onPick={spendBusTicket}
+            onBoardingChange={setBusBoarding}
+            onEmbarked={disarmBus}
             onCancel={disarmBus}
           />
         </Overlay>
@@ -198,50 +275,7 @@ export function ModalLayer() {
           )}
 
           {view.kind === 'card-reveal' && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 10, rotateZ: -2 }}
-              animate={{ opacity: 1, scale: 1, y: 0, rotateZ: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 10 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-[300px] max-w-[90vw] bg-coffee-800 rounded-[var(--radius-modal)] overflow-hidden border-2"
-              style={{ borderColor: RARITY_COLOR[view.rarity], boxShadow: `var(--shadow-dropdown), 0 0 22px color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 45%, transparent)` }}
-            >
-              {/* Faixa da raridade */}
-              <div
-                className="px-4 py-2.5 flex items-center justify-between"
-                style={{ background: `linear-gradient(180deg, ${RARITY_COLOR[view.rarity]} 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 75%, var(--color-ink-950)) 100%)` }}
-              >
-                <span className="display text-coffee-950 text-sm leading-none tracking-[var(--tracking-caps)] uppercase">{view.deckId === 'acaso' ? 'Acaso' : 'Tesouro'}</span>
-                <span className="label text-coffee-950/85 text-micro">{RARITY_LABEL[view.rarity]}</span>
-              </div>
-
-              {/* Corpo — véu radial na cor da raridade atrás do título */}
-              <div
-                className="px-5 pt-7 pb-5 flex flex-col items-center gap-5"
-                style={{
-                  background: `radial-gradient(90% 55% at 50% 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 10%, transparent) 0%, transparent 62%)`,
-                }}
-              >
-                <h2 className="display text-cream text-3xl leading-[0.95] text-center">{cardLabel(view.effect)}</h2>
-                <div className="w-full">
-                  <div className="flex items-center gap-2 justify-center mb-2">
-                    <span className="h-px flex-1 bg-coffee-500/50" />
-                    <span className="label text-gold text-micro">O que faz</span>
-                    <span className="h-px flex-1 bg-coffee-500/50" />
-                  </div>
-                  <p className="text-cream text-sm leading-snug text-center">{CARD_DESC[view.effect] ?? 'Carta sorteada.'}</p>
-                </div>
-              </div>
-
-              {/* Rodapé */}
-              <div className="px-4 py-3 border-t-2 border-coffee-950 bg-coffee-900/60">
-                <p className="label text-cream-muted text-center mb-2 text-micro">vai para a sua mão</p>
-                <div className="flex">
-                  <ActionBtn onClick={() => confirmCardReveal()}>Guardar na mão</ActionBtn>
-                </div>
-              </div>
-            </motion.div>
+            <CardRevealCard view={view} reduced={reduced} onConfirm={confirmCardReveal} />
           )}
 
           {view.kind === 'bus-move' && (
@@ -298,7 +332,23 @@ export function ModalLayer() {
 // parada sob o cursor. Clicar EMBARCA: o ônibus viaja até lá e só então o
 // movimento acontece. Layout fluido (células flex, posição em %): nunca estoura
 // a largura do modal — sem scroll horizontal.
-function BusLine({ fromPos, onPick, onBoard }: { fromPos: number; onPick: (pos: number) => void; onBoard?: () => void }) {
+// Duração da decoração de embarque (ônibus deslizando + rótulo "Embarcando…") — puramente
+// visual desde o T070: o comando já saiu antes dela começar a contar. Zerada sob movimento
+// reduzido (`reduced`), igual ao resto do vocabulário (D7 do plan).
+const EMBARK_MS = 560
+
+function BusLine({
+  fromPos,
+  onPick,
+  onBoard,
+  onEmbarked,
+}: {
+  fromPos: number
+  onPick: (pos: number) => void
+  onBoard?: () => void
+  onEmbarked?: () => void
+}) {
+  const { reduced } = useMotion()
   const players = useGameStore((s) => s.game.players)
   const turnOrder = useGameStore((s) => s.game.turnOrder)
   const activeSeat = useGameStore((s) => s.game.activeSeat)
@@ -323,14 +373,17 @@ function BusLine({ fromPos, onPick, onBoard }: { fromPos: number; onPick: (pos: 
   const busPct = ((busIdx + 0.5) / n) * 100
   const steps = hover != null && departing == null ? hover - fromPos : 0 // lado é contíguo no BOARD → distância = diferença de pos
 
-  // Embarque: o ônibus viaja até a parada e SÓ ENTÃO o movimento dispara —
-  // a viagem vira parte da resposta, em vez de um teleporte seco.
+  // Embarque (044/T070, FR-031): o COMANDO sai na hora — `onPick` já não fica represado
+  // atrás da viagem visual. O que antes era "espera 560ms, então move" virou "move, e a
+  // viagem decora por cima do estado já avançado". Sob movimento reduzido, a decoração some
+  // (`EMBARK_MS` zerado) e `onEmbarked` dispara já no próximo tick, sem espera nenhuma.
   const embark = (pos: number) => {
     if (departing != null) return
     setDeparting(pos)
     setHover(null)
     onBoard?.()
-    window.setTimeout(() => onPick(pos), 560)
+    onPick(pos)
+    window.setTimeout(() => onEmbarked?.(), reduced ? 0 : EMBARK_MS)
   }
 
   return (
@@ -345,6 +398,7 @@ function BusLine({ fromPos, onPick, onBoard }: { fromPos: number; onPick: (pos: 
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 4 }}
+                transition={{ duration: reduced ? 0 : MOTION.fast, ease: EASE.standard }}
                 className="block label text-nano text-coffee-950 bg-gold-glow rounded-full px-2 py-0.5 whitespace-nowrap shadow-[var(--shadow-card)]"
               >
                 {departing != null
@@ -458,12 +512,19 @@ function BusPicker({
   title,
   subtitle,
   onPick,
+  onBoardingChange,
+  onEmbarked,
   onCancel,
 }: {
   fromPos: number
   title: string
   subtitle: string
   onPick: (pos: number) => void
+  /** 044/T070: avisa o pai (que decide se o seletor continua montado) assim que o
+   * embarque começa — o comando já saiu, isto é só o sinal de "ainda decorando". */
+  onBoardingChange?: (boarding: boolean) => void
+  /** 044/T070: a viagem terminou de decorar — agora sim é hora de fechar o seletor. */
+  onEmbarked?: () => void
   onCancel?: () => void
 }) {
   const tickets = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]].busTickets)
@@ -480,7 +541,12 @@ function BusPicker({
         }
       />
       <div className="px-5 pt-4 pb-3">
-        <BusLine fromPos={fromPos} onPick={onPick} onBoard={() => setBoarding(true)} />
+        <BusLine
+          fromPos={fromPos}
+          onPick={onPick}
+          onBoard={() => { setBoarding(true); onBoardingChange?.(true) }}
+          onEmbarked={onEmbarked}
+        />
         <p className="label text-cream-muted text-center mt-2.5 leading-snug">Passe o cursor pela linha e clique na parada para embarcar.</p>
       </div>
       {/* Canhoto do bilhete — picote com furos nas bordas + contador + cancelar */}
@@ -493,7 +559,7 @@ function BusPicker({
             <span className="label text-cream-muted">Bilhete de ônibus</span>
             <span className="currency text-gold-glow text-sm tabular-nums leading-none">×{tickets}</span>
           </span>
-          <span className="label text-cream-muted/70 text-nano">1 bilhete será usado na viagem</span>
+          <span className="label text-cream-muted/85 text-nano">1 bilhete será usado na viagem</span>
           {onCancel && (
             <Button variant="secondary" onClick={onCancel} disabled={boarding} className="ml-auto">
               Cancelar
@@ -584,6 +650,7 @@ function AuctionCard({
   activeId: string
   placeBid: (playerId: string, amount: number) => void
 }) {
+  const { reduced } = useMotion()
   const cash = useGameStore((s) => s.game.players.find((p) => p.id === activeId)?.cash ?? 0)
   // Quem já passou não é mais licitante (`auction.ts:26` recusa o lance). Antes a view não
   // trazia `activeBidders`, então a tela oferecia três botões que o motor descartava.
@@ -625,9 +692,9 @@ function AuctionCard({
             <p className="label text-cream-muted">Lance atual</p>
             <motion.p
               key={view.currentBid}
-              initial={{ scale: 1.14 }}
+              initial={reduced ? false : { scale: 1.14 }}
               animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 16 }}
+              transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 16 }}
               className="currency text-5xl leading-none mt-2 origin-left"
               style={{
                 backgroundImage: 'var(--gradient-brass-shine)',

@@ -43,7 +43,7 @@ export function PauseBanner() {
                 ))}
                 {view.tail}.{view.hostFora && ' Não há transferência de comando.'}
               </p>
-              <p className="text-cream-muted/70 mt-1" style={{ fontSize: 10 }}>
+              <p className="text-cream-muted/85 mt-1" style={{ fontSize: 10 }}>
                 Nada se perde: saldo, propriedades, cartas e prazos ficam exatamente como estão.
               </p>
             </div>

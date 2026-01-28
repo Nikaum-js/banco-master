@@ -5,11 +5,54 @@
 // logo o mesmo token de sessão, e a segunda faria takeover do assento (FR-006a da 037) em
 // vez de virar um segundo jogador.
 import { test, expect, type BrowserContext, type Page } from '@playwright/test'
+import { createClient } from '@supabase/supabase-js'
 
 test.describe.configure({ mode: 'serial' })
 
+// FR-052/T053: este gate só entra quando há credencial REAL disponível — nunca em silêncio.
+// Sem `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` no ambiente do runner (distinto do
+// placeholder que `playwright.config.ts` injeta só no projeto `built`, que nem roda este
+// arquivo), o Playwright reporta a suíte inteira como "skipped" com o motivo abaixo —
+// aparece no relatório, não um verde enganoso nem uma pane silenciosa.
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY
+const SUPABASE_CONFIGURED = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
+
+if (!SUPABASE_CONFIGURED) {
+  console.warn(
+    '[multiplayer.spec] PULADO: sem VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY no ambiente — ' +
+      'o gate multiplayer não roda sem credencial real (FR-052). Não está no CI padrão por ' +
+      'este motivo (ver comentário do job `e2e` em .github/workflows/ci.yml).',
+  )
+}
+test.skip(!SUPABASE_CONFIGURED, 'sem VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY — gate multiplayer pulado (FR-052)')
+
 const HOST_NAME = 'Anfitriao'
 const GUEST_NAME = 'Convidada'
+
+// FR-054: nenhum roteiro pode deixar sala de teste para trás. Não existe policy de DELETE
+// anônimo por design (`supabase/migrations/0001_rooms_snapshots.sql`: "a limpeza de salas
+// velhas é trabalho de rotina do lado servidor") — o que o cliente PODE fazer é marcar
+// `status: 'ended'`, o mesmo estado que uma partida real alcança sozinha ao terminar. Isso
+// tira a sala de qualquer contagem de "sala aberta" sem depender de uma policy que não existe.
+const createdRoomIds: string[] = []
+
+function roomIdFromUrl(url: string): string | null {
+  return new URL(url).searchParams.get('room')
+}
+
+async function markRoomsEnded(): Promise<void> {
+  const ids = createdRoomIds.splice(0)
+  if (ids.length === 0 || !SUPABASE_CONFIGURED) return
+  const client = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!)
+  await Promise.all(ids.map((id) => client.from('rooms').update({ status: 'ended' }).eq('id', id)))
+}
+
+test.afterEach(async () => {
+  await markRoomsEnded().catch((e: unknown) => {
+    console.warn(`[multiplayer.spec] limpeza de sala falhou (não bloqueia o teste): ${String(e)}`)
+  })
+})
 
 // Preenche nome + escolhe a 1ª cor e a 1ª peça livres, e confirma.
 async function fillIdentity(page: Page, name: string, cta: RegExp): Promise<void> {
@@ -41,6 +84,8 @@ test('dois browsers jogam a mesma partida, cada um da sua perspectiva', async ({
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   await expect(host.getByText(HOST_NAME)).toBeVisible()
   const roomUrl = host.url()
+  const createdRoomId = roomIdFromUrl(roomUrl)
+  if (createdRoomId) createdRoomIds.push(createdRoomId) // FR-054 — marcado 'ended' no afterEach
   expect(roomUrl).toContain('?room=')
 
   // — 3. Convidada entra pelo link (FR-002) —
@@ -120,6 +165,8 @@ test('queda do convidado pausa a mesa e diz quem caiu', async ({ browser }) => {
   await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   const roomUrl = host.url()
+  const createdRoomId = roomIdFromUrl(roomUrl)
+  if (createdRoomId) createdRoomIds.push(createdRoomId) // FR-054 — marcado 'ended' no afterEach
 
   await guest.goto(roomUrl)
   await expect(guest.getByText('Entrar na sala')).toBeVisible({ timeout: 20_000 })
@@ -187,6 +234,8 @@ test('leilão sobrevive ao reload do host — prazo preservado (SC-005/SC-009)',
   await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   const roomUrl = host.url()
+  const createdRoomId = roomIdFromUrl(roomUrl)
+  if (createdRoomId) createdRoomIds.push(createdRoomId) // FR-054 — marcado 'ended' no afterEach
 
   await guest.goto(roomUrl)
   await expect(guest.getByText('Entrar na sala')).toBeVisible({ timeout: 20_000 })

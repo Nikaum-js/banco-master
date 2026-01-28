@@ -74,31 +74,43 @@ export default function Board01Classic() {
             const isUtility  = square.kind === 'utility'
             const isClickable = isProperty || isAirport || isUtility
             const isSelected = selectedPos === square.pos
-            return (
-              <div
-                key={square.pos}
-                style={gridArea(square.pos)}
-                className={isClickable ? 'relative cursor-pointer' : 'relative'}
-                onClick={
-                  isClickable
-                    ? (e) => {
-                        e.stopPropagation()
-                        setSelectedPos((cur) => (cur === square.pos ? null : square.pos))
-                      }
-                    : undefined
+            // 044/T032: casa clicável (propriedade/aeroporto/utilidade) precisa ser
+            // alcançável e operável por teclado, com nome. Antes era um `<div onClick>` —
+            // sem `tabIndex`, sem semântica, invisível pro teclado inteiro. Vira `<button>`
+            // (foco + Enter/Space nativos) SEPARADO do `<div>` externo — o `<div>` continua
+            // só como âncora de posição pro popover, que fica como IRMÃO do botão, nunca
+            // filho (botão dentro de botão seria HTML inválido, e o popover tem botões
+            // próprios). Nome vem do `square.name` (o mesmo que a casa já mostra visível).
+            const squareContent = isCorner ? (
+              <CornerSquare
+                square={square}
+                accent={
+                  square.kind === 'corner-go' ? 'gold' :
+                  square.kind === 'corner-gotojail' ? 'logo' :
+                  'cream'
                 }
-              >
-                {isCorner ? (
-                  <CornerSquare
-                    square={square}
-                    accent={
-                      square.kind === 'corner-go' ? 'gold' :
-                      square.kind === 'corner-gotojail' ? 'logo' :
-                      'cream'
-                    }
-                  />
+              />
+            ) : (
+              <ClassicSquare square={square} side={side} />
+            )
+            return (
+              <div key={square.pos} style={gridArea(square.pos)} className="relative">
+                {isClickable ? (
+                  <button
+                    type="button"
+                    aria-label={`${square.name} — ver detalhes`}
+                    aria-haspopup="dialog"
+                    aria-expanded={isSelected}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedPos((cur) => (cur === square.pos ? null : square.pos))
+                    }}
+                    className="relative block w-full h-full text-left cursor-pointer"
+                  >
+                    {squareContent}
+                  </button>
                 ) : (
-                  <ClassicSquare square={square} side={side} />
+                  squareContent
                 )}
 
                 {/* Popover-balão adjacente à casa selecionada */}

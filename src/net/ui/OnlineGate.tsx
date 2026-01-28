@@ -16,6 +16,7 @@ import { createRoomSession, type RoomSession } from '@/net/roomSession'
 import { setActiveSession } from '@/net/activeSession'
 import { MatchErrorBoundary } from '@/app/MatchErrorBoundary'
 import { createSupabaseTransport, describeInfraError, isSupabaseConfigured } from '@/net/supabaseClient'
+import { resolveTelemetry } from '@/telemetry'
 import { IdentityForm, LobbyMessage, ReentryForm, RoomLobby, TurnOrderReveal } from './LobbyScreen'
 import { HomeScreen } from './HomeScreen'
 import { SessionBadge } from './SessionBadge'
@@ -72,6 +73,7 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
       createTransport: createSupabaseTransport, // a seam: em teste, entra o hub in-memory
       connectStore: connectMultiplayer,
       describeError: describeInfraError,
+      telemetry: resolveTelemetry(), // 044: nulo sem env/DEV — nenhuma requisição sai (FR-038)
     }),
   )
   const state = useSyncExternalStore(session.subscribe, session.getState)

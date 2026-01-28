@@ -100,3 +100,65 @@ jobs:
           name: playwright-traces
           path: test-results/
           retention-days: 7
+
+  a11y:
+    name: acessibilidade (axe, sobre o build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Instalar dependências
+        run: bun install --frozen-lockfile
+
+      - name: Instalar chromium do Playwright
+        run: bunx playwright install --with-deps chromium
+
+      # `e2e/a11y.spec.ts` só casa com o projeto `built` (playwright.config.ts, FR-051): sobe
+      # `vite build && vite preview` sozinho e audita cada parada do caminho de jogo com
+      # `@axe-core/playwright`. Falha em violação `serious`/`critical` (D-039); o resto vai
+      # só pro log do passo, sem quebrar o job.
+      - name: Acessibilidade (axe)
+        run: bunx playwright test e2e/a11y.spec.ts
+
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-a11y
+          path: test-results/
+          retention-days: 7
+
+  full-match:
+    name: partida completa (semeada, sobre o build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Instalar dependências
+        run: bun install --frozen-lockfile
+
+      - name: Instalar chromium do Playwright
+        run: bunx playwright install --with-deps chromium
+
+      # `e2e/fullMatch.spec.ts` (projeto `built`, FR-050/FR-051): conduz uma partida SEMEADA
+      # (?scenario=endgame, D10 do plan) pela interface real até a última falência e confere
+      # a classificação na tela. O roteiro anuncia no próprio log que a partida é semeada —
+      # o `sim:batch` (job `simulation`) é quem prova partidas inteiras jogadas do zero.
+      - name: Partida completa (fim de jogo)
+        run: bunx playwright test e2e/fullMatch.spec.ts
+
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-full-match
+          path: test-results/
+          retention-days: 7

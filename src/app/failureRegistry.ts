@@ -34,6 +34,18 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+// Ponto de assinatura ADITIVO (044, T048): quem quiser saber de toda falha registrada (o
+// Sentry, em `telemetry/sentry.ts`) assina aqui. A 042 continua sendo a ÚNICA fonte do
+// `occurrenceId` — isto não muda contenção, loop-breaker nem tela de falha, só ganha um
+// ouvinte a mais. Um ouvinte quebrado nunca pode calar o registro local (console.error
+// roda de qualquer jeito, ANTES de qualquer callback).
+const listeners = new Set<(record: FailureRecord) => void>()
+
+export function onFailure(cb: (record: FailureRecord) => void): () => void {
+  listeners.add(cb)
+  return () => listeners.delete(cb)
+}
+
 /** Registra e devolve o identificador curto (FR-017) — utilizável para relatar sem console. */
 export function registerFailure(ctx: FailureContext, opts: FailureRegistryOptions = {}): string {
   const now = opts.now ?? Date.now
@@ -48,5 +60,13 @@ export function registerFailure(ctx: FailureContext, opts: FailureRegistryOption
     at: now(),
   }
   console.error('[banco-master:failure]', record)
+  for (const cb of listeners) {
+    try {
+      cb(record)
+    } catch {
+      // um ouvinte quebrado (ex.: SDK de monitoramento fora do ar) não pode derrubar o
+      // registro de falha em si — a garantia central deste arquivo.
+    }
+  }
   return occurrenceId
 }

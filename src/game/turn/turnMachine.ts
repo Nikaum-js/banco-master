@@ -109,12 +109,17 @@ export function land(turn: Turn, player: Player, roll: Roll | null): void {
 export function advanceSeat(s: GameState, ctx: TurnCtx): void {
   ctx.ports.taxMan?.(s, ctx.rng) // Fiscal move 1×/turno ao passar a vez (012, §13.8)
   const n = s.turnOrder.length
+  const prev = s.activeSeat
   let next = s.activeSeat
   for (let i = 0; i < n; i++) {
     next = (next + 1) % n
     const p = s.players[s.turnOrder[next]]
     if (!p.eliminated) break // pula eliminados (FR-002)
   }
+  // 044/D1: a rodada avança quando a busca deu a volta na ordem de assentos — isto é,
+  // o assento escolhido é menor ou igual ao anterior EM POSIÇÃO de turnOrder. É a única
+  // definição estável quando jogadores são eliminados no meio (a ordem encurta).
+  if (next <= prev) s.round += 1
   s.activeSeat = next
   startTurn(s)
 }

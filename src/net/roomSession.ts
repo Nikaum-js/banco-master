@@ -14,6 +14,8 @@ import { createHost, type Host, type HostOptions } from './host'
 import { createRoom, hostSeat, newReentryCode, seatByToken, type JoinError, type PieceId, type Room } from './room'
 import { newRoomId } from './session'
 import type { Transport, Unsubscribe } from './transport'
+import { nullTelemetry, type Telemetry, type TelemetryEvent } from '@/telemetry/port'
+import { matchKey } from '@/telemetry/matchKey'
 
 /** Ritual de início (`order`) é de ENTRADA, nunca de reconexão — ver `isReentry`.
  * `'reentry'` (041, D-033): partida em curso, sem assento — perder o aparelho não é mais
@@ -81,6 +83,9 @@ export interface RoomSessionOptions {
   mintReentryCode?(): string
   /** RNG/relógio do host. Injetáveis para o sorteio de ordem ser reprodutível nos testes. */
   hostOptions?: HostOptions
+  /** Padrão `nullTelemetry` (044, D-040). Emite `room_created` aqui e é repassado ao host
+   * (`match_started`/`match_ended`/`match_paused`) — a MESMA instância, um destino só. */
+  telemetry?: Telemetry
 }
 
 export function createRoomSession(opts: RoomSessionOptions): RoomSession {
@@ -88,6 +93,17 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
   const describeError = opts.describeError ?? ((e: unknown) => String(e))
   const mintRoomId = opts.newRoomId ?? newRoomId
   const mintReentryCode = opts.mintReentryCode ?? (() => newReentryCode(Math.random))
+  const telemetry = opts.telemetry ?? nullTelemetry
+
+  // T1/T2 do contrato: a sessão não pode sentir uma falha de telemetria — mesma segunda
+  // linha de defesa de `host.ts` (o adaptador de produção já engole os próprios erros).
+  function trackSafely(event: TelemetryEvent): void {
+    try {
+      telemetry.track(event)
+    } catch {
+      // FR-037
+    }
+  }
 
   let transport: Transport | null = null
   let client: Client | null = null
@@ -159,7 +175,9 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
 
   async function takeAuthority(initial: Room): Promise<void> {
     if (host || !transport) return
-    const h = createHost(transport, initial, opts.hostOptions)
+    // A MESMA instância de telemetria da sessão desce ao host (044): `room_created` sai
+    // daqui, `match_started`/`match_ended`/`match_paused` saem de lá — um destino só.
+    const h = createHost(transport, initial, { ...opts.hostOptions, telemetry })
     host = h
     subs.push(h.subscribe(() => emit({ room: h.room() })))
     await h.open()
@@ -206,6 +224,9 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
         const id = mintRoomId()
         await openSession(id)
         await takeAuthority(createRoom(id, { token, ...who, reentryCode: mintReentryCode() }))
+        // 044/T045: só AQUI, na criação de verdade — `enter()` também chama `takeAuthority`
+        // quando o host reassume a própria sala (F5), e isso não é "sala criada" de novo.
+        trackSafely({ kind: 'room_created', matchKey: await matchKey(id) })
         emit({ phase: 'lobby', busy: false })
         return id
       } catch (e) {

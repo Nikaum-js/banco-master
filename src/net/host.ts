@@ -8,6 +8,9 @@ import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
 import { actorOf, applyCommand, type GameAction, type SystemAction } from '@/game/commands'
 import { buildGameCtx, buildInitialGame } from '@/game/setup'
+import { matchSummary } from '@/game/summary'
+import { nullTelemetry, type Telemetry, type TelemetryEvent } from '@/telemetry/port'
+import { matchKey } from '@/telemetry/matchKey'
 import { recordingCtx } from './recorder'
 import {
   anyDisconnected,
@@ -29,6 +32,7 @@ import { registerFailure } from '@/app/failureRegistry'
 export interface HostOptions {
   rng?: RNG // padrão Math.random; injetável nos testes (seed)
   now?: () => number // padrão Date.now; relógio lógico nos testes
+  telemetry?: Telemetry // padrão `nullTelemetry` (044, D-040) — emissão é do host, nunca da tela
 }
 
 export interface Host {
@@ -47,7 +51,7 @@ export interface Host {
 export function createHost(transport: Transport, initialRoom: Room, opts: HostOptions = {}): Host {
   const rng: RNG = opts.rng ?? (() => Math.random())
   const now = opts.now ?? (() => Date.now())
-  const baseCtx: TurnCtx = buildGameCtx(rng, now)
+  const telemetry = opts.telemetry ?? nullTelemetry
 
   let room = initialRoom
   let game: GameState | null = null
@@ -55,6 +59,26 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   let opened = false
   const subs: Unsubscribe[] = []
   const listeners = new Set<() => void>()
+  const baseCtx: TurnCtx = buildGameCtx(rng, now)
+
+  // Hash do id de sala (044, contrato §matchKey) — calculado UMA vez e reusado nos três
+  // eventos do host. `roomId` nunca muda depois de criado, e T7 do contrato pede um evento
+  // por fato, não um hash novo a cada emissão.
+  let cachedMatchKey: string | null = null
+  async function ensureMatchKey(): Promise<void> {
+    cachedMatchKey ??= await matchKey(room.id)
+  }
+
+  // T1/T2 do contrato: a partida NUNCA sente uma falha de telemetria. O adaptador de
+  // produção já engole os próprios erros (`supabaseSink.ts`); isto aqui é a segunda linha
+  // de defesa, para um adaptador mal-comportado (ou injetado em teste) não derrubar `accept`.
+  function trackSafely(event: TelemetryEvent): void {
+    try {
+      telemetry.track(event)
+    } catch {
+      // FR-037: falha de envio não pausa, não bloqueia comando, não repete.
+    }
+  }
 
   function notify(): void {
     for (const cb of listeners) cb()
@@ -75,6 +99,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   // sistema (tick, pausa) não tem um remetente único a quem recusar, só registra a falha.
   function accept(action: GameAction, fromToken?: string): boolean {
     if (!game) return false
+    const wasEnded = game.phase === 'ended' // 044/T045: T7 do contrato — só emite na TRANSIÇÃO
     const { ctx, drain } = recordingCtx(baseCtx)
     let next: GameState
     try {
@@ -92,6 +117,18 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     const cmd: AcceptedCommand = { seq, action, resolved: drain() }
     void transport.saveSnapshot({ seq, game, room }) // FR-013 (upsert)
     transport.broadcast(cmd) // FR-010/011
+
+    // 044/T045 (FR-033/034, T7 do contrato): emitido AQUI, na autoridade — nunca na tela.
+    // Oito clientes renderizando o fim de jogo emitiriam oito `match_ended`; só o `accept`
+    // que de fato mudou o estado dispara, uma vez por fato.
+    const key = cachedMatchKey ?? '' // sempre preenchido a esta altura (ensureMatchKey já rodou em start/open)
+    if (action.kind === 'pause') {
+      trackSafely({ kind: 'match_paused', matchKey: key, cause: action.cause })
+    }
+    if (!wasEnded && game.phase === 'ended') {
+      const summary = matchSummary(game)
+      trackSafely({ kind: 'match_ended', matchKey: key, players: game.players.length, rounds: summary.rounds, durationMs: summary.durationMs })
+    }
     return true
   }
 
@@ -211,10 +248,12 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
 
   async function startInternal(): Promise<void> {
     await ensureOpen()
-    game = buildInitialGame(playerIdsInOrder(room), rng)
+    await ensureMatchKey()
+    game = buildInitialGame(playerIdsInOrder(room), rng, now()) // 044/D3: mesmo relógio que o recorder grava/replica
     seq = 0
     await transport.saveSnapshot({ seq, game, room }) // 1º snapshot (FR-006/013): clientes leem ao entrar
     transport.publishRoom(room) // status já 'playing' (definido por startGame antes de criar o host)
+    trackSafely({ kind: 'match_started', matchKey: cachedMatchKey ?? '', players: game.players.length })
     notify()
   }
 
@@ -229,6 +268,10 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
         room = snap.room
       }
       await ensureOpen()
+      // Host reassumindo (F5/reload, FR-015): `match_started` já foi emitido na sessão
+      // anterior — só precisamos do hash em cache para `accept()` poder emitir
+      // `match_paused`/`match_ended` depois, se for o caso.
+      if (game) await ensureMatchKey()
       transport.publishRoom(room)
       notify()
     },

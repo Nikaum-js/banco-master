@@ -9,6 +9,7 @@ import type { Transport } from '@/net/transport'
 import type { PlayerAction } from '@/game/commands'
 import type { RNG } from '@/game/turn/dice'
 import type { PauseCause, PauseState } from '@/game/turn/types'
+import type { Telemetry } from '@/telemetry/port'
 import { enumerateActions } from '../sim/engine/actions'
 import { pickAction } from '../sim/engine/agent'
 import type { SimSession } from '../sim/engine/driver'
@@ -44,7 +45,10 @@ export interface NetGame {
 
 // Monta e inicia uma partida em rede com `playerCount` assentos. Ordem = entrada
 // (idents[0] = host). Retorna tudo já sincronizado no estado inicial (snapshot seq 0).
-export async function setupGame(playerCount: number, seed = 1): Promise<NetGame> {
+//
+// `telemetry` (044, T046): aditivo, opcional — a MAIORIA das suítes nem sabe que existe.
+// Só quem precisa provar emissão (`tests/telemetry/emission.test.ts`) o passa.
+export async function setupGame(playerCount: number, seed = 1, telemetry?: Telemetry): Promise<NetGame> {
   const hub = new LocalHub()
   const clock = { t: 1_000 }
   const rng = mulberry32(seed)
@@ -69,7 +73,7 @@ export async function setupGame(playerCount: number, seed = 1): Promise<NetGame>
   // Host: autoridade + client próprio, sobre a MESMA conexão. Autoridade inicia ANTES dos
   // clientes entrarem (snapshot precisa existir p/ a leitura de entrada).
   const hostTransport = localTransport(hub, idents[0].token)
-  const host = createHost(hostTransport, room, { rng, now: () => clock.t })
+  const host = createHost(hostTransport, room, { rng, now: () => clock.t, telemetry })
   await host.start()
 
   const players: NetPlayer[] = []

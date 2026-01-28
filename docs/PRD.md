@@ -112,8 +112,13 @@ Legenda: ✅ entregue · ❌ descontinuada · ⏳ pendente (sem spec ainda).
 | 038 | Partida online de verdade: perspectiva de jogador local (mão privada de fato), identidade real (nomes/cores/peças no lugar de `p1..pN`), status de conexão/pausa visível, roteamento home → sala → partida → fim, kick no lobby, ordem inicial sorteada | ✅ |
 | 039 | Leilão do **espólio** do falido-ao-banco (§9.2 / D-031): pregão simultâneo reusando a D-023, com discriminador de origem e injeção de lotes em pregão aberto | ✅ |
 
-### E16 — Polimento & Lançamento (M4) — **NÃO COMEÇOU**
-| ⏳ | Tela de fim de jogo com resumo; acessibilidade/responsivo; telemetria mínima; deploy + CI | ⏳ |
+### E16 — Polimento & Lançamento (M4) — **IMPLEMENTADO** (falta o lançamento em si)
+
+| Spec | O que entrega | Status |
+|---|---|---|
+| 044 | Classificação e resumo no fim de jogo (D-038, 4 campos novos no estado, `matchSummary` derivada); WCAG 2.2 AA no caminho de jogo com gate `axe` no CI (D-039 — trap de foco e política de Esc no primitivo de modal, região viva sobre o log tipado, teclado no tabuleiro); paisagem em tablet e celular com aviso de girar em retrato; vocabulário único de movimento com freio de `prefers-reduced-motion`; telemetria mínima anônima (D-040 — porta com adaptador nulo, Supabase + Sentry, id de sala nunca em claro); publicação na Vercel promovida só com gate verde (D-041); smoke E2E de partida completa sobre o build | ✅ código · ⏳ lançamento |
+
+> **O que falta é operação, não código** (`docs/RUNBOOK.md`): aplicar as três migrations em produção, ligar o projeto na Vercel com as variáveis, promover o primeiro deploy e ensaiar o retorno uma vez.
 
 ---
 
@@ -128,12 +133,14 @@ O engine e a UI single-player estão fechados, e a **fundação multiplayer saiu
 "dois browsers conectados" de "v1.0" é a **experiência** online (038) e o polimento de lançamento
 (E16). Ordem vigente:
 
-1. **037 Fundação multiplayer** — ✅ entregue (falta aplicar a migration no projeto Supabase e
-   medir SC-002/SC-006 numa partida real).
+1. **037 Fundação multiplayer** — ✅ entregue. A migration pendente virou passo §1 do
+   [`RUNBOOK.md`](RUNBOOK.md), com verificação; medir SC-002/SC-006 numa partida real continua aberto.
 2. **038 Partida online de verdade** — ✅ entregue (2026-07-25). Falta só o roteiro manual em
    dois browsers; o DoD #4 do §3 (lobby com nomes reais) está cumprido.
 3. **039 Leilão do espólio do falido-ao-banco** (§9.2) — ✅ entregue (2026-07-25). **O SRS não tem mais lacuna de regra**: era a última.
-4. **M4:** tela de fim de jogo, acessibilidade, telemetria, deploy + CI.
+4. **044 Polimento & Lançamento** — ✅ código entregue (2026-07-27). Resta o **lançamento**: as
+   migrations da 037/041 (que nunca subiram) mais a de telemetria, o projeto na Vercel e o
+   primeiro deploy. Passo a passo em [`RUNBOOK.md`](RUNBOOK.md).
 
 > **Decisão travada antes de specificar 037 — resolvida:** a autoridade de estado (item 17 da
 > auditoria / `store.ts:262`) foi fechada pela 037: todo comando carrega o `playerId` do remetente e
