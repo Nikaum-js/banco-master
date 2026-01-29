@@ -121,7 +121,7 @@ test('host escolhe Maior dado e todos veem a mesma largada sem custo', async ({ 
   const guest = await guestCtx.newPage()
 
   await host.goto('/')
-  await host.getByRole('button', { name: 'Começar uma partida' }).click()
+  await host.getByRole('button', { name: /^Criar sala$/ }).click()
   await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   const roomUrl = host.url()
@@ -175,9 +175,9 @@ test('dois browsers jogam a mesma partida, cada um da sua perspectiva', async ({
 
   // — 1. Tela inicial: a porta de entrada existe sem editar URL (FR-021) —
   await host.goto('/')
-  await expect(host.getByRole('button', { name: 'Começar uma partida' })).toBeVisible()
+  await expect(host.getByRole('button', { name: /^Criar sala$/ })).toBeVisible()
 
-  await host.getByRole('button', { name: 'Começar uma partida' }).click()
+  await host.getByRole('button', { name: /^Criar sala$/ }).click()
   await fillIdentity(host, HOST_NAME, /^Criar sala$/)
 
   // — 2. Sala aberta: link compartilhável e o host sentado —
@@ -264,7 +264,7 @@ test('queda do convidado pausa a mesa e diz quem caiu', async ({ browser }) => {
   const guest = await guestCtx.newPage()
 
   await host.goto('/')
-  await host.getByRole('button', { name: 'Começar uma partida' }).click()
+  await host.getByRole('button', { name: /^Criar sala$/ }).click()
   await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   const roomUrl = host.url()
@@ -329,7 +329,7 @@ test('leilão sobrevive ao reload do host — prazo preservado (SC-005/SC-009)',
   const guest = await guestCtx.newPage()
 
   await host.goto('/')
-  await host.getByRole('button', { name: 'Começar uma partida' }).click()
+  await host.getByRole('button', { name: /^Criar sala$/ }).click()
   await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   const roomUrl = host.url()
@@ -398,7 +398,7 @@ test('convidado reanexa por código a partir de um terceiro dispositivo', async 
   const guest = await guestCtx.newPage()
 
   await host.goto('/')
-  await host.getByRole('button', { name: 'Começar uma partida' }).click()
+  await host.getByRole('button', { name: /^Criar sala$/ }).click()
   await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   const roomUrl = host.url()

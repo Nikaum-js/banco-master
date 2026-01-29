@@ -16,11 +16,16 @@
 // mora em `home/homeShared.ts`, uma vez só: as duas desenham o mesmo formulário de jeitos
 // diferentes.
 import { AnimatePresence, motion } from 'motion/react'
+import { useState } from 'react'
+import { Map } from 'lucide-react'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
-import { useBoardTheme } from '@/game/ui/theme/boardTheme'
+import {
+  useBoardTheme,
+  type BoardTheme,
+} from '@/game/ui/theme/boardTheme'
 import { HomeAtlas } from './home/HomeAtlas'
 import { HomeNeonArcade } from './home/HomeNeonArcade'
-import { useHomeForm, type HomeActions } from './home/homeShared'
+import { HOME_MAPS, useHomeForm, type HomeActions } from './home/homeShared'
 
 const SCREEN = {
   atlas: HomeAtlas,
@@ -31,9 +36,34 @@ export function HomeScreen(actions: HomeActions) {
   const { reduced } = useMotion()
   const theme = useBoardTheme((s) => s.theme)
   const Screen = SCREEN[theme]
+  const [themeTransition, setThemeTransition] = useState<{
+    target: BoardTheme
+    phase: 'cover' | 'reveal'
+  } | null>(null)
   // Acima da troca de pele: nome, convite e gaveta permanecem intactos quando
   // o seletor de mapa alterna Atlas ⇄ Neon.
   const f = useHomeForm(actions)
+
+  function changeMap(target: BoardTheme): void {
+    if (target === theme || themeTransition) return
+    if (reduced) {
+      useBoardTheme.getState().setTheme(target)
+      return
+    }
+    setThemeTransition({ target, phase: 'cover' })
+  }
+
+  function advanceThemeTransition(): void {
+    if (!themeTransition) return
+    if (themeTransition.phase === 'cover') {
+      // O tema global só muda quando a cortina cobre tudo. Assim a fonte do
+      // mundo novo nunca recalcula a tela antiga diante da pessoa.
+      useBoardTheme.getState().setTheme(themeTransition.target)
+      setThemeTransition({ ...themeTransition, phase: 'reveal' })
+      return
+    }
+    setThemeTransition(null)
+  }
 
   return (
     <>
@@ -49,9 +79,50 @@ export function HomeScreen(actions: HomeActions) {
           exit={reduced ? { opacity: 0 } : { opacity: 0 }}
           transition={reduced ? { duration: 0 } : { duration: MOTION.slow, ease: EASE.standard }}
         >
-          <Screen f={f} />
+          <Screen
+            f={f}
+            onChangeMap={changeMap}
+            mapChanging={themeTransition !== null}
+          />
         </motion.div>
       </AnimatePresence>
+
+      {themeTransition && (
+        <motion.div
+          className={`home-theme-transition home-theme-transition--${themeTransition.target}`}
+          data-theme-transition={themeTransition.phase}
+          initial={{ clipPath: 'polygon(0 0, 0 0, -12% 100%, -12% 100%)' }}
+          animate={{
+            clipPath: themeTransition.phase === 'cover'
+              ? 'polygon(0 0, 112% 0, 100% 100%, 0 100%)'
+              : 'polygon(100% 0, 112% 0, 100% 100%, 100% 100%)',
+          }}
+          transition={{
+            duration: themeTransition.phase === 'cover' ? 0.42 : 0.62,
+            delay: themeTransition.phase === 'reveal' ? 0.16 : 0,
+            ease: EASE.emphasis,
+          }}
+          onAnimationComplete={advanceThemeTransition}
+          aria-hidden="true"
+        >
+          <motion.div
+            className="home-theme-transition__content"
+            animate={{ opacity: themeTransition.phase === 'cover' ? 1 : 0 }}
+            transition={{ duration: 0.18 }}
+          >
+            <div className="home-theme-transition__map">
+              <Map size={30} />
+            </div>
+            <span>Carregando mapa</span>
+            <strong>{HOME_MAPS[themeTransition.target].name}</strong>
+            <div className="home-theme-transition__route">
+              <i />
+              <i />
+              <i />
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </>
   )
 }

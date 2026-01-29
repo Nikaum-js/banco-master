@@ -9,6 +9,7 @@ import { DepartureFlap } from '../departureFlap'
 import { EntryStage, OrnamentRule } from '../entryShell'
 import { COMMIT_SHA, TAGLINE, type HomeForm } from './homeShared'
 import { HomeMapPanel } from './HomeMapPanel'
+import type { BoardTheme } from '@/game/ui/theme/boardTheme'
 
 const WORDMARK = [
   { text: 'Banco', tone: 'text-starlight' },
@@ -66,7 +67,15 @@ function Wordmark() {
   )
 }
 
-export function HomeAtlas({ f }: { f: HomeForm }) {
+export function HomeAtlas({
+  f,
+  onChangeMap,
+  mapChanging,
+}: {
+  f: HomeForm
+  onChangeMap: (theme: BoardTheme) => void
+  mapChanging: boolean
+}) {
   const { reduced } = useMotion()
 
   return (
@@ -82,7 +91,13 @@ export function HomeAtlas({ f }: { f: HomeForm }) {
           ambiente, e o formulário precisa caber sem rolagem. */}
       <DepartureFlap className="[@media(max-height:640px)]:hidden" />
 
-      <HomeMapPanel f={f} reduced={reduced} skin="atlas" />
+      <HomeMapPanel
+        f={f}
+        reduced={reduced}
+        skin="atlas"
+        onChangeMap={onChangeMap}
+        mapChanging={mapChanging}
+      />
 
       {/* Benefícios concretos da sala online — informação útil antes de começar. */}
       <footer className="flex flex-col items-center gap-2 [@media(max-height:640px)]:hidden">

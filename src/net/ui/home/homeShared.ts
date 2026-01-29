@@ -2,6 +2,7 @@
 // lembrar o nome, criar sala e entrar por convite — e só a pele muda. Este arquivo evita
 // repetir clipboard, extração de id de sala e persistência de nome.
 import { useState } from 'react'
+import type { BoardTheme } from '@/game/ui/theme/boardTheme'
 import { BOARD, GROUPS, type PropertySquare } from '@/lib/boardData'
 import { extractRoomId, rememberPlayerName, recallPlayerName, NAME_MAX } from '@/net/session'
 
@@ -9,6 +10,11 @@ import { extractRoomId, rememberPlayerName, recallPlayerName, NAME_MAX } from '@
 export const COMMIT_SHA = (import.meta.env.VITE_COMMIT_SHA as string | undefined) ?? ''
 
 export const MAX_PLAYERS = 8
+
+export const HOME_MAPS = {
+  atlas: { name: 'Cidades do Mundo', playable: true },
+  neon: { name: 'Metrópole Neon', playable: false },
+} as const satisfies Record<BoardTheme, { name: string; playable: boolean }>
 
 // A frase da home. Diz o que o jogo É e que não cobra nada, em três negativas curtas —
 // é o que responde "por que eu clicaria?" antes de qualquer botão. Cada estilo pode

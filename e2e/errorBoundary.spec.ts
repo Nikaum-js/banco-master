@@ -30,7 +30,7 @@ test('a casca do convidado cai → o host vê pausa por desconexão → reabrir 
   const guest = await guestCtx.newPage()
 
   await host.goto('/')
-  await host.getByRole('button', { name: 'Começar uma partida' }).click()
+  await host.getByRole('button', { name: /^Criar sala$/ }).click()
   await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   const roomUrl = host.url()

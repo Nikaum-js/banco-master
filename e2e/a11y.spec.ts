@@ -52,7 +52,7 @@ test('caminho de jogo não tem violação de acessibilidade serious/critical', a
 
   // — 1. Home —
   await page.goto('/')
-  await expect(page.getByRole('button', { name: 'Começar uma partida' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Criar sala$/ })).toBeVisible()
   await auditStop(page, 'home', report)
 
   // — 2. Lobby ("Criar sala") — o projeto `built` sobe com credenciais Supabase FALSAS

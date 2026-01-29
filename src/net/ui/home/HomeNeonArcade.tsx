@@ -23,6 +23,7 @@ import { useMotion } from '@/game/ui/motion'
 import { CITIES, COMMIT_SHA, STATS, type HomeForm } from './homeShared'
 import { NeonBackdrop } from './NeonBackdrop'
 import { HomeMapPanel } from './HomeMapPanel'
+import type { BoardTheme } from '@/game/ui/theme/boardTheme'
 
 // ---------------------------------------------------------------------
 // Letreiro de pixel — matriz 5×7 por letra, só as dez de "BANCO MASTER".
@@ -102,7 +103,15 @@ function PixelWordmark() {
   )
 }
 
-export function HomeNeonArcade({ f }: { f: HomeForm }) {
+export function HomeNeonArcade({
+  f,
+  onChangeMap,
+  mapChanging,
+}: {
+  f: HomeForm
+  onChangeMap: (theme: BoardTheme) => void
+  mapChanging: boolean
+}) {
   const { reduced } = useMotion()
   // O ticker precisa de uma volta contínua: a mesma lista DUAS vezes, e a animação desloca
   // exatamente metade da trilha — a emenda cai onde o conteúdo se repete.
@@ -126,12 +135,17 @@ export function HomeNeonArcade({ f }: { f: HomeForm }) {
       <div className="relative min-h-full flex flex-col items-center justify-center gap-6 p-4 py-12 [@media(max-height:640px)]:gap-2 [@media(max-height:640px)]:py-3">
         <header className="text-center">
           <PixelWordmark />
-          <div className="neon-tube mt-5" aria-hidden="true" />
-          <p className="neon-blink mt-3">insert coin · zero fichas</p>
+          <div className="neon-tube mt-3" aria-hidden="true" />
           <p className="neon-sub mt-3">Compre cidades, negocie propriedades e domine o tabuleiro com seus amigos.</p>
         </header>
 
-        <HomeMapPanel f={f} reduced={reduced} skin="neon" />
+        <HomeMapPanel
+          f={f}
+          reduced={reduced}
+          skin="neon"
+          onChangeMap={onChangeMap}
+          mapChanging={mapChanging}
+        />
 
         {COMMIT_SHA && <p className="neon-label opacity-60">ver {COMMIT_SHA.slice(0, 7)}</p>}
       </div>
