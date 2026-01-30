@@ -42,6 +42,14 @@ export interface Loan {
   ratePct: number // 10..50 — juros simples sobre o principal (§15.4), cobrados por GO
 }
 
+// Solicitação de empréstimo pendente (§15.2) — o devedor pediu a um credor específico;
+// aguarda o credor definir a taxa (§15.3) e aceitar/recusar. Não há dinheiro movido ainda.
+export interface LoanRequest {
+  debtorId: string // solicitou (jogador da vez, em dívida pendente)
+  creditorId: string // a quem foi pedido — define a taxa ao aceitar
+  principal: number // = déficit no momento da solicitação (≤ caixa do credor)
+}
+
 export interface Immunity {
   beneficiaryId: string // quem não paga aluguel naquela propriedade (014, §8.4)
   pos: number // propriedade isenta
