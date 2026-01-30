@@ -349,37 +349,111 @@ test('modal alto: o último botão continua alcançável rolando por dentro', as
 })
 
 // ---------------------------------------------------------------------------
-// OrientationGate — o contrato que não pode quebrar
+// Retrato de celular (D-079) — o contrato que não pode quebrar.
+//
+// Este bloco existia ao contrário: até a D-079 ele PROVAVA que retrato exibia
+// "gire o aparelho". O aviso era exatamente o que dispensava o layout de baixo
+// de funcionar — e, escondido por ele, o layout apodreceu: medido em 320×568,
+// a mesa começava a ~410px de uma tela de 568px, quase inteira abaixo da dobra.
+// Agora o gate prova o oposto: em retrato se JOGA.
 // ---------------------------------------------------------------------------
 
-test('telefone em retrato durante a partida: pede para girar SEM perder a sessão', async ({ page }) => {
+const PORTRAIT_PLAY_SIZES = [
+  PHONE_SMALL_PORTRAIT,
+  { width: 360, height: 640 },
+  PHONE_PORTRAIT,
+] as const
+
+for (const size of PORTRAIT_PLAY_SIZES) {
+  test(`retrato ${size.width}×${size.height}: tabuleiro inteiro acima da dobra`, async ({ page }) => {
+    const errors = trackRuntimeErrors(page)
+    await page.setViewportSize(size)
+    await page.goto('/play?players=2')
+    await page.waitForSelector('.board-stage')
+    await page.waitForTimeout(700)
+
+    // Nenhum aviso de rotação, em orientação nenhuma.
+    await expect(
+      page.getByRole('dialog', { name: /gire o aparelho/i }),
+      'retrato voltou a recusar a partida',
+    ).toHaveCount(0)
+
+    const geom = await page.evaluate(() => {
+      const frame = document.querySelector('.board-frame')!.getBoundingClientRect()
+      return {
+        top: frame.top,
+        bottom: frame.bottom,
+        width: frame.width,
+        viewportH: window.innerHeight,
+        viewportW: window.innerWidth,
+      }
+    })
+
+    // O herói: largura inteira, inteiro na tela. Não "visível rolando" — visível.
+    expect(geom.top, 'tabuleiro começa fora da tela').toBeGreaterThanOrEqual(-1)
+    expect(
+      geom.bottom,
+      `tabuleiro passa da dobra (${Math.round(geom.bottom)} > ${geom.viewportH})`,
+    ).toBeLessThanOrEqual(geom.viewportH + 1)
+    expect(
+      geom.width,
+      'tabuleiro deixou de ocupar a largura da viewport',
+    ).toBeGreaterThanOrEqual(geom.viewportW * 0.95)
+
+    await expectNoHorizontalScroll(page, `retrato @ ${size.width}`)
+    expect(errors, `retrato @ ${size.width}: erros de runtime`).toEqual([])
+  })
+}
+
+test('retrato: a gaveta mostra caixa e vez sem exigir toque, e as abas alternam os painéis', async ({ page }) => {
+  await page.setViewportSize(PHONE_PORTRAIT)
+  await page.goto('/play?players=2')
+  await page.waitForSelector('.board-stage')
+  await page.waitForTimeout(700)
+
+  // Cockpit: o que a D-079 promete estar à vista de graça.
+  const cockpit = page.locator('.portrait-dock__cockpit')
+  await expect(cockpit, 'cockpit ausente em retrato').toBeVisible()
+  await expect(cockpit).toContainText(/R\$/)
+
+  // Abas: `tablist` de verdade, e cada uma revela o seu painel.
+  const players = page.getByRole('tab', { name: 'Jogadores' })
+  const actions = page.getByRole('tab', { name: 'Ações' })
+  await expectTouchTarget(players, 'aba Jogadores')
+  await expectTouchTarget(actions, 'aba Ações')
+
+  await expect(players).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('.side-panel--players')).toBeVisible()
+  await expect(page.locator('.side-panel--actions')).toBeHidden()
+
+  await actions.click()
+  await expect(actions).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('.side-panel--actions')).toBeVisible()
+  await expect(page.locator('.side-panel--players')).toBeHidden()
+})
+
+test('girar não perde a sessão nem remonta o tabuleiro', async ({ page }) => {
   await page.setViewportSize(PLAY_MIN)
   await page.goto('/play?players=2')
   await page.waitForSelector('.board-stage')
   await page.waitForTimeout(800)
 
-  // Marca do estado vivo: o aviso não pode desmontar a árvore por baixo dele.
   const beforeSeed = await page.evaluate(() => document.querySelectorAll('.board-square').length)
   expect(beforeSeed, 'tabuleiro não montou').toBeGreaterThan(0)
   await page.evaluate(() => {
     ;(window as unknown as { __responsiveProbe?: number }).__responsiveProbe = 42
   })
 
-  // Gira para retrato.
+  // Paisagem → retrato: agora a mesa CONTINUA jogável, não some sob um aviso.
   await page.setViewportSize({ width: 360, height: 740 })
   await page.waitForTimeout(500)
-
-  const gate = page.getByRole('dialog', { name: /gire o aparelho/i })
-  await expect(gate, 'aviso de rotação ausente em retrato durante a partida').toBeVisible()
-
-  // A árvore por baixo continua montada — é isso que preserva a sessão online.
+  await expect(page.locator('.board-frame')).toBeVisible()
   const duringSquares = await page.evaluate(() => document.querySelectorAll('.board-square').length)
-  expect(duringSquares, 'tabuleiro desmontou sob o aviso').toBe(beforeSeed)
+  expect(duringSquares, 'tabuleiro desmontou ao girar').toBe(beforeSeed)
 
-  // Volta para paisagem: mesmo estado, mesma instância.
+  // E de volta: mesma instância, mesmo estado.
   await page.setViewportSize(PLAY_MIN)
   await page.waitForTimeout(500)
-  await expect(gate).toBeHidden()
   const probe = await page.evaluate(
     () => (window as unknown as { __responsiveProbe?: number }).__responsiveProbe,
   )
@@ -388,16 +462,39 @@ test('telefone em retrato durante a partida: pede para girar SEM perder a sessã
   expect(afterSquares, 'tabuleiro remontou diferente').toBe(beforeSeed)
 })
 
-test('telas de entrada NÃO pedem para girar em retrato', async ({ page }) => {
-  await page.setViewportSize(PHONE_PORTRAIT)
-  for (const route of ['/play', '/play?host=1']) {
-    await page.goto(route)
-    await page.waitForTimeout(900)
-    await expect(
-      page.getByRole('dialog', { name: /gire o aparelho/i }),
-      `${route}: retrato deve funcionar nas telas de entrada`,
-    ).toHaveCount(0)
-  }
+test('retrato: o convite com QR não estoura o modal no menor telefone', async ({ page }) => {
+  // A grade do convite tinha piso RÍGIDO de duas colunas (~386px de largura mínima)
+  // inclusive no bloco "de celular" — não cabia em 390px e destruía 320px. Piso mínimo
+  // não encolhe: transborda. O que se prova aqui é o empilhamento.
+  await page.setViewportSize(PHONE_SMALL_PORTRAIT)
+  await page.goto('/play')
+  await page.waitForTimeout(400)
+
+  const verdict = await page.evaluate(() => {
+    const probe = document.createElement('div')
+    probe.className = 'room-invite-dialog'
+    probe.style.width = 'min(100%, 38rem)'
+    probe.innerHTML = `
+      <div class="room-invite-dialog__body">
+        <figure class="room-invite-qr"><svg class="room-invite-qr__image" viewBox="0 0 33 33"></svg></figure>
+        <div class="room-invite-dialog__actions">
+          <div class="room-invite-dialog__link"><code>https://exemplo.invalido/play?room=8f3c1a7d-4b62-49e0-9a15-2c7e6b0d5f31</code></div>
+        </div>
+      </div>`
+    document.body.appendChild(probe)
+    const body = probe.querySelector('.room-invite-dialog__body')!
+    const code = probe.querySelector('code')!
+    const columns = getComputedStyle(body).gridTemplateColumns.trim().split(/\s+/).length
+    const out = {
+      columns,
+      codeOverflows: code.getBoundingClientRect().right > probe.getBoundingClientRect().right + 1,
+    }
+    probe.remove()
+    return out
+  })
+
+  expect(verdict.columns, 'convite continua em duas colunas no menor telefone').toBe(1)
+  expect(verdict.codeOverflows, 'o link da sala vaza do cartão').toBe(false)
 })
 
 // ---------------------------------------------------------------------------
@@ -410,6 +507,22 @@ test('sem violação serious/critical no caminho de jogo em paisagem mínima', a
   await page.waitForSelector('.board-stage')
   await page.waitForTimeout(700)
   await expectNoBlockingA11yViolations(page, 'partida 740×360')
+})
+
+// Retrato entrou no caminho de jogo pela D-079, então entra no mesmo gate: uma orientação
+// servida sem auditoria é a orientação anterior de novo, só que sem o aviso.
+test('sem violação serious/critical no caminho de jogo em retrato de celular', async ({ page }) => {
+  await page.setViewportSize(PHONE_SMALL_PORTRAIT)
+  await page.goto('/play?players=2')
+  await page.waitForSelector('.board-stage')
+  await page.waitForTimeout(700)
+  await expectNoBlockingA11yViolations(page, 'partida 320×568 em retrato')
+
+  // A aba fechada não pode deixar conteúdo órfão para o leitor de tela — é a razão de o
+  // painel escondido usar `hidden` em vez de sumir só na pintura.
+  await page.getByRole('tab', { name: 'Ações' }).click()
+  await page.waitForTimeout(400)
+  await expectNoBlockingA11yViolations(page, 'partida 320×568, aba Ações')
 })
 
 // ---------------------------------------------------------------------------
