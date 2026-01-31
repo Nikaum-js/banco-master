@@ -83,7 +83,10 @@ export const resolutionRegistry: Record<Square['kind'], ResolutionHandler> = {
     if (square.kind !== 'tax') return { done: true }
     const p = state.players.find((x) => x.id === playerId)
     if (p && p.cash < square.amount) {
-      state.resolution = { kind: 'debt', amount: square.amount, creditorId: null } // dívida ao banco (008)
+      // dívida ao banco (008). O imposto de CASA abre dívida (diferente das cobranças pequenas e
+      // incondicionais que truncam, §9.1/D-061): o valor é grande e o jogador escolheu andar até ali.
+      state.resolution = { kind: 'debt', amount: square.amount, creditorId: null, debtorId: playerId, cause: 'tax' }
+      logEvent(state, { kind: 'debt-open', who: playerId, amount: square.amount, creditorId: null, cause: 'tax' })
       return { done: false }
     }
     if (p) p.cash -= square.amount // débito real (007)

@@ -198,8 +198,13 @@ export function chargeLoanInterest(state: GameState, debtorId: string): void {
       kind: 'debt',
       amount: resto,
       creditorId: loan.creditorId,
+      debtorId, // D-061 — explícito; era implicitamente `activePlayer`, e é o devedor mesmo
+      cause: matures ? 'loan-due' : 'loan-interest',
       origin: matures ? 'loan-due' : 'loan-interest',
     }
+    // Sem `debt-open` aqui: `loan-due-short`/`loan-interest-short` logo abaixo JÁ narram este
+    // mesmo fato com o valor do resíduo. Dois fatos para uma abertura contariam a mesma coisa
+    // duas vezes no histórico.
     logEvent(state, matures
       ? { kind: 'loan-due-short', who: debtorId, amount: paid, creditorId: loan.creditorId, shortfall: resto }
       : { kind: 'loan-interest-short', who: debtorId, amount: paid, creditorId: loan.creditorId, shortfall: resto })
