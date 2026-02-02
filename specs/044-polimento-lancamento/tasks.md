@@ -171,3 +171,13 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 | **Deploy publica `index.html` velho** | tela branca em produção com tudo verde | é exatamente o que a política de cache do `vercel.json` evita (D11) — verificar no primeiro lançamento |
 | **Migration aplicada fora de ordem** | `rooms` sem gatilho, ou telemetria antes de `rooms` | runbook §1 fixa a ordem e a verificação (D12) |
 | **Telemetria vaza credencial** | `roomId` legível num evento | T3/T4 do contrato são teste, não convenção |
+
+---
+
+## Fase 5b — Comando não espera animação (FR-031, FR-032)
+
+**Origem**: achados da Fase 3. O agente que migrou o vocabulário de movimento encontrou dois pontos onde a lógica de jogo **já dependia** de animação, anteriores a esta spec. Não foram consertados lá porque a Fase 3 tinha escopo fechado; são violação direta de FR-031/FR-032 e precisam cair dentro desta spec.
+
+- [ ] **T070** `src/game/ui/modals/ModalLayer.tsx` (`BusLine`, `embark()`): o dispatch de `use-bus-ticket` é atrasado em `setTimeout(…, 560)` para "esperar o ônibus chegar visualmente" — comando de jogo esperando animação (FR-031). Separar as duas coisas: o comando sai imediatamente, a animação de embarque acontece por cima do estado já avançado. Sob movimento reduzido, nenhuma espera.
+- [ ] **T071** `src/boards/shared.tsx` (`ROLL_DURATION_MS`, `useDieAnimation`, `DiceArena`): a flag `rolling` de `tokenAnim` fica presa a 1050 ms fixos, independente de `prefers-reduced-motion` — o peão não anda e o botão não volta antes disso (FR-032). Derivar a duração do vocabulário (`motion.ts`) e zerá-la sob movimento reduzido, **preservando o handshake `rolling`/`animating`** com `GameDriver` (o modal de compra não pode abrir antes do peão chegar).
+- [ ] **T072** [test-first] Prova de que, sob movimento reduzido, o comando de Bus Ticket é despachado sem espera e o peão anda assim que o dado para — e de que o handshake com `GameDriver` continua valendo nos dois modos.
