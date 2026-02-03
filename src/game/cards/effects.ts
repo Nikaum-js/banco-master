@@ -9,6 +9,7 @@ import type { GameState, Player } from '../turn/types'
 import type { TurnPorts } from '../turn/resolution'
 import { advance, JAIL_POS } from '../turn/turnMachine'
 import { buildCost, cityLevel, HANGAR_COST } from '../economy/construction'
+import { addTempEffect } from '../economy/tempEffects'
 
 type Handler = (state: GameState, playerId: string, ports: TurnPorts) => void
 
@@ -99,6 +100,12 @@ const handlers: Record<string, Handler> = {
   },
   passagemOnibus: (s, id) => {
     pl(s, id).busTickets += 1
+  },
+  apagao: (s, id) => {
+    addTempEffect(s, { kind: 'apagao', ownerId: id, pos: null, lapsRemaining: 1 }) // Hangares inativos 1 volta (§10.6)
+  },
+  greveUtilidades: (s, id) => {
+    addTempEffect(s, { kind: 'greve', ownerId: id, pos: null, lapsRemaining: 1 }) // utilidades sem aluguel 1 volta
   },
   refinanciamento: (s, id) => {
     const p = pl(s, id)
