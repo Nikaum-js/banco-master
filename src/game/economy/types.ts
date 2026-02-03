@@ -30,6 +30,13 @@ export interface Auction {
   deadline: number // epoch ms — serializável; o timer é reconstruível (princípio VII)
 }
 
+export interface Loan {
+  debtorId: string // tomou o empréstimo (máx. 1 ativo por devedor, §15.3)
+  creditorId: string // concedeu
+  principal: number // valor emprestado (> 0)
+  ratePct: number // 10..50 — juros simples sobre o principal (§15.4), cobrados por GO
+}
+
 export type ResolutionSlice =
   | { kind: 'purchase'; pos: number }
   | { kind: 'auction'; auction: Auction }
