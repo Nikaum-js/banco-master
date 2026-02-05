@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createSeedState } from '@/game/store'
-import { useBusTicket, sideOf, resolvePending, finalizeTurn } from '@/game/turn/turnMachine'
+import { useBusTicket, sideOf, resolvePending, finalizeTurn, chooseBusRide } from '@/game/turn/turnMachine'
 import { economyResolve } from '@/game/economy/resolveRentable'
 import { BOARD } from '@/lib/boardData'
 import type { GameState } from '@/game/turn/types'
@@ -85,15 +85,15 @@ describe('Bus Ticket — uso (US1)', () => {
     if (g.resolution?.kind === 'purchase') expect(g.resolution.pos).toBe(PROP_SIDE0)
   })
 
-  it('FR-005: escolher casa "atrás" no lado 37–47 cruza o GO e credita o bônus', () => {
+  it('pulo direto NÃO cruza o GO, mesmo indo "pra trás" no lado (sem bônus)', () => {
     const ports = mockPorts()
     const g = withTicketAt(45, 1)
     const out = useBusTicket(g, 38, { rng: () => 0, ports })
-    expect(out.players[0].pos).toBe(38)
-    expect(ports.onPassGo).toHaveBeenCalledTimes(1) // 45 → 38 horário cruza o 0
+    expect(out.players[0].pos).toBe(38) // vai direto, sem dar a volta
+    expect(ports.onPassGo).not.toHaveBeenCalled() // não percorre o tabuleiro → não cruza o GO
   })
 
-  it('FR-005: movimento dentro do lado sem cruzar o GO não credita', () => {
+  it('movimento dentro do lado nunca credita o GO', () => {
     const ports = mockPorts()
     const g = withTicketAt(38, 1)
     useBusTicket(g, 45, { rng: () => 0, ports })
@@ -101,18 +101,43 @@ describe('Bus Ticket — uso (US1)', () => {
   })
 })
 
-describe('Bus Ticket — espaço (US2, §2.7)', () => {
-  it('SC-004: parar no espaço Bus Ticket concede +1 e resolve sem interação econômica', () => {
-    const ctx = ctxWith([3, 2])
-    const BT = BOARD.find((sq) => sq.kind === 'bus-ticket')!.pos
-    let g = createSeedState(['p1', 'p2'])
-    g.players[0].pos = BT // parado no espaço
+describe('Bus Ticket — espaço (US2, §2.7 revisto por D-021)', () => {
+  const BT = BOARD.find((sq) => sq.kind === 'bus-ticket')!.pos
+  function atBusSpace(): GameState {
+    const g = createSeedState(['p1', 'p2'])
+    g.players[0].pos = BT
     g.turn.state = 'casa-a-resolver'
     g.turn.pendingResolve = true
+    return g
+  }
+
+  it('parar no espaço abre o seletor (bus-ride) e NÃO banca ticket', () => {
+    const ctx = ctxWith([3, 2])
+    let g = atBusSpace()
     const antes = g.players[0].busTickets
     g = resolvePending(g, ctx)
-    expect(g.players[0].busTickets).toBe(antes + 1)
-    expect(g.resolution).toBeNull() // nenhuma compra/leilão aberta
-    expect(g.turn.state).toBe('aguardando-finalizacao')
+    expect(g.turn.awaitingChoice).toBe('bus-ride')
+    expect(g.players[0].busTickets).toBe(antes) // não banca mais (D-021)
+    expect(g.resolution).toBeNull()
+  })
+
+  it('chooseBusRide move para casa do mesmo lado e resolve o destino (sem gastar ticket)', () => {
+    const ctx = ctxWith([3, 2])
+    const dest = BOARD.find((sq) => sideOf(sq.pos) === sideOf(BT) && sq.pos !== BT)!.pos
+    let g = resolvePending(atBusSpace(), ctx) // abre bus-ride
+    const ticketsAntes = g.players[0].busTickets
+    g = chooseBusRide(g, dest, ctx)
+    expect(g.players[0].pos).toBe(dest)
+    expect(g.players[0].busTickets).toBe(ticketsAntes) // espaço é a corrida; não consome
+    expect(g.turn.awaitingChoice).toBeNull()
+    expect(g.turn.state).toBe('casa-a-resolver') // destino é resolvido normalmente
+  })
+
+  it('chooseBusRide rejeita destino de outro lado / igual à origem (no-op)', () => {
+    const ctx = ctxWith([3, 2])
+    const g = resolvePending(atBusSpace(), ctx)
+    const outroLado = BOARD.find((sq) => sideOf(sq.pos) !== null && sideOf(sq.pos) !== sideOf(BT))!.pos
+    expect(chooseBusRide(g, outroLado, ctx)).toBe(g) // outro lado
+    expect(chooseBusRide(g, BT, ctx)).toBe(g) // mesma casa
   })
 })
