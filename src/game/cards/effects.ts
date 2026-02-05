@@ -8,7 +8,7 @@ import type { Square, PropertySquare } from '@/lib/boardData'
 import type { GameState, Player } from '../turn/types'
 import type { TurnPorts } from '../turn/resolution'
 import { advance, JAIL_POS } from '../turn/turnMachine'
-import { buildCost } from '../economy/construction'
+import { buildCost, cityLevel, HANGAR_COST } from '../economy/construction'
 
 type Handler = (state: GameState, playerId: string, ports: TurnPorts) => void
 
@@ -28,9 +28,10 @@ export function netWorth(state: GameState, playerId: string): number {
     if (!t || t.ownerId !== playerId) continue
     total += t.mortgaged ? Math.round(priceOf(sq) / 2) : priceOf(sq)
     if (sq.kind === 'property') {
-      const units = t.hotel ? 5 : t.houses // hotel = 4 casas + 1 hotel pagos
+      const units = cityLevel(t) // 0–7: casas/hotel/2º hotel/Skyscraper, cada nível = buildCost (011)
       total += units * buildCost(sq as PropertySquare)
     }
+    if (sq.kind === 'airport' && t.hangar) total += HANGAR_COST // Hangar (011)
   }
   return total
 }
