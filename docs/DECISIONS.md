@@ -30,6 +30,7 @@
 - [D-018](#d-018--termo-canônico-acaso-antes-surpresa) — Termo canônico "Acaso" (antes "Surpresa")
 - [D-019](#d-019--autenticação-anônima-por-link-sem-contas-no-v1) — Autenticação anônima por link (sem contas no v1)
 - [D-020](#d-020--modelo-de-autoridade--sincronização-host-autoritativo--realtime--snapshot) — Modelo de autoridade & sync: host-autoritativo + Realtime + snapshot
+- [D-021](#d-021--espaço-bus-ticket-uso-imediato-ao-parar-revisa-27107) — Espaço Bus Ticket: uso imediato ao parar (revisa §2.7/§10.7)
 
 ### Rejeitadas
 - [D-R01](#d-r01--sistema-de-draft-rejeitada) — Sistema de draft de propriedades no início
@@ -72,9 +73,10 @@
 **Por quê:** Catch-up discreto. Quem está perdendo torce pra cair lá.
 
 ### D-007 — GO Progressivo
-**Data:** 2026-05 · **Status:** aceita
-**Decisão:** Valor recebido ao passar pelo GO escala inversamente com ranking de patrimônio: $100 (1º) a $400 (último).
-**Por quê:** Catch-up natural sem destaque na UI. Valores podem ser ajustados após playtesting.
+**Data:** 2026-05 · **Status:** aceita, **REVISTA pós-playtest (2026-05-24)**
+**Decisão original:** Valor recebido ao passar pelo GO escala inversamente com ranking de patrimônio: $100 (1º) a $400 (último).
+**Por quê (original):** Catch-up natural sem destaque na UI.
+**Revisão (2026-05-24):** o GO Progressivo foi **substituído por regra fixa** (feedback de playtest — o valor variável por ranking confundia e parecia "pouco"): **passar pelo GO = $200**; **cair EXATAMENTE no GO = $400** (em dobro). Implementado em `THEME.GO_PASS` + `advance` (dobra ao parar em pos 0) + carta "Volta para o GO" (Acaso) que teleporta ao GO e credita os $400. O catch-up fica por conta do Free Parking (D-006) e tuning futuro.
 
 ### D-008 — Segundo hotel por propriedade
 **Data:** 2026-05 · **Status:** aceita
@@ -148,6 +150,12 @@
 **Decisão:** No v1 a partida é **host-autoritativa**: o cliente **host** roda o reducer puro (o motor M1); os demais clientes **enviam comandos** por canal Supabase Realtime; o host **aplica** o comando e **difunde o snapshot** resultante do `GameState`; após cada comando aceito, o snapshot (JSON) é **persistido** no Postgres (linha da partida). Os critérios de validade já existentes (ex.: `validateTrade`, `canAcquire`, gates de resolução) validam os comandos — sem caminho de regra novo. O reducer permanece **puro/serializável** para poder migrar a **server-autoritativo** (Edge Function rodando o mesmo módulo) depois, sem reescrever regra.
 **Por quê:** o motor já é `(state) → state` puro e o `GameState` é JSON puro (M1, princípio VII) — host-autoritativo é a casca de **menor infra** que aproveita isso. Autoridade única **lineariza** os comandos (sem merge/conflito). Casa naturalmente com [D-016](#d-016--desconexo-pausa-partida)/§11.3: **host desconectado → partida pausa indefinidamente, sem transferência de host** (o host É a autoridade). A persistência por snapshot dá a resiliência/recarregamento (§11.4) sem log de eventos.
 **Como aplicar:** definir uma interface de **transporte de comandos** + **persistência de snapshot**; a store Zustand atual segue sendo o reducer no host; clientes não-host viram "magros" (enviam comando, renderizam o snapshot recebido). **Trade-offs:** (a) vantagem/latência do host — mitigável com UI otimista local validada pelos mesmos gates; (b) host como ponto único — aceito no v1 por simplicidade e por já ser o modelo de pausa do §11.3; reavaliar server-autoritativo se virar problema. É a base das fatias 1–2 do M3.
+
+### D-021 — Espaço Bus Ticket: uso imediato ao parar (revisa §2.7/§10.7)
+**Data:** 2026-05-24 · **Status:** aceita
+**Decisão:** Parar no **espaço Bus Ticket** NÃO banca mais um ticket — abre **na hora** o seletor de "bus ride": o jogador escolhe uma casa do **mesmo lado** e move-se para lá imediatamente (e o destino é resolvido normalmente). O ticket **guardado** passa a vir **apenas** da carta "Passagem de Ônibus" (Tesouro), usável antes de rolar (§10.7 mantido para a carta).
+**Por quê:** feedback de playtest — parar no espaço e só receber um ticket "invisível" para usar no turno seguinte foi confuso; o jogador espera **agir na hora**. O uso imediato é mais claro e satisfatório, e a corrida do mesmo lado é a mesma mecânica do §10.7.
+**Como aplicar:** motor — o handler `'bus-ticket'` abre `awaitingChoice='bus-ride'` (não credita ticket); `chooseBusRide(dest)` valida mesmo lado, move (credita GO ao cruzar) e resolve o destino. UI — seletor vira modal (`BusPicker`), reusado pela carta guardada. **Atualizar SRS §2.7** (espaço = corrida imediata, não concede ticket) e manter §10.7 para o ticket de carta.
 
 ---
 

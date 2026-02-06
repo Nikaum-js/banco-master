@@ -669,10 +669,10 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 
 **Como usar:**
 - Apenas durante o próprio turno, **antes de rolar os dados**.
-- Ao usar 1 Bus Ticket, o jogador escolhe uma casa no **mesmo lado do tabuleiro** em que está atualmente e move-se para lá, em vez de rolar os dados.
+- Ao usar 1 Bus Ticket, o jogador escolhe uma casa no **mesmo lado do tabuleiro** em que está atualmente e **pula direto** para lá, em vez de rolar os dados.
 - Resolve a casa de destino normalmente.
 - Após usar o Bus Ticket, o turno do jogador continua normalmente (ações facultativas e finalizar turno).
-- Se passar pelo GO durante o movimento do Bus Ticket, **recebe** o bônus progressivo.
+- O Bus Ticket é um **pulo direto** dentro do mesmo lado: **não percorre o tabuleiro e NÃO cruza o GO** — portanto não recebe o bônus de GO (revisão pós-playtest 2026-05-24; antes dava a volta no sentido horário e podia cruzar o GO).
 
 > 📌 Os "lados do tabuleiro" são as 4 sequências de 11 casas entre os cantos. Lado 1: casas 1–11 (entre GO=0 e Prisão=12). Lado 2: casas 13–23 (entre Prisão=12 e Férias=24). Lado 3: casas 25–35 (entre Férias=24 e Vá-pra-Prisão=36). Lado 4: casas 37–47 (entre Vá-pra-Prisão=36 e GO).
 
