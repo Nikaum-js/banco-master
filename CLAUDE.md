@@ -14,7 +14,7 @@ Tema inicial: "Cidades do Mundo". Base extensível para outros temas no futuro.
 
 **Lançamento (M4).** As specs 001–044 estão implementadas e integradas ao `main`: motor fechado, multiplayer vivo sobre o Supabase, fronteira de erro, identidade de transporte atestada pelo servidor (043) e o polimento de lançamento (044 — fim de jogo com classificação, acessibilidade AA no caminho de jogo, paisagem em tablet/celular, telemetria anônima, gates de CI e deploy na Vercel).
 
-**O que falta não é código: é operação.** Aplicar as **quatro** migrations em produção, ligar o projeto na Vercel e promover o primeiro deploy — passo a passo em [`docs/RUNBOOK.md`](./docs/RUNBOOK.md).
+**A operação de lançamento está concluída** (2026-07-27): as **quatro** migrations estão aplicadas no projeto de produção, os secrets da Vercel (`VERCEL_TOKEN`/`ORG_ID`/`PROJECT_ID`) estão no repo, e o `deploy.yml` promove produção **só** depois do CI fechar verde (D-041) — o auto-deploy nativo em `main` está desligado por `vercel.json`. O [`docs/RUNBOOK.md`](./docs/RUNBOOK.md) continua valendo como procedimento de operação, não como pendência.
 
 Comportamento esperado:
 
