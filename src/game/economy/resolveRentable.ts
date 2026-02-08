@@ -3,6 +3,8 @@
 import type { ResolveCtx, ResolutionOutcome } from '../turn/resolution'
 import { ownerOf, isMortgaged, groupOwnedCount, groupSize, countOwned, groupHasSkyscraper } from './titles'
 import { rentCity, rentAirport, rentUtility, diceValue } from './rent'
+import { hasImmunity } from './imunidade'
+import { apagaoActive, greveActive, isBoycotted } from './tempEffects'
 
 export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
   const { square, state, playerId, roll } = ctx
@@ -17,13 +19,16 @@ export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
   }
   if (owner === playerId) return { done: true } // própria (FR-011)
   if (isMortgaged(state, pos)) return { done: true } // hipotecada → sem aluguel (FR-010)
+  if (hasImmunity(state, playerId, pos)) return { done: true } // imunidade pessoal (014, §8.4)
+  if (isBoycotted(state, pos)) return { done: true } // Boicote: ninguém paga (015, §10.6)
 
   // aluguel devido (FR-006..009)
   let amount = 0
   if (square.kind === 'airport') {
-    amount = rentAirport(countOwned(state, 'airport', owner)) * (state.titles[pos].hangar ? 2 : 1) // Hangar dobra (011, §13.6)
+    const hangarDobra = state.titles[pos].hangar && !apagaoActive(state) // Apagão desliga a dobra (015)
+    amount = rentAirport(countOwned(state, 'airport', owner)) * (hangarDobra ? 2 : 1) // Hangar dobra (011, §13.6)
   } else if (square.kind === 'utility') {
-    amount = rentUtility(countOwned(state, 'utility', owner), diceValue(roll))
+    amount = greveActive(state) ? 0 : rentUtility(countOwned(state, 'utility', owner), diceValue(roll)) // Greve zera (015)
   } else {
     const t = state.titles[pos]
     amount = rentCity(
