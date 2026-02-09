@@ -38,7 +38,6 @@ function who(room: Room | null, id: string): LogFragment {
 const CARD_FIXED_PHRASE: Record<string, string> = {
   'Va Prisao': 'foi para a Prisão',
   'Volte 3': 'voltou 3 casas',
-  'Greve Utilidades': 'Greve: utilidades sem aluguel por 1 volta',
   'Investidor Anjo': 'Investidor Anjo: 20% de desconto na próxima compra',
 }
 
@@ -49,6 +48,9 @@ function mapAwareFixedPhrase(name: string): string | null {
   const labels = activeLabels()
   if (name === 'Passagem Onibus') return `ganhou 1 ${labels.busTicket}`
   if (name === 'Apagao') return `Apagão: ${labels.hangar.toLowerCase()}s ficam inativas por 1 volta`
+  if (name === 'Greve' || name === 'Greve Utilidades') {
+    return `Greve: bônus de ${labels.hangar} suspenso e utilidades sem aluguel por 1 volta`
+  }
   return null
 }
 
@@ -73,9 +75,7 @@ function cardImmediatePhrase(name: string, delta: number): LogSentence {
         ? [text('pagou '), money(-delta), text(' de conserto dos imóveis ($25/casa, $100/hotel)')]
         : [text('Conserto de Imóveis cobraria $25/casa e $100/hotel, mas não havia construções')]
     case 'Crise Imobiliaria':
-      return delta < 0
-        ? [text('pagou '), money(-delta), text(' na crise (5% do patrimônio)')]
-        : [text('Crise imobiliária cobraria 5% do patrimônio, mas não havia o que cobrar')]
+      return [text('Crise imobiliária: adversários pagam 10% do patrimônio à Loteria')]
     case 'Aniversario':
       return delta > 0
         ? [text('recebeu '), money(delta), text(' de aniversário (cada adversário paga $50)')]
@@ -84,10 +84,29 @@ function cardImmediatePhrase(name: string, delta: number): LogSentence {
       return [text('pagou '), money(-delta), text(' de honorários')]
     case 'Boom Economico':
       return [text('Boom econômico: todos que ainda estão na partida receberam '), money(delta)]
+    // Cartas dependentes de estado podem não movimentar caixa (SRS §10.6), mas isso precisa ser
+    // narrado: o jogador deve distinguir um efeito persistente ou sem alvo de um bug silencioso.
+    case 'Incentivo Fiscal':
+      return delta > 0
+        ? [text('recebeu '), money(delta), text(' de incentivo fiscal ($50 por propriedade hipotecada)')]
+        : [text('Incentivo Fiscal pagaria $50 por propriedade hipotecada, mas não havia hipotecas')]
+    case 'Resgate Do Pote':
+      return delta > 0
+        ? [text('resgatou '), money(delta), text(' — metade da Loteria')]
+        : [text('Resgate do Pote pagaria metade da Loteria, mas o pote estava vazio')]
+    case 'Obra Relampago':
+      return [text('Obra Relâmpago: a próxima construção será gratuita')]
+    case 'Estatizacao':
+      return [text('Estatização: por 2 voltas, todo aluguel vai para a Loteria')]
     default: // erroBanco, boomEconomico e demais efeitos baseados só em caixa
       if (delta < 0) return [text('pagou '), money(-delta)]
       if (delta > 0) return [text('recebeu '), money(delta)]
-      return [text('nenhum efeito')]
+      // ÚLTIMO RECURSO, e nunca "nenhum efeito" seco: carta que sai e não explica nada parece
+      // bug para quem está jogando — foi exatamente o relato. Aqui a frase pelo menos diz que o
+      // efeito não era de caixa ou não encontrou alvo, que é a única coisa verdadeira que se
+      // pode afirmar sem saber qual carta é. Carta nova que caia neste ramo com delta 0 merece
+      // um `case` próprio acima, não esta frase.
+      return [text('a carta não movimentou dinheiro — o efeito dela não é de caixa, ou não encontrou alvo nesta situação')]
   }
 }
 
