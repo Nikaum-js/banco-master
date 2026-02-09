@@ -1,12 +1,13 @@
 # D-071 — Minas são ativos passivos sem aluguel
 
-**Data:** 2026-07-30 · **Status:** aceita · **Complementa:** [D-070](D-070-fuligem-tem-topologia-e-regras-proprias.md)
+**Data:** 2026-07-30 · **Status:** aceita · **Complementa:** [D-070](D-070-fuligem-tem-topologia-e-regras-proprias.md) · **Refinada por:** [D-076](D-076-rebalanceamento-economico-para-mesas-de-3-e-4.md)
 
 **Decisão:** as quatro Minas da Cidade da Fuligem são títulos compráveis, negociáveis e
 hipotecáveis, mas **não cobram aluguel**. Cair numa Mina que pertence a outro jogador não
 transfere dinheiro nem abre dívida; possuir várias Minas não cria escada de aluguel.
 
-Todas custam `R$ 220`, hipotecam por `R$ 110`, não recebem construções e dão um bônus
+Na decisão original, todas custavam `R$ 220` e hipotecavam por `R$ 110`; desde a D-076, custam
+`R$ 250` e hipotecam por `R$ 125`. Não recebem construções e dão um bônus
 passivo diferente enquanto pertencem ao jogador e não estão hipotecadas:
 
 | Mina | Bônus passivo |
@@ -21,7 +22,7 @@ compra, recusa, leilão, troca, hipoteca, devolução ao banco, falência e efei
 aplicáveis a títulos sem construção.
 
 **Por quê:** a Mina é uma peça de composição de carteira. Cobrar aluguel além de melhorar
-outros ativos duplicava seu valor e fazia quatro títulos de `R$ 220` acumularem a mesma
+outros ativos duplicava seu valor e fazia quatro títulos de mesmo preço acumularem a mesma
 receita direta das Ferrovias, sem depender de dados ou investimento. Sem aluguel, a decisão
 passa a ser estratégica: comprar a Mina certa para o patrimônio que o jogador já possui ou
 pretende montar.

@@ -35,7 +35,7 @@ _Avoid_: modo de jogo, regra personalizada
 ### Mapa
 
 **Mapa**:
-Catálogo autoritativo de um tabuleiro jogável — identificador estável, nome público, grupos, casas, topologia, apresentação e regras próprias declaradas. Escolhido pelo host antes da criação da sala, gravado nela e imutável depois; todos os participantes recebem o mesmo. Compartilha o motor e os contratos de estado com os demais mapas ([D-069](./docs/adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md), [D-070](./docs/adr/D-070-fuligem-tem-topologia-e-regras-proprias.md)).
+Catálogo autoritativo de um tabuleiro jogável — identificador estável, nome público, grupos, casas, topologia, apresentação e regras próprias declaradas. Escolhido pelo host na criação da sala, gravado nela e trocável por ele enquanto a sala está em lobby — do Ritual de Largada em diante, não; todos os participantes recebem o mesmo. Compartilha o motor e os contratos de estado com os demais mapas ([D-069](./docs/adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md), [D-070](./docs/adr/D-070-fuligem-tem-topologia-e-regras-proprias.md), [D-077](./docs/adr/D-077-mapa-da-sala-e-trocavel-no-lobby.md)).
 _Avoid_: tema (para o eixo jogável), skin de tabuleiro
 
 **Cidades do Mundo**:
@@ -73,7 +73,7 @@ Movimento opcional, ao terminar o turno numa Ferrovia própria e não hipotecada
 ### Tabuleiro e movimento
 
 **GO**:
-Casa de índice 0. Passar por ela credita $200; parar exatamente nela credita $400 ([D-007](./docs/adr/D-007-go-progressivo.md)).
+Casa de índice 0. Passar por ela credita $250; parar exatamente nela credita $500 ([D-007](./docs/adr/D-007-go-progressivo.md), [D-076](./docs/adr/D-076-rebalanceamento-economico-para-mesas-de-3-e-4.md)).
 _Avoid_: Início, Partida, Start
 
 **Free Parking**:
@@ -81,7 +81,7 @@ Casa de canto oposta ao GO: índice 24 no Atlas e 20 na Cidade da Fuligem. Quem 
 _Avoid_: Férias, Estacionamento Livre
 
 **Loteria**:
-Prêmio acumulado no centro da mesa. Começa em $500, recebe impostos, multas e, quando escolhido, todos os lances do Leilão secreto; quem parar no Free Parking leva tudo ([D-006](./docs/adr/D-006-free-parking-com-premio-acumulado.md), [D-046](./docs/adr/D-046-leilao-da-largada-financia-a-loteria.md)).
+Prêmio acumulado no centro da mesa. Começa e é reabastecido em $750, recebe impostos, multas e, quando escolhido, todos os lances do Leilão secreto; quem parar no Free Parking leva tudo ([D-006](./docs/adr/D-006-free-parking-com-premio-acumulado.md), [D-046](./docs/adr/D-046-leilao-da-largada-financia-a-loteria.md), [D-076](./docs/adr/D-076-rebalanceamento-economico-para-mesas-de-3-e-4.md)).
 _Avoid_: centerPot (na interface), pote do Free Parking
 
 **Ritual de Largada**:

@@ -1,6 +1,6 @@
 # Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.35
+**Versão:** 1.37
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -70,9 +70,9 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Desconexão mid-game | Partida pausa; propriedades não vão ao banco; aguarda reconexão |
 | Speed Die | Presente — ativado após primeira volta completa do jogador |
 | Construção com país parcial | Permitida com 1+ cidade; enquanto o país estiver incompleto, o nível máximo por cidade é igual ao número de cidades possuídas; aluguel construído escala pela posse (50%→100%, §13.3) |
-| Free Parking com prêmio acumulado | Presente — impostos/multas vão para o centro, prêmio inicial $500 |
+| Free Parking com prêmio acumulado | Presente — impostos/multas vão para o centro, prêmio inicial e reabastecimento de $750 (D-076) |
 | Fiscal (Tax Man) | **Removido** — token invisível que cobrava fora da vez; causa raiz de quatro relatos de bug financeiro (D-065, §13.8) |
-| Bônus de GO | Fixo — $200 ao passar; $400 ao parar exatamente no GO (revisão D-007, 2026-05-24) |
+| Bônus de GO | Fixo — $250 ao passar; $500 ao parar exatamente no GO (D-007, 2026-05-24; valores recalibrados pela D-076) |
 | Segundo hotel por propriedade | Presente — sequencial, cobra **mais** aluguel que o 1º; 2 hotéis viram arranha-céu |
 | Empréstimos entre jogadores | Presentes — juros 10%–50%, cobrados a cada passagem pelo GO; vencem em 3 voltas com cobrança automática do principal (D-054, §15.6) |
 | Imunidade de aluguel em negociações | Presente — pode ser negociada por N voltas ou até o fim |
@@ -106,7 +106,8 @@ percorridas no sentido horário (11 casas por lado + 4 cantos).
 > explicitamente declaradas. O motor, a autoridade da sala e os contratos de estado
 > continuam compartilhados. Os nomes, quantidades e valores das §§2.2–2.7 são do mapa
 > **Cidades do Mundo** (`atlas`). A **Cidade da Fuligem** (`fuligem`) usa a composição
-> própria da §2.8. O mapa é gravado na sala na criação e é imutável (§11.1).
+> própria da §2.8. O mapa é gravado na sala e vale para toda a mesa; o host pode trocá-lo
+> enquanto a sala está em lobby (§11.1, v1.37, [D-077](adr/D-077-mapa-da-sala-e-trocavel-no-lobby.md)).
 
 > **Nota de design (v1.1):** o tabuleiro foi expandido de 40 → 48 casas, inspirado no **Monopoly: The Mega Edition** (52 casas), para suportar partidas de 7-8 jogadores com mais profundidade. A escolha é coerente: as mecânicas que o Mega introduziu para fazer um tabuleiro maior funcionar — Speed Die (§13.2), Skyscraper (§13.7), Bus Tickets (§10.7), Hangares ≈ Train Depots (§13.6) e construção com grupo parcial (§13.3) — **já existiam neste SRS**. A expansão completa esse design em vez de divergir do Richup.
 
@@ -152,24 +153,24 @@ As 28 propriedades são divididas em **10 grupos de cores** (tema "Cidades do Mu
 
 > **Balanceamento:** grupos de 3 seguram o *runaway leader* e forçam negociação — dá pra construir 1 casa com 1 cidade (50% do aluguel) e até 2 casas por cidade com 2 cidades (75%), mas **completar o país libera toda a escada e leva o aluguel a 100%** (§5.1/§13.3). **Laranja/Vermelho** (meio do tabuleiro) são o *sweet spot* (casa barata, bom aluguel). Os duos do topo — **França** e **Emirados** — permitem 1 casa com 1 cidade e liberam toda a escada com as 2, e são caros: os **Emirados** (Abu Dhabi/Dubai) são o **super-luxo** (preços/aluguéis muito acima, armadilha de prestígio — ver §5 e D-025).
 
-> 📌 Preços ($60→$650), aluguéis-base e **custos de construção (tier por grupo)** vivem no tema (`theme.ts`) — fonte única tunável. Composição e calibração: [D-017](adr/README.md) (rev.) + [D-024](adr/README.md) + [D-025](adr/README.md).
+> 📌 Preços ($60→$650), aluguéis-base e **custos de construção (tier por grupo)** vivem no tema (`theme.ts`) — fonte única tunável. Composição e calibração: [D-017](adr/README.md) (rev.) + [D-024](adr/README.md) + [D-025](adr/README.md) + [D-076](adr/D-076-rebalanceamento-economico-para-mesas-de-3-e-4.md).
 
 ### 2.4 Aeroportos
 
-Existem **4 aeroportos** distribuídos um em cada lado do tabuleiro. O aluguel escala com o número de aeroportos do proprietário:
+Existem **4 aeroportos** de **$250** cada, distribuídos um em cada lado do tabuleiro. O aluguel escala com o número de aeroportos do proprietário:
 
 | Aeroportos possuídos | Aluguel |
 |---|---|
-| 1 | $25 |
-| 2 | $50 |
-| 3 | $100 |
-| 4 | $200 |
+| 1 | $30 |
+| 2 | $60 |
+| 3 | $125 |
+| 4 | $250 |
 
 Aeroportos podem ser hipotecados, mas **não recebem construções de casas/hotéis**. Podem receber **Hangares** (ver Seção 13.6).
 
 ### 2.5 Utilidades
 
-Existem **3 utilidades** (ex: Petrobras, Eletrobras e uma 3ª companhia — Gás/Saneamento). A 3ª segue o Mega Edition (Gas Company). O aluguel é baseado no valor dos dados:
+Existem **3 utilidades** de **$175** cada (ex: Petrobras, Eletrobras e uma 3ª companhia — Gás/Saneamento). A 3ª segue o Mega Edition (Gas Company). O aluguel é baseado no valor dos dados:
 
 | Utilidades possuídas | Aluguel |
 |---|---|
@@ -183,8 +184,8 @@ Utilidades podem ser hipotecadas mas não recebem construções.
 
 | Casa | Valor |
 |---|---|
-| Income Tax | $200 fixo (ou 10% do patrimônio — seguir Richup.io) |
-| Luxury Tax | $100 fixo |
+| Income Tax | $250 fixo |
+| Luxury Tax | $150 fixo |
 
 ### 2.7 Espaço Bus Ticket
 
@@ -214,7 +215,7 @@ e não hipotecada, o jogador pode usar o **Desvio pela Ferrovia** para mover dir
 até outra Ferrovia própria e não hipotecada, **no máximo uma vez no mesmo turno**. O
 movimento não passa pelo GO e não resolve aluguel na chegada.
 
-Cada **Mina** custa `R$ 220`, hipoteca por `R$ 110`, não recebe construções e **não cobra
+Cada **Mina** custa `R$ 250`, hipoteca por `R$ 125`, não recebe construções e **não cobra
 aluguel**. Cair em Mina de outro jogador não transfere dinheiro. Enquanto a Mina pertencer
 ao jogador e não estiver hipotecada, concede o bônus correspondente:
 
@@ -239,20 +240,20 @@ superfícies funcionais do jogo.
 
 ### 3.1 Início de Partida
 
-- Cada jogador recebe **$2.000 antes do Ritual de Largada**, em qualquer mapa.
+- Cada jogador recebe **$3.000 antes do Ritual de Largada**, em qualquer mapa (v1.36, [D-076](adr/D-076-rebalanceamento-economico-para-mesas-de-3-e-4.md)).
 - Antes de iniciar, o host escolhe no lobby como a ordem será definida (D-046):
   - **Leilão secreto**: o host abre uma única rodada simultânea para todos os assentos, inclusive o próprio;
   - cada jogador lacra um lance de **$0 a $500**, em passos de **$50**, dentro de **15 segundos**;
   - o lance não pode ser alterado depois de enviado; ausência de lance no prazo vale **$0**;
   - a ordem é decrescente por valor; empates são resolvidos por sorteio da autoridade da mesa;
-  - cada jogador paga o próprio lance ao banco, e começa a partida com **$2.000 menos o lance**;
-  - o banco deposita a soma integral dos lances na **Loteria** (§13.4), além dos $500 iniciais;
+  - cada jogador paga o próprio lance ao banco, e começa a partida com **$3.000 menos o lance**;
+  - o banco deposita a soma integral dos lances na **Loteria** (§13.4), além dos $750 iniciais;
   - durante a coleta, valores permanecem secretos; a revelação publica os lances e a ordem para todos;
   - **Maior dado**: cada jogador, na ordem dos assentos do lobby, aciona a própria rolagem em uma fase compartilhada e visível para toda a mesa (D-051);
   - somente o dono do assento da vez pode pedir a rolagem; a autoridade gera e atesta os dois dados brancos, publica o arremesso e o resultado antes de liberar o próximo jogador;
   - depois da última rolagem, a ordem é decrescente pela soma e empates são resolvidos pelo RNG da autoridade;
   - se o jogador da vez desconectar antes de rolar, a mesa aguarda sua reconexão, sem timer ou rolagem automática;
-  - em Maior dado, ninguém paga pela posição: todos começam com $2.000 e a Loteria com $500;
+  - em Maior dado, ninguém paga pela posição: todos começam com $3.000 e a Loteria com $750;
   - o modo escolhido e o resultado ficam visíveis para todos; somente o host pode mudar o modo, e apenas antes de iniciar;
   - terminada a revelação visual de qualquer modo, todas as telas entram automaticamente no tabuleiro, sem confirmação individual.
 - Todos os jogadores iniciam na casa **GO** (índice 0).
@@ -273,7 +274,7 @@ superfícies funcionais do jogo.
 
 ### 3.3 Passar pelo GO
 
-Sempre que o token passar pela casa GO, o jogador recebe o **bônus fixo de $200**; se parar **exatamente** no GO, recebe **em dobro ($400)** — ver Seção 13.5.
+Sempre que o token passar pela casa GO, o jogador recebe o **bônus fixo de $250**; se parar **exatamente** no GO, recebe **em dobro ($500)** — ver Seção 13.5.
 
 > 📌 Cartas que enviam o jogador diretamente para uma casa **NÃO** pagam GO ao passar, a menos que a carta diga explicitamente.
 
@@ -320,7 +321,7 @@ O valor é debitado automaticamente. Vai para o **centro do tabuleiro** (Free Pa
 
 ### 4.7 GO (Início)
 
-Recebe o bônus de GO (Seção 13.5): $200 ao passar, $400 ao parar exatamente na casa. Nenhuma outra ação.
+Recebe o bônus de GO (Seção 13.5): $250 ao passar, $500 ao parar exatamente na casa. Nenhuma outra ação.
 
 ### 4.8 Apenas Visitando / Prisão
 
@@ -870,7 +871,7 @@ Chance por carta, como a vitrine de probabilidades a exibe:
 > Vá imediatamente para a casa Prisão (índice 12). **NÃO** recebe bônus do GO se passar por ele. Não move mais no turno.
 
 **Volta para o GO** (Acaso)
-> Mova-se diretamente para a casa GO. Recebe o bônus em dobro ($400 — parou exatamente no GO, Seção 13.5).
+> Mova-se diretamente para a casa GO. Recebe o bônus em dobro ($500 — parou exatamente no GO, Seção 13.5).
 
 **Conserto de Imóveis** (Acaso)
 > Pague **$25 por casa** e **$100 por hotel** que possui. Valor vai para o **centro do tabuleiro** (Free Parking).
@@ -923,7 +924,7 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 ### 11.1 Criação de Sala
 
 - Host cria a sala e recebe um link único.
-- **Mapa da sala** (v1.30, [D-069](adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md)): o host escolhe o mapa (`atlas` ou `fuligem`) **antes** de criar a sala; o identificador fica gravado na sala e **não pode ser alterado** depois. Todos os participantes — convidado pelo link, reload, reconexão — recebem o mesmo mapa da autoridade; sala antiga ou sem identificação usa `atlas`. A escolha nunca depende apenas de estado local do navegador.
+- **Mapa da sala** (v1.30, [D-069](adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md); v1.37, [D-077](adr/D-077-mapa-da-sala-e-trocavel-no-lobby.md)): o host escolhe o mapa (`atlas` ou `fuligem`) ao criar a sala e **pode trocá-lo no lobby** — o inicial e o de revanche (§11.6) —, enquanto ninguém tiver entrado no Ritual de Largada; do Ritual em diante o mapa da partida não muda. Trocar de mapa não altera assentos, identidade, códigos de reentrada nem o histórico de partidas da sala. Todos os participantes — convidado pelo link, reload, reconexão — recebem o mesmo mapa da autoridade; sala antiga ou sem identificação usa `atlas`. A escolha nunca depende apenas de estado local do navegador.
 - Host tem poderes especiais: **kickar jogadores**, **escolher o Ritual de Largada** e **iniciar a partida**. Em Maior dado, iniciar abre a sequência compartilhada de rolagens; nos dois modos, a mesa entra no tabuleiro automaticamente depois da revelação.
 - Sala suporta de 2 a 8 jogadores humanos.
 - Host pode iniciar com pelo menos 2 jogadores.
@@ -1186,9 +1187,9 @@ A casa Free Parking (índice 24) entrega a **Loteria**, prêmio em dinheiro acum
 - Todo valor pago em **multas** de cartas Acaso/Tesouro vai para o centro.
 - A multa da **Prisão** ($50) vai para o centro.
 - Todo valor pago no **Leilão secreto da largada** vai para o centro antes do primeiro turno (D-046); o modo Maior dado não acrescenta dinheiro.
-- **Prêmio inicial** colocado no centro ao início: **$500**.
+- **Prêmio inicial** colocado no centro ao início: **$750**.
 - O jogador que parar no Free Parking recebe **todo** o dinheiro acumulado.
-- Após coletado, o centro é **reabastecido** com $500 do banco.
+- Após coletado, o centro é **reabastecido** com $750 do banco.
 
 > 📌 Catch-up discreto e natural. Quem está perdendo torce para cair no Free Parking.
 
@@ -1198,20 +1199,20 @@ Valor **fixo**, definido no tema (`THEME.GO_PASS`):
 
 | Situação | Valor recebido |
 |---|---|
-| Passar pelo GO | **$200** |
-| Parar **exatamente** no GO | **$400** (em dobro) |
+| Passar pelo GO | **$250** |
+| Parar **exatamente** no GO | **$500** (em dobro) |
 
-- Cartas que enviam o jogador **diretamente ao GO** ("Volta para o GO") creditam os $400 de parada exata.
+- Cartas que enviam o jogador **diretamente ao GO** ("Volta para o GO") creditam os $500 de parada exata.
 - Cartas/efeitos que movem **para trás** cruzando o GO **não** pagam bônus (Seção 3.3).
 - O Bus Ticket é pulo direto no mesmo lado — nunca cruza o GO (Seção 10.7).
 
-> 📌 **Histórico (D-007, revisão 2026-05-24):** o GO Progressivo original ($100–$400 inversamente ao ranking de patrimônio) foi substituído pela regra fixa após playtest — o valor variável confundia e parecia "pouco". O catch-up fica por conta do Free Parking (Seção 13.4) e de tuning futuro — o Fiscal, que também era alavanca, saiu na v1.27 ([D-065](adr/D-065-fiscal-sai-do-jogo.md)).
+> 📌 **Histórico (D-007, revisão 2026-05-24; valores recalibrados pela D-076):** o GO Progressivo original ($100–$400 inversamente ao ranking de patrimônio) foi substituído pela regra fixa após playtest — o valor variável confundia e parecia "pouco". O catch-up fica por conta do Free Parking (Seção 13.4) e de tuning futuro — o Fiscal, que também era alavanca, saiu na v1.27 ([D-065](adr/D-065-fiscal-sai-do-jogo.md)).
 
 ### 13.6 Hangar (Melhoria de Aeroporto)
 
 Cada aeroporto pode receber **um Hangar**, melhoria individual que **dobra o aluguel** daquele aeroporto específico:
 
-- Custo: **$100** (configurável no tema).
+- Custo: **$125** (configurável no tema).
 - Não exige possuir múltiplos aeroportos.
 - Não pode ser hipotecado junto com o aeroporto — o Hangar deve ser vendido antes da hipoteca.
 - Em falência, segue o destino do aeroporto.
@@ -1348,7 +1349,7 @@ Todo empréstimo nasce com **prazo de 3 voltas do devedor**, contadas pelas pass
 | Inteligência Artificial (bots) | Decidido: fora do escopo. Apenas jogadores humanos |
 | Timer de turno | Decidido: sem timer. Jogador finaliza quando quiser |
 | Modo local (hotseat) | Apenas multiplayer online via sala |
-| Múltiplos temas simultâneos | Revisado em v1.31 ([D-069](adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md), [D-070](adr/D-070-fuligem-tem-topologia-e-regras-proprias.md)): **dois mapas jogáveis** — Cidades do Mundo (`atlas`) e Cidade da Fuligem (`fuligem`) —, escolhidos **por sala** na criação e imutáveis depois. Cada mapa pode ter topologia e regras declaradas próprias; mais de um mapa na **mesma partida** segue fora de escopo |
+| Múltiplos temas simultâneos | Revisado em v1.31 ([D-069](adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md), [D-070](adr/D-070-fuligem-tem-topologia-e-regras-proprias.md)): **dois mapas jogáveis** — Cidades do Mundo (`atlas`) e Cidade da Fuligem (`fuligem`) —, escolhidos **por sala** e trocáveis pelo host no lobby (v1.37, [D-077](adr/D-077-mapa-da-sala-e-trocavel-no-lobby.md)). Cada mapa pode ter topologia e regras declaradas próprias; mais de um mapa na **mesma partida** segue fora de escopo |
 | Transferência de host | Host desconectado pausa a partida indefinidamente |
 | Chat em tempo real | Não previsto no v1 |
 | Espectadores | Não previsto no v1 |

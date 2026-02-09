@@ -16,8 +16,8 @@
 - [D-003](D-003-speed-die-apos-1a-volta.md) — Speed Die ativado após 1ª volta
 - [D-004](D-004-construcao-com-grupo-parcial.md) — Construção com grupo parcial permitida (70% / 150%)
 - [D-005](D-005-propriedade-coringa.md) — ~~2 propriedades coringa no tabuleiro~~ **revogada** (funcionalidade removida)
-- [D-006](D-006-free-parking-com-premio-acumulado.md) — Free Parking acumula prêmio (inicial $500)
-- [D-007](D-007-go-progressivo.md) — GO Progressivo ($100 a $400 por ranking)
+- [D-006](D-006-free-parking-com-premio-acumulado.md) — Free Parking acumula prêmio; semente/reabastecimento atuais de $750 (D-076)
+- [D-007](D-007-go-progressivo.md) — GO fixo: $250 ao passar e $500 ao parar exatamente (regra fixa da revisão pós-playtest; valores da D-076)
 - [D-008](D-008-segundo-hotel-por-propriedade.md) — Segundo hotel permitido (cobra mais aluguel; revista pela D-022)
 - [D-009](D-009-emprestimos-entre-jogadores.md) — Empréstimos entre jogadores (10–50%, cobra por GO)
 - [D-010](D-010-imunidade-de-aluguel-negociavel.md) — Imunidade de aluguel negociável
@@ -85,6 +85,8 @@
 - [D-073](D-073-desvio-pela-ferrovia-uma-vez-por-turno.md) — Desvio pela Ferrovia pode ser usado no máximo uma vez por turno, encerrando o ciclo gratuito entre estações (refina D-070)
 - [D-074](D-074-raridade-de-carta-nao-inverte-probabilidade.md) — No vocabulário de três níveis da época, lendárias e raras ficam em 1 cópia e o excedente dos baralhos 21/18 vai para comuns (refina D-064; nomenclatura e pesos refinados pela D-075)
 - [D-075](D-075-quarto-nivel-de-raridade-epica.md) — Quarto nível de raridade **Épica** (roxo), inserido no meio: ex-rara→épica, ex-comum de 1 cópia→rara, comum passa a ser só o que tem 2 cópias; pesos 90/104/107/109 sobem a épica e cedem em rara e comum (refina D-074, SRS §10.2/§10.4–10.5 v1.35)
+- [D-076](D-076-rebalanceamento-economico-para-mesas-de-3-e-4.md) — Rebalanceamento econômico para mesas de 3–4: caixa inicial $3.000, GO $250/$500, Loteria $750, impostos $250/$150, aeroportos 30/60/125/250; Fuligem reprecificada dentro do tier de cada `GroupKey` (a curva dela estava invertida) e marrom do Atlas corrigido (refina D-017/D-024/D-070, SRS v1.36)
+- [D-077](D-077-mapa-da-sala-e-trocavel-no-lobby.md) — O mapa da sala deixa de ser imutável: o host pode trocá-lo **enquanto a sala está em lobby** (inclusive no lobby de revanche); do Ritual de Largada em diante, não (refina D-069, SRS §2.1/§11.1/§16 v1.37)
 
 > ℹ️ **Renumeração na integração da 043** (a colisão que este arquivo avisava): a worktree da 043
 > tinha escrito a identidade de transporte como `D-035` e o código de reentrada como `D-038`, e

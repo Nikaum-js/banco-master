@@ -1,9 +1,12 @@
 # D-046 — Host escolhe o Ritual de Largada
 
 **Data:** 2026-07-28 · **Status:** aceita
-**Refinada por:** [D-051](D-051-maior-dado-e-rolado-por-cada-jogador.md), que substitui a resolução automática de Maior dado por rolagens individuais e públicas.
+**Refinada por:** [D-051](D-051-maior-dado-e-rolado-por-cada-jogador.md), que substitui a resolução automática de Maior dado por rolagens individuais e públicas; [D-076](D-076-rebalanceamento-economico-para-mesas-de-3-e-4.md), que leva o caixa inicial a $3.000 e a semente da Loteria a $750 sem mudar o ritual.
 **Refina:** [D-006](D-006-free-parking-com-premio-acumulado.md) — os lances passam a ser mais uma fonte do prêmio acumulado.
 **Refina:** a rolagem de ordem inicial descrita no SRS §3.1 e o sorteio da spec 038 (FR-030/FR-031).
+
+> Os valores de $2.000/$500 abaixo registram a decisão original. A D-076 mantém o ritual, mas
+> leva o caixa inicial a $3.000 e a semente da Loteria a $750.
 
 **Decisão:** antes de iniciar, o host escolhe no lobby um dos dois modos do **Ritual de Largada**:
 
