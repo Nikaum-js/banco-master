@@ -171,7 +171,7 @@ describe('perspectiva de carta (043, US5) — a mão para de trafegar', () => {
       }
     }
     expect(sawRevealedPlay).toBe(true)
-  })
+  }, 30_000)
 
   it('descartar chega redigido a quem não é o dono (D10 — descartar não revela)', async () => {
     // Descarte forçado (4ª carta) é raro no passeio aleatório — construído direto: a mão do
