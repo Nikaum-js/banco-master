@@ -48,12 +48,14 @@ export const resolutionRegistry: Record<Square['kind'], ResolutionHandler> = {
   utility: stub,
   acaso: stub,
   tesouro: stub,
-  // Espaço Bus Ticket (009; §2.7 revisto por D-021): parar abre NA HORA o seletor de
-  // "bus ride" — escolhe uma casa do mesmo lado e move já. Não banca ticket (o banco
-  // vem da carta "Passagem de Ônibus"). Pausa em `awaitingChoice` até a escolha.
-  'bus-ticket': ({ state }) => {
-    state.turn.awaitingChoice = 'bus-ride'
-    return { done: false, blocksFinalize: true }
+  // Espaço Bus Ticket (009; SRS §2.7): parar GANHA 1 Bus Ticket guardado — uso é
+  // facultativo depois (antes de rolar, §10.7). Não força viagem na hora
+  // (revertido D-021 em 2026-05-27: não obrigar o jogador a usar ao parar).
+  'bus-ticket': ({ state, playerId }) => {
+    const p = state.players.find((x) => x.id === playerId)
+    if (p) p.busTickets += 1
+    logEvent(state, playerId, 'parou no espaço Bus Ticket — ganhou 1 Bus Ticket') // 021
+    return { done: true }
   },
   // Roteados pelo turno:
   tax: ({ square, ports, state, playerId }) => {

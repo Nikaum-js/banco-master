@@ -212,7 +212,8 @@ export function chooseTripleDest(state: GameState, dest: number, ctx: TurnCtx): 
 // para uma casa do MESMO LADO (não percorre o tabuleiro → NÃO cruza o GO, sem $200).
 export function useBusTicket(state: GameState, dest: number, ctx: TurnCtx): GameState {
   if (state.paused) return state // FR-011
-  if (state.turn.state !== 'aguardando-rolagem') return state // só antes de rolar (FR-001)
+  // 034: usável ANTES de rolar OU no fim do turno (depois de resolver a jogada) — não só pré-rolagem.
+  if (state.turn.state !== 'aguardando-rolagem' && state.turn.state !== 'aguardando-finalizacao') return state
   const player = activePlayer(state)
   if (player.busTickets < 1) return state // FR-002
   const fromSide = sideOf(player.pos)
@@ -224,25 +225,6 @@ export function useBusTicket(state: GameState, dest: number, ctx: TurnCtx): Game
   p.busTickets -= 1 // FR-004
   p.pos = dest // pulo direto no mesmo lado — sem volta no tabuleiro, sem bônus de GO
   land(turn, p, null) // resolve o destino; sem rolagem ⇒ sem dupla/re-rolagem (FR-007)
-  return finishIfEnded(s, ctx)
-}
-
-// Bus ride do ESPAÇO (D-021, §2.7 revisto): ao PARAR no espaço Bus Ticket, escolhe
-// um destino do MESMO LADO e move já (resolve o destino). Não gasta ticket — o
-// espaço É a corrida. Disparado por awaitingChoice='bus-ride'.
-export function chooseBusRide(state: GameState, dest: number, ctx: TurnCtx): GameState {
-  if (state.paused) return state
-  if (state.turn.awaitingChoice !== 'bus-ride') return state
-  const player = activePlayer(state)
-  const fromSide = sideOf(player.pos)
-  if (fromSide === null) return state // sobre canto (não ocorre: o espaço fica num lado)
-  if (sideOf(dest) !== fromSide || dest === player.pos) return state // destino inválido
-  const s = clone(state)
-  const turn = s.turn
-  const p = activePlayer(s)
-  turn.awaitingChoice = null
-  p.pos = dest // pulo direto no mesmo lado — sem volta no tabuleiro, sem bônus de GO
-  land(turn, p, null) // resolve o destino normalmente
   return finishIfEnded(s, ctx)
 }
 

@@ -22,7 +22,6 @@ export type ModalView =
   // Escolhas do Speed Die (turn.awaitingChoice) — também decisões centrais (022.1)
   | { kind: 'bus-move'; pos: number; white: [number, number]; playerId: string }
   | { kind: 'triple-dest'; pos: number; playerId: string }
-  | { kind: 'bus-ride'; pos: number; playerId: string } // parou no espaço Bus Ticket (D-021)
 
 // Jogador da vez (mesma convenção do resto da UI/motor).
 function activeId(game: GameState): string {
@@ -45,9 +44,6 @@ export function activeModal(game: GameState): ModalView | null {
     }
     if (t.awaitingChoice === 'triple') {
       return { kind: 'triple-dest', pos: activePos(game), playerId: activeId(game) }
-    }
-    if (t.awaitingChoice === 'bus-ride') {
-      return { kind: 'bus-ride', pos: activePos(game), playerId: activeId(game) }
     }
     return null
   }
