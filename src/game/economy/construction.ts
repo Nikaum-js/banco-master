@@ -78,9 +78,8 @@ export function canBuildHouse(state: GameState, pos: number): boolean {
   const min = Math.min(...cities.map((c) => cityLevel(state.titles[c.pos])))
   if (cur !== min) return false // uniformidade
   if (player.cash < buildCost(sq)) return false
-  if (cur === 4 || cur === 5) return state.bank.hotels >= 1 // → hotel / 2º hotel (mesmo estoque, §14)
-  if (cur === 6) return state.bank.skyscrapers >= 1 && cities.length === groupSize(sq.group) // → Skyscraper (grupo completo §13.7)
-  return state.bank.houses >= 1 // → casa
+  if (cur === 6) return cities.length === groupSize(sq.group) // → Skyscraper exige grupo completo (§13.7)
+  return true // casas/hotéis/arranha-céus são ilimitados (sem estoque do banco)
 }
 
 // Constrói 1 nível na cidade subindo o ladder (casa → hotel → 2º hotel → Skyscraper).
@@ -96,18 +95,13 @@ export function buildHouse(state: GameState, pos: number): GameState {
   p.cash -= buildCost(sq)
   if (cur === 4) {
     t.houses = 0
-    t.hotel = true
-    s.bank.houses += 4 // 4 casas voltam ao estoque
-    s.bank.hotels -= 1
+    t.hotel = true // 4 casas viram 1 hotel
   } else if (cur === 5) {
-    t.hotel2 = true // 2º hotel — não muda aluguel (§14.4)
-    s.bank.hotels -= 1
+    t.hotel2 = true // 2º hotel — cobra mais que o 1º (§14.4)
   } else if (cur === 6) {
-    t.skyscraper = true // marcador de topo — nada de hotéis volta (clarify)
-    s.bank.skyscrapers -= 1
+    t.skyscraper = true // 2 hotéis viram 1 arranha-céu — topo (1 por propriedade)
   } else {
     t.houses += 1
-    s.bank.houses -= 1
   }
   return s
 }
@@ -164,54 +158,28 @@ export function canSellBuilding(state: GameState, pos: number): boolean {
   return cur === max // só vende da de maior nível do grupo
 }
 
-// Vende 1 nível ao banco por metade. No-op se inválido. Desce o ladder: Skyscraper → 2º hotel
-// → hotel → 4 casas (ou desmonte forçado §5.5) → casas.
+// Vende 1 nível ao banco por metade. No-op se inválido. Desce o ladder:
+// arranha-céu → 2º hotel → 1º hotel → 4 casas → casas.
 export function sellBuilding(state: GameState, pos: number): GameState {
   if (state.paused) return state
   if (!canSellBuilding(state, pos)) return state
   const sq = BOARD[pos]
-  const player = activePlayer(state)
   const cur = cityLevel(state.titles[pos])
-  const cities = ownedGroupCities(state, (sq as PropertySquare).group, player.id)
 
   const s = clone(state)
   const p = activePlayer(s)
   const t = s.titles[pos]
-  const refund = Math.round(buildCost(sq as PropertySquare) / 2)
+  p.cash += Math.round(buildCost(sq as PropertySquare) / 2)
 
   if (cur === 7) {
-    // Skyscraper → 2º hotel: devolve só 1 Skyscraper (nada de hotéis, clarify)
-    t.skyscraper = false
-    s.bank.skyscrapers += 1
-    p.cash += refund
+    t.skyscraper = false // arranha-céu → 2º hotel
   } else if (cur === 6) {
-    // 2º hotel → hotel: devolve 1 hotel ao estoque
-    t.hotel2 = false
-    s.bank.hotels += 1
-    p.cash += refund
+    t.hotel2 = false // 2º hotel → 1º hotel
   } else if (t.hotel) {
-    if (s.bank.houses >= 4) {
-      t.hotel = false
-      t.houses = 4
-      s.bank.houses -= 4
-      s.bank.hotels += 1
-      p.cash += refund
-    } else {
-      // §5.5 — desmonte forçado de TODOS os hotéis do grupo, simultaneamente
-      for (const c of cities) {
-        const ct = s.titles[c.pos]
-        if (ct.hotel) {
-          ct.hotel = false
-          ct.houses = 0
-          s.bank.hotels += 1
-          p.cash += Math.round(buildCost(c) / 2)
-        }
-      }
-    }
+    t.hotel = false
+    t.houses = 4 // 1º hotel → 4 casas
   } else {
     t.houses -= 1
-    s.bank.houses += 1
-    p.cash += refund
   }
   return s
 }
