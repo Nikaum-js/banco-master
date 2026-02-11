@@ -11,6 +11,7 @@
 import type { Square } from '@/lib/boardData'
 import type { Roll, GameState } from './types'
 import type { RNG } from './dice'
+import { logEvent } from '../log'
 
 export interface TurnPorts {
   onPassGo(state: GameState, playerId: string): number // bônus do GO; advance credita o retorno (007)
@@ -63,6 +64,7 @@ export const resolutionRegistry: Record<Square['kind'], ResolutionHandler> = {
     }
     if (p) p.cash -= square.amount // débito real (007)
     ports.onPayToCenter(state, square.amount) // → pote
+    logEvent(state, playerId, `pagou $${square.amount} de imposto`) // 021
     return { done: true }
   },
   'corner-parking': ({ playerId, ports, state }) => {

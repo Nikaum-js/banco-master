@@ -4,10 +4,12 @@ import { BOARD } from '@/lib/boardData'
 import type { GameState, Player, Turn, Roll } from './types'
 import { roll as rollDiceFn, type RNG } from './dice'
 import { resolveSquare, type TurnPorts, type ResolveCtx, type ResolutionOutcome } from './resolution'
+import { THEME } from '../theme'
+import { logEvent } from '../log'
 
 export const BOARD_SIZE = 48
 export const JAIL_POS = 12
-export const JAIL_FINE = 50
+export const JAIL_FINE = THEME.JAIL_FINE
 
 export interface TurnCtx {
   rng: RNG
@@ -16,6 +18,8 @@ export interface TurnCtx {
   // Retorna null para outros kinds → cai no registry default (tax/cantos/etc.).
   resolve?: (rctx: ResolveCtx) => ResolutionOutcome | null
   now?: () => number // relógio injetável (deadline do leilão)
+  speedDie?: boolean // habilita o Speed Die (D-003). undefined = padrão (após 1ª volta);
+  // o store passa `false` p/ desativar no jogo (suspenso pós-playtest). Testes omitem → padrão.
 }
 
 function clone(state: GameState): GameState {
@@ -38,8 +42,10 @@ export function advance(state: GameState, player: Player, steps: number, ports: 
   const passedGo = player.pos + steps >= BOARD_SIZE
   player.pos = (player.pos + steps) % BOARD_SIZE
   if (passedGo) {
-    player.cash += ports.onPassGo(state, player.id) // GO Progressivo creditado (007)
+    const bonus = ports.onPassGo(state, player.id) // GO Progressivo creditado (007)
+    player.cash += bonus
     player.completouPrimeiraVolta = true // Speed Die a partir da próxima rolagem (clarify Q2)
+    logEvent(state, player.id, `passou pelo GO (+$${bonus})`) // 021
     ports.afterPassGo?.(state, player.id) // juros de empréstimo cobrados após o bônus (010)
   }
 }
@@ -129,8 +135,11 @@ export function rollDice(state: GameState, ctx: TurnCtx): GameState {
   const turn = s.turn
   const player = activePlayer(s)
 
-  const roll = rollDiceFn(ctx.rng, { speedDie: player.completouPrimeiraVolta })
+  // Speed Die (D-003): ativo após a 1ª volta, MAS o store pode desativá-lo (ctx.speedDie=false,
+  // suspenso pós-playtest). Testes omitem ctx.speedDie → mantém o comportamento padrão.
+  const roll = rollDiceFn(ctx.rng, { speedDie: (ctx.speedDie ?? true) && player.completouPrimeiraVolta })
   turn.lastRoll = roll
+  logEvent(s, player.id, `rolou ${roll.white[0]}+${roll.white[1]}`) // 021
 
   // 3ª dupla consecutiva → prisão; o 3º movimento NÃO é executado (FR-015).
   if (countsAsDouble(roll)) {

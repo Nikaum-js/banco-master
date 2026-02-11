@@ -4,6 +4,7 @@ import type { ResolveCtx, ResolutionOutcome } from '../turn/resolution'
 import { ownerOf, isMortgaged, groupOwnedCount, groupSize, countOwned, groupHasSkyscraper } from './titles'
 import { rentCity, rentAirport, rentUtility, diceValue } from './rent'
 import { hasImmunity } from './imunidade'
+import { logEvent } from '../log'
 import { apagaoActive, greveActive, isBoycotted } from './tempEffects'
 
 export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
@@ -48,5 +49,6 @@ export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
   if (payer) payer.cash -= amount
   const ownerP = state.players.find((p) => p.id === owner)
   if (ownerP) ownerP.cash += amount
+  logEvent(state, playerId, `pagou $${amount} de aluguel a ${owner}`) // 021
   return { done: true }
 }

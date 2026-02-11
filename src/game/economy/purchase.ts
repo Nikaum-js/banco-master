@@ -3,6 +3,7 @@ import { BOARD } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
 import type { Auction } from './types'
 import { activePlayer, completeResolution } from '../turn/turnMachine'
+import { logEvent } from '../log'
 
 export const AUCTION_WINDOW = 10_000 // ms — cronômetro curto do leilão (tunável no tema)
 
@@ -26,6 +27,7 @@ export function buyProperty(state: GameState): GameState {
   player.cash -= price
   player.nextPurchaseDiscount = 0 // consome o desconto
   s.titles[pos].ownerId = player.id // propriedade livre → sem construção; preserva o shape do título
+  logEvent(s, player.id, `comprou ${BOARD[pos].name} por $${price}`) // 021
   completeResolution(s)
   return s
 }
