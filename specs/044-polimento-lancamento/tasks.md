@@ -101,16 +101,16 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 
 **Meta**: saber se as partidas terminam, sem saber quem jogou.
 
-- [ ] **T039** [P] [test-first] `tests/telemetry/port.test.ts`: os 5 casos do [contrato](./contracts/telemetry-port.md#testes-obrigatórios-teststelemetry).
-- [ ] **T040** [P] `src/telemetry/port.ts` (FR-040): interface `Telemetry`, união fechada de eventos, `nullTelemetry`. **Sem campo livre** — a união é o mecanismo de privacidade.
-- [ ] **T041** [P] `src/telemetry/matchKey.ts`: `SHA-256(roomId + BUILD_SALT)` truncado, via `crypto.subtle`.
-- [ ] **T042** `src/telemetry/supabaseSink.ts`: insert-only na tabela nova, falha engolida, sem retentativa (T1/T2 do contrato).
-- [ ] **T043** `src/telemetry/index.ts`: `resolveTelemetry()` — sem env ou em `DEV`, `nullTelemetry` (FR-038).
-- [ ] **T044** `supabase/migrations/0003_telemetry_events.sql`: tabela conforme [data-model §3](./data-model.md#3-telemetria--telemetry_events), RLS com insert anônimo e **sem** política de select.
-- [ ] **T045** `src/net/host.ts` e `src/net/roomSession.ts` (FR-033, FR-034): emitir `room_created`, `match_started`, `match_ended`, `match_paused` — **do lado da autoridade**, uma vez por fato (T7 do contrato).
-- [ ] **T046** [test-first] `tests/telemetry/emission.test.ts`: com transporte local e dois clientes, cada fato gera **um** evento (não um por cliente); falha do sink não altera o estado da partida nem bloqueia comando (FR-037).
-- [ ] **T047** `src/telemetry/sentry.ts`: init condicional a `VITE_SENTRY_DSN`; assina o `failureRegistry` da 042; `beforeSend` com **lista de permissão** de campos; `sendDefaultPii: false`.
-- [ ] **T048** `src/app/failureRegistry.ts`: ponto de assinatura para o ouvinte (a 042 continua sendo a fonte única do `occurrenceId`) — mudança aditiva, sem alterar contenção, loop-breaker nem tela de falha.
+- [x] **T039** [P] [test-first] `tests/telemetry/port.test.ts`: os 5 casos do [contrato](./contracts/telemetry-port.md#testes-obrigatórios-teststelemetry).
+- [x] **T040** [P] `src/telemetry/port.ts` (FR-040): interface `Telemetry`, união fechada de eventos, `nullTelemetry`. **Sem campo livre** — a união é o mecanismo de privacidade.
+- [x] **T041** [P] `src/telemetry/matchKey.ts`: `SHA-256(roomId + BUILD_SALT)` truncado, via `crypto.subtle`.
+- [x] **T042** `src/telemetry/supabaseSink.ts`: insert-only na tabela nova, falha engolida, sem retentativa (T1/T2 do contrato).
+- [x] **T043** `src/telemetry/index.ts`: `resolveTelemetry()` — sem env ou em `DEV`, `nullTelemetry` (FR-038).
+- [x] **T044** `supabase/migrations/0003_telemetry_events.sql`: tabela conforme [data-model §3](./data-model.md#3-telemetria--telemetry_events), RLS com insert anônimo e **sem** política de select.
+- [x] **T045** `src/net/host.ts` e `src/net/roomSession.ts` (FR-033, FR-034): emitir `room_created`, `match_started`, `match_ended`, `match_paused` — **do lado da autoridade**, uma vez por fato (T7 do contrato).
+- [x] **T046** [test-first] `tests/telemetry/emission.test.ts`: com transporte local e dois clientes, cada fato gera **um** evento (não um por cliente); falha do sink não altera o estado da partida nem bloqueia comando (FR-037).
+- [x] **T047** `src/telemetry/sentry.ts`: init condicional a `VITE_SENTRY_DSN`; assina o `failureRegistry` da 042; `beforeSend` com **lista de permissão** de campos; `sendDefaultPii: false`.
+- [x] **T048** `src/app/failureRegistry.ts`: ponto de assinatura para o ouvinte (a 042 continua sendo a fonte única do `occurrenceId`) — mudança aditiva, sem alterar contenção, loop-breaker nem tela de falha.
 
 **Checkpoint**: **SC-012** e **SC-013** provados headless. Sem env, nenhuma requisição sai.
 
