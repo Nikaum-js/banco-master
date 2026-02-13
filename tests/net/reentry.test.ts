@@ -105,6 +105,7 @@ async function setup() {
   const host = createHost(hostTransport, createRoom('r1', { uid: 'tok-host', name: 'Host', color: SEAT_COLORS[0], reentryCode: 'HHHHHH' }), {
     rng: mulberry32(9),
     now: () => 1_000,
+    openingAuctionMs: 0,
   })
   await host.open()
 

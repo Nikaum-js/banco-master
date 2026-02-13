@@ -18,6 +18,7 @@ async function lobbyCom(convidados: number): Promise<{ hub: LocalHub; host: Retu
   const host = createHost(transport, createRoom('r1', { uid: 'tok-host', name: 'Host', color: SEAT_COLORS[0] }), {
     rng: mulberry32(4),
     now: () => 1_000,
+    openingAuctionMs: 0,
   })
   await host.open()
 

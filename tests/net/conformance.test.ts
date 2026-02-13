@@ -22,7 +22,7 @@ import { LocalHub, localTransport } from '@/net/localTransport'
 import { supabaseTransport } from '@/net/supabaseTransport'
 import { durableWrites } from '@/net/durableWrites'
 import { fakeSupabase } from './fakeSupabase'
-import type { PublicRoom, Room, Seat } from '@/net/room'
+import { normalizeRoom, type PublicRoom, type Room, type Seat } from '@/net/room'
 
 // Fábrica de N transportes ligados na MESMA sala — a única coisa que difere entre adapters.
 // 041: ganhou `dropChannel`/`restoreChannel` — a queda/restauração de CANAL sem contar como
@@ -59,7 +59,7 @@ const ADAPTERS: [string, () => Fixture][] = [
   }],
 ]
 
-const ROOM: Room = { id: 'sala1', status: 'lobby', seats: [] }
+const ROOM: Room = { id: 'sala1', status: 'lobby', openingMode: 'sealed-bid', seats: [] }
 const ACCEPTED: AcceptedCommand = { seq: 1, action: { kind: 'roll' }, resolved: { rng: [], now: [], draws: [], reactions: [] } }
 const seat = (uid: string, isHost: boolean, i = 0): Seat => ({
   uid, playerId: `p${i + 1}`, name: uid, color: '#fff', isHost, connected: true, reentryCode: '',
@@ -115,6 +115,42 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     guest.submit({ senderId: 'p2', action: { kind: 'roll' } })
 
     expect(seen).toEqual([])
+  })
+
+  it('opening-bid chega lacrado à autoridade com uid do tópico privado', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    const guest = f.make('t-guest')
+    await asHost(host, ['t-guest'])
+    await host.connect()
+    await guest.connect()
+    host.watchSeat('t-guest')
+
+    const seen: { amount: number; fromUid: string }[] = []
+    host.onOpeningBid((message, fromUid) => seen.push({ amount: message.amount, fromUid }))
+    guest.submitOpeningBid(350)
+
+    expect(seen).toEqual([{ amount: 350, fromUid: 't-guest' }])
+  })
+
+  it('opening-bid não chega sem watchSeat e não é difundido a outro convidado', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    const guest = f.make('t-guest')
+    const other = f.make('t-other')
+    await asHost(host, ['t-guest', 't-other'])
+    await host.connect()
+    await guest.connect()
+    await other.connect()
+
+    const atHost: number[] = []
+    const atOther: number[] = []
+    host.onOpeningBid((message) => atHost.push(message.amount))
+    other.onOpeningBid((message) => atOther.push(message.amount))
+    guest.submitOpeningBid(500)
+
+    expect(atHost).toEqual([])
+    expect(atOther).toEqual([])
   })
 
   it('broadcast alcança TODOS, inclusive o próprio host (modelo uniforme)', async () => {
@@ -408,7 +444,40 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     await t.connect()
     const room: Room = { id: 'sala1', status: 'lobby', seats: [seat('t-host', true)] }
     await t.saveRoom(room)
-    expect(await t.loadRoom()).toEqual(room)
+    expect(await t.loadRoom()).toEqual(normalizeRoom(room))
+  })
+
+  it('preferência e rolagens do Ritual de Largada fazem round-trip', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    await host.connect()
+    const room: Room = {
+      ...ROOM,
+      openingMode: 'dice-roll',
+      seats: [{ ...seat('t-host', true), openingRoll: [6, 4] }],
+    }
+    await host.saveRoom(room)
+
+    expect(await host.loadRoom()).toMatchObject({
+      openingMode: 'dice-roll',
+      seats: [{ openingRoll: [6, 4] }],
+    })
+  })
+
+  it('persistência preserva prazo e lance lacrado durante o Leilão da Largada', async () => {
+    const f = fixture()
+    const t = f.make('t-host')
+    await t.connect()
+    const hostSeat = { ...seat('t-host', true), openingBid: 350, bidLocked: true }
+    const room: Room = {
+      id: 'sala1',
+      status: 'bidding',
+      openingAuction: { closesAt: 45_000 },
+      seats: [hostSeat],
+    }
+    await t.saveRoom(room)
+
+    expect(await t.loadRoom()).toEqual(normalizeRoom(room))
   })
 
   it('saveRoom NÃO apaga a partida em andamento (upsert parcial)', async () => {

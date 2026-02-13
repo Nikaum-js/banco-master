@@ -18,7 +18,11 @@ const BRUNO: SessionIdentity = { name: 'Bruno', color: SEAT_COLORS[1] }
 
 // Uma sessão ligada ao hub in-memory. `connectStore` é um espião: o boot não deve depender
 // do Zustand para funcionar.
-function makeSession(hub: LocalHub, uid: string): { session: RoomSession; connected: () => number; client: () => Client | null } {
+function makeSession(
+  hub: LocalHub,
+  uid: string,
+  timing: { openingAuctionMs?: number; revealMs?: number } = {},
+): { session: RoomSession; connected: () => number; client: () => Client | null } {
   let connects = 0
   let client: Client | null = null
   const session = createRoomSession({
@@ -29,7 +33,12 @@ function makeSession(hub: LocalHub, uid: string): { session: RoomSession; connec
       return () => {}
     },
     newRoomId: () => 'sala-fixa',
-    hostOptions: { rng: mulberry32(7), now: () => 1_000 }, // ordem de turno reprodutível
+    hostOptions: {
+      rng: mulberry32(7),
+      now: () => 1_000,
+      openingAuctionMs: timing.openingAuctionMs ?? 0,
+    },
+    revealMs: timing.revealMs ?? 0,
   })
   return { session, connected: () => connects, client: () => client }
 }
@@ -136,24 +145,85 @@ describe('createRoomSession — entrar por link', () => {
 })
 
 describe('createRoomSession — início da partida', () => {
-  it('com 2 assentos, inicia e mostra a ordem sorteada uma vez (FR-030)', async () => {
+  it('com 2 assentos, coleta lances e todos entram sozinhos após a revelação', async () => {
     const hub = new LocalHub()
-    const anfitriao = makeSession(hub, 'tok-host')
+    const anfitriao = makeSession(hub, 'tok-host', { openingAuctionMs: 15_000, revealMs: 20 })
     await anfitriao.session.create(ANA)
-    const convidado = makeSession(hub, 'tok-guest')
+    const convidado = makeSession(hub, 'tok-guest', { revealMs: 20 })
     await convidado.session.enter('sala-fixa')
     convidado.session.requestSeat(BRUNO)
 
     await anfitriao.session.startMatch()
 
-    // Quem estava presente no início vê o ritual; o store é ligado nos dois.
-    expect(anfitriao.session.getState().phase).toBe('order')
-    expect(convidado.session.getState().phase).toBe('order')
+    expect(anfitriao.session.getState().phase).toBe('auction')
+    expect(convidado.session.getState().phase).toBe('auction')
+    anfitriao.session.submitOpeningBid(200)
+    convidado.session.submitOpeningBid(500)
+
+    for (let i = 0; i < 20 && anfitriao.session.getState().phase !== 'reveal'; i++) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0))
+    }
+    expect(anfitriao.session.getState().phase).toBe('reveal')
+    expect(convidado.session.getState().phase).toBe('reveal')
+    expect(anfitriao.session.getState().room?.seats.map((seat) => [seat.name, seat.openingBid])).toEqual([
+      ['Bruno', 500],
+      ['Ana', 200],
+    ])
     expect(anfitriao.connected()).toBe(1)
     expect(convidado.connected()).toBe(1)
 
-    anfitriao.session.orderSeen()
+    await new Promise<void>((resolve) => setTimeout(resolve, 25))
     expect(anfitriao.session.getState().phase).toBe('playing')
+    expect(convidado.session.getState().phase).toBe('playing')
+  })
+
+  it('host seleciona Maior dado no lobby e convidados apenas observam', async () => {
+    const hub = new LocalHub()
+    const anfitriao = makeSession(hub, 'tok-host', { revealMs: 20 })
+    await anfitriao.session.create(ANA)
+    const convidado = makeSession(hub, 'tok-guest', { revealMs: 20 })
+    await convidado.session.enter('sala-fixa')
+    convidado.session.requestSeat(BRUNO)
+
+    anfitriao.session.setOpeningMode('dice-roll')
+    expect(anfitriao.session.getState().room?.openingMode).toBe('dice-roll')
+    expect(convidado.session.getState().room?.openingMode).toBe('dice-roll')
+
+    convidado.session.setOpeningMode('sealed-bid')
+    expect(anfitriao.session.getState().room?.openingMode).toBe('dice-roll')
+
+    await anfitriao.session.startMatch()
+    expect(anfitriao.session.getState().phase).toBe('reveal')
+    expect(convidado.session.getState().phase).toBe('reveal')
+    expect(anfitriao.session.getState().room?.seats.every((seat) => seat.openingRoll !== null)).toBe(true)
+    expect(anfitriao.client()?.game()?.players.map((player) => player.cash)).toEqual([2_000, 2_000])
+    expect(anfitriao.client()?.game()?.centerPot).toBe(500)
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 25))
+    expect(anfitriao.session.getState().phase).toBe('playing')
+    expect(convidado.session.getState().phase).toBe('playing')
+  })
+
+  it('comando sistêmico no arranque não faz uma sessão do lobby pular a revelação', async () => {
+    const hub = new LocalHub()
+    const anfitriao = makeSession(hub, 'tok-host', { revealMs: 20 })
+    await anfitriao.session.create(ANA)
+    const convidado = makeSession(hub, 'tok-guest', { revealMs: 20 })
+    await convidado.session.enter('sala-fixa')
+    convidado.session.requestSeat(BRUNO)
+    anfitriao.session.setOpeningMode('dice-roll')
+
+    // A ausência no instante do start gera `pause` logo depois do snapshot inicial e pode
+    // elevar `seq` acima de zero antes de a sessão consumir o jogo. Isso é arranque, não
+    // reconexão: quem já estava no lobby ainda precisa ver o Ritual de Largada.
+    hub.dropChannel('tok-guest')
+    await anfitriao.session.startMatch()
+
+    for (let i = 0; i < 20 && anfitriao.client()?.seq() === 0; i++) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0))
+    }
+    expect(anfitriao.client()?.seq()).toBeGreaterThan(0)
+    expect(anfitriao.session.getState().phase).toBe('reveal')
   })
 
   it('com 1 assento, recusa com mensagem e sem travar o botão', async () => {
@@ -178,9 +248,7 @@ describe('createRoomSession — início da partida', () => {
     await anfitriao.session.startMatch()
 
     // Um comando aceito avança o `seq` acima de 0 — a marca de "partida em andamento".
-    // No snapshot inicial (seq 0) ninguém jogou ainda, e aí o ritual É devido.
-    anfitriao.session.orderSeen()
-    // A ordem de turno é sorteada (FR-030), então o ator do 1º turno depende da seed.
+    // A ordem de turno vem do leilão; emitir dos dois segue seguro porque o host valida o ator.
     // Emitir dos dois é seguro: o host descarta quem não é o ator (FR-007, no-op).
     anfitriao.client()!.send({ kind: 'roll' })
     convidado.client()!.send({ kind: 'roll' })

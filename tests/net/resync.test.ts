@@ -18,6 +18,8 @@ function stubTransport() {
     disconnect: () => {},
     submit: () => {},
     onSubmit: () => () => {},
+    submitOpeningBid: () => {},
+    onOpeningBid: () => () => {},
     broadcast: () => {},
     onBroadcast: () => () => {},
     broadcastPrivate: () => {},

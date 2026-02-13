@@ -26,6 +26,7 @@ async function openLobby(): Promise<Lobby> {
   const host = createHost(transport, createRoom('r1', { uid: 'tok-host', name: 'Host', color: SEAT_COLORS[0] }), {
     rng: mulberry32(7),
     now: () => 1_000,
+    openingAuctionMs: 0,
   })
   await host.open()
   return { hub, host, hostClient }
@@ -182,9 +183,8 @@ describe('lobby sobre a rede (FR-001..006)', () => {
     expect(revived.seq()).toBe(seqBefore)
   })
 
-  it('a ordem da mesa é sorteada no início, não a de entrada (FR-030/031)', async () => {
-    // Mesmos assentos, seeds diferentes → ordens diferentes em algum momento. O que importa
-    // para a spec é que a ordem seja (a) igual em todos os clientes e (b) não fixa pela entrada.
+  it('empate em $0 é desfeito pelo host e converge em todos os clientes', async () => {
+    // Mesmos assentos, seeds diferentes → desempates diferentes em algum momento.
     const ordens = new Set<string>()
     for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
       const hub = new LocalHub()
@@ -194,6 +194,7 @@ describe('lobby sobre a rede (FR-001..006)', () => {
       const host = createHost(transport, createRoom('r', { uid: 'tok-host', name: 'Host', color: SEAT_COLORS[0] }), {
         rng: mulberry32(seed),
         now: () => 1_000,
+        openingAuctionMs: 0,
       })
       await host.open()
       const ana = await guestJoins(hub, 'tok-a', 'Ana', SEAT_COLORS[1])
@@ -208,7 +209,7 @@ describe('lobby sobre a rede (FR-001..006)', () => {
       }
       ordens.add(host.room().seats.map((s) => s.name).join('>'))
     }
-    // (b) não é sempre a ordem de entrada
+    // (b) o desempate não fixa a ordem de entrada
     expect(ordens.size).toBeGreaterThan(1)
   })
 })

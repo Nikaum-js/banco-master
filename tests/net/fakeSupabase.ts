@@ -313,11 +313,22 @@ export function fakeSupabase(): FakeSupabase {
           if (fn === 'room_preview') {
             const row = broker.rows.get(`rooms:${roomId}`)
             if (!row) return Promise.resolve({ data: null, error: null })
-            const seats = (row.seats as { uid: string; isHost?: boolean; reentryCode?: string }[]) ?? []
+            const seats = (row.seats as { uid: string; isHost?: boolean; reentryCode?: string; openingBid?: number | null }[]) ?? []
             const scoped = seats.find((s) => s.uid === uid)?.isHost
               ? seats
-              : seats.map((s) => (s.uid === uid ? s : { ...s, reentryCode: undefined }))
-            return Promise.resolve({ data: { id: row.id, status: row.status, seats: scoped }, error: null })
+              : seats.map((s) => (s.uid === uid
+                ? s
+                : { ...s, reentryCode: undefined, openingBid: row.status === 'bidding' ? undefined : s.openingBid }))
+            return Promise.resolve({
+              data: {
+                id: row.id,
+                status: row.status,
+                openingMode: row.openingMode,
+                openingAuction: row.openingAuction,
+                seats: scoped,
+              },
+              error: null,
+            })
           }
           // 043, T036/T037 — espelho de `read_snapshot`: `secrets` E `seats` filtrados pela
           // MESMA chave (D6). A autoridade (uid do assento `isHost`) recebe tudo — inclusive os
@@ -337,7 +348,16 @@ export function fakeSupabase(): FakeSupabase {
               ? row.seats
               : seats.map((s) => (s.uid === uid ? s : { ...s, reentryCode: undefined }))
             return Promise.resolve({
-              data: { id: row.id, status: row.status, seats: scopedSeats, seq: row.seq, game: row.game, secrets: scoped },
+              data: {
+                id: row.id,
+                status: row.status,
+                openingMode: row.openingMode,
+                openingAuction: row.openingAuction,
+                seats: scopedSeats,
+                seq: row.seq,
+                game: row.game,
+                secrets: scoped,
+              },
               error: null,
             })
           }
@@ -369,7 +389,14 @@ export function fakeSupabase(): FakeSupabase {
               return Promise.resolve({ data: null, error: new Error('not authorized to write this room') })
             }
             const existing = broker.rows.get(key)
-            broker.rows.set(key, { ...(existing ?? {}), id: roomId, status: args.status, seats: preserveSeatCodes(args.seats) })
+            broker.rows.set(key, {
+              ...(existing ?? {}),
+              id: roomId,
+              status: args.status,
+              seats: preserveSeatCodes(args.seats),
+              openingMode: args.opening_mode,
+              openingAuction: args.opening_auction,
+            })
             return Promise.resolve({ data: null, error: null })
           }
           // Guarda monotônica (041, D9) igual ao trigger SQL.
@@ -384,7 +411,15 @@ export function fakeSupabase(): FakeSupabase {
               return Promise.resolve({ data: null, error: null }) // no-op silencioso, como o trigger real
             }
             broker.rows.set(key, {
-              ...(existing ?? {}), id: roomId, status: args.status, seats: preserveSeatCodes(args.seats), seq: args.seq, game: args.game, secrets: args.secrets,
+              ...(existing ?? {}),
+              id: roomId,
+              status: args.status,
+              seats: preserveSeatCodes(args.seats),
+              openingMode: args.opening_mode,
+              openingAuction: args.opening_auction,
+              seq: args.seq,
+              game: args.game,
+              secrets: args.secrets,
             })
             return Promise.resolve({ data: null, error: null })
           }

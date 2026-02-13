@@ -5,6 +5,7 @@
 // logo o mesmo token de sessão, e a segunda faria takeover do assento (FR-006a da 037) em
 // vez de virar um segundo jogador.
 import { test, expect, type BrowserContext, type Page } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
 import { createClient } from '@supabase/supabase-js'
 
 test.describe.configure({ mode: 'serial' })
@@ -70,9 +71,100 @@ async function fillIdentity(page: Page, name: string, cta: RegExp, free = SEAT_C
   await page.getByRole('button', { name: cta }).click()
 }
 
+async function expectNoBlockingA11y(page: Page, label: string): Promise<void> {
+  const { violations } = await new AxeBuilder({ page }).analyze()
+  const blocking = violations
+    .filter((violation) => violation.impact === 'serious' || violation.impact === 'critical')
+    .map((violation) => `${violation.impact} ${violation.id}: ${violation.help}`)
+  expect(blocking, `${label}: violações serious/critical`).toEqual([])
+}
+
+// 045/D-046: um único clique do host abre a coleta; cada contexto lacra no próprio tópico
+// privado e, depois da revelação, ambos chegam ao tabuleiro sem um segundo aceite local.
+async function completeOpeningAuction(host: Page, guest: Page, audit = false): Promise<void> {
+  const hostMode = host.getByRole('button', { name: /Leilão secreto/ })
+  await hostMode.click()
+  await expect(hostMode).toHaveAttribute('aria-pressed', 'true')
+  await expect(guest.getByRole('button', { name: /Leilão secreto/ })).toHaveAttribute('aria-pressed', 'true')
+  await host.getByRole('button', { name: 'Abrir leilão' }).click()
+  for (const page of [host, guest]) {
+    await expect(page.getByText('Leilão da Largada')).toBeVisible({ timeout: 20_000 })
+  }
+  if (audit) await Promise.all([
+    expectNoBlockingA11y(host, 'leilão secreto do host'),
+    expectNoBlockingA11y(guest, 'leilão secreto do convidado'),
+  ])
+
+  await host.getByLabel('Valor do lance').fill('350')
+  await host.getByRole('button', { name: 'Lacrar lance de $350' }).click()
+  await guest.getByLabel('Valor do lance').fill('500')
+  await guest.getByRole('button', { name: 'Lacrar lance de $500' }).click()
+
+  await Promise.all([
+    expect(host.getByText('Rota definida')).toBeVisible({ timeout: 20_000 }),
+    expect(guest.getByText('Rota definida')).toBeVisible({ timeout: 20_000 }),
+  ])
+  if (audit) await Promise.all([
+    expectNoBlockingA11y(host, 'revelação do leilão do host'),
+    expectNoBlockingA11y(guest, 'revelação do leilão do convidado'),
+  ])
+  await Promise.all([
+    expect(host.locator('.board-stage')).toBeVisible({ timeout: 20_000 }),
+    expect(guest.locator('.board-stage')).toBeVisible({ timeout: 20_000 }),
+  ])
+}
+
+test('host escolhe Maior dado e todos veem a mesma largada sem custo', async ({ browser }) => {
+  const hostCtx = await browser.newContext({ reducedMotion: 'reduce' })
+  const guestCtx = await browser.newContext({ reducedMotion: 'reduce' })
+  const host = await hostCtx.newPage()
+  const guest = await guestCtx.newPage()
+
+  await host.goto('/')
+  await host.getByRole('button', { name: 'Começar uma partida' }).click()
+  await fillIdentity(host, HOST_NAME, /^Criar sala$/)
+  await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
+  const roomUrl = host.url()
+  const createdRoomId = roomIdFromUrl(roomUrl)
+  if (createdRoomId) createdRoomIds.push(createdRoomId)
+
+  await guest.goto(roomUrl)
+  await expect(guest.getByText('Entrar na sala')).toBeVisible({ timeout: 20_000 })
+  await fillIdentity(guest, GUEST_NAME, /^Confirmar e entrar$/, SEAT_COUNT - 1)
+  await expect(host.getByText(GUEST_NAME)).toBeVisible({ timeout: 20_000 })
+
+  const hostDiceMode = host.getByRole('button', { name: /Maior dado/ })
+  const guestDiceMode = guest.getByRole('button', { name: /Maior dado/ })
+  await hostDiceMode.click()
+  await expect(hostDiceMode).toHaveAttribute('aria-pressed', 'true')
+  await expect(guestDiceMode).toHaveAttribute('aria-pressed', 'true')
+  await expect(guestDiceMode).toBeDisabled()
+  await Promise.all([
+    expectNoBlockingA11y(host, 'seletor de modo do host'),
+    expectNoBlockingA11y(guest, 'seletor de modo do convidado'),
+  ])
+
+  await host.getByRole('button', { name: 'Rolar e iniciar' }).click()
+  await Promise.all([host, guest].flatMap((page) => [
+    expect(page.getByText('Maior soma primeiro')).toBeVisible({ timeout: 20_000 }),
+    expect(page.locator('.opening-roll').last()).toBeVisible({ timeout: 20_000 }),
+  ]))
+  await Promise.all([
+    expectNoBlockingA11y(host, 'revelação Maior dado do host'),
+    expectNoBlockingA11y(guest, 'revelação Maior dado do convidado'),
+  ])
+  await Promise.all([
+    expect(host.locator('.board-stage')).toBeVisible({ timeout: 20_000 }),
+    expect(guest.locator('.board-stage')).toBeVisible({ timeout: 20_000 }),
+  ])
+
+  await hostCtx.close()
+  await guestCtx.close()
+})
+
 test('dois browsers jogam a mesma partida, cada um da sua perspectiva', async ({ browser }) => {
-  const hostCtx: BrowserContext = await browser.newContext()
-  const guestCtx: BrowserContext = await browser.newContext()
+  const hostCtx: BrowserContext = await browser.newContext({ reducedMotion: 'reduce' })
+  const guestCtx: BrowserContext = await browser.newContext({ reducedMotion: 'reduce' })
   const host = await hostCtx.newPage()
   const guest = await guestCtx.newPage()
 
@@ -105,13 +197,8 @@ test('dois browsers jogam a mesma partida, cada um da sua perspectiva', async ({
   // O anfitrião vê a chegada — sem recarregar nada.
   await expect(host.getByText(GUEST_NAME)).toBeVisible({ timeout: 20_000 })
 
-  // — 4. Início: ordem sorteada aparece para os dois (FR-030) —
-  await host.getByRole('button', { name: /Iniciar partida/ }).click()
-  for (const p of [host, guest]) {
-    await expect(p.getByText('Ordem da mesa')).toBeVisible({ timeout: 20_000 })
-    await p.getByRole('button', { name: 'Começar' }).click()
-    await expect(p.locator('.board-stage')).toBeVisible({ timeout: 20_000 })
-  }
+  // — 4. Início: leilão, revelação e entrada automática nos dois contextos —
+  await completeOpeningAuction(host, guest, true)
 
   // — 5. Identidade real: nomes na mesa, nenhum `pN` (FR-008/009 · SC-002) —
   for (const p of [host, guest]) {
@@ -189,11 +276,7 @@ test('queda do convidado pausa a mesa e diz quem caiu', async ({ browser }) => {
   await fillIdentity(guest, GUEST_NAME, /^Confirmar e entrar$/, SEAT_COUNT - 1) // o anfitrião já levou uma
   await expect(host.getByText(GUEST_NAME)).toBeVisible({ timeout: 20_000 })
 
-  await host.getByRole('button', { name: /Iniciar partida/ }).click()
-  for (const p of [host, guest]) {
-    await p.getByRole('button', { name: 'Começar' }).click()
-    await expect(p.locator('.board-stage')).toBeVisible({ timeout: 20_000 })
-  }
+  await completeOpeningAuction(host, guest)
 
   await guest.close()
   await guestCtx.close()
@@ -258,11 +341,7 @@ test('leilão sobrevive ao reload do host — prazo preservado (SC-005/SC-009)',
   await fillIdentity(guest, GUEST_NAME, /^Confirmar e entrar$/, SEAT_COUNT - 1) // o anfitrião já levou uma
   await expect(host.getByText(GUEST_NAME)).toBeVisible({ timeout: 20_000 })
 
-  await host.getByRole('button', { name: /Iniciar partida/ }).click()
-  for (const p of [host, guest]) {
-    await p.getByRole('button', { name: 'Começar' }).click()
-    await expect(p.locator('.board-stage')).toBeVisible({ timeout: 20_000 })
-  }
+  await completeOpeningAuction(host, guest)
 
   await playUntilAuction([host, guest])
   await expect(host.getByText('Leilão').first()).toBeVisible({ timeout: 20_000 })
@@ -329,20 +408,7 @@ test('convidado reanexa por código a partir de um terceiro dispositivo', async 
   await fillIdentity(guest, GUEST_NAME, /^Confirmar e entrar$/, SEAT_COUNT - 1) // o anfitrião já levou uma
   await expect(host.getByText(GUEST_NAME)).toBeVisible({ timeout: 20_000 })
 
-  await host.getByRole('button', { name: /Iniciar partida/ }).click()
-  for (const p of [host, guest]) {
-    // Ritual de ordem OU tabuleiro direto — os dois são chegadas legítimas aqui. `isReentry`
-    // (roomSession) trata `seq() > 0` como "partida em andamento", e um comando de SISTEMA
-    // aceito antes de o cliente ler o snapshot (uma pausa/retomada no arranque) já basta para
-    // pular o ritual. Quem prova o ritual é o primeiro teste deste arquivo; este mede
-    // REENTRADA, e exigir a tela intermediária o tornaria refém de uma corrida alheia.
-    // Esperar por uma das duas também dá teto ao clique: `click()` sem teto próprio herda o do
-    // teste e trava 4 min como "Test ended", escondendo qual passo falhou.
-    await expect(p.getByText('Ordem da mesa').or(p.locator('.board-stage'))).toBeVisible({ timeout: 20_000 })
-    const comecar = p.getByRole('button', { name: 'Começar' })
-    if (await comecar.isVisible()) await comecar.click()
-    await expect(p.locator('.board-stage')).toBeVisible({ timeout: 20_000 })
-  }
+  await completeOpeningAuction(host, guest)
 
   // O código do PRÓPRIO assento, lido da tela do convidado (nunca vaza o de ninguém — D-036).
   await guest.getByRole('button', { name: 'Link e código' }).click()

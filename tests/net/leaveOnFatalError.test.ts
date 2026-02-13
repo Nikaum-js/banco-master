@@ -18,7 +18,8 @@ function makeSession(hub: LocalHub, uid: string): RoomSession {
     createTransport: () => localTransport(hub, uid),
     connectStore: () => () => {},
     newRoomId: () => 'sala-fixa',
-    hostOptions: { rng: mulberry32(7), now: () => 1_000 },
+    hostOptions: { rng: mulberry32(7), now: () => 1_000, openingAuctionMs: 0 },
+    revealMs: 0,
   })
 }
 
@@ -31,7 +32,6 @@ describe('roomSession.leaveOnFatalError (T004)', () => {
     await convidado.enter('sala-fixa')
     convidado.requestSeat(BRUNO)
     await anfitriao.startMatch()
-    anfitriao.orderSeen()
 
     convidado.leaveOnFatalError()
 

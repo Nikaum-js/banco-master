@@ -41,12 +41,18 @@ test('a casca do convidado cai → o host vê pausa por desconexão → reabrir 
   await expect(guest.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   await expect(host.getByText(GUEST_NAME)).toBeVisible({ timeout: 20_000 })
 
-  await host.getByRole('button', { name: /Iniciar partida/ }).click()
+  await host.getByRole('button', { name: 'Abrir leilão' }).click()
   for (const p of [host, guest]) {
-    await expect(p.getByText('Ordem da mesa')).toBeVisible({ timeout: 20_000 })
-    await p.getByRole('button', { name: 'Começar' }).click()
-    await expect(p.locator('.board-stage')).toBeVisible({ timeout: 20_000 })
+    await expect(p.getByText('Leilão da Largada')).toBeVisible({ timeout: 20_000 })
   }
+  await host.getByLabel('Valor do lance').fill('350')
+  await host.getByRole('button', { name: 'Lacrar lance de $350' }).click()
+  await guest.getByLabel('Valor do lance').fill('500')
+  await guest.getByRole('button', { name: 'Lacrar lance de $500' }).click()
+  await Promise.all([
+    expect(host.locator('.board-stage')).toBeVisible({ timeout: 20_000 }),
+    expect(guest.locator('.board-stage')).toBeVisible({ timeout: 20_000 }),
+  ])
 
   // — A casca do convidado cai (hook de E2E — FR-025) —
   const guestErrors: string[] = []
