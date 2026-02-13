@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import Board01Classic from '@/boards/Board01Classic'
 import { GameHUD } from '@/game/ui/GameHUD'
 import { GameDriver } from '@/game/ui/GameDriver'
@@ -21,6 +22,10 @@ import { AccessoryErrorBoundary } from '@/app/AccessoryErrorBoundary'
 // em `game/store.ts`. Sem o parâmetro, não faz nada.
 import '@/game/ui/e2eScenario'
 
+const VisualLab = lazy(() =>
+  import('@/game/ui/lab/VisualLab').then((module) => ({ default: module.VisualLab })),
+)
+
 // O tabuleiro Clássico É a tela inicial. A rolagem é o DiceArena central; o
 // GameDriver faz o turno "ir sozinho" (resolve/finaliza); o ModalLayer (022) traz
 // as decisões dirigidas por resolução; o GameHUD vira uma barra só de decisões
@@ -37,6 +42,14 @@ import '@/game/ui/e2eScenario'
 export default function App() {
   // `?sons` abre o board de auditoria dos SFX (dev) no lugar do jogo.
   if (new URLSearchParams(window.location.search).has('sons')) return <SoundBoard />
+  // `?ui-lab` isola os componentes visuais reais em fixtures de desenvolvimento.
+  if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('ui-lab')) {
+    return (
+      <Suspense fallback={null}>
+        <VisualLab />
+      </Suspense>
+    )
+  }
   return (
     <>
       <OnlineGate>
