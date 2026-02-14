@@ -3,6 +3,7 @@ import { applyEffect, netWorth } from '@/game/cards/effects'
 import { playHandCard } from '@/game/cards/draw'
 import { findReactionCard } from '@/game/cards/reacao'
 import { createSeedState } from '@/game/setup'
+import { estatizacaoActive, tickTempEffects } from '@/game/economy/tempEffects'
 import type { TurnPorts } from '@/game/turn/resolution'
 import { THEME } from '@/game/theme'
 
@@ -74,6 +75,28 @@ describe('Efeitos de carta (US1)', () => {
 
     applyEffect('estatizacao', g, 'p1', p)
     expect(g.tempEffects.some((e) => e.kind === 'estatizacao')).toBe(true)
+  })
+
+  // D-080 — a Estatização nasce com UMA volta, e some na primeira passagem pelo GO de
+  // quem a originou. Antes eram duas: o efeito atravessava um segundo giro inteiro da
+  // mesa com todo aluguel confiscado. O teste cobre os dois lados do relógio — que a
+  // volta 1 encerra, e que ela encerra APENAS pelo GO do originador.
+  it('D-080: Estatização dura 1 volta e expira no GO de quem a originou', () => {
+    const g = createSeedState(['p1', 'p2'])
+    applyEffect('estatizacao', g, 'p1', ports())
+
+    const efeito = g.tempEffects.find((e) => e.kind === 'estatizacao')
+    expect(efeito?.lapsRemaining).toBe(1)
+    expect(estatizacaoActive(g)).toBe(true)
+
+    // GO de OUTRO jogador não mexe no relógio: o prazo é do originador.
+    tickTempEffects(g, 'p2')
+    expect(estatizacaoActive(g)).toBe(true)
+
+    // Primeira passagem do originador encerra — e não sobra uma segunda volta.
+    tickTempEffects(g, 'p1')
+    expect(estatizacaoActive(g)).toBe(false)
+    expect(g.tempEffects.some((e) => e.kind === 'estatizacao')).toBe(false)
   })
 
   it('SC-004: Investidor Anjo marca desconto; Passagem de Ônibus +ticket', () => {

@@ -185,9 +185,12 @@ const handlers: Record<string, Handler> = {
     addTempEffect(s, { kind: 'apagao', ownerId: id, pos: null, lapsRemaining: 1 }) // Hangares inativos (§10.6)
     addTempEffect(s, { kind: 'greve', ownerId: id, pos: null, lapsRemaining: 1 }) // utilidades sem aluguel
   },
-  // D-064 — Estatização: por 2 voltas, todo aluguel da mesa vai à Loteria (resolveRentable).
+  // D-064/D-080 — Estatização: por 1 volta, todo aluguel da mesa vai à Loteria
+  // (resolveRentable). Era 2 até a D-080: é o único efeito que desliga a economia de
+  // aluguel da mesa INTEIRA, e duas voltas de mesa cheia viravam um intervalo de jogo.
+  // A duração é lida só aqui, na criação — a interface deriva de `lapsRemaining`.
   estatizacao: (s, id) => {
-    addTempEffect(s, { kind: 'estatizacao', ownerId: id, pos: null, lapsRemaining: 2 })
+    addTempEffect(s, { kind: 'estatizacao', ownerId: id, pos: null, lapsRemaining: 1 })
   },
 }
 

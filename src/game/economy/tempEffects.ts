@@ -19,7 +19,7 @@ export function isTempImmune(state: GameState, pos: number): boolean {
   return state.tempEffects.some((e) => e.kind === 'imunidade-temp' && e.pos === pos) // não pode ser alvo
 }
 
-// D-064 — Estatização: todo aluguel da mesa vai à Loteria em vez do dono, por 2 voltas.
+// D-064 — Estatização: todo aluguel da mesa vai à Loteria em vez do dono, por 1 volta (D-080).
 export function estatizacaoActive(state: GameState): boolean {
   return state.tempEffects.some((e) => e.kind === 'estatizacao')
 }

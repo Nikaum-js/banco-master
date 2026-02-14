@@ -170,7 +170,7 @@ const FULIGEM_CARD_TEXT: Record<string, CardTextOverride> = {
     desc: 'Crise no mercado: cada adversário paga 10% do patrimônio à Sorte Grande. Você não paga.',
   },
   estatizacao: {
-    desc: 'Por 2 voltas, todo aluguel pago na mesa vai direto para a Sorte Grande em vez do dono.',
+    desc: 'Por 1 volta, todo aluguel pago na mesa vai direto para a Sorte Grande em vez do dono.',
   },
   desvalorizacaoCambial: {
     desc: 'Pague 10% do seu dinheiro em caixa à Sorte Grande.',

@@ -2,6 +2,7 @@
 
 **Data:** 2026-07-29 · **Status:** aceita · **Refina:** SRS §10 (catálogo introduzido na 006; ofensivas 016; reação 017)
 **Refinada por:** [D-074](D-074-raridade-de-carta-nao-inverte-probabilidade.md) — redistribui cópias sem alterar as 21/18 cartas.
+**Refinada por:** [D-080](D-080-estatizacao-dura-uma-volta.md) — **só a duração da Estatização** cai de 2 voltas para 1; destino do aluguel, raridade, cópias, modo e elegibilidade permanecem os desta decisão.
 
 **Decisão:** o catálogo de cartas deixa de ter 16+16 e passa a **21 (Acaso) + 18 (Tesouro)**, com cartas reforçadas, fundidas, removidas e novas. Decisão de design tomada em playtest/discovery com o Nikolas (2026-07-29), item a item:
 
@@ -35,7 +36,7 @@
 - **Desvalorização Cambial** (comum) — paga **10% do caixa em mãos** à Loteria (pune caixa parado, não patrimônio).
 - **Obras na Pista** (comum) — vai ao **aeroporto mais próximo** (sentido horário, credita GO ao cruzar); se tiver dono, paga **aluguel em dobro**.
 - **Multa Ambiental** (comum) — paga **$50 + $50 por hotel/2º hotel/arranha-céu** que possui, à Loteria.
-- **Estatização** (rara) — por **2 voltas, todo aluguel** pago na mesa vai **direto à Loteria** em vez do dono.
+- **Estatização** (rara) — por **2 voltas, todo aluguel** pago na mesa vai **direto à Loteria** em vez do dono. *(Duração revista para **1 volta** pela [D-080](D-080-estatizacao-dura-uma-volta.md); o resto da carta segue como aqui.)*
 
 ## Cartas novas — Acaso (mão)
 

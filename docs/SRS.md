@@ -1,6 +1,6 @@
 # Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.39
+**Versão:** 1.40
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -814,8 +814,10 @@ Chance por carta, como a vitrine de probabilidades a exibe:
 **Crise Imobiliária** (Acaso, imediato)
 > Todos os **adversários** de quem sacou pagam **10% do patrimônio líquido** ao banco (v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md) — quem sacou não paga). O valor total arrecadado vai para o **centro do tabuleiro** (Free Parking).
 
-**Estatização** (Acaso, imediato — v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
-> Por **2 voltas completas**, **todo aluguel** pago na mesa vai **direto para a Loteria** (centro do tabuleiro, Seção 13.4) em vez do dono da propriedade.
+**Estatização** (Acaso, imediato — v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md); duração revista em v1.40, [D-080](adr/D-080-estatizacao-dura-uma-volta.md))
+> Por **1 volta completa**, **todo aluguel** pago na mesa vai **direto para a Loteria** (centro do tabuleiro, Seção 13.4) em vez do dono da propriedade.
+
+> 📌 **Uma volta, não duas** (v1.40, [D-080](adr/D-080-estatizacao-dura-uma-volta.md)): é o único efeito da mesa inteira que desliga a economia de aluguel de todo mundo ao mesmo tempo, e duas voltas de mesa cheia viram um intervalo de jogo — numa mesa de 6, doze turnos em que comprar, construir e cobrar deixam de se relacionar. Boicote e Embargo mantêm as 2 voltas porque atingem **uma** propriedade e **um** jogador. Só a duração mudou: o aluguel continua indo à Loteria, a carta continua Épica, com 1 cópia no Acaso, imediata, sem alvo escolhido.
 
 **Valorização** (Tesouro — v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
 > Escolha uma propriedade sua. Por **1 volta completa**, ela cobra **aluguel em dobro**.

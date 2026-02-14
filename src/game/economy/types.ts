@@ -173,7 +173,7 @@ export interface TempEffect {
   kind: 'apagao' | 'greve' | 'boicote' | 'imunidade-temp' | 'estatizacao' | 'valorizacao' | 'embargo' | 'imunidade-total'
   ownerId: string // quem originou — relógio da expiração (passagem dele pelo GO)
   pos: number | null // propriedade (boicote/valorizacao) ou null (efeitos board-wide/de jogador)
-  lapsRemaining: number // voltas restantes (apagao/greve/valorizacao/imunidade-total: 1; boicote/embargo/estatizacao: 2)
+  lapsRemaining: number // voltas restantes (apagao/greve/valorizacao/imunidade-total/estatizacao: 1 — a última desde a D-080; boicote/embargo: 2)
   targetId?: string // embargo (D-064): jogador proibido de construir
 }
 

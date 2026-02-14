@@ -97,7 +97,7 @@ function cardImmediatePhrase(name: string, delta: number): LogSentence {
     case 'Obra Relampago':
       return [text('Obra Relâmpago: a próxima construção será gratuita')]
     case 'Estatizacao':
-      return [text('Estatização: por 2 voltas, todo aluguel vai para a Loteria')]
+      return [text('Estatização: por 1 volta, todo aluguel vai para a Loteria')]
     default: // erroBanco, boomEconomico e demais efeitos baseados só em caixa
       if (delta < 0) return [text('pagou '), money(-delta)]
       if (delta > 0) return [text('recebeu '), money(delta)]

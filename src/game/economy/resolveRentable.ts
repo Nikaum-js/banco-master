@@ -38,7 +38,7 @@ export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
   if (doubleOnce) amount *= 2 // Obras na Pista (D-064)
   amount = discountedByTin(state, playerId, amount) // Mina de Estanho: −15% no aluguel PAGO
 
-  // Estatização (D-064): por 2 voltas o aluguel vai à Loteria, não ao dono.
+  // Estatização (D-064, duração revista pela D-080): por 1 volta o aluguel vai à Loteria, não ao dono.
   const confiscated = estatizacaoActive(state)
 
   if (payer && payer.cash < amount) {

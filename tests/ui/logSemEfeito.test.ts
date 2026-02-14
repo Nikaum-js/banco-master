@@ -36,7 +36,7 @@ describe('narração de carta imediata sem efeito', () => {
 
   it.each([
     ['Obra Relampago', /próxima construção será gratuita/i],
-    ['Estatizacao', /2 voltas.*aluguel.*Loteria/i],
+    ['Estatizacao', /1 volta.*aluguel.*Loteria/i], // D-080: era 2 voltas
     ['Greve', /bônus.*suspenso.*utilidades sem aluguel/i],
     ['Crise Imobiliaria', /adversários.*10%.*Loteria/i],
   ])('%s com delta 0 narra o efeito não monetário', (name, expected) => {

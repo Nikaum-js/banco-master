@@ -84,7 +84,7 @@ export const CARD_DESC: Record<string, string> = {
   boicote: 'No seu turno, escolha uma propriedade de um adversário: por 2 voltas ela não cobra aluguel de ninguém.',
   embargoDeObras: 'No seu turno, escolha um adversário: por 2 voltas ele não pode construir.',
   criseImobiliaria: 'Crise no mercado: cada adversário paga 10% do patrimônio à Loteria. Você não paga.',
-  estatizacao: 'Por 2 voltas, todo aluguel pago na mesa vai direto para a Loteria em vez do dono.',
+  estatizacao: 'Por 1 volta, todo aluguel pago na mesa vai direto para a Loteria em vez do dono.',
   atalho: 'Mova-se 3 casas, para a frente ou para trás (você escolhe).',
   greve: 'Greve geral por 1 volta: Hangares ficam inativos e utilidades não cobram aluguel.',
   desvalorizacaoCambial: 'Pague 10% do seu dinheiro em caixa à Loteria.',
