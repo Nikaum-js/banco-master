@@ -40,7 +40,113 @@ function requireEnv(): Plugin {
   }
 }
 
+/**
+ * Domínio público do site (051). Canonical, Open Graph, robots.txt e sitemap.xml saem
+ * daqui — nunca hardcoded nas páginas. Sem `VITE_SITE_URL` no ambiente, vale o domínio
+ * de produção da Vercel que já era o canonical antes da landing existir.
+ */
+const SITE_URL = (process.env.VITE_SITE_URL ?? 'https://magnata-imobiliario.vercel.app').replace(/\/+$/, '')
+
+// Params que sempre significaram "estou indo pro jogo" quando apareciam na raiz.
+// `/` agora é a landing: quem chega com um deles é redirecionado pra `/jogar` com a
+// query intacta — é o mesmo contrato dos redirects do vercel.json, valendo em dev e
+// preview (o E2E roda nos dois). A lista cobre convite (`room`), criação (`host`),
+// andaime local (`local`/`players`), e os hooks de dev/E2E.
+const GAME_QUERY_PARAMS = ['room', 'host', 'local', 'players', 'multi', 'sons', 'ui-lab', 'e2eCrashCasca', 'scenario']
+
+// Rotas limpas de marketing/jogo → arquivo HTML do build MPA (051). Em produção quem
+// faz isso são os rewrites do vercel.json; aqui é a paridade pro dev server e pro preview.
+const CLEAN_ROUTES: Record<string, string> = {
+  // Com appType 'mpa' o preview perde o fallback que servia a raiz — o mapeamento
+  // explícito devolve o index sem reabrir o catch-all de SPA.
+  '/': '/index.html',
+  '/jogar': '/jogar.html',
+  '/como-jogar': '/como-jogar.html',
+  '/faq': '/faq.html',
+}
+
+function marketingRoutes(): Plugin {
+  const middleware = (
+    req: { url?: string },
+    res: { statusCode: number; setHeader(k: string, v: string): void; end(): void },
+    next: () => void,
+  ) => {
+    const url = new URL(req.url ?? '/', 'http://local.test')
+    if (url.pathname === '/' && GAME_QUERY_PARAMS.some((p) => url.searchParams.has(p))) {
+      res.statusCode = 307
+      res.setHeader('Location', `/jogar${url.search}`)
+      res.end()
+      return
+    }
+    const target = CLEAN_ROUTES[url.pathname]
+    if (target) req.url = `${target}${url.search}`
+    next()
+  }
+  return {
+    name: 'magnata-imobiliario:marketing-routes',
+    configureServer(server) {
+      server.middlewares.use(middleware)
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(middleware)
+      // Pós-middleware (roda DEPOIS do static): rota desconhecida responde o 404 real,
+      // com status 404 — a mesma semântica que a Vercel dá ao dist/404.html. Sem isso o
+      // preview devolvia 200 vazio (appType mpa) e a validação de status mentia.
+      return () => {
+        server.middlewares.use((_req, res) => {
+          res.statusCode = 404
+          res.setHeader('Content-Type', 'text/html; charset=utf-8')
+          res.end(fs.readFileSync(path.resolve(__dirname, 'dist/404.html'), 'utf-8'))
+        })
+      }
+    },
+  }
+}
+
+/**
+ * Metadados de site (051, FR-007): troca `%SITE_URL%` nos HTML (canonical/OG absolutos),
+ * injeta a meta de verificação do Search Console quando `VITE_GSC_VERIFICATION` existir
+ * (passo manual documentado em docs/SEO.md) e emite robots.txt + sitemap.xml no build —
+ * gerados aqui para nunca divergirem do domínio configurado.
+ */
+function siteMeta(): Plugin {
+  const routes = ['/', '/como-jogar', '/faq', '/jogar']
+  return {
+    name: 'magnata-imobiliario:site-meta',
+    transformIndexHtml(html) {
+      const gsc = process.env.VITE_GSC_VERIFICATION
+      return {
+        html: html.replaceAll('%SITE_URL%', SITE_URL),
+        tags: gsc
+          ? [{ tag: 'meta', attrs: { name: 'google-site-verification', content: gsc }, injectTo: 'head' as const }]
+          : [],
+      }
+    },
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'robots.txt',
+        source: `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`,
+      })
+      this.emitFile({
+        type: 'asset',
+        fileName: 'sitemap.xml',
+        source: [
+          '<?xml version="1.0" encoding="UTF-8"?>',
+          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+          ...routes.map((route) => `  <url><loc>${SITE_URL}${route === '/' ? '/' : route}</loc></url>`),
+          '</urlset>',
+          '',
+        ].join('\n'),
+      })
+    },
+  }
+}
+
 export default defineConfig({
+  // MPA de verdade (051): sem fallback de history pro index.html — a raiz é a landing
+  // e rota desconhecida é 404, como em produção (Vercel serve dist/404.html).
+  appType: 'mpa',
   define: {
     'import.meta.env.VITE_COMMIT_SHA': JSON.stringify(COMMIT_SHA),
   },
@@ -49,7 +155,23 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] }),
     tailwindcss(),
+    marketingRoutes(),
+    siteMeta(),
   ],
+  build: {
+    // O manifest é a PROVA da separação de bundles (051, FR-006/SC-003): a auditoria
+    // pós-build lê daqui que os entrypoints de marketing não alcançam Supabase/engine.
+    manifest: true,
+    rollupOptions: {
+      input: {
+        landing: path.resolve(__dirname, 'index.html'),
+        jogar: path.resolve(__dirname, 'jogar.html'),
+        comoJogar: path.resolve(__dirname, 'como-jogar.html'),
+        faq: path.resolve(__dirname, 'faq.html'),
+        notFound: path.resolve(__dirname, '404.html'),
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
