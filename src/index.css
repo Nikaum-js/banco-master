@@ -827,6 +827,546 @@
 }
 
 /* =====================================================================
+   Pregão simultâneo (§7.3) — escassez de terrenos (§7.5) e espólio (§9.2).
+   Componente: `game/ui/landAuction/LandAuctionLayer.tsx`.
+
+   Estas classes existiam no JSX desde a reconstrução do CARD 03 e NUNCA
+   tiveram folha: o pregão renderizava como texto corrido, com "R$ 180lance
+   de Bia" colado no preço de tabela e sem cartão, sem cronômetro pintado e
+   sem separação entre lotes. A D-078, que leva o pregão de 3 para até 6
+   lotes, não tinha como caber numa tela que já não organizava três.
+
+   Vocabulário: o MESMO do leilão de título acima (moldura em `ink`, stripe
+   de acento na borda, latão como fio). O acento por lote entra como
+   `--lot-accent`, a cor do grupo, que o JSX injeta; nada é hardcoded.
+   ===================================================================== */
+@layer components {
+  /* Largura na FOLHA, não como utilitário arbitrário: `w-[min(62rem,97vw)]` numa string
+     interpolada não chega ao scanner do Tailwind, e o cartão silenciosamente encolhia até o
+     conteúdo (medido: 311px numa viewport de 667). Aqui a regra é lida sempre. */
+  .land-auction {
+    --lot-accent: var(--color-brass);
+    inline-size: min(62rem, 97vw);
+  }
+
+  /* Barra de licitante e caixa. Envolve em telas estreitas em vez de estourar. */
+  .land-auction__bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--color-ink-500);
+  }
+
+  .land-auction__seat {
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--color-brass);
+    border-radius: var(--radius-sharp);
+    background: var(--color-brass);
+    color: var(--color-ink-950);
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .land-auction__seat--pick {
+    border-color: var(--color-ink-500);
+    background: var(--color-ink-700);
+    color: var(--color-starlight);
+    cursor: pointer;
+    transition: border-color var(--motion-base) var(--ease-standard);
+  }
+
+  .land-auction__seat--pick:hover { border-color: var(--color-brass); }
+
+  .land-auction__seat--pick.is-on {
+    border-color: var(--color-brass);
+    background: var(--color-brass);
+    color: var(--color-ink-950);
+  }
+
+  .land-auction__purse {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-inline-start: auto;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid color-mix(in srgb, var(--color-ink-500) 60%, transparent);
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--color-ink-950) 55%, transparent);
+    box-shadow: var(--shadow-press);
+  }
+
+  /* -------------------------------------------------------------------
+     GRADE (desktop, tablet, retrato). Até 3 colunas no desktop e 2 no
+     tablet, e nunca mais colunas do que lotes — 2 lotes numa grade de 3
+     deixariam um buraco alinhado à esquerda que parece defeito.
+     ------------------------------------------------------------------- */
+  .lot-grid {
+    display: grid;
+    gap: 0.7rem;
+    padding: 0.85rem;
+    grid-template-columns: repeat(min(var(--lot-count, 1), 3), minmax(0, 1fr));
+  }
+
+  /* Até 1279px é TABLET (o paisagem canônico do gate responsivo é 1024×768) e leva 2 colunas.
+     Três colunas só a partir de 1280, onde um lote ainda tem ~19rem de largura útil. */
+  @media (max-width: 1279px) {
+    .lot-grid { grid-template-columns: repeat(min(var(--lot-count, 1), 2), minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 620px) {
+    .lot-grid {
+      grid-template-columns: minmax(0, 1fr);
+      padding: 0.6rem;
+    }
+  }
+
+  /* -------------------------------------------------------------------
+     Cartão e painel compartilham a mesma matéria: um retângulo de tinta
+     com o fio do grupo à esquerda. O que muda entre eles é a densidade.
+     ------------------------------------------------------------------- */
+  .lot-card,
+  .lot-panel {
+    position: relative;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 0.6rem 0.65rem 0.55rem 0.8rem;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--lot-accent) 30%, var(--color-ink-500));
+    border-radius: var(--radius-card);
+    background:
+      linear-gradient(100deg, color-mix(in srgb, var(--lot-accent) 9%, transparent), transparent 58%),
+      color-mix(in srgb, var(--color-ink-950) 70%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--lot-accent) 10%, transparent);
+  }
+
+  .lot-card::before,
+  .lot-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--lot-accent);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--lot-accent) 45%, transparent);
+  }
+
+  /* Urgência e encerramento têm CADA UM um sinal não-cromático no conteúdo
+     (barra curta, martelo + rótulo textual). A cor aqui reforça, não informa. */
+  .lot-card--urgent,
+  .lot-panel--urgent { border-color: color-mix(in srgb, var(--color-signal) 55%, var(--color-ink-500)); }
+
+  .lot-card--closed,
+  .lot-panel--closed {
+    border-style: dashed;
+    opacity: 0.72;
+  }
+
+  .lot-card__head,
+  .lot-panel__head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .lot-card__identity { min-width: 0; flex: 1 1 auto; }
+
+  .lot-card__name {
+    overflow: hidden;
+    color: var(--color-starlight);
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    letter-spacing: var(--tracking-display);
+    /* 1.15, não 1: com `overflow: hidden` e altura de linha justa a Bebas perde o acento
+       agudo do topo (medido em "GIZÉ", que saía "GIZE"). */
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .lot-card__origin {
+    overflow: hidden;
+    color: var(--color-starlight-muted);
+    font-size: 0.66rem;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lot-badge {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    padding: 0.15rem 0.32rem;
+    border: 1px solid var(--color-brass);
+    border-radius: var(--radius-sharp);
+    color: var(--color-brass-glow);
+    font-family: var(--font-sans);
+    font-size: var(--text-nano);
+    font-weight: 720;
+    letter-spacing: var(--tracking-mono);
+    line-height: 1.4;
+  }
+
+  /* ---------------------------- Cronômetro ---------------------------- */
+  .lot-clock {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .lot-clock__secs {
+    flex: 0 0 auto;
+    color: var(--color-starlight);
+    font-family: var(--font-slab);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .lot-clock--lg .lot-clock__secs { font-size: 1.15rem; }
+  .lot-clock--sm .lot-clock__secs { font-size: 0.8rem; }
+
+  .lot-clock__secs small {
+    margin-inline-start: 0.06em;
+    font-size: 0.55em;
+    color: var(--color-starlight-muted);
+  }
+
+  .lot-clock__bar {
+    flex: 1 1 auto;
+    height: 4px;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--color-ink-abyss) 80%, transparent);
+  }
+
+  .lot-clock__fill {
+    height: 100%;
+    background: var(--color-brass);
+  }
+
+  .lot-card--urgent .lot-clock__fill,
+  .lot-panel--urgent .lot-clock__fill { background: var(--color-signal); }
+
+  .lot-clock__closed {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--color-starlight-muted);
+    font-family: var(--font-sans);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.3;
+  }
+
+  /* ------------------- Lance atual × preço de tabela ------------------- */
+  .lot-figures {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .lot-figures__cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+
+  .lot-figures__cell--right { margin-inline-start: auto; text-align: end; }
+
+  .lot-figures__value {
+    color: var(--color-starlight);
+    font-family: var(--font-slab);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.05;
+  }
+
+  .lot-figures__value--bid { color: var(--color-brass-glow); }
+
+  .lot-figures__label {
+    overflow: hidden;
+    color: var(--color-starlight-muted);
+    font-size: 0.62rem;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ------------------ Caixa disponível e comprometido ------------------ */
+  .lot-purse {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.68rem;
+    line-height: 1.2;
+  }
+
+  .lot-purse__avail,
+  .lot-purse__held {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--color-starlight);
+  }
+
+  .lot-purse__avail { color: var(--color-brass-glow); }
+  .lot-purse__held { color: var(--color-starlight-muted); }
+
+  .lot-purse__tag {
+    font-family: var(--font-sans);
+    font-size: var(--text-micro);
+    font-weight: 600;
+    letter-spacing: var(--tracking-mono);
+    text-transform: uppercase;
+    color: var(--color-starlight-muted);
+  }
+
+  /* ------------------------------ Ações ------------------------------- */
+  .lot-actions {
+    display: flex;
+    align-items: stretch;
+    gap: 0.35rem;
+    margin-top: auto;
+  }
+
+  .lot-actions__primary { flex: 1 1 auto; min-width: 0; }
+
+  .lot-actions__steps { display: flex; gap: 0.35rem; flex: 0 0 auto; }
+
+  .lot-actions__step {
+    min-inline-size: 2.6rem;
+    min-block-size: 2.75rem;
+    padding-inline: 0.4rem;
+    border: 1px solid var(--color-ink-500);
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--color-ink-900) 85%, transparent);
+    color: var(--color-starlight);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: border-color var(--motion-base) var(--ease-standard), color var(--motion-base) var(--ease-standard);
+  }
+
+  .lot-actions__step:hover:not(:disabled) {
+    border-color: var(--color-brass);
+    color: var(--color-brass-glow);
+  }
+
+  .lot-actions__step:disabled { cursor: not-allowed; opacity: 0.42; }
+
+  /* --------------------------- Escritura ------------------------------ */
+  .lot-deed { min-width: 0; }
+
+  .lot-deed__summary {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 1.9rem;
+    color: var(--color-starlight-muted);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: var(--tracking-mono);
+    text-transform: uppercase;
+  }
+
+  .lot-deed__summary:hover { color: var(--color-brass-glow); }
+
+  .lot-deed__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.14rem;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--color-ink-500) 70%, transparent);
+    border-radius: var(--radius-sharp);
+    background: color-mix(in srgb, var(--color-ink-abyss) 45%, transparent);
+  }
+
+  .lot-deed__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    color: var(--color-starlight-muted);
+    font-size: 0.66rem;
+    line-height: 1.35;
+  }
+
+  .lot-deed__row .currency { color: var(--color-starlight); }
+
+  .lot-deed__stats {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+    border-top: 1px solid color-mix(in srgb, var(--color-ink-500) 60%, transparent);
+  }
+
+  /* ===================================================================
+     PAISAGEM BAIXA — faixa de seleção + painel do lote selecionado.
+     Sem carrossel e sem rolagem horizontal: a faixa cabe inteira porque
+     é uma grade de N colunas iguais, e N nunca passa de 6 (o limiar da
+     §7.5). Cada chip guarda o piso de 44px de alvo de toque.
+     =================================================================== */
+  .land-auction__compact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem 0.6rem;
+    min-height: 0;
+  }
+
+  .lot-strip {
+    display: grid;
+    grid-template-columns: repeat(var(--lot-strip-cols, 1), minmax(0, 1fr));
+    gap: 0.3rem;
+    min-width: 0;
+  }
+
+  .lot-chip {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.12rem;
+    min-inline-size: 0;
+    min-block-size: 2.75rem;
+    padding: 0.28rem 0.3rem 0.22rem;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--lot-accent) 26%, var(--color-ink-500));
+    border-radius: var(--radius-sharp);
+    background: color-mix(in srgb, var(--color-ink-950) 62%, transparent);
+    color: var(--color-starlight-muted);
+    cursor: pointer;
+    text-align: start;
+    transition: border-color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard);
+  }
+
+  /* Selecionado NÃO se distingue só por cor: ganha o fio de acento cheio na
+     base, o texto em papel e o peso do nome. */
+  .lot-chip--on {
+    border-color: var(--lot-accent);
+    background: color-mix(in srgb, var(--lot-accent) 16%, var(--color-ink-900));
+    color: var(--color-starlight);
+  }
+
+  .lot-chip--urgent { border-color: color-mix(in srgb, var(--color-signal) 52%, var(--color-ink-500)); }
+  .lot-chip--closed { border-style: dashed; opacity: 0.66; }
+
+  .lot-chip__name {
+    overflow: hidden;
+    color: inherit;
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    letter-spacing: var(--tracking-display);
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .lot-chip--on .lot-chip__name { color: var(--color-starlight); }
+
+  .lot-chip__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.22rem;
+    font-family: var(--font-sans);
+    font-size: var(--text-micro);
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .lot-chip__mark {
+    display: inline-flex;
+    align-items: center;
+    color: var(--color-brass-glow);
+    font-size: 0.7em;
+  }
+
+  .lot-chip__secs {
+    font-variant-numeric: tabular-nums;
+    color: var(--color-starlight-muted);
+  }
+
+  .lot-chip--urgent .lot-chip__secs { color: var(--color-signal-glow); }
+
+  .lot-chip__bar {
+    display: block;
+    height: 2px;
+    margin-top: 0.15rem;
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--color-ink-abyss) 75%, transparent);
+  }
+
+  .lot-chip__bar-fill {
+    display: block;
+    height: 100%;
+    background: var(--lot-accent);
+    transition: width var(--motion-base) linear;
+  }
+
+  .lot-panel {
+    gap: 0.4rem;
+    padding: 0.55rem 0.6rem 0.5rem 0.75rem;
+  }
+
+  .lot-panel__head {
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .lot-panel__head .lot-clock {
+    flex: 1 1 8rem;
+    min-width: 6rem;
+  }
+
+  .lot-panel__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  /* Em paisagem baixa o modal inteiro é o recurso escasso: a moldura para de
+     reservar altura para si e a escritura fecha por padrão (já é `details`). */
+  .land-auction--compact .modal-shell,
+  .land-auction--compact { max-block-size: calc(100svh - 1.25rem); }
+
+  /* Em paisagem baixa a ALTURA é o recurso escasso, e o maior gasto dela é cerimônia: o
+     header do modal come ~85px entre respiro e o losango ornamental. Ele encolhe (o
+     ornamento sai, o título fica) para que a AÇÃO PRINCIPAL caiba acima da dobra. */
+  @media (orientation: landscape) and (max-height: 560px) {
+    .land-auction__bar { padding: 0.4rem 0.7rem; }
+    .lot-card__name { font-size: 1rem; }
+    .lot-figures__value { font-size: 0.88rem; }
+    .lot-deed__summary { min-block-size: 1.6rem; }
+  }
+
+  /* Alturas de verdade apertadas (740×360, 667×375): a escritura some da
+     primeira dobra e o cronômetro encolhe, mas nada é retirado da árvore. */
+  @media (orientation: landscape) and (max-height: 400px) {
+    .lot-clock--lg .lot-clock__secs { font-size: 1rem; }
+    .lot-panel { padding-block: 0.45rem 0.4rem; }
+    .land-auction__compact { gap: 0.4rem; padding: 0.4rem 0.5rem 0.5rem; }
+  }
+}
+
+/* =====================================================================
    Freio de movimento reduzido (044/US5, D7 do plan; FR-030) — um bloco
    zera as TRÊS durações do vocabulário, e toda transição CSS que resolve
    duração por `var(--motion-*)` para de se mover de uma vez. O fato

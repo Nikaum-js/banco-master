@@ -19,43 +19,20 @@
 // primitivo `Overlay`/`ModalShell` (shell.tsx) que todo modal do jogo usa — foco ao
 // aparecer, restauração ao sumir, `role="dialog"`/`aria-modal`, tudo de graça, sem
 // reimplementar nada de `a11y/dialog.ts`.
-import { useSyncExternalStore, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { RotateCw } from 'lucide-react'
 import { Overlay, ModalShell } from '@/game/ui/shell'
+import { useMediaQuery } from '@/game/ui/media'
 
 // Mesmo limiar que `.board-stage` usa pra empilhar os painéis (index.css, `@media
 // (max-width: 1100px)`): abaixo dele a mesa não cabe em 3 colunas — girar ajuda. Dali pra
 // cima ela já cabe empilhada, então o aviso seria falso alarme.
 const QUERY = '(orientation: portrait) and (max-width: 1100px)'
 
-// Sem `window.matchMedia` (SSR, ambiente de teste sem polyfill) o produto não trava: a
-// suposição segura é "não é retrato" — o mesmo espírito defensivo que `motion-dom` usa pro
-// freio de `prefers-reduced-motion` (`if (window.matchMedia) … else prefersReducedMotion =
-// false`).
-function hasMatchMedia(): boolean {
-  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-}
-
-function subscribe(onChange: () => void): () => void {
-  if (!hasMatchMedia()) return () => {}
-  const mql = window.matchMedia(QUERY)
-  mql.addEventListener('change', onChange)
-  return () => mql.removeEventListener('change', onChange)
-}
-
-function getSnapshot(): boolean {
-  if (!hasMatchMedia()) return false
-  return window.matchMedia(QUERY).matches
-}
-
-// App 100% client (sem SSR) — o snapshot do servidor nunca é usado de verdade, mas
-// `useSyncExternalStore` exige o terceiro argumento.
-function getServerSnapshot(): boolean {
-  return false
-}
-
+// A tolerância a ambiente sem `window.matchMedia` (SSR, teste sem polyfill) vive no hook
+// compartilhado `@/game/ui/media`: ali, "não casa" é a suposição segura.
 function useNeedsRotate(): boolean {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+  return useMediaQuery(QUERY)
 }
 
 export function OrientationGate({ children }: { children: ReactNode }) {
