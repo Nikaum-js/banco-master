@@ -7,6 +7,7 @@ import type { RNG } from '@/game/turn/dice'
 import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
 import { actorOf, applyCommand, type GameAction, type PlayerAction } from '@/game/commands'
+import { applyOpeningAuction } from '@/game/openingAuction'
 import { buildGameCtx, buildInitialGame } from '@/game/setup'
 import { matchSummary } from '@/game/summary'
 import { nullTelemetry, type Telemetry, type TelemetryEvent } from '@/telemetry/port'
@@ -15,16 +16,23 @@ import { recordingCtx } from './recorder'
 import { redactAccepted, splitSnapshot } from './perspective'
 import {
   anyDisconnected,
+  allOpeningBidsLocked,
+  finalizeOpeningAuction,
   joinRoom,
   kickSeat,
+  lockOpeningBid,
   newReentryCode,
-  shuffleSeatOrder,
   markConnected,
   markDisconnected,
+  normalizeRoom,
+  openOpeningAuction,
+  OPENING_AUCTION_MS,
   playerIdsInOrder,
+  rollOpeningOrder,
   seatByUid,
-  startGame as startGameRoom,
+  selectOpeningMode,
   toPublicRoom,
+  type OpeningMode,
   type Room,
 } from './room'
 import type { AcceptedCommand, CommandEnvelope, JoinRequest, PresenceChange, Transport, Unsubscribe } from './transport'
@@ -41,12 +49,14 @@ export interface HostOptions {
   rng?: RNG // padrão Math.random; injetável nos testes (seed)
   now?: () => number // padrão Date.now; relógio lógico nos testes
   telemetry?: Telemetry // padrão `nullTelemetry` (044, D-040) — emissão é do host, nunca da tela
+  openingAuctionMs?: number // padrão 15s; `0` é o seam determinístico de testes legados
 }
 
 export interface Host {
   open(): Promise<void> // abre o LOBBY: escuta pedidos de assento/presença e publica a sala (FR-001/002)
   start(): Promise<void> // cria o estado inicial, persiste como 1º snapshot e publica a sala em 'playing'
   startMatch(): Promise<{ ok: true } | { ok: false; reason: 'too-few' | 'already-started' | 'not-host' }> // lobby → partida (FR-006)
+  setOpeningMode(mode: OpeningMode): { ok: true } | { ok: false; reason: 'not-in-lobby' }
   kick(uid: string): { ok: true } | { ok: false; reason: 'not-in-lobby' | 'is-host' | 'unknown-uid' } // remoção no lobby (FR-024)
   stop(): void
   tick(): void // fecha leilões/lotes vencidos pelo prazo (emite comandos de sistema) — browser agenda; testes chamam
@@ -60,11 +70,13 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   const rng: RNG = opts.rng ?? (() => Math.random())
   const now = opts.now ?? (() => Date.now())
   const telemetry = opts.telemetry ?? nullTelemetry
+  const openingAuctionMs = opts.openingAuctionMs ?? OPENING_AUCTION_MS
 
-  let room = initialRoom
+  let room = normalizeRoom(initialRoom)
   let game: GameState | null = null
   let seq = -1 // -1 = ainda não iniciado; o snapshot inicial fica em seq 0
   let opened = false
+  let closingOpeningAuction = false
   const subs: Unsubscribe[] = []
   const listeners = new Set<() => void>()
   let watchedUids = new Set<string>() // 043, T015 — assentos cujo tópico privado a autoridade assina
@@ -189,6 +201,33 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     accept(env.action, fromUid)
   }
 
+  async function closeOpeningAuction(): Promise<void> {
+    if (closingOpeningAuction || room.status !== 'bidding') return
+    closingOpeningAuction = true
+    try {
+      const finalized = finalizeOpeningAuction(room, rng)
+      if (!finalized.ok) return
+      room = finalized.room
+      await startInternal()
+      syncPause() // alguém que caiu durante os lances não deixa o 1º turno correr sem ele
+    } finally {
+      closingOpeningAuction = false
+    }
+  }
+
+  function handleOpeningBid({ amount }: { amount: number }, fromUid: string): void {
+    if (room.status !== 'bidding') return
+    if ((room.openingAuction?.closesAt ?? 0) <= now()) {
+      void closeOpeningAuction()
+      return
+    }
+    const result = lockOpeningBid(room, fromUid, amount)
+    if (!result.ok) return
+    room = result.room
+    publishAndPersistRoom()
+    if (allOpeningBidsLocked(room)) void closeOpeningAuction()
+  }
+
   // Pedido de assento no lobby (FR-002/005). A identidade do assento é o uid da CONEXÃO —
   // o pedinte só escolhe nome e cor. Recusa (cheia/cor tomada/já iniciada) volta ao pedinte.
   //
@@ -308,6 +347,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     // correção que `watchSeat` reemite dispara um `pause`+`resume` espúrio.
     syncWatchedSeats()
     subs.push(transport.onSubmit(handleSubmit))
+    subs.push(transport.onOpeningBid(handleOpeningBid))
     subs.push(transport.onPresence(handlePresence))
     subs.push(transport.onJoinRequest(handleJoinRequest))
     subs.push(transport.onReattachNotice(() => void handleSeatReattached()))
@@ -329,7 +369,10 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   async function startInternal(): Promise<void> {
     await ensureOpen()
     await ensureMatchKey()
-    game = buildInitialGame(playerIdsInOrder(room), rng, now()) // 044/D3: mesmo relógio que o recorder grava/replica
+    const initialGame = buildInitialGame(playerIdsInOrder(room), rng, now())
+    game = room.openingMode === 'sealed-bid'
+      ? applyOpeningAuction(initialGame, room)
+      : initialGame
     seq = 0
     const { publicGame, secrets } = splitSnapshot(game, room)
     await transport.saveSnapshot({ seq, game: publicGame, secrets, room }) // 1º snapshot (FR-006/013): clientes leem ao entrar
@@ -354,7 +397,13 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
         // códigos voltam; sem isto o `taken` de `newReentryCode` mintaria contra um conjunto de
         // vazios, e a sala em memória divergiria da linha persistida.
         const stored = await transport.loadRoom()
-        if (stored) room = withKnownCodes(room, stored)
+        if (stored) {
+          // Durante a coleta, a linha persistida é a única fonte íntegra dos lances lacrados;
+          // a sala pública em `initialRoom` mascara todos eles por contrato.
+          room = stored.status === 'bidding'
+            ? withKnownCodes(stored, room)
+            : withKnownCodes(room, stored)
+        }
       }
       await ensureOpen()
       // Host reassumindo (F5/reload, FR-015): `match_started` já foi emitido na sessão
@@ -367,14 +416,35 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
 
     start: startInternal,
 
-    // Fecha o lobby e inicia a partida (FR-006). A ordem da mesa é SORTEADA aqui (spec 038,
-    // FR-030) com o RNG do host — o resultado vive no snapshot, então os clientes o recebem
-    // por leitura, sem replay (mesmo padrão do embaralho das cartas).
+    // O host inicia o modo já persistido no lobby. Leilão coleta em paralelo; Maior dado
+    // resolve as rolagens imediatamente. Nos dois casos, a ordem vive no primeiro snapshot.
     async startMatch() {
-      const started = startGameRoom(room)
-      if (!started.ok) return started
-      room = shuffleSeatOrder(started.room, rng)
-      await startInternal()
+      if (room.openingMode === 'dice-roll') {
+        const rolled = rollOpeningOrder(room, rng)
+        if (!rolled.ok) {
+          return { ok: false as const, reason: rolled.reason === 'wrong-mode' ? 'already-started' as const : rolled.reason }
+        }
+        room = rolled.room
+        await startInternal()
+        syncPause()
+        return { ok: true as const }
+      }
+      const openedAuction = openOpeningAuction(room, now() + openingAuctionMs)
+      if (!openedAuction.ok) {
+        return { ok: false as const, reason: openedAuction.reason === 'wrong-mode' ? 'already-started' as const : openedAuction.reason }
+      }
+      room = openedAuction.room
+      await ensureOpen()
+      publishAndPersistRoom()
+      if (openingAuctionMs <= 0) await closeOpeningAuction()
+      return { ok: true as const }
+    },
+
+    setOpeningMode(mode: OpeningMode) {
+      const selected = selectOpeningMode(room, mode)
+      if (!selected.ok) return selected
+      room = selected.room
+      publishAndPersistRoom()
       return { ok: true as const }
     },
 
@@ -398,8 +468,12 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     },
 
     tick(): void {
-      if (!game) return
       const t = now()
+      if (room.status === 'bidding' && t >= (room.openingAuction?.closesAt ?? Number.POSITIVE_INFINITY)) {
+        void closeOpeningAuction()
+        return
+      }
+      if (!game) return
       for (const action of deadlinePlan(game, t).due) accept(action)
     },
 

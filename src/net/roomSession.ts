@@ -11,16 +11,16 @@
 // Aqui o transporte entra por PARÂMETRO. `OnlineGate` vira uma assinatura.
 import { createClient, type Client } from './client'
 import { createHost, type Host, type HostOptions } from './host'
-import { createRoom, hostSeat, newReentryCode, seatByUid, type JoinError, type Room } from './room'
+import { createRoom, hostSeat, newReentryCode, seatByUid, type JoinError, type OpeningMode, type Room } from './room'
 import { newRoomId } from './session'
 import type { Transport, Unsubscribe } from './transport'
 import { nullTelemetry, type Telemetry, type TelemetryEvent } from '@/telemetry/port'
 import { matchKey } from '@/telemetry/matchKey'
 
-/** Ritual de início (`order`) é de ENTRADA, nunca de reconexão — ver `isReentry`.
+/** Ritual de início (`reveal`) é de ENTRADA, nunca de reconexão — ver `isReentry`.
  * `'reentry'` (041, D-033): partida em curso, sem assento — perder o aparelho não é mais
  * beco (era `fail('already-started')`); o formulário pede o código do próprio assento. */
-export type SessionPhase = 'identity' | 'lobby' | 'order' | 'playing' | 'error' | 'reentry'
+export type SessionPhase = 'identity' | 'lobby' | 'auction' | 'reveal' | 'playing' | 'error' | 'reentry'
 
 export interface SessionIdentity {
   name: string
@@ -42,6 +42,8 @@ export interface RoomSessionState {
   /** 043, D-036/T026: o PRÓPRIO código de reentrada (da prévia — `room` nunca carrega
    * código nenhum, nem o do dono). `null` até a prévia resolver. */
   readonly myReentryCode: string | null
+  /** Valor escolhido nesta sessão; segue privado durante `auction`. */
+  readonly openingBid: number | null
 }
 
 export interface RoomSession {
@@ -55,10 +57,10 @@ export interface RoomSession {
   requestSeat(who: SessionIdentity): void
   /** Reanexa ao próprio assento por CÓDIGO (041, D-033) — quando o link + uid não bastam. */
   requestReentry(code: string): void
+  setOpeningMode(mode: OpeningMode): void
   startMatch(): Promise<void>
+  submitOpeningBid(amount: number): void
   kick(target: string): void
-  /** A revelação da ordem terminou (FR-030). */
-  orderSeen(): void
 
   /** Fecha prazos vencidos. O browser agenda; os testes chamam. */
   tick(): void
@@ -90,6 +92,8 @@ export interface RoomSessionOptions {
   /** Padrão `nullTelemetry` (044, D-040). Emite `room_created` aqui e é repassado ao host
    * (`match_started`/`match_ended`/`match_paused`) — a MESMA instância, um destino só. */
   telemetry?: Telemetry
+  /** Duração da revelação automática; injetável para testes headless. */
+  revealMs?: number
 }
 
 export function createRoomSession(opts: RoomSessionOptions): RoomSession {
@@ -98,6 +102,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
   const mintRoomId = opts.newRoomId ?? newRoomId
   const mintReentryCode = opts.mintReentryCode ?? (() => newReentryCode(Math.random))
   const telemetry = opts.telemetry ?? nullTelemetry
+  const revealMs = opts.revealMs ?? 4_200
 
   // T1/T2 do contrato: a sessão não pode sentir uma falha de telemetria — mesma segunda
   // linha de defesa de `host.ts` (o adaptador de produção já engole os próprios erros).
@@ -113,11 +118,12 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
   let client: Client | null = null
   let host: Host | null = null
   let disconnectStore: (() => void) | null = null
+  let revealTimer: ReturnType<typeof setTimeout> | null = null
   const subs: Unsubscribe[] = []
   const listeners: (() => void)[] = []
 
   let state: RoomSessionState = {
-    phase: 'identity', room: null, error: null, busy: false, isHost: false, roomId: null, uid: null, myReentryCode: null,
+    phase: 'identity', room: null, error: null, busy: false, isHost: false, roomId: null, uid: null, myReentryCode: null, openingBid: null,
   }
 
   function emit(patch: Partial<RoomSessionState>): void {
@@ -139,23 +145,45 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
     return state.phase === 'playing' || c.seq() > 0
   }
 
+  function revealThenPlay(fromOpeningFlow = false): void {
+    if (!fromOpeningFlow && isReentry(client!)) {
+      emit({ phase: 'playing' })
+      return
+    }
+    emit({ phase: 'reveal' })
+    if (revealMs <= 0) {
+      emit({ phase: 'playing' })
+      return
+    }
+    revealTimer ??= setTimeout(() => {
+      revealTimer = null
+      emit({ phase: 'playing' })
+    }, revealMs)
+  }
+
   // Espelha o client na sessão e liga o store assim que a partida existe.
   function syncFromClient(c: Client): void {
     const room = c.room()
     const joinError = c.joinError()
     const game = c.game()
     const myReentryCode = c.myReentryCode()
+    const openingBid = c.openingBid()
 
     // Partida em curso mas AINDA sem assento (041, D-033): reentrada pendente ou recusada
     // por código inválido. Fica no formulário — NUNCA pula para 'playing'/'order' sem
     // assento, mesmo com o `GameState` já carregado (é o mesmo `game` de todo mundo).
     if (game && !c.playerId()) {
-      emit({ room, error: joinError, busy: false, phase: 'reentry', myReentryCode })
+      emit({ room, error: joinError, busy: false, phase: 'reentry', myReentryCode, openingBid })
       return
     }
     if (game) {
+      // Um comando sistêmico pode avançar `seq` durante o próprio start (por exemplo,
+      // ausência detectada logo após o snapshot). Quem já estava no lobby/leilão continua
+      // no ritual de abertura; `seq > 0` só caracteriza reentrada fora desse fluxo.
+      const fromOpeningFlow = state.phase === 'lobby' || state.phase === 'auction'
       disconnectStore ??= connectStore(c)
-      emit({ room, error: joinError, busy: false, phase: isReentry(c) ? 'playing' : 'order', myReentryCode })
+      emit({ room, error: joinError, busy: false, myReentryCode, openingBid })
+      if (state.phase !== 'reveal' && state.phase !== 'playing') revealThenPlay(fromOpeningFlow)
       return
     }
     // O pedido de assento é fire-and-forget na porta; a RESPOSTA é o `room` com o nosso
@@ -169,8 +197,9 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
       room: room ?? state.room,
       error: joinError,
       busy: answered ? false : state.busy,
-      phase: c.playerId() ? 'lobby' : state.phase,
+      phase: c.playerId() ? (room?.status === 'bidding' ? 'auction' : 'lobby') : state.phase,
       myReentryCode,
+      openingBid,
     })
   }
 
@@ -274,6 +303,11 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
       })()
     },
 
+    setOpeningMode(mode: OpeningMode): void {
+      const result = host?.setOpeningMode(mode)
+      if (result && !result.ok) emit({ error: result.reason })
+    },
+
     async startMatch(): Promise<void> {
       emit({ busy: true })
       const result = await host?.startMatch()
@@ -283,12 +317,14 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
       emit({ busy: false })
     },
 
+    submitOpeningBid(amount: number): void {
+      client?.submitOpeningBid(amount)
+    },
+
     kick(target: string): void {
       const r = host?.kick(target)
       if (r && !r.ok) emit({ error: r.reason === 'is-host' ? 'O host não pode se remover.' : String(r.reason) })
     },
-
-    orderSeen: () => emit({ phase: 'playing' }),
 
     tick: () => host?.tick(),
 
@@ -298,6 +334,8 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
       listeners.length = 0
       disconnectStore?.()
       disconnectStore = null
+      if (revealTimer) clearTimeout(revealTimer)
+      revealTimer = null
     },
 
     leaveOnFatalError(): void {
@@ -310,6 +348,8 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
       listeners.length = 0
       disconnectStore?.()
       disconnectStore = null
+      if (revealTimer) clearTimeout(revealTimer)
+      revealTimer = null
     },
   }
 }

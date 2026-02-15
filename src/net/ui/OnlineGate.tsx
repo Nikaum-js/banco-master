@@ -22,7 +22,7 @@ import {
   isSupabaseConfigured,
 } from '@/net/supabaseClient'
 import { resolveTelemetry } from '@/telemetry'
-import { IdentityForm, LobbyMessage, ReentryForm, RoomLobby, TurnOrderReveal } from './LobbyScreen'
+import { IdentityForm, LobbyMessage, OpeningAuction, ReentryForm, RoomLobby, TurnOrderReveal } from './LobbyScreen'
 import { HomeScreen } from './HomeScreen'
 import { SessionBadge } from './SessionBadge'
 import { Button } from '@/game/ui/primitives'
@@ -110,9 +110,20 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
 
   const { phase, room, error, busy } = state
 
-  // Ordem sorteada: mostrada uma vez, antes do primeiro turno (FR-030).
-  if (phase === 'order' && room) {
-    return <TurnOrderReveal room={room} onDone={session.orderSeen} />
+  if (phase === 'auction' && room) {
+    return (
+      <OpeningAuction
+        room={room}
+        myUid={state.uid ?? ''}
+        myBid={state.openingBid}
+        onBid={session.submitOpeningBid}
+      />
+    )
+  }
+
+  // Resultado aparece como transição, sem botão local: todas as telas embarcam sozinhas.
+  if (phase === 'reveal' && room) {
+    return <TurnOrderReveal room={room} />
   }
 
   if (phase === 'playing') {
@@ -186,6 +197,7 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
       isHost={hostSeat(room).uid === state.uid}
       link={roomLink(room.id, window.location.origin)}
       starting={busy}
+      onOpeningModeChange={session.setOpeningMode}
       onStart={() => void session.startMatch()}
       onKick={session.kick}
     />

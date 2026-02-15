@@ -3,11 +3,18 @@
 // tabuleiro — graticule, latão, marcas de registro) e o PRÓPRIO token do tabuleiro
 // (`PlayerFace`) como preview: a pergunta "como eu apareço na mesa?" é respondida
 // mostrando, não descrevendo.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Chip } from '@/game/ui/primitives'
 import { PlayerFace } from '@/boards/shared'
 import { SKINS, type SkinId } from '@/boards/faceSkins'
-import { availableColors, MAX_SEATS, MIN_SEATS, type JoinError, type Room } from '@/net/room'
+import {
+  availableColors,
+  MAX_SEATS,
+  MIN_SEATS,
+  type JoinError,
+  type OpeningMode,
+  type Room,
+} from '@/net/room'
 import { NAME_MAX, recallPlayerName, rememberPlayerName } from '@/net/session'
 import { EntryPanel, EntryStage, EntryHeader } from './entryShell'
 
@@ -24,14 +31,48 @@ const JOIN_ERROR_TEXT: Record<JoinError, string> = {
 }
 
 // Moldura comum das telas de sala: palco da sala de mapas + prancha central.
-function Frame({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+function Frame({
+  title,
+  subtitle,
+  className = '',
+  bodyClassName = '',
+  children,
+}: {
+  title: string
+  subtitle?: string
+  className?: string
+  bodyClassName?: string
+  children: React.ReactNode
+}) {
   return (
     <EntryStage>
-      <EntryPanel className="max-w-md">
+      <EntryPanel className={className || 'max-w-md'}>
         <EntryHeader title={title} subtitle={subtitle} />
-        <div className="p-5 pt-4 flex flex-col gap-4">{children}</div>
+        <div className={`p-5 pt-4 ${bodyClassName || 'flex flex-col gap-4'}`}>{children}</div>
       </EntryPanel>
     </EntryStage>
+  )
+}
+
+function OpeningModeMark({ mode }: { mode: OpeningMode }) {
+  return (
+    <span className="opening-mode-option__mark" aria-hidden>
+      {mode === 'sealed-bid' ? (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="m4 8 8-4 8 4v9l-8 3-8-3z" />
+          <path d="m4 8 8 4 8-4M12 12v8" />
+        </svg>
+      ) : (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <rect x="4" y="4" width="16" height="16" rx="3" />
+          <circle cx="8" cy="8" r="1" fill="currentColor" stroke="none" />
+          <circle cx="16" cy="8" r="1" fill="currentColor" stroke="none" />
+          <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+          <circle cx="8" cy="16" r="1" fill="currentColor" stroke="none" />
+          <circle cx="16" cy="16" r="1" fill="currentColor" stroke="none" />
+        </svg>
+      )}
+    </span>
   )
 }
 
@@ -172,6 +213,7 @@ export function RoomLobby({
   isHost,
   link,
   starting,
+  onOpeningModeChange,
   onStart,
   onKick,
 }: {
@@ -183,6 +225,7 @@ export function RoomLobby({
   isHost: boolean
   link: string
   starting?: boolean
+  onOpeningModeChange?: (mode: OpeningMode) => void
   onStart: () => void
   onKick?: (uid: string) => void
 }) {
@@ -196,9 +239,17 @@ export function RoomLobby({
   }
 
   const faltam = MIN_SEATS - room.seats.length
+  const openingMode = room.openingMode ?? 'sealed-bid'
 
   return (
-    <Frame title="Sala aberta" subtitle={faltam > 0 ? 'Aguardando jogadores…' : 'A ordem da mesa é sorteada ao iniciar'}>
+    <Frame
+      title="Sala aberta"
+      subtitle={faltam > 0
+        ? 'Aguardando jogadores…'
+        : openingMode === 'sealed-bid'
+          ? 'Ordem por Leilão secreto'
+          : 'Ordem por Maior dado'}
+    >
       {/* 1. Convite — o PRIMEIRO bloco da tela. Numa sala recém-criada não há nada a fazer
           além de chamar gente; deixar o link abaixo da lista de assentos enterrava a única
           ação que importa naquele momento. */}
@@ -259,6 +310,34 @@ export function RoomLobby({
         ))}
       </div>
 
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="label text-brass mb-1">Ritual de Largada</legend>
+        <div className="opening-mode-picker">
+          {([
+            { mode: 'sealed-bid', label: 'Leilão secreto', detail: 'Lances lacrados' },
+            { mode: 'dice-roll', label: 'Maior dado', detail: 'Sem custo' },
+          ] as const).map((option) => {
+            const selected = openingMode === option.mode
+            return (
+              <button
+                key={option.mode}
+                type="button"
+                className={`opening-mode-option ${selected ? 'opening-mode-option--selected' : ''}`}
+                aria-pressed={selected}
+                disabled={!isHost || starting}
+                onClick={() => onOpeningModeChange?.(option.mode)}
+              >
+                <OpeningModeMark mode={option.mode} />
+                <span className="min-w-0 text-left">
+                  <strong>{option.label}</strong>
+                  <small>{option.detail}</small>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </fieldset>
+
       {/* 3. A ação da tela. O motivo de estar desabilitado fica no `title` — antes, o
           botão apagado não dizia o que faltava. */}
       {isHost ? (
@@ -267,7 +346,11 @@ export function RoomLobby({
           title={faltam > 0 ? `São necessários pelo menos ${MIN_SEATS} jogadores para começar` : undefined}
           onClick={onStart}
         >
-          {starting ? 'Iniciando…' : 'Iniciar partida'}
+          {starting
+            ? 'Iniciando…'
+            : openingMode === 'sealed-bid'
+              ? 'Abrir leilão'
+              : 'Rolar e iniciar'}
         </Button>
       ) : (
         <p className="label text-starlight-muted text-center">Aguardando o host iniciar a partida…</p>
@@ -286,23 +369,230 @@ export function RoomLobby({
   )
 }
 
-// Ordem sorteada da mesa (FR-030): mostrada a todos antes do primeiro turno.
-export function TurnOrderReveal({ room, onDone }: { room: Room; onDone: () => void }) {
+const money = (amount: number): string => `$${amount.toLocaleString('pt-BR')}`
+const DIE_PIPS: Record<number, number[]> = {
+  1: [5],
+  2: [1, 9],
+  3: [1, 5, 9],
+  4: [1, 3, 7, 9],
+  5: [1, 3, 5, 7, 9],
+  6: [1, 3, 4, 6, 7, 9],
+}
+
+function OpeningDie({ value }: { value: number }) {
   return (
-    <Frame title="Ordem da mesa" subtitle="Sorteada agora — vale para toda a partida">
-      <ol className="flex flex-col gap-1.5">
-        {room.seats.map((s, i) => (
-          <li
-            key={s.uid}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-card)] bg-ink-800/70 border border-ink-500"
+    <span className="opening-die" aria-hidden>
+      {(DIE_PIPS[value] ?? DIE_PIPS[1]).map((cell) => <i key={cell} style={{ gridArea: `${Math.ceil(cell / 3)} / ${((cell - 1) % 3) + 1}` }} />)}
+    </span>
+  )
+}
+
+function SealIcon({ locked }: { locked: boolean }) {
+  return (
+    <span className={`auction-seal ${locked ? 'auction-seal--locked' : ''}`} aria-hidden>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        {locked ? (
+          <>
+            <rect x="5" y="10" width="14" height="10" rx="2" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+            <path d="m9.5 15 1.7 1.7 3.7-3.7" />
+          </>
+        ) : (
+          <>
+            <path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z" />
+            <path d="m4 7.5 8 5 8-5M12 12.5V21" />
+          </>
+        )}
+      </svg>
+    </span>
+  )
+}
+
+export function OpeningAuction({
+  room,
+  myUid,
+  myBid,
+  onBid,
+}: {
+  room: Room
+  myUid: string
+  myBid: number | null
+  onBid: (amount: number) => void
+}) {
+  const [amount, setAmount] = useState(myBid ?? 0)
+  const [now, setNow] = useState(() => Date.now())
+  const closesAt = room.openingAuction?.closesAt ?? now
+  const remaining = Math.max(0, closesAt - now)
+  const seconds = Math.ceil(remaining / 1_000)
+  const progress = Math.max(0, Math.min(1, remaining / 15_000))
+  const mine = room.seats.find((seat) => seat.uid === myUid)
+  const locked = mine?.bidLocked ?? false
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const current = Date.now()
+      setNow(current)
+      if (current >= closesAt) clearInterval(id)
+    }, 100)
+    return () => clearInterval(id)
+  }, [closesAt])
+
+  return (
+    <Frame
+      title="Leilão da Largada"
+      subtitle="Lances lacrados para escolher a ordem da mesa"
+      className="auction-frame"
+      bodyClassName="auction-layout"
+    >
+      <div className="auction-ledger">
+        <div
+          className="auction-clock"
+          style={{ '--auction-progress': `${progress * 360}deg` } as React.CSSProperties}
+          aria-label={`${seconds} segundos restantes`}
+        >
+          <span className="auction-clock__inner">
+            <strong>{seconds}</strong>
+            <small>seg</small>
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="label text-brass">Caixa de largada</span>
+          <p className="display text-2xl text-starlight mt-0.5">{money(2_000)}</p>
+          <p className="text-xs text-starlight-muted leading-snug mt-1">
+            Todos pagam o próprio lance. O total abastece a Loteria.
+          </p>
+        </div>
+        <div className="lottery-stack" aria-label="Destino: Loteria">
+          <span className="lottery-chip">L</span>
+          <span className="lottery-chip">L</span>
+          <span className="lottery-chip">L</span>
+        </div>
+      </div>
+
+      <div className={`auction-bid-card ${locked ? 'auction-bid-card--locked' : ''}`}>
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <span className="label text-starlight-muted">{locked ? 'Seu lance lacrado' : 'Quanto vale sair primeiro?'}</span>
+            <p className="display text-[2.15rem] leading-none text-brass-glow mt-1 tabular-nums">
+              {money(myBid ?? amount)}
+            </p>
+          </div>
+          <SealIcon locked={locked} />
+        </div>
+
+        <input
+          type="range"
+          min={0}
+          max={500}
+          step={50}
+          value={myBid ?? amount}
+          disabled={locked || remaining === 0}
+          onChange={(event) => setAmount(Number(event.target.value))}
+          aria-label="Valor do lance"
+          className="auction-range"
+        />
+        <div className="auction-bounds justify-between label text-starlight-muted/80">
+          <span>$0</span>
+          <span>$500</span>
+        </div>
+
+        <Button
+          disabled={locked || remaining === 0}
+          onClick={() => onBid(amount)}
+          className={locked ? 'auction-locked-button' : ''}
+        >
+          {locked ? 'Lance lacrado' : `Lacrar lance de ${money(amount)}`}
+        </Button>
+      </div>
+
+      <div className="auction-roster flex flex-col gap-1.5" aria-live="polite">
+        {room.seats.map((seat) => (
+          <div
+            key={seat.uid}
+            className={`auction-player ${seat.bidLocked ? 'auction-player--locked' : ''}`}
           >
-            <span className="display text-brass text-xl w-7 text-center tabular-nums">{i + 1}º</span>
-            <PlayerFace color={s.color} size={30} />
-            <span className="text-starlight truncate flex-1">{s.name}</span>
-          </li>
+            <PlayerFace color={seat.color} size={28} />
+            <span className="text-starlight truncate flex-1">{seat.name}</span>
+            {seat.uid === myUid && <Chip tone="gold">você</Chip>}
+            <span className="label text-starlight-muted">
+              {seat.bidLocked ? 'lacrado' : 'escolhendo'}
+            </span>
+            <SealIcon locked={seat.bidLocked ?? false} />
+          </div>
         ))}
+      </div>
+    </Frame>
+  )
+}
+
+// Revelação automática: mostra ordem + valores, credita a Loteria e segue sem clique.
+export function TurnOrderReveal({ room }: { room: Room }) {
+  const diceMode = room.openingMode === 'dice-roll'
+  const total = room.seats.reduce((sum, seat) => sum + (seat.openingBid ?? 0), 0)
+  return (
+    <Frame
+      title="Rota definida"
+      subtitle={diceMode ? 'Maior soma primeiro · embarque automático' : 'Lances revelados · embarque automático'}
+      className="auction-frame"
+      bodyClassName="auction-layout auction-layout--reveal"
+    >
+      {diceMode ? (
+        <div className="auction-pot-reveal opening-dice-reveal">
+          <div className="opening-roll" aria-hidden>
+            <OpeningDie value={6} />
+            <OpeningDie value={5} />
+          </div>
+          <div>
+            <span className="label text-brass">Maior dado</span>
+            <p className="display text-xl text-starlight">Ordem sem custo</p>
+          </div>
+        </div>
+      ) : (
+        <div className="auction-pot-reveal">
+          <div className="lottery-stack lottery-stack--reveal" aria-hidden>
+            <span className="lottery-chip">L</span>
+            <span className="lottery-chip">L</span>
+            <span className="lottery-chip">L</span>
+          </div>
+          <div>
+            <span className="label text-brass">Crédito na Loteria</span>
+            <p className="display text-2xl text-starlight">+{money(total)}</p>
+          </div>
+        </div>
+      )}
+      <ol className="auction-roster flex flex-col gap-1.5">
+        {room.seats.map((s, i) => {
+          const roll = s.openingRoll ?? [1, 1]
+          return (
+            <li
+              key={s.uid}
+              className="auction-result-row"
+              style={{ animationDelay: `${i * 110}ms` }}
+            >
+              <span className="display text-brass text-xl w-7 text-center tabular-nums">{i + 1}º</span>
+              <PlayerFace color={s.color} size={30} />
+              <span className="text-starlight truncate flex-1">{s.name}</span>
+              {diceMode ? (
+                <span
+                  className="opening-roll"
+                  role="img"
+                  aria-label={`Dados ${roll[0]} e ${roll[1]}, soma ${roll[0] + roll[1]}`}
+                >
+                  <OpeningDie value={roll[0]} />
+                  <OpeningDie value={roll[1]} />
+                  <strong>{roll[0] + roll[1]}</strong>
+                </span>
+              ) : (
+                <span className="display text-brass-glow tabular-nums">{money(s.openingBid ?? 0)}</span>
+              )}
+            </li>
+          )
+        })}
       </ol>
-      <Button onClick={onDone}>Começar</Button>
+      <div className="auction-auto-route" role="status">
+        <span>Iniciando a partida para todos</span>
+        <span className="auction-route-dots" aria-hidden><i /><i /><i /></span>
+      </div>
     </Frame>
   )
 }

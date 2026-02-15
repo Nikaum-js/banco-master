@@ -30,6 +30,8 @@ export interface Client {
   requestJoin(who: JoinRequest): Promise<void> // pede assento no lobby (FR-002) — host aceita e publica a sala
   leave(): void
   send(action: PlayerAction): void
+  submitOpeningBid(amount: number): void
+  openingBid(): number | null
   game(): GameState | null
   room(): Room | null
   playerId(): string | null
@@ -77,6 +79,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
   let playerId: string | null = null
   let joinError: JoinError | null = null
   let commandFailure: { occurrenceId: string } | null = null
+  let openingBid: number | null = null
   let myReentryCode: string | null = null
   const pending: { cmd: AcceptedCommand; origin: 'public' | 'private' }[] = [] // difusões chegadas antes do snapshot (buffer de corrida)
   const listeners = new Set<() => void>()
@@ -219,13 +222,15 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
       subs.push(transport.onRoom((r) => {
         room = fromPublicRoom(r) // nunca carrega código nenhum — nem o do dono (D-036)
         resolvePlayerId()
+        const mine = r.seats.find((seat) => seat.uid === transport.uid)
+        if (r.status !== 'bidding' && mine?.openingBid != null) openingBid = mine.openingBid
         // Host iniciou a partida enquanto estávamos no lobby: o 1º snapshot já existe, mas
         // nenhuma difusão o traz (a difusão só carrega comandos) → busca-o agora (FR-006/014).
         // Piso `0` (043, T045): a sala fora do lobby é a PROMESSA de que existe partida a
         // ler. Sem o piso, um snapshot ainda não commitado era lido como "não há partida" e
         // esta era a ÚNICA chance de descobrir o contrário — o convidado ficava no lobby
         // enquanto a mesa jogava.
-        if (!game && r.status !== 'lobby') void resync(0)
+        if (!game && (r.status === 'playing' || r.status === 'paused' || r.status === 'ended')) void resync(0)
         notify()
       }))
       subs.push(transport.onCommandRejected((toUid, info) => {
@@ -269,7 +274,9 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
       // o único lugar de onde `myReentryCode` pode vir.
       const persisted = await transport.loadRoom()
       if (persisted) {
-        myReentryCode = persisted.seats.find((s) => s.uid === transport.uid)?.reentryCode || null
+        const mine = persisted.seats.find((s) => s.uid === transport.uid)
+        myReentryCode = mine?.reentryCode || null
+        openingBid = mine?.openingBid ?? null
       }
       if (persisted && !room) {
         room = redactRoom(persisted) // room() nunca carrega código nenhum, nem o do dono
@@ -295,6 +302,14 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
       transport.submit({ senderId: playerId, action }) // pessimista: não aplica local; espera a difusão
     },
 
+    submitOpeningBid(amount: number): void {
+      if (!playerId || room?.status !== 'bidding') return
+      openingBid = amount
+      transport.submitOpeningBid(amount)
+      notify()
+    },
+
+    openingBid: () => openingBid,
     game: () => game,
     room: () => room,
     playerId: () => playerId,
