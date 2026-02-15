@@ -104,7 +104,7 @@ export function NoticeLayer() {
             initial={reduced ? false : { scale: 0.8, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 18 }}
-            className="relative text-center px-6 select-none"
+            className="atlas-surface atlas-surface--modal lottery-card relative w-[32rem] max-w-[92vw] px-8 py-8 text-center select-none"
           >
             <p className="display text-cream leading-tight tracking-wide" style={{ fontSize: '36px', textShadow: '0 3px 14px rgba(0,0,0,0.6)' }}>
               <span className="text-gold-glow">{notice.playerId}</span> ganhou na loteria!

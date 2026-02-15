@@ -1,5 +1,5 @@
-// Casca única de modal do jogo — overlay, cartão e header em gradiente do
-// tema. Toda camada modal (ModalLayer, Trade, HandCard, LandAuction, Notice)
+// Casca única de modal do jogo — overlay, prancha Atlas e header integrado.
+// Toda camada modal (ModalLayer, Trade, HandCard, LandAuction, Notice)
 // usa este vocabulário; divergência de backdrop/raio/gradiente é bug.
 //
 // 044/T023 (US3/D4 do plan, D-039): é também o ÚNICO lugar que implementa acessibilidade
@@ -73,11 +73,11 @@ export function Overlay({
   )
 }
 
-// Cartão de modal — superfície com PROFUNDIDADE em vez de cor chapada: brilho
-// quente de latão descendo do header, vinheta escura no rodapé e bisel dourado
-// na borda superior (luz de castiçal). Raio modal, borda coffee, sombra
-// dropdown, entrada com spring e clique interno protegido (não fecha pelo
-// backdrop). Tema-aware: tudo via var(--color-*).
+// Cartão de modal — a mesma prancha cartográfica das telas de entrada:
+// superfície azul contínua, dupla moldura e marcas de registro nos cantos.
+// O latão aparece como fio, não como placa. A classe `atlas-surface` também
+// atende cards de decisão e popovers sem transformar essas superfícies em
+// modal nem alterar seus ciclos de vida.
 //
 // 044/T037 (FR-026): teto de altura + rolagem própria SÃO O PADRÃO daqui, não de cada
 // modal — antes, três camadas (`LandAuctionLayer`, `TradeLayer`, `HandCardLayer`)
@@ -103,17 +103,8 @@ export function ModalShell({ className, children }: { className?: string; childr
       exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.93, y: 8 }}
       transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 360, damping: 28 }}
       onClick={(e) => e.stopPropagation()}
-      style={{
-        background: [
-          'radial-gradient(90% 55% at 50% 0%, color-mix(in srgb, var(--color-brass) 10%, transparent) 0%, transparent 60%)',
-          'radial-gradient(130% 55% at 50% 118%, color-mix(in srgb, var(--color-coffee-950) 80%, transparent) 0%, transparent 60%)',
-          'linear-gradient(180deg, var(--color-coffee-800) 0%, var(--color-coffee-900) 100%)',
-        ].join(', '),
-        boxShadow:
-          'inset 0 1px 0 0 color-mix(in srgb, var(--color-brass-glow) 22%, transparent), var(--shadow-dropdown)',
-      }}
       className={cn(
-        'modal-shell border-2 border-coffee-500 rounded-[var(--radius-modal)] max-h-[calc(100svh-2rem)] overflow-auto overscroll-contain',
+        'atlas-surface atlas-surface--modal modal-shell max-h-[calc(100svh-2rem)] overflow-auto overscroll-contain',
         className,
       )}
     >
@@ -122,9 +113,8 @@ export function ModalShell({ className, children }: { className?: string; childr
   )
 }
 
-// Header de modal — faixa em gradiente do tema: brass (padrão), signal
-// (perigo/multa) ou um `bg` custom (stripe de grupo/raridade). Texto escuro
-// sobre latão, claro sobre signal/custom escuro.
+// Header de modal — título integrado à prancha com filete ornamental. `tone`
+// troca somente o acento sem criar uma segunda linguagem de superfície.
 export function ModalHeader({
   tone = 'brass',
   bg,
@@ -144,40 +134,38 @@ export function ModalHeader({
   onClose?: () => void // fecha SEM decidir (ex.: proposta recebida — responder depois)
   className?: string
 }) {
-  // Shine (não chapado): topo quase branco descendo pro tom cheio — placa de
-  // latão polido. Bisel: luz na aresta de cima, sombra na de baixo.
-  const background = bg ?? (tone === 'signal' ? 'var(--gradient-signal-shine)' : 'var(--gradient-brass-shine)')
-  const dark = tone !== 'signal' // texto tinta sobre latão/stripes; claro sobre signal
   // 044/T023 (D4 do plan): título vira o `aria-labelledby` do diálogo — o id vem de quem
   // envolve este header (Overlay ou o DecisionShell do GameHUD), nunca inventado aqui.
   const titleId = useModalTitleId()
+  const accent = bg ?? (tone === 'signal' ? 'var(--color-signal-glow)' : 'var(--color-brass)')
   return (
     <div
       data-tone={tone}
       className={cn(
-        'modal-header relative px-4 py-3 border-b-2 border-coffee-950 shrink-0',
+        'modal-header relative px-5 pt-5 pb-3 shrink-0',
         center && 'text-center',
-        onClose && 'pr-14',
+        onClose && 'px-14',
         className,
       )}
-      style={{
-        background,
-        boxShadow:
-          'inset 0 1px 0 0 color-mix(in srgb, white 32%, transparent), inset 0 -2px 0 0 color-mix(in srgb, var(--color-ink-950) 22%, transparent)',
-      }}
+      style={{ '--modal-header-accent': accent } as React.CSSProperties}
     >
       <div className={cn('relative z-[1] flex items-center gap-2.5', center && 'justify-center')}>
-        {icon && <div className="shrink-0 w-9 h-9 flex items-center justify-center">{icon}</div>}
+        {icon && <div className="modal-header__icon shrink-0 w-10 h-10 flex items-center justify-center">{icon}</div>}
         <div className={cn('min-w-0', !center && 'flex-1')}>
-          <h3 id={titleId ?? undefined} className={cn('display text-lg leading-none truncate', dark ? 'text-coffee-950' : 'text-cream')}>
+          <h3 id={titleId ?? undefined} className="display text-xl leading-none text-starlight truncate">
             {title}
           </h3>
           {subtitle && (
-            <p className={cn('label mt-0.5 text-micro', dark ? 'text-coffee-950/80' : 'text-cream/85')}>
+            <p className="label mt-1 text-micro text-starlight-muted">
               {subtitle}
             </p>
           )}
         </div>
+      </div>
+      <div className="modal-header__rule mt-3 flex items-center gap-2.5" aria-hidden="true">
+        <span />
+        <i />
+        <span />
       </div>
       {onClose && (
         <button
@@ -185,12 +173,7 @@ export function ModalHeader({
           onClick={onClose}
           aria-label="Fechar"
           title="Fechar (a proposta continua na mesa)"
-          className={cn(
-            'absolute z-[2] right-1 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full grid place-items-center transition-colors',
-            dark
-              ? 'text-coffee-950/70 hover:text-coffee-950 hover:bg-coffee-950/15'
-              : 'text-cream/70 hover:text-cream hover:bg-coffee-950/25',
-          )}
+          className="modal-header__close absolute z-[2] right-2 top-2 w-11 h-11 grid place-items-center transition-colors"
         >
           <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden>
             <path d="M18 6 6 18" />

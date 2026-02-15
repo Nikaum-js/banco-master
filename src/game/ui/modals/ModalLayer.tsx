@@ -93,16 +93,19 @@ function CardRevealCard({
       exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 10 }}
       transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 26 }}
       onClick={(e) => e.stopPropagation()}
-      className="w-[300px] max-w-[90vw] bg-coffee-800 rounded-[var(--radius-modal)] overflow-hidden border-2"
-      style={{ borderColor: RARITY_COLOR[view.rarity], boxShadow: `var(--shadow-dropdown), 0 0 22px color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 45%, transparent)` }}
+      className="atlas-surface atlas-surface--modal card-reveal w-[300px] max-w-[90vw] overflow-hidden"
+      style={{
+        '--atlas-surface-accent': RARITY_COLOR[view.rarity],
+        '--card-reveal-accent': RARITY_COLOR[view.rarity],
+        boxShadow: `inset 0 1px 0 color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 12%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-ink-950) 72%, transparent), 0 0 0 5px color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 18%, transparent), var(--shadow-dropdown), 0 0 22px color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 45%, transparent)`,
+      } as React.CSSProperties}
     >
-      {/* Faixa da raridade */}
+      {/* Raridade como filete, sem quebrar a superfície azul do modal. */}
       <div
-        className="px-4 py-2.5 flex items-center justify-between"
-        style={{ background: `linear-gradient(180deg, ${RARITY_COLOR[view.rarity]} 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 75%, var(--color-ink-950)) 100%)` }}
+        className="card-reveal__header px-5 pt-5 pb-3 flex items-center justify-between"
       >
-        <span className="display text-coffee-950 text-sm leading-none tracking-[var(--tracking-caps)] uppercase">{view.deckId === 'acaso' ? 'Acaso' : 'Tesouro'}</span>
-        <span className="label text-coffee-950/85 text-micro">{RARITY_LABEL[view.rarity]}</span>
+        <span className="display text-starlight text-base leading-none tracking-[var(--tracking-caps)] uppercase">{view.deckId === 'acaso' ? 'Acaso' : 'Tesouro'}</span>
+        <span className="label card-reveal__rarity text-micro">{RARITY_LABEL[view.rarity]}</span>
       </div>
 
       {/* Corpo — véu radial na cor da raridade atrás do título */}
@@ -561,11 +564,7 @@ function BusPicker({
       <ModalHeader
         title={title}
         subtitle={subtitle}
-        icon={
-          <span className="w-9 h-9 rounded-full bg-coffee-950/15 border border-coffee-950/25 grid place-items-center text-coffee-950">
-            <Bus size={19} />
-          </span>
-        }
+        icon={<Bus size={19} />}
       />
       <div className="px-5 pt-4 pb-3">
         <BusLine
@@ -682,7 +681,7 @@ function AuctionCard({
         center
         title="Leilão"
         subtitle="quem der mais, leva"
-        icon={<GavelIcon size={22} className="text-coffee-950" />}
+        icon={<GavelIcon size={22} />}
         className="[&_h3]:text-xl"
       />
       {/* Nome + ícone, centralizado */}

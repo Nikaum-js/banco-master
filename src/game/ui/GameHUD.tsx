@@ -34,7 +34,8 @@ import { EndGameScreen } from '@/game/ui/EndGameScreen'
 import { Button, Chip, MoneyPulse } from '@/game/ui/primitives'
 import { useMoneyPulse } from '@/game/ui/useMoneyPulse'
 import { useMotion } from '@/game/ui/motion'
-import { useDialogA11y, ModalTitleContext, useModalTitleId } from '@/game/ui/a11y/dialog'
+import { useDialogA11y, ModalTitleContext } from '@/game/ui/a11y/dialog'
+import { ModalHeader } from '@/game/ui/shell'
 import type { LoanRequest } from '@/game/economy/types'
 import { money as fmt } from '@/lib/money'
 
@@ -60,14 +61,10 @@ const SIGNAL_TEXT: React.CSSProperties = {
 // Cor do jogador por id (mesma paleta de assento do tabuleiro/tokens). Mantém o
 // credor visualmente ligado à sua carinha no board.
 // Cascas de largura total sobre o primitivo Button — hierarquia do card de
-// decisão: primária (latão + glow), neutra (secondary) e destrutiva (danger).
+// decisão: primária, neutra (secondary) e destrutiva (danger).
 function PrimaryBtn({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: ReactNode }) {
   return (
-    <Button
-      onClick={onClick}
-      disabled={disabled}
-      className="w-full py-2.5 shadow-[0_2px_10px_-2px_color-mix(in_srgb,var(--color-brass)_50%,transparent)]"
-    >
+    <Button onClick={onClick} disabled={disabled} className="w-full py-2.5">
       {children}
     </Button>
   )
@@ -131,12 +128,12 @@ function CardFrame({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.92, y: 8 }}
       transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 360, damping: 26 }}
-      className="pointer-events-auto relative max-w-[94vw] bg-coffee-800 rounded-[var(--radius-modal)] overflow-hidden"
+      className="atlas-surface atlas-surface--decision pointer-events-auto relative max-w-[94vw] overflow-hidden"
       style={{
         width,
-        border: `1.5px solid ${accent}`,
-        boxShadow: `var(--shadow-dropdown), 0 0 0 1px color-mix(in srgb, var(--color-ink-950) 60%, transparent), 0 0 34px -10px ${glow}`,
-      }}
+        '--atlas-surface-accent': accent,
+        boxShadow: `inset 0 1px 0 color-mix(in srgb, ${accent} 12%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-ink-950) 72%, transparent), 0 0 0 5px color-mix(in srgb, ${accent} 18%, transparent), var(--shadow-dropdown), 0 0 34px -10px ${glow}`,
+      } as React.CSSProperties}
     >
       {/* textura de papel + brilho de topo */}
       <div
@@ -445,32 +442,10 @@ export function GameHUD() {
   return null // sem decisão pendente
 }
 
-// Cabeçalho das reações — faixa dourada, ícone num selo redondo escuro, título +
-// subtítulo curto. Clima de "interrupção/alerta" sóbrio.
+// Cabeçalho das reações — a mesma prancha integrada dos demais modais. O
+// `DecisionShell` continua dono do contexto acessível e do ciclo de vida.
 function ReactionHead({ icon, title, subtitle }: { icon: ReactNode; title: string; subtitle: string }) {
-  // 044/T024: o id vem do `DecisionShell(dim)` que envolve este card — mesmo mecanismo do
-  // `ModalHeader` de shell.tsx, pro título virar `aria-labelledby` do diálogo.
-  const titleId = useModalTitleId()
-  return (
-    <div
-      className="relative flex items-center gap-3 px-5 py-3 border-b-2 border-coffee-950"
-      style={{ background: 'var(--gradient-brass)' }}
-    >
-      <motion.div
-        initial={{ scale: 0, rotate: -20 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ type: 'spring', stiffness: 320, damping: 14, delay: 0.1 }}
-        className="w-9 h-9 rounded-full flex items-center justify-center bg-coffee-900 shrink-0"
-        style={{ boxShadow: 'inset 0 0 0 1.5px color-mix(in srgb, var(--color-brass-glow) 60%, transparent)' }}
-      >
-        {icon}
-      </motion.div>
-      <div className="min-w-0">
-        <h3 id={titleId ?? undefined} className="display text-xl leading-none text-coffee-900">{title}</h3>
-        <p className="label text-coffee-900/80 leading-none mt-1 normal-case">{subtitle}</p>
-      </div>
-    </div>
-  )
+  return <ModalHeader icon={icon} title={title} subtitle={subtitle} />
 }
 
 const RATE_OPTIONS = [10, 20, 30, 40, 50] as const

@@ -580,39 +580,222 @@
      primitivos, não por skins desconectadas em cada feature.
      ================================================================ */
   .ui-button {
+    --ui-button-accent: var(--color-brass);
+    --ui-button-accent-hot: var(--color-brass-glow);
     position: relative;
+    color: var(--ui-button-accent-hot);
+    border-color: color-mix(in srgb, var(--ui-button-accent) 52%, var(--color-ink-500));
+    background: color-mix(in srgb, var(--ui-button-accent) 10%, var(--color-ink-900));
     box-shadow:
-      inset 0 1px 0 color-mix(in srgb, white 24%, transparent),
-      inset 0 -1px 0 color-mix(in srgb, var(--color-ink-950) 58%, transparent),
-      0 3px 0 color-mix(in srgb, var(--color-ink-950) 82%, transparent),
-      0 8px 18px -12px color-mix(in srgb, var(--color-brass) 65%, transparent);
+      inset 0 1px 0 color-mix(in srgb, var(--ui-button-accent-hot) 5%, transparent),
+      0 8px 22px -20px color-mix(in srgb, var(--ui-button-accent) 54%, transparent);
+    transform: translateZ(0);
+  }
+
+  .ui-button::after {
+    content: "";
+    position: absolute;
+    inset: -35% -45%;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    background:
+      linear-gradient(
+        108deg,
+        transparent 34%,
+        color-mix(in srgb, var(--ui-button-accent-hot) 13%, transparent) 50%,
+        transparent 66%
+      );
+    transform: translateX(-125%);
+    transition:
+      transform 520ms var(--ease-snap),
+      opacity var(--motion-fast) var(--ease-standard);
   }
 
   .ui-button[data-variant="primary"] {
-    background-image: var(--gradient-brass-shine);
+    color: var(--ui-button-accent-hot);
+    border-color: color-mix(in srgb, var(--ui-button-accent) 58%, var(--color-ink-500));
+    background: color-mix(in srgb, var(--ui-button-accent) 11%, var(--color-ink-900));
   }
 
   .ui-button[data-variant="secondary"] {
-    box-shadow:
-      inset 0 1px 0 rgb(238 242 251 / 0.07),
-      inset 0 -1px 0 color-mix(in srgb, var(--color-ink-950) 70%, transparent),
-      0 3px 0 color-mix(in srgb, var(--color-ink-950) 88%, transparent);
+    color: var(--color-starlight);
+    border-color: color-mix(in srgb, var(--color-ink-400) 72%, var(--ui-button-accent));
+    background: color-mix(in srgb, var(--color-ink-700) 38%, var(--color-ink-900));
   }
 
   .ui-button[data-variant="ghost"] {
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, var(--color-brass-glow) 9%, transparent),
-      0 2px 0 color-mix(in srgb, var(--color-ink-950) 70%, transparent);
+    color: var(--ui-button-accent);
+    border-color: color-mix(in srgb, var(--ui-button-accent) 42%, var(--color-ink-500));
+    background: color-mix(in srgb, var(--ui-button-accent) 6%, var(--color-ink-950));
   }
 
   .ui-button[data-variant="danger"] {
+    --ui-button-accent: var(--color-signal);
+    --ui-button-accent-hot: var(--color-signal-glow);
+    color: var(--color-signal-glow);
+    border-color: color-mix(in srgb, var(--color-signal) 58%, var(--color-ink-500));
+    background: color-mix(in srgb, var(--color-signal) 7%, var(--color-ink-950));
+  }
+
+  .ui-button:hover:not(:disabled) {
+    color: var(--ui-button-accent-hot);
+    border-color: var(--ui-button-accent);
+    background: color-mix(in srgb, var(--ui-button-accent) 17%, var(--color-ink-900));
     box-shadow:
-      inset 0 1px 0 color-mix(in srgb, var(--color-signal-glow) 10%, transparent),
-      0 2px 0 color-mix(in srgb, var(--color-signal-deep) 62%, transparent);
+      inset 0 1px 0 color-mix(in srgb, var(--ui-button-accent-hot) 8%, transparent),
+      0 12px 26px -20px color-mix(in srgb, var(--ui-button-accent) 72%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .ui-button:hover:not(:disabled)::after,
+  .ui-button:focus-visible::after {
+    opacity: 1;
+    transform: translateX(125%);
   }
 
   .ui-button:active:not(:disabled) {
-    box-shadow: var(--shadow-press);
+    background: color-mix(in srgb, var(--ui-button-accent) 22%, var(--color-ink-950));
+    box-shadow:
+      inset 0 1px 4px color-mix(in srgb, var(--color-ink-950) 64%, transparent),
+      0 4px 12px -10px color-mix(in srgb, var(--ui-button-accent) 56%, transparent);
+    transform: translateY(1px) scale(0.992);
+    transition-duration: var(--motion-fast);
+  }
+
+  .ui-button:focus-visible {
+    outline: 2px solid var(--ui-button-accent-hot);
+    outline-offset: 3px;
+  }
+
+  .ui-button:disabled {
+    color: color-mix(in srgb, var(--color-starlight-muted) 82%, transparent);
+    border-color: color-mix(in srgb, var(--color-ink-500) 72%, transparent);
+    background: color-mix(in srgb, var(--color-ink-950) 48%, transparent);
+    box-shadow: none;
+    opacity: 0.48;
+    filter: none;
+    transform: none;
+  }
+
+  .ui-button:disabled::after {
+    opacity: 0;
+    transform: translateX(-125%);
+  }
+
+  /* A rolagem continua sendo o gesto-herói do tabuleiro. Ela preserva o latão
+     sólido e ganha pulso de prontidão + resposta viva enquanto os dados giram. */
+  .ui-button.dice-roll-button {
+    color: var(--color-ink-950);
+    border-color: color-mix(in srgb, var(--color-brass-glow) 68%, white);
+    background: var(--gradient-brass-shine);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 28%, transparent),
+      0 3px 0 color-mix(in srgb, var(--color-brass-soft) 64%, var(--color-ink-950)),
+      0 12px 24px -18px color-mix(in srgb, var(--color-brass) 74%, transparent);
+    animation: dice-button-ready 2.6s var(--ease-paper) infinite;
+  }
+
+  .ui-button.dice-roll-button:hover:not(:disabled) {
+    color: var(--color-ink-950);
+    border-color: var(--color-brass-glow);
+    background: var(--gradient-brass-shine);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 34%, transparent),
+      0 3px 0 color-mix(in srgb, var(--color-brass-soft) 68%, var(--color-ink-950)),
+      0 0 0 1px color-mix(in srgb, var(--color-brass) 34%, transparent),
+      0 16px 32px -18px color-mix(in srgb, var(--color-brass) 82%, transparent);
+    transform: translateY(-2px) scale(1.012);
+  }
+
+  .ui-button.dice-roll-button:active:not(:disabled) {
+    animation: none;
+    box-shadow:
+      inset 0 2px 5px color-mix(in srgb, var(--color-ink-950) 38%, transparent),
+      0 1px 0 color-mix(in srgb, var(--color-brass-soft) 60%, var(--color-ink-950));
+    transform: translateY(2px) scale(0.988);
+  }
+
+  .ui-button.dice-roll-button > svg {
+    transition: transform var(--motion-base) var(--ease-snap);
+  }
+
+  .ui-button.dice-roll-button:hover:not(:disabled) > svg {
+    transform: rotate(-8deg) scale(1.08);
+  }
+
+  .ui-button.dice-roll-button--rolling:disabled {
+    color: var(--color-ink-950);
+    border-color: var(--color-brass-glow);
+    background: var(--gradient-brass-shine);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 32%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--color-brass) 36%, transparent),
+      0 14px 30px -18px color-mix(in srgb, var(--color-brass) 80%, transparent);
+    opacity: 1;
+    animation: dice-button-rolling 560ms var(--ease-paper) infinite alternate;
+  }
+
+  .ui-button.dice-roll-button--rolling:disabled::after {
+    opacity: 1;
+    animation: dice-button-sweep 720ms var(--ease-snap) infinite;
+  }
+
+  .ui-button.dice-roll-button--rolling:disabled > svg {
+    animation: dice-button-icon 560ms var(--ease-snap) infinite;
+  }
+
+  @keyframes dice-button-ready {
+    0%, 100% {
+      box-shadow:
+        inset 0 1px 0 color-mix(in srgb, white 28%, transparent),
+        0 3px 0 color-mix(in srgb, var(--color-brass-soft) 64%, var(--color-ink-950)),
+        0 12px 24px -18px color-mix(in srgb, var(--color-brass) 60%, transparent);
+    }
+    50% {
+      box-shadow:
+        inset 0 1px 0 color-mix(in srgb, white 31%, transparent),
+        0 3px 0 color-mix(in srgb, var(--color-brass-soft) 64%, var(--color-ink-950)),
+        0 16px 30px -17px color-mix(in srgb, var(--color-brass) 88%, transparent);
+    }
+  }
+
+  @keyframes dice-button-rolling {
+    from { filter: brightness(0.96); }
+    to { filter: brightness(1.08); }
+  }
+
+  @keyframes dice-button-sweep {
+    from { transform: translateX(-125%); }
+    to { transform: translateX(125%); }
+  }
+
+  @keyframes dice-button-icon {
+    0%, 100% { transform: rotate(-10deg) scale(0.96); }
+    50% { transform: rotate(10deg) scale(1.08); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ui-button,
+    .ui-button:hover:not(:disabled),
+    .ui-button:active:not(:disabled) {
+      transform: none;
+      will-change: auto;
+    }
+
+    .ui-button::after,
+    .ui-button:hover:not(:disabled)::after,
+    .ui-button:focus-visible::after,
+    .ui-button.dice-roll-button,
+    .ui-button.dice-roll-button--rolling:disabled,
+    .ui-button.dice-roll-button--rolling:disabled::after,
+    .ui-button.dice-roll-button--rolling:disabled > svg {
+      animation: none;
+    }
+
+    .ui-button::after {
+      display: none;
+    }
   }
 
   .modal-overlay {
@@ -2156,11 +2339,6 @@
   .home-map-panel__counter {
     color: color-mix(in srgb, var(--color-starlight-muted) 68%, transparent);
   }
-  .home-map-panel__primary {
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.2),
-      0 10px 28px -16px color-mix(in srgb, var(--home-map-hot) 72%, transparent);
-  }
   .home-map-panel__invite {
     width: 100%;
     min-height: 2.75rem;
@@ -2246,21 +2424,26 @@
   }
   .home-map-panel--neon .home-map-panel__primary,
   .home-map-panel--neon .home-map-panel__join {
-    border-color: #ff8cc3;
+    --ui-button-accent: #f2589c;
+    --ui-button-accent-hot: #ffe14a;
+    border-color: color-mix(in srgb, var(--ui-button-accent) 58%, var(--color-ink-500));
     border-radius: 0;
-    background: linear-gradient(180deg, #ff8cc3, #f2589c 55%, #c22a72);
-    color: #1a0512;
-    box-shadow:
-      0 5px 0 #7d1749,
-      0 0 24px -5px rgb(242 88 156 / 0.85);
+    background: color-mix(in srgb, var(--ui-button-accent) 11%, var(--color-ink-900));
+    color: var(--ui-button-accent-hot);
+    box-shadow: none;
     text-transform: uppercase;
+  }
+  .home-map-panel--neon .home-map-panel__primary:hover:not(:disabled),
+  .home-map-panel--neon .home-map-panel__join:hover:not(:disabled) {
+    border-color: var(--ui-button-accent);
+    background: color-mix(in srgb, var(--ui-button-accent) 17%, var(--color-ink-900));
+    color: var(--ui-button-accent-hot);
+    box-shadow: 0 12px 26px -20px color-mix(in srgb, var(--ui-button-accent) 72%, transparent);
   }
   .home-map-panel--neon .home-map-panel__primary:active:not(:disabled),
   .home-map-panel--neon .home-map-panel__join:active:not(:disabled) {
-    transform: translateY(4px);
-    box-shadow:
-      0 1px 0 #7d1749,
-      0 0 18px -7px rgb(242 88 156 / 0.75);
+    background: color-mix(in srgb, var(--ui-button-accent) 22%, var(--color-ink-950));
+    box-shadow: inset 0 1px 4px color-mix(in srgb, var(--color-ink-950) 64%, transparent);
   }
   .home-map-panel--neon .home-map-panel__invite {
     border-color: #402f72;
@@ -2903,26 +3086,7 @@
   }
   .identity-submit.ui-button {
     margin-top: 0.1rem;
-    border-color: color-mix(in srgb, var(--color-brass) 52%, var(--color-ink-500));
     border-radius: var(--radius-sharp);
-    color: var(--color-starlight);
-    background: color-mix(in srgb, var(--color-brass) 10%, var(--color-ink-900));
-    box-shadow: none;
-    filter: none;
-    transform: none;
-  }
-  .identity-submit.ui-button:hover:not(:disabled) {
-    border-color: var(--color-brass);
-    color: var(--color-brass-glow);
-    background: color-mix(in srgb, var(--color-brass) 17%, var(--color-ink-900));
-    box-shadow: none;
-    filter: none;
-    transform: none;
-  }
-  .identity-submit.ui-button:active:not(:disabled) {
-    background: color-mix(in srgb, var(--color-brass) 22%, var(--color-ink-950));
-    box-shadow: none;
-    transform: none;
   }
 
   .lobby-layout {
@@ -2958,30 +3122,6 @@
     margin-top: auto;
     min-height: 3rem;
     border-radius: var(--radius-sharp);
-    border-color: color-mix(in srgb, var(--color-brass) 42%, var(--color-ink-500));
-    color: var(--color-brass-glow);
-    background: color-mix(in srgb, var(--color-brass) 8%, var(--color-ink-950));
-    box-shadow: none;
-    filter: none;
-    transform: none;
-  }
-  .lobby-start-cta.ui-button:hover:not(:disabled) {
-    border-color: var(--color-brass);
-    color: var(--color-starlight);
-    background: color-mix(in srgb, var(--color-brass) 15%, var(--color-ink-900));
-    box-shadow: none;
-    filter: none;
-    transform: none;
-  }
-  .lobby-start-cta.ui-button:active:not(:disabled) {
-    background: color-mix(in srgb, var(--color-brass) 19%, var(--color-ink-950));
-    transform: none;
-  }
-  .lobby-start-cta.ui-button:disabled {
-    border-color: color-mix(in srgb, var(--color-ink-500) 70%, transparent);
-    color: color-mix(in srgb, var(--color-starlight-muted) 86%, transparent);
-    background: color-mix(in srgb, var(--color-ink-950) 32%, transparent);
-    opacity: 1;
   }
 
   @media (max-width: 720px) {
@@ -3916,5 +4056,248 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .bm-spin-slow { animation: none; }
+  }
+}
+
+/* =====================================================================
+   Moldura Atlas canônica
+   Home, modais, decisões e popovers compartilham o mesmo material:
+   tinta azul contínua, latão como filete, dupla borda e marcas de registro.
+   A classe é somente visual; foco, Escape, portais e ciclo de vida continuam
+   pertencendo aos componentes que já os implementam.
+   ===================================================================== */
+@layer components {
+  .atlas-surface {
+    --atlas-surface-accent: var(--color-brass);
+    --atlas-surface-radius: var(--radius-card);
+    position: relative;
+    isolation: isolate;
+    border: 1px solid color-mix(in srgb, var(--atlas-surface-accent) 34%, var(--color-ink-500));
+    border-radius: var(--atlas-surface-radius);
+    background:
+      linear-gradient(color-mix(in srgb, var(--atlas-surface-accent) 3.5%, transparent) 1px, transparent 1px) 0 0 / 48px 48px,
+      linear-gradient(90deg, color-mix(in srgb, var(--atlas-surface-accent) 3.5%, transparent) 1px, transparent 1px) 0 0 / 48px 48px,
+      radial-gradient(105% 58% at 50% 0%, color-mix(in srgb, var(--atlas-surface-accent) 7%, transparent), transparent 58%),
+      linear-gradient(180deg, color-mix(in srgb, var(--color-ink-800) 98%, transparent), color-mix(in srgb, var(--color-ink-900) 99%, transparent));
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--atlas-surface-accent) 13%, transparent),
+      0 0 0 4px color-mix(in srgb, var(--color-ink-950) 72%, transparent),
+      0 0 0 5px color-mix(in srgb, var(--atlas-surface-accent) 17%, transparent),
+      var(--shadow-dropdown);
+    outline: 0;
+  }
+
+  .atlas-surface::before {
+    content: "";
+    display: block;
+    position: absolute;
+    inset: 6px;
+    z-index: 20;
+    pointer-events: none;
+    background: none;
+    border: 1px solid color-mix(in srgb, var(--atlas-surface-accent) 16%, transparent);
+    border-radius: max(0px, calc(var(--atlas-surface-radius) - 6px));
+    box-shadow: inset 0 0 26px color-mix(in srgb, var(--color-ink-950) 24%, transparent);
+  }
+
+  .atlas-surface::after {
+    content: "";
+    display: block;
+    position: absolute;
+    inset: 11px;
+    z-index: 21;
+    pointer-events: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    --atlas-tick: color-mix(in srgb, var(--atlas-surface-accent) 58%, transparent);
+    background:
+      linear-gradient(var(--atlas-tick), var(--atlas-tick)) left top / 16px 1px,
+      linear-gradient(var(--atlas-tick), var(--atlas-tick)) left top / 1px 16px,
+      linear-gradient(var(--atlas-tick), var(--atlas-tick)) right top / 16px 1px,
+      linear-gradient(var(--atlas-tick), var(--atlas-tick)) right top / 1px 16px,
+      linear-gradient(var(--atlas-tick), var(--atlas-tick)) left bottom / 16px 1px,
+      linear-gradient(var(--atlas-tick), var(--atlas-tick)) left bottom / 1px 16px,
+      linear-gradient(var(--atlas-tick), var(--atlas-tick)) right bottom / 16px 1px,
+      linear-gradient(var(--atlas-tick), var(--atlas-tick)) right bottom / 1px 16px;
+    background-repeat: no-repeat;
+  }
+
+  .atlas-surface--modal,
+  .atlas-surface--decision {
+    --atlas-surface-radius: var(--radius-modal);
+  }
+
+  .atlas-surface--popover {
+    --atlas-surface-radius: var(--radius-card);
+  }
+
+  .atlas-surface:focus-visible {
+    outline: 2px solid var(--atlas-surface-accent);
+    outline-offset: 6px;
+  }
+
+  /* A home também é uma prancha Atlas. O override corrige a antiga regra
+     `.home-map-panel::before { display: none }` sem duplicar sua estrutura. */
+  .entry-panel.atlas-surface,
+  .home-map-panel.atlas-surface {
+    border-color: color-mix(in srgb, var(--atlas-surface-accent) 36%, var(--color-ink-500));
+    outline: 0;
+  }
+
+  .home-map-panel--neon.atlas-surface {
+    --atlas-surface-accent: var(--neon-pink);
+  }
+
+  /* Cabeçalho integrado: nada de placa dourada; o acento vive no ícone,
+     no texto auxiliar e no filete com losango. */
+  .modal-header {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .modal-header::before,
+  .modal-header::after {
+    content: none;
+  }
+
+  .modal-header__icon {
+    color: var(--modal-header-accent);
+    border: 1px solid color-mix(in srgb, var(--modal-header-accent) 54%, var(--color-ink-500));
+    border-radius: var(--radius-sharp);
+    background: color-mix(in srgb, var(--modal-header-accent) 7%, var(--color-ink-950));
+    box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--color-ink-950) 30%, transparent);
+  }
+
+  .modal-header[data-tone="signal"] h3,
+  .modal-header[data-tone="signal"] .modal-header__rule {
+    color: var(--modal-header-accent);
+  }
+
+  .modal-header__rule {
+    color: var(--modal-header-accent);
+  }
+
+  .modal-header__rule > span {
+    height: 1px;
+    flex: 1;
+    background: linear-gradient(90deg, transparent, currentColor);
+    opacity: 0.5;
+  }
+
+  .modal-header__rule > span:last-child {
+    background: linear-gradient(90deg, currentColor, transparent);
+  }
+
+  .modal-header__rule > i {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 auto;
+    border: 1px solid currentColor;
+    background: color-mix(in srgb, currentColor 20%, var(--color-ink-900));
+    rotate: 45deg;
+  }
+
+  .modal-header__close,
+  .deed-close {
+    color: var(--color-starlight-muted);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sharp);
+    background: transparent;
+  }
+
+  .modal-header__close:hover,
+  .deed-close:hover {
+    color: var(--color-starlight);
+    border-color: color-mix(in srgb, var(--atlas-surface-accent) 30%, var(--color-ink-500));
+    background: color-mix(in srgb, var(--atlas-surface-accent) 7%, var(--color-ink-950));
+  }
+
+  .modal-header__close:focus-visible,
+  .deed-close:focus-visible {
+    outline: 2px solid var(--color-brass-glow);
+    outline-offset: -2px;
+  }
+
+  /* Popovers de título preservam a cor da cidade/tipo como filete, sem
+     abandonar a mesma superfície azul dos modais. */
+  .deed-popover {
+    background:
+      radial-gradient(110% 50% at 50% 0%, color-mix(in srgb, var(--atlas-surface-accent) 8%, transparent), transparent 60%),
+      linear-gradient(180deg, var(--color-ink-800), var(--color-ink-900));
+  }
+
+  .deed-header {
+    --deed-accent: var(--atlas-surface-accent);
+    border-bottom: 1px solid color-mix(in srgb, var(--deed-accent) 38%, var(--color-ink-500));
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--deed-accent) 10%, transparent), transparent 62%),
+      color-mix(in srgb, var(--color-ink-900) 76%, transparent);
+  }
+
+  .deed-header::after {
+    content: "";
+    position: absolute;
+    left: 1rem;
+    right: 1rem;
+    bottom: -1px;
+    height: 1px;
+    background: linear-gradient(90deg, var(--deed-accent), color-mix(in srgb, var(--deed-accent) 14%, transparent), transparent);
+    opacity: 0.72;
+  }
+
+  .deed-header__meta,
+  .deed-header__tag {
+    color: color-mix(in srgb, var(--deed-accent) 84%, var(--color-starlight));
+  }
+
+  .deed-header__tag {
+    border: 1px solid color-mix(in srgb, var(--deed-accent) 48%, var(--color-ink-500));
+    border-radius: var(--radius-sharp);
+    background: color-mix(in srgb, var(--deed-accent) 8%, var(--color-ink-950));
+  }
+
+  /* Cartas usam a raridade como o mesmo filete contextual dos deeds. */
+  .card-reveal__header {
+    border-bottom: 1px solid color-mix(in srgb, var(--card-reveal-accent) 42%, var(--color-ink-500));
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--card-reveal-accent) 10%, transparent), transparent 66%),
+      color-mix(in srgb, var(--color-ink-900) 72%, transparent);
+  }
+
+  .card-reveal__rarity {
+    color: color-mix(in srgb, var(--card-reveal-accent) 82%, var(--color-starlight));
+  }
+
+  .lottery-card {
+    cursor: pointer;
+    background:
+      radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--color-brass) 15%, transparent), transparent 52%),
+      linear-gradient(180deg, var(--color-ink-800), var(--color-ink-900));
+  }
+
+  @media (max-width: 640px) {
+    .atlas-surface::before {
+      inset: 4px;
+    }
+
+    .atlas-surface::after {
+      inset: 8px;
+      background-size:
+        12px 1px, 1px 12px,
+        12px 1px, 1px 12px,
+        12px 1px, 1px 12px,
+        12px 1px, 1px 12px;
+    }
+
+    .modal-header {
+      padding-inline: 1.25rem;
+    }
+
+    .modal-header:has(.modal-header__close) {
+      padding-inline: 3.5rem;
+    }
   }
 }

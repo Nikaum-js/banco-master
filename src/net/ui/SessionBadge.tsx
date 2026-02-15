@@ -39,7 +39,7 @@ export function SessionBadge({ link }: { link: string }) {
   }
 
   return (
-    <div className="session-access fixed bottom-4 right-4 z-[74] w-72 max-w-[calc(100vw-2rem)] p-3 flex flex-col gap-1">
+    <div className="atlas-surface atlas-surface--popover session-access fixed bottom-4 right-4 z-[74] w-72 max-w-[calc(100vw-2rem)] p-3 flex flex-col gap-1">
       <div className="flex items-center justify-between">
         <span className="label text-gold">Seu acesso</span>
         <button type="button" onClick={() => setOpen(false)} aria-label="Recolher" className="w-11 h-11 -mr-2 -my-2 grid place-items-center text-cream-muted/85 hover:text-cream text-xs">

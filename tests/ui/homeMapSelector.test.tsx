@@ -28,6 +28,10 @@ describe('seletor visual do mapa na home', () => {
       />,
     )
 
+    const homePanel = document.querySelector('.home-map-panel')
+    expect(homePanel?.classList.contains('atlas-surface')).toBe(true)
+    expect(homePanel?.classList.contains('atlas-surface--entry')).toBe(true)
+
     const input = screen.getByLabelText('Seu nome') as HTMLInputElement
     fireEvent.change(input, { target: { value: 'Nikaum' } })
 

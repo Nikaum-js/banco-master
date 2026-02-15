@@ -51,6 +51,18 @@ describe('trap de foco do modal (T022)', () => {
     expect(dialog.getAttribute('aria-modal')).toBe('true')
   })
 
+  it('o cartão e o header herdam a moldura Atlas canônica sem placa inline', () => {
+    render(<Harness />)
+    fireEvent.click(screen.getByText('Abrir'))
+
+    const shell = document.querySelector('.modal-shell')
+    const header = document.querySelector('.modal-header') as HTMLElement | null
+    expect(shell?.classList.contains('atlas-surface')).toBe(true)
+    expect(shell?.classList.contains('atlas-surface--modal')).toBe(true)
+    expect(header?.style.background).toBe('')
+    expect(header?.querySelector('.modal-header__rule')).toBeTruthy()
+  })
+
   it('Tab e Shift+Tab circulam só entre os controles do modal (trap)', () => {
     render(<Harness />)
     fireEvent.click(screen.getByText('Abrir'))

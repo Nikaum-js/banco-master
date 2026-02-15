@@ -9,8 +9,8 @@ import { useMotion, MOTION } from '@/game/ui/motion'
 // Botão canônico do jogo — quatro variantes com a MESMA régua de padding,
 // fonte, hover e estado desabilitado. Toda superfície (HUD, modais, trade,
 // leilões, deed) deriva daqui; divergência visual de botão é bug.
-//   primary   → latão sólido, texto tinta (ação principal)
-//   secondary → superfície de tinta com borda (ação neutra)
+//   primary   → tinta com presença de latão (ação principal)
+//   secondary → tinta mais neutra e borda discreta
 //   ghost     → contorno dourado leve (ação de baixo peso, ex. "nova proposta")
 //   danger    → contorno signal que preenche no hover (destrutivo)
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
@@ -26,18 +26,10 @@ export function Button({
       type={type}
       data-variant={variant}
       className={cn(
-        'ui-button min-h-11 px-3 py-2 rounded-[var(--radius-card)] border font-bold text-sm leading-none',
+        'ui-button min-h-11 px-3 py-2 rounded-[var(--radius-card)] border font-bold text-sm leading-none overflow-hidden isolate cursor-pointer',
         'inline-flex items-center justify-center gap-1.5 whitespace-nowrap',
-        'touch-manipulation transition-[transform,filter,background-color,border-color,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-press)]',
-        'hover:-translate-y-px active:translate-y-px active:scale-[0.985] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:active:translate-y-0 disabled:active:scale-100',
-        variant === 'primary' &&
-          'bg-gold text-coffee-950 border-gold-glow/55 hover:brightness-105 disabled:hover:brightness-100',
-        variant === 'secondary' &&
-          'bg-gradient-to-b from-coffee-700 to-coffee-800 text-cream border-coffee-500 hover:border-gold/60 hover:from-coffee-600 hover:to-coffee-700 disabled:hover:from-coffee-700 disabled:hover:to-coffee-800 disabled:hover:border-coffee-500',
-        variant === 'ghost' &&
-          'bg-gold/[0.06] text-gold border-gold/40 hover:bg-gold/15 hover:border-gold/70 disabled:hover:bg-gold/[0.06]',
-        variant === 'danger' &&
-          'bg-transparent text-signal-glow border-signal hover:bg-signal hover:text-cream disabled:hover:bg-transparent disabled:hover:text-signal-glow',
+        'touch-manipulation transition-[transform,filter,background-color,border-color,box-shadow,color] duration-[var(--motion-base)] ease-[var(--ease-snap)]',
+        'disabled:cursor-not-allowed',
         className,
       )}
       {...props}

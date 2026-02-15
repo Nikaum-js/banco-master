@@ -327,7 +327,7 @@ export function EntryPanel({ className, children }: { className?: string; childr
       initial={reduced ? false : { opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 260, damping: 26 }}
-      className={cn('entry-panel w-full', className)}
+      className={cn('atlas-surface atlas-surface--entry entry-panel w-full', className)}
     >
       {children}
     </motion.div>

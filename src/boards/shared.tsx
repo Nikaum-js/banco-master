@@ -738,8 +738,9 @@ function toUiSpeedFace(speed: number | 'mr-banco' | 'onibus'): SpeedFace {
 const ROLL_DURATION_MS = 1050
 
 // Botão único das ações do turno (Rolar / Comprar / Leilão / Finalizar) —
-// casca sobre o primitivo Button com a voz display CONDENSADA e porte maior;
-// a primária ganha borda gold-soft + glow no hover (é O botão do jogo).
+// casca sobre o primitivo Button com a voz display CONDENSADA e porte maior.
+// A exceção visual do botão de rolagem entra no call site via `dice-roll-button`;
+// comprar, leiloar e finalizar seguem o Button canônico.
 //
 // `display--tight` e não só `display`: a zona de ação é uma coluna de 280px fixos e às
 // vezes carrega DOIS botões ("Comprar R$ 100" + "Leilão"). Medido, a display larga do tema
@@ -771,8 +772,6 @@ function TurnActionBtn({
       title={title}
       className={cn(
         'px-5 py-3 display display--tight font-normal text-base tracking-wide gap-2',
-        variant === 'primary' &&
-          'border border-gold-soft hover:bg-gold-glow hover:brightness-100 hover:shadow-[var(--shadow-glow)] disabled:hover:bg-gold disabled:hover:shadow-none',
         className,
       )}
     >
@@ -782,36 +781,22 @@ function TurnActionBtn({
   )
 }
 
-// Canhoto de Bus Ticket — ação opcional pré-rolagem/fim de turno (034). Vive na
-// zona de ação da DiceArena (onde o jogador já decide o turno), não flutuando
-// sobre o tabuleiro. Visual de BILHETE de verdade: papel com tinta de latão,
-// picote tracejado com furos separando o corpo do "×N", levemente torto — e se
-// endireita com glow no hover, como quem destaca o canhoto.
+// Ação opcional pré-rolagem/fim de turno (034). Vive na zona de ação da
+// DiceArena e usa o mesmo Button canônico das demais decisões do jogo.
 function BusTicketStub({ count, onClick }: { count: number; onClick: () => void }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
       onClick={onClick}
-      className="group relative w-full flex items-stretch overflow-hidden rounded-[var(--radius-card)] border border-gold/45 text-left transition-all -rotate-1 hover:rotate-0 hover:border-gold hover:shadow-[var(--shadow-glow)] active:translate-y-px"
-      style={{
-        background:
-          'linear-gradient(115deg, color-mix(in srgb, var(--color-brass) 16%, var(--color-coffee-900)) 0%, var(--color-coffee-900) 55%, color-mix(in srgb, var(--color-brass) 8%, var(--color-coffee-900)) 100%)',
-      }}
+      className="group w-full justify-start px-3 py-2.5 text-left"
     >
-      <span className="flex items-center gap-2.5 flex-1 min-w-0 pl-3 pr-2 py-2">
-        <Bus size={16} className="text-gold-glow shrink-0 transition-transform group-hover:translate-x-0.5" />
-        <span className="min-w-0">
-          <span className="block display text-cream text-sm leading-none tracking-wide">Usar Bus Ticket</span>
-          <span className="block label text-cream-muted leading-none mt-1 text-nano">mover no mesmo lado</span>
-        </span>
-      </span>
-      {/* picote: linha tracejada + furos de punção nas pontas */}
-      <span className="relative shrink-0 border-l border-dashed border-gold/40" aria-hidden>
-        <span className="absolute -top-[5px] -left-[4.5px] w-2 h-2 rounded-full bg-coffee-950" />
-        <span className="absolute -bottom-[5px] -left-[4.5px] w-2 h-2 rounded-full bg-coffee-950" />
+      <Bus size={16} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
+      <span className="min-w-0 flex-1">
+        <span className="block display display--tight text-sm leading-none tracking-wide">Usar Bus Ticket</span>
+        <span className="block label text-cream-muted leading-none mt-1 text-nano">mover no mesmo lado</span>
       </span>
       <span className="shrink-0 flex items-center px-3 currency text-gold-glow text-sm tabular-nums">×{count}</span>
-    </button>
+    </Button>
   )
 }
 
@@ -967,7 +952,13 @@ export function DiceArena() {
             Finalizar turno
           </TurnActionBtn>
         ) : (
-          <TurnActionBtn variant="primary" disabled={!canRoll} icon={<DiceIcon size={18} className="shrink-0" />} onClick={handleRoll}>
+          <TurnActionBtn
+            variant="primary"
+            disabled={!canRoll}
+            icon={<DiceIcon size={18} className="shrink-0" />}
+            onClick={handleRoll}
+            className={cn('dice-roll-button', rolling && 'dice-roll-button--rolling')}
+          >
             {rolling ? 'Rolando…' : 'Rolar dados'}
           </TurnActionBtn>
         )}
@@ -1650,6 +1641,7 @@ export function PropertyPopover({
   // Geometria do balão vem de `./topology` — este bloco estava escrito TRÊS vezes,
   // uma por popover (property/airport/utility).
   const { position: positionStyle, centerTransform, tail: tailStyle } = popoverPlacement(side)
+  const popoverAccent = deedPresentation(square).accent
 
   return (
     <div
@@ -1674,13 +1666,11 @@ export function PropertyPopover({
             da propriedade estoura `max-h`, a rolagem precisa estar alcançável pelo teclado. */}
         <div
           tabIndex={0}
-          className="
+          className="atlas-surface atlas-surface--popover deed-popover
             w-[270px]
-            bg-coffee-800 border-2 border-coffee-500
-            rounded-[var(--radius-card)]
-            shadow-[var(--shadow-dropdown)]
             overflow-x-hidden overflow-y-auto max-h-[calc(100vh-24px)]
           "
+          style={{ '--atlas-surface-accent': popoverAccent } as React.CSSProperties}
         >
           <PropertyDeedContent square={square} onClose={onClose} />
         </div>
@@ -1812,24 +1802,17 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
     <>
       {/* Header com stripe colorida + bandeira + nome */}
       <div
-        className="relative px-3.5 py-3 border-b-2 border-coffee-950"
-        style={{
-          background: `linear-gradient(180deg, ${stripeColor} 0%, ${stripeColor} 60%, color-mix(in srgb, ${stripeColor} 75%, #000) 100%)`,
-        }}
+        className="deed-header relative px-4 pt-4 pb-3"
+        style={{ '--deed-accent': stripeColor } as React.CSSProperties}
       >
         <button
           onClick={onClose}
           aria-label="Fechar"
-          className="
-            absolute top-1.5 right-1.5 w-6 h-6 rounded-full
-            bg-coffee-950/45 text-cream hover:bg-coffee-950/75
-            flex items-center justify-center text-xs
-            transition-colors
-          "
+          className="deed-close absolute top-1.5 right-1.5 w-11 h-11 flex items-center justify-center text-xs transition-colors"
         >
           ✕
         </button>
-        <div className="flex items-center gap-2.5 pr-6">
+        <div className="flex items-center gap-2.5 pr-10">
           <div
             className="
               shrink-0 w-9 h-9 rounded-full
@@ -1846,10 +1829,10 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
             />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="display text-coffee-950 text-xl leading-none truncate">
+            <h3 className="display text-starlight text-xl leading-none truncate">
               {presentation.name}
             </h3>
-            <p className="label text-coffee-950/80 mt-0.5 text-micro">
+            <p className="label deed-header__meta mt-1 text-micro">
               {presentation.subtitle}
             </p>
           </div>
@@ -1924,17 +1907,17 @@ export function AirportPopover({
   return (
     <div ref={clampRef} style={{ position: 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ position: 'relative' }}>
-        <div className="w-[270px] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden">
-          {/* Header dourado */}
-          <div className="relative px-3.5 py-3 border-b-2 border-coffee-950" style={{ background: 'linear-gradient(180deg, var(--color-brass) 0%, var(--color-brass-soft) 100%)' }}>
-            <button onClick={onClose} aria-label="Fechar" className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-coffee-950/45 text-cream hover:bg-coffee-950/75 flex items-center justify-center text-xs transition-colors">✕</button>
-            <div className="flex items-center gap-2.5 pr-6">
+        <div className="atlas-surface atlas-surface--popover deed-popover w-[270px] overflow-hidden">
+          {/* Header integrado à prancha Atlas. */}
+          <div className="deed-header relative px-4 pt-4 pb-3" style={{ '--deed-accent': 'var(--color-brass)' } as React.CSSProperties}>
+            <button onClick={onClose} aria-label="Fechar" className="deed-close absolute top-1.5 right-1.5 w-11 h-11 flex items-center justify-center text-xs transition-colors">✕</button>
+            <div className="flex items-center gap-2.5 pr-10">
               <div className="shrink-0 w-9 h-9 flex items-center justify-center">
                 <SquareIcon square={square} size={32} />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="display text-coffee-950 text-lg leading-none truncate">{presentation.name}</h3>
-                <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-coffee-950/25 text-coffee-950 font-bold" style={{ fontSize: '10px', letterSpacing: '0.08em' }}>{square.iata}</span>
+                <h3 className="display text-starlight text-lg leading-none truncate">{presentation.name}</h3>
+                <span className="deed-header__tag inline-block mt-1 px-1.5 py-0.5 font-bold" style={{ fontSize: '10px', letterSpacing: '0.08em' }}>{square.iata}</span>
               </div>
             </div>
           </div>
@@ -1994,17 +1977,20 @@ export function UtilityPopover({
   return (
     <div ref={clampRef} style={{ position: 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ position: 'relative' }}>
-        <div className="w-[270px] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden">
-          {/* Header colorido por tipo */}
-          <div className="relative px-3.5 py-3 border-b-2 border-coffee-950" style={{ background: `linear-gradient(180deg, ${accentColor} 0%, color-mix(in srgb, ${accentColor} 70%, #000) 100%)` }}>
-            <button onClick={onClose} aria-label="Fechar" className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-coffee-950/45 text-cream hover:bg-coffee-950/75 flex items-center justify-center text-xs transition-colors">✕</button>
-            <div className="flex items-center gap-2.5 pr-6">
+        <div
+          className="atlas-surface atlas-surface--popover deed-popover w-[270px] overflow-hidden"
+          style={{ '--atlas-surface-accent': accentColor } as React.CSSProperties}
+        >
+          {/* Header integrado, com a cor do tipo restrita ao filete. */}
+          <div className="deed-header relative px-4 pt-4 pb-3" style={{ '--deed-accent': accentColor } as React.CSSProperties}>
+            <button onClick={onClose} aria-label="Fechar" className="deed-close absolute top-1.5 right-1.5 w-11 h-11 flex items-center justify-center text-xs transition-colors">✕</button>
+            <div className="flex items-center gap-2.5 pr-10">
               <div className="shrink-0 w-9 h-9 flex items-center justify-center">
                 <SquareIcon square={square} size={32} />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="display text-coffee-950 text-lg leading-none truncate">{presentation.name}</h3>
-                <p className="label text-coffee-950/80 mt-0.5 text-micro">{presentation.subtitle}</p>
+                <h3 className="display text-starlight text-lg leading-none truncate">{presentation.name}</h3>
+                <p className="label deed-header__meta mt-1 text-micro">{presentation.subtitle}</p>
               </div>
             </div>
           </div>
