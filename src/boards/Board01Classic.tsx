@@ -22,9 +22,11 @@ const { sideOf, gridArea, trackTemplate } = CLASSIC_TOPOLOGY
 
 export default function Board01Classic() {
   // Casa selecionada — abre o popover-balão adjacente. Clicar fora ou em
-  // outra casa fecha. Guardamos pos (não a square inteira) pra ficar
-  // simples; lookup do square é feito no render.
-  const [selectedPos, setSelectedPos] = useState<number | null>(null)
+  // outra casa fecha. O elemento-âncora acompanha a posição porque o deed
+  // é portado ao `body`: assim ele escapa do stacking context do tabuleiro
+  // e continua operável por cima da cobrança de dívida.
+  const [selection, setSelection] = useState<{ pos: number; anchor: HTMLElement } | null>(null)
+  const selectedPos = selection?.pos ?? null
   const selectedSquare: Square | undefined =
     selectedPos !== null ? BOARD.find((s) => s.pos === selectedPos) : undefined
 
@@ -33,7 +35,7 @@ export default function Board01Classic() {
       className="board-stage"
       // Click em qualquer área fora de uma propriedade fecha o popover.
       // Cells de propriedade fazem stopPropagation antes de setar a nova.
-      onClick={() => setSelectedPos(null)}
+      onClick={() => setSelection(null)}
     >
       <StageBackdrop />
       <PlayersPanel />
@@ -106,7 +108,11 @@ export default function Board01Classic() {
                     aria-expanded={isSelected}
                     onClick={(e) => {
                       e.stopPropagation()
-                      setSelectedPos((cur) => (cur === square.pos ? null : square.pos))
+                      setSelection((current) => (
+                        current?.pos === square.pos
+                          ? null
+                          : { pos: square.pos, anchor: e.currentTarget }
+                      ))
                     }}
                     className="board-square-button relative block w-full h-full text-left cursor-pointer"
                   >
@@ -123,7 +129,8 @@ export default function Board01Classic() {
                       key={square.pos}
                       square={selectedSquare as PropertySquare}
                       side={side}
-                      onClose={() => setSelectedPos(null)}
+                      anchor={selection?.anchor}
+                      onClose={() => setSelection(null)}
                     />
                   )}
                   {isSelected && isAirport && selectedSquare?.kind === 'airport' && (
@@ -131,7 +138,8 @@ export default function Board01Classic() {
                       key={`airport-${square.pos}`}
                       square={selectedSquare as AirportSquare}
                       side={side}
-                      onClose={() => setSelectedPos(null)}
+                      anchor={selection?.anchor}
+                      onClose={() => setSelection(null)}
                     />
                   )}
                   {isSelected && isUtility && selectedSquare?.kind === 'utility' && (
@@ -139,7 +147,8 @@ export default function Board01Classic() {
                       key={`utility-${square.pos}`}
                       square={selectedSquare as UtilitySquare}
                       side={side}
-                      onClose={() => setSelectedPos(null)}
+                      anchor={selection?.anchor}
+                      onClose={() => setSelection(null)}
                     />
                   )}
                 </AnimatePresence>

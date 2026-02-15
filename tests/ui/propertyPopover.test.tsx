@@ -3,6 +3,8 @@ import { act } from 'react'
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { BuildingMark, HangarMark, PropertyPopover } from '@/boards/shared'
+import Board01Classic from '@/boards/Board01Classic'
+import { GameHUD } from '@/game/ui/GameHUD'
 import { createSeedState } from '@/game/setup'
 import { useGameStore } from '@/game/store'
 import { BOARD, type PropertySquare } from '@/lib/boardData'
@@ -16,6 +18,30 @@ afterEach(() => {
 })
 
 describe('popover de propriedade', () => {
+  it('eleva a gestão da propriedade acima da cobrança de dívida', () => {
+    const game = createSeedState(['p1', 'p2'])
+    game.players[0].cash = 0
+    game.titles[1].ownerId = 'p1'
+    game.resolution = { kind: 'debt', amount: 50, creditorId: 'p2' }
+    act(() => useGameStore.setState({ game }))
+
+    render(
+      <>
+        <Board01Classic />
+        <GameHUD />
+      </>,
+    )
+
+    act(() => {
+      screen.getByRole('button', { name: 'Roma — ver detalhes' }).click()
+    })
+
+    const layer = document.body.querySelector(':scope > [data-deed-popover-layer]')
+    expect(layer).toBeTruthy()
+    expect(layer?.getAttribute('style')).toContain('z-index: 65')
+    expect(screen.getByRole('button', { name: 'Hipotecar' })).toBeTruthy()
+  })
+
   it('apresenta a progressão completa e resolve o dono para sua identidade pública', () => {
     const game = createSeedState(['p1', 'p2'])
     game.titles[1].ownerId = 'p1'

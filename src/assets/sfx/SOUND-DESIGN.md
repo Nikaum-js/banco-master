@@ -1,4 +1,4 @@
-# BANCO MASTER — Identidade sonora (39 cues)
+# MAGNATA IMOBILIARIO — Identidade sonora (39 cues)
 
 > Documento de design da spec 035. Substitui a lógica "um beep pra cada coisa" por uma
 > **mesa de jogo premium e viva**. Toda escolha abaixo foi feita sobre arquivos reais,

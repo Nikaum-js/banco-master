@@ -92,17 +92,57 @@ describe('disputa de Maior dado', () => {
       ])
       rerender(<OpeningRolls room={next} myUid="guest" onRoll={vi.fn()} />)
 
-      // Reveal: o foco FICA em quem rolou enquanto o dado 3D tomba na face
-      // sorteada — o resultado é anunciado antes de o foco passar adiante.
+      // Fase 1 do reveal: o dado 3D ainda tomba — soma, líder e a vez do próximo
+      // esperam o pouso (mesma disciplina da arena de dados do tabuleiro).
+      expect(screen.getByRole('status').textContent).toContain('Nikaum está rolando')
+      expect(screen.queryByText('Nikaum lidera com 8')).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Rolar meus dados' })).toBeNull()
+      expect(screen.getByText('A mesa acompanha Nikaum')).toBeTruthy()
+
+      // Fase 2: o cubo pousou — o resultado entra e o próximo já pode agir.
+      act(() => {
+        vi.advanceTimersByTime(1_100)
+      })
       expect(screen.getByText('Nikaum lidera com 8')).toBeTruthy()
       expect(screen.getByRole('status').textContent).toContain('Nikaum tirou 8')
       expect(screen.getByRole('button', { name: 'Rolar meus dados' })).toBeTruthy()
 
-      // Vencido o tempo do tumble, o foco libera o próximo da fila.
+      // Vencida a vitrine do resultado, o foco libera o próximo da fila.
       act(() => {
         vi.advanceTimersByTime(1_600)
       })
       expect(screen.getByText('Ana joga agora')).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('segura o resultado do último arremesso em cartaz até a autoridade trocar de tela', () => {
+    vi.useFakeTimers()
+    try {
+      const beforeLast = rollingRoom([
+        { ...seats[0], openingRoll: [5, 3] },
+        seats[1],
+      ])
+      const { rerender } = render(
+        <OpeningRolls room={beforeLast} myUid="host" onRoll={vi.fn()} />,
+      )
+
+      const allRolled = rollingRoom([
+        { ...seats[0], openingRoll: [5, 3] },
+        { ...seats[1], openingRoll: [6, 6], openingRollStartedAt: 5_000, openingRollResolvesAt: 7_600 },
+      ])
+      rerender(<OpeningRolls room={allRolled} myUid="host" onRoll={vi.fn()} />)
+
+      expect(screen.getByRole('status').textContent).toContain('Ana está rolando')
+
+      // Pousou: o resultado decisivo fica anunciado SEM prazo local — quem encerra é a
+      // troca de tela comandada pela autoridade, nunca um timer da própria tela.
+      act(() => {
+        vi.advanceTimersByTime(5_000)
+      })
+      expect(screen.getByRole('status').textContent).toContain('Ana tirou 12')
+      expect(screen.getByText('Ana lidera com 12')).toBeTruthy()
     } finally {
       vi.useRealTimers()
     }

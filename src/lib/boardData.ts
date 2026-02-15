@@ -1,5 +1,5 @@
 // =====================================================================
-// Banco Master — Tabuleiro tema "Países do Mundo"
+// Magnata Imobiliário — Tabuleiro tema "Países do Mundo"
 // 48 casas no padrão SRS §2.1 / decisão D-017 (4 cantos + 28 propriedades
 // + 4 aeroportos + 3 utilidades + 3 Acaso + 3 Tesouro + 2 impostos +
 // 1 espaço Bus Ticket). 9 países: 2 premium (4 cidades), 3 regular (3),
