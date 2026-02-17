@@ -63,7 +63,10 @@ describe.each(ADAPTERS)('segredo do assento — %s', (_name, fixture) => {
     assertNoLeak(seen, [CODES.host, CODES.a, CODES.b])
   })
 
-  it('loadRoom (prévia): cada um lê o PRÓPRIO código, e só o próprio', async () => {
+  // 043, T043 (D-038): quem NÃO é a autoridade lê o próprio código e só ele. A autoridade lê
+  // todos — ela os mintou, ela os grava, e é a partir desta leitura que um anfitrião que deu F5
+  // no lobby remonta a sala. Redigir para ela fazia a remontagem apagar o código de todo mundo.
+  it('loadRoom (prévia): jogador lê o PRÓPRIO código e só o próprio; a autoridade lê todos', async () => {
     const f = fixture()
     const host = f.make('t-host')
     const a = f.make('t-a')
@@ -77,13 +80,82 @@ describe.each(ADAPTERS)('segredo do assento — %s', (_name, fixture) => {
     const aView = await a.loadRoom()
     const bView = await b.loadRoom()
 
-    assertNoLeak(hostView, [CODES.a, CODES.b])
     assertNoLeak(aView, [CODES.host, CODES.b])
     assertNoLeak(bView, [CODES.host, CODES.a])
 
-    expect(hostView?.seats.find((s) => s.uid === 't-host')?.reentryCode).toBe(CODES.host)
+    expect(hostView?.seats.map((s) => s.reentryCode).sort()).toEqual([CODES.host, CODES.a, CODES.b].sort())
     expect(aView?.seats.find((s) => s.uid === 't-a')?.reentryCode).toBe(CODES.a)
     expect(bView?.seats.find((s) => s.uid === 't-b')?.reentryCode).toBe(CODES.b)
+  })
+
+  // Defesa em profundidade (043, T043 / D-038): o código é IMUTÁVEL depois de mintado, e quem
+  // garante isso é a GRAVAÇÃO, não quem chama. Nenhuma escrita — nem a da própria autoridade —
+  // pode zerar ou trocar o código de um assento que já tem um. Foi por falta disto que uma
+  // sala remontada de uma leitura redigida destruía os códigos em silêncio: o erro tinha um
+  // único ponto onde ser barrado, e não era barrado lá.
+  it('saveRoom/saveSnapshot não destroem código já gravado — nem vindo da autoridade', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    await host.connect()
+    await host.saveRoom(ROOM())
+
+    // Regrava a MESMA sala com todos os códigos vazios — o que uma remontagem redigida faria.
+    const zeroed = { ...ROOM(), seats: ROOM().seats.map((s) => ({ ...s, reentryCode: '' })) }
+    await host.saveRoom(zeroed)
+
+    const afterRoom = await host.loadRoom()
+    expect(afterRoom?.seats.map((s) => s.reentryCode).sort()).toEqual([CODES.host, CODES.a, CODES.b].sort())
+
+    const game = { players: [], decks: {}, log: [], paused: null } as never
+    await host.saveSnapshot({ seq: 1, game, secrets: { hands: {}, decks: {} }, room: { ...zeroed, status: 'playing' } })
+
+    const afterSnap = await host.loadSnapshot()
+    expect(afterSnap?.room.seats.map((s) => s.reentryCode).sort()).toEqual([CODES.host, CODES.a, CODES.b].sort())
+  })
+
+  // 043, T043 — a Fase 5 trocou a leitura do snapshot por `read_snapshot`, e a redação que a
+  // Fase 4 tinha posto em `room_preview` NÃO veio junto: `seats` vinha cru, com o código de
+  // todo mundo. `client.ts` redige de novo ao aplicar, então nada aparecia na UI — mas o
+  // segredo já tinha CRUZADO O FIO, e é isso que esta suíte mede (o cliente é do adversário).
+  // Não é vazamento decorativo: com `reattach_by_code`, quem lê o código de um assento o toma
+  // — inclusive o do anfitrião, levando a autoridade junto.
+  it('loadSnapshot: o snapshot lido não carrega código alheio — só o do próprio assento', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    const a = f.make('t-a')
+    await host.connect()
+    await a.connect()
+
+    const room = { ...ROOM(), status: 'playing' as const }
+    await host.saveRoom(room)
+    const game = { players: [], decks: {}, log: [], paused: null } as never
+    await host.saveSnapshot({ seq: 3, game, secrets: { hands: {}, decks: {} }, room })
+
+    const aSnap = await a.loadSnapshot()
+    assertNoLeak(aSnap, [CODES.host, CODES.b])
+    expect(aSnap?.room.seats.find((s) => s.uid === 't-a')?.reentryCode).toBe(CODES.a)
+  })
+
+  // A contrapartida do caso acima, e o motivo de a correção ser SELEÇÃO por chave e não
+  // redação cega: quem reassume a autoridade num aparelho novo (reanexou o assento de
+  // anfitrião — D4) monta o `room` a partir DESTA leitura, e é ela que passa a gravar a linha.
+  // Sem os códigos aqui, a reassunção regravaria a sala apagando o de todo mundo. Mesma regra
+  // que `secrets` já segue (D6): anfitrião recebe inteiro, jogador recebe só o seu.
+  // `room_preview`/`loadRoom` NÃO ganha exceção — lá a redação vale para todos, inclusive o
+  // anfitrião (contrato §4), e é o caso acima que a mantém honesta.
+  it('loadSnapshot: a autoridade recebe os assentos íntegros — é ela que os grava de volta', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    await host.connect()
+
+    const room = { ...ROOM(), status: 'playing' as const }
+    await host.saveRoom(room)
+    const game = { players: [], decks: {}, log: [], paused: null } as never
+    await host.saveSnapshot({ seq: 3, game, secrets: { hands: {}, decks: {} }, room })
+
+    const hostSnap = await host.loadSnapshot()
+    expect(hostSnap?.room.seats.map((s) => s.reentryCode).sort())
+      .toEqual([CODES.host, CODES.a, CODES.b].sort())
   })
 
   it('Client.room()/myReentryCode(): a UI nunca vê código alheio, e o dono obtém o seu', async () => {

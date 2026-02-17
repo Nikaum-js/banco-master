@@ -8,7 +8,7 @@ import { mergeSnapshot, type Secrets } from './perspective'
 import { reattachByCode, toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
 
 type SubmitCb = (cmd: CommandEnvelope, fromUid: string) => void
-type BroadcastCb = (cmd: AcceptedCommand) => void
+type BroadcastCb = (cmd: AcceptedCommand, origin: 'public' | 'private') => void
 type RoomCb = (room: PublicRoom) => void
 type PresenceCb = (change: PresenceChange) => void
 type JoinReqCb = (who: JoinRequest, fromUid: string) => void
@@ -151,8 +151,19 @@ export class LocalHub {
   // aplicado é NO-OP silencioso. `saveRoom` (que não envia `seq`) não é afetado por esta guarda.
   private applySnapshot(snap: PersistedSnapshot): void {
     if (this.snapshot && snap.seq < this.snapshot.seq) return
-    this.snapshot = snap
-    this.storedRoom = snap.room
+    const room = this.preserveSeatCodes(snap.room)
+    this.snapshot = { ...snap, room }
+    this.storedRoom = room
+  }
+
+  // Paridade com `preserve_seat_codes` (043, T043/D-038): o código é imutável depois de
+  // mintado, e é a gravação que garante — casando por `playerId`, que a reanexação preserva
+  // (FR-027). Nenhuma escrita, nem a da autoridade, apaga um código já guardado.
+  private preserveSeatCodes(room: Room): Room {
+    const stored = this.storedRoom
+    if (!stored) return room
+    const known = new Map(stored.seats.filter((s) => s.reentryCode).map((s) => [s.playerId, s.reentryCode]))
+    return { ...room, seats: room.seats.map((s) => (s.reentryCode ? s : { ...s, reentryCode: known.get(s.playerId) ?? '' })) }
   }
 
   addSubmit(cb: SubmitCb): Unsubscribe {
@@ -221,19 +232,21 @@ export class LocalHub {
     if (fromUid !== this.currentHostUid()) return
     for (const conn of this.conns.values()) {
       if (this.dropped.has(conn.uid)) continue // simula lacuna na sequência (FR-012)
-      for (const cb of conn.onBroadcast) cb(cmd)
+      for (const cb of conn.onBroadcast) cb(cmd, 'public')
     }
   }
 
   // Parte PRIVADA do aceito (043, D9/D10) — alcança só o(s) conexão(ões) do assento alvo, e
   // só quando quem chama é a autoridade (mesma regra de `broadcast`). Alimenta o MESMO
-  // `onBroadcast` do destinatário — o cliente não distingue pública de privada, aplica as
-  // duas (o guard de `seq` absorve a duplicata).
+  // `onBroadcast` do destinatário, marcada como 'private' — `client.ts` usa essa marca pra
+  // saber que ESTA cópia é sempre a completa, mesmo que chegue DEPOIS da pública (043, T043:
+  // no adapter Supabase as duas trafegam por canais diferentes, sem ordem garantida — só aqui,
+  // síncrono na mesma pilha, a ordem de chamada é a ordem de entrega).
   broadcastPrivate(targetUid: string, cmd: AcceptedCommand, fromUid: string): void {
     if (fromUid !== this.currentHostUid()) return
     for (const conn of this.conns.values()) {
       if (conn.uid !== targetUid || this.dropped.has(conn.uid)) continue
-      for (const cb of conn.onBroadcast) cb(cmd)
+      for (const cb of conn.onBroadcast) cb(cmd, 'private')
     }
   }
 
@@ -279,8 +292,9 @@ export class LocalHub {
 
   async saveRoom(room: Room): Promise<void> {
     if (this.consumeWriteFailure()) throw new Error('injected write failure (saveRoom)')
-    this.storedRoom = room
-    if (this.snapshot) this.snapshot = { ...this.snapshot, room }
+    const kept = this.preserveSeatCodes(room)
+    this.storedRoom = kept
+    if (this.snapshot) this.snapshot = { ...this.snapshot, room: kept }
   }
 
   async loadRoom(): Promise<Room | null> {
@@ -396,9 +410,12 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
 
     // Paridade com `room_preview` (043, T022/T025): redige o código de todo mundo, EXCETO o
     // do próprio uid — é daqui que `Client.myReentryCode()` lê o dono, e só o dono (D5).
+    // A AUTORIDADE recebe todos (T043/D-038): no lobby não há snapshot, então esta é a única
+    // leitura de onde ela remonta a sala que vai gravar em seguida.
     async loadRoom(): Promise<Room | null> {
       const r = await hub.loadRoom()
       if (!r) return null
+      if (r.seats.find((s) => s.uid === uid)?.isHost) return r
       return { ...r, seats: r.seats.map((s) => (s.uid === uid ? s : { ...s, reentryCode: '' })) }
     },
 
@@ -439,6 +456,11 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
     // assento `isHost` NA SALA DO PRÓPRIO SNAPSHOT — não a `currentHostUid()` do hub, que
     // reflete a sala mais recente e pode já ter avançado) recebe `secrets` inteiro; qualquer
     // outro recebe só a própria entrada de `hands`, nunca o deck.
+    // Paridade com `read_snapshot` (043, T036/T043): `secrets` E `seats` pela MESMA seleção de
+    // chave. A autoridade recebe tudo — é ela quem regrava a linha, e quem reassume num
+    // aparelho novo monta a sala daqui; qualquer outro recebe só a própria mão e só o PRÓPRIO
+    // `reentryCode`, porque o código é credencial portadora (`reattach_by_code` o converte em
+    // posse do assento).
     async loadSnapshot(): Promise<PersistedSnapshot | null> {
       const snap = await hub.loadSnapshot()
       if (!snap) return null
@@ -446,7 +468,10 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
       const mySecrets: Secrets = isHost
         ? snap.secrets
         : { hands: uid in snap.secrets.hands ? { [uid]: snap.secrets.hands[uid] } : {}, decks: {} }
-      return { ...snap, game: mergeSnapshot(snap.game, mySecrets, snap.room) }
+      const room: Room = isHost
+        ? snap.room
+        : { ...snap.room, seats: snap.room.seats.map((s) => (s.uid === uid ? s : { ...s, reentryCode: '' })) }
+      return { ...snap, room, game: mergeSnapshot(snap.game, mySecrets, snap.room) }
     },
 
     // O adapter CRU não repete sozinho, então nunca esgota — quem sobrescreve isto é o

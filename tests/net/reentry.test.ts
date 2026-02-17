@@ -222,4 +222,72 @@ describe('reentrada por código — sessão (041, D-033 → 043, D4, RPC)', () =
     expect(result).toEqual({ ok: true })
     expect(revived.playerId()).toBe(hostSeat.playerId)
   })
+
+  // 043, T043 (D-038) — o caminho MAIS comum dos três que apagavam código: o anfitrião dá F5
+  // no lobby. Não há snapshot ainda, então `roomSession.enter` reassume a autoridade a partir
+  // de `Client.room()` — que não carrega código NENHUM (a difusão nunca os carrega, T023) — e
+  // o `open()` seguinte grava essa sala. Sem a leitura íntegra da autoridade e a preservação
+  // na gravação, todo convidado perdia o código antes mesmo de a partida começar.
+  it('F5 do anfitrião no LOBBY preserva o código dos convidados', async () => {
+    const hub = new LocalHub()
+    const hostTransport = localTransport(hub, 'tok-host')
+    const hostClient = createClient(hostTransport)
+    await hostClient.join()
+    const host = createHost(hostTransport, createRoom('r1', { uid: 'tok-host', name: 'Host', color: SEAT_COLORS[0], reentryCode: 'HHHHHH' }), { rng: mulberry32(9) })
+    await host.open()
+
+    const bob = createClient(localTransport(hub, 'tok-b'))
+    await bob.join()
+    await bob.requestJoin({ name: 'Bob', color: SEAT_COLORS[1] })
+    await flush()
+    const bobCode = host.room().seats.find((s) => s.name === 'Bob')!.reentryCode
+    expect(bobCode).not.toBe('')
+
+    // F5: sessão nova do MESMO uid, autoridade reassumida a partir da sala que o cliente vê.
+    const revivedTransport = localTransport(hub, 'tok-host')
+    const revivedClient = createClient(revivedTransport)
+    await revivedClient.join()
+    const revived = createHost(revivedTransport, revivedClient.room()!)
+    await revived.open()
+    await flush()
+
+    expect(revived.room().seats.find((s) => s.name === 'Bob')!.reentryCode).toBe(bobCode)
+    const persisted = await hub.loadRoom()
+    expect(persisted!.seats.find((s) => s.name === 'Bob')!.reentryCode).toBe(bobCode)
+  })
+
+  // 043, T043 — a reanexação não pode custar o código de QUEM NÃO REANEXOU. `handleSeatReattached`
+  // (host.ts) recarrega a sala pela leitura de PRÉVIA, que é redigida por desenho (contrato §4:
+  // ninguém lê código alheio, nem o anfitrião), e em seguida grava essa sala de volta — o que
+  // apagava o código de todos os outros assentos, tornando a SEGUNDA reanexação impossível.
+  // A autoridade já tem todos os códigos: ela os mintou. Recarregar não pode ser desaprender.
+  it('reanexar um assento preserva o código dos OUTROS — a segunda reanexação ainda funciona', async () => {
+    const { hub, host, hostClient, bob } = await setup()
+    const bobId = bob.playerId()!
+    const bobCode = host.room().seats.find((s) => s.playerId === bobId)!.reentryCode
+    const hostSeat = host.room().seats.find((s) => s.isHost)!
+
+    // 1ª reanexação: Bob troca de aparelho.
+    bob.leave()
+    const bobNewTransport = localTransport(hub, 'tok-b-novo')
+    const bobNew = createClient(bobNewTransport)
+    await bobNew.join()
+    expect(await bobNewTransport.reattach('r1', bobCode)).toEqual({ ok: true })
+    await flush()
+
+    // O código do ANFITRIÃO sobreviveu à reanexação do Bob — na sala em memória e na persistida.
+    expect(host.room().seats.find((s) => s.isHost)!.reentryCode).toBe(hostSeat.reentryCode)
+    const persisted = await hub.loadRoom()
+    expect(persisted!.seats.map((s) => s.reentryCode).sort())
+      .toEqual([hostSeat.reentryCode, bobCode].sort())
+
+    // 2ª reanexação, agora a do anfitrião: só funciona se o código dele não foi apagado acima.
+    hostClient.leave()
+    const hostNewTransport = localTransport(hub, 'tok-host-novo')
+    const hostNew = createClient(hostNewTransport)
+    await hostNew.join()
+    expect(await hostNewTransport.reattach('r1', hostSeat.reentryCode)).toEqual({ ok: true })
+    await flush()
+    expect(hostNew.playerId()).toBe(hostSeat.playerId)
+  })
 })

@@ -99,7 +99,14 @@ export interface Transport {
 
   // host → todos
   broadcast(cmd: AcceptedCommand): void
-  onBroadcast(cb: (cmd: AcceptedCommand) => void): Unsubscribe
+  // `origin` diz por qual canal esta cópia chegou — 'private' é SEMPRE a completa (043, D9/D10;
+  // achado ao rodar T043 contra infra real): as duas cópias do mesmo `seq` trafegam por canais
+  // DIFERENTES (`:play` vs `:s:<uid>`), então a ordem de CHEGADA não é garantida em rede real
+  // (só era no hub in-memory, onde `broadcast`/`broadcastPrivate` são chamadas síncronas na
+  // mesma pilha). Se a pública chegar primeiro, o dono aplicaria a versão redigida e a privada
+  // — mais completa — seria descartada como duplicata pelo guard de `seq`. `client.ts` usa
+  // `origin` pra saber quando precisa se corrigir.
+  onBroadcast(cb: (cmd: AcceptedCommand, origin: 'public' | 'private') => void): Unsubscribe
   // host → UM assento (043, D9/D10) — o dono recebe as DUAS cópias (esta e a de `broadcast`)
   // e aplica a privada; o guard de `seq` existente absorve a duplicata. Só tem efeito quando
   // chamada pela autoridade (contrato §3.2) — silenciosa para qualquer outra sessão.

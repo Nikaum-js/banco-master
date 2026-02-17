@@ -142,7 +142,11 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
     // assento ou um `joinError`. Antes o `busy` era liberado por um `setTimeout(400)`.
     const answered = c.playerId() !== null || joinError !== null
     emit({
-      room,
+      // `room ?? state.room` (043, T045): o client só conhece a sala DEPOIS de recebê-la por
+      // difusão ou prévia; a autoridade a conhece desde que a criou. Deixar o `null` do client
+      // sobrescrever apagava a sala recém-criada e a tela do anfitrião voltava para
+      // "Conectando…" — a sessão não pode desaprender o que já sabe.
+      room: room ?? state.room,
       error: joinError,
       busy: answered ? false : state.busy,
       phase: c.playerId() ? 'lobby' : state.phase,

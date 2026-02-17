@@ -94,6 +94,55 @@ describe('client.resync — espera crescente, uma em voo, desistência honesta (
     await vi.waitFor(() => expect(client.connection()).toBe('desynced'))
   })
 
+  // 043, T045 — achado contra infra real, e o defeito mais caro da spec: um convidado ficava
+  // PRESO NO LOBBY com a mesa jogando, sem erro e sem nada que o acordasse.
+  //
+  // `durableWrites` resolve a promessa de `saveSnapshot` quando o pedido entra na FILA, não
+  // quando a linha commita (041, D8/contrato §4). O anfitrião então difunde `status: 'playing'`
+  // antes de o `game` existir no banco. O convidado reagia a essa difusão lendo o snapshot,
+  // recebia `null`, e o `client` traduzia isso como "ainda no lobby, não repete" — mas aquela
+  // difusão era a ÚNICA chance dele de descobrir a partida (as difusões seguintes só carregam
+  // comandos, e a lacuna de `seq` nem chega a quem não tem estado). Intermitente por natureza:
+  // dependia de a fila esvaziar antes ou depois da leitura.
+  it('snapshot ainda NÃO COMMITADO com a sala em "playing" repete, em vez de desistir no lobby', async () => {
+    const { inner, loadSnapshot } = stubTransport()
+    let roomCb: ((r: { id: string; status: string; seats: unknown[] }) => void) | null = null
+    inner.onRoom = (cb) => { roomCb = cb as never; return () => {} }
+    loadSnapshot.mockResolvedValueOnce(null) // join(): de fato ainda no lobby
+    const client = createClient(inner, { retries: 5, sleep: () => Promise.resolve(), backoff: () => 0 })
+    await client.join()
+    expect(client.game()).toBeNull()
+
+    // A sala vira 'playing' ANTES de a escrita do snapshot commitar: duas leituras vazias, e só
+    // então a linha aparece. Sem o piso, a 1ª leitura vazia encerrava a busca para sempre.
+    loadSnapshot
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(snapOf(0))
+
+    roomCb!({ id: 'r1', status: 'playing', seats: [] })
+
+    await vi.waitFor(() => expect(client.game()).not.toBeNull())
+    expect(client.seq()).toBe(0)
+    expect(client.connection()).toBe('connected')
+  })
+
+  // A contrapartida: sem promessa de partida, `null` continua sendo resposta FINAL. Repetir
+  // aqui seria girar à toa em toda sala de lobby, e o piso é exatamente o que separa os casos.
+  it('sem sala em "playing", snapshot ausente continua sendo resposta final — não repete', async () => {
+    const { inner, loadSnapshot, emitStatus } = stubTransport()
+    loadSnapshot.mockResolvedValue(null)
+    const client = createClient(inner, { retries: 5, sleep: () => Promise.resolve(), backoff: () => 0 })
+    await client.join()
+
+    emitStatus('reconnecting')
+    emitStatus('connected')
+
+    await vi.waitFor(() => expect(loadSnapshot).toHaveBeenCalledTimes(2)) // join + 1 do resync
+    expect(client.game()).toBeNull()
+    expect(loadSnapshot).toHaveBeenCalledTimes(2) // e PARA aí — sem repetição
+  })
+
   it('difusão chegada DURANTE a ressincronização é aplicada em ordem, não descartada', async () => {
     const { inner, loadSnapshot, emitStatus } = stubTransport()
     let broadcastCb: ((cmd: unknown) => void) | null = null

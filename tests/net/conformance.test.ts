@@ -79,9 +79,14 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
+    // Sala gravada ANTES de conectar (043, T045): `room_play_select` decide pela linha
+    // PERSISTIDA, e o adapter Supabase só assina `:play` depois de confirmar ali o próprio
+    // assento — bater na porta sem assento derruba a conexão inteira, então ele não bate. Em
+    // produção quem reaviva essa checagem é a sala difundida (ou a própria gravação, no caso
+    // da autoridade); aqui, onde não há difusão nenhuma, a montagem tem de dar o assento antes.
+    await asHost(host, ['t-guest'])
     await host.connect()
     await guest.connect()
-    await asHost(host, ['t-guest'])
     host.watchSeat('t-guest') // 043, D2 — a autoridade só ouve quem observa
 
     const seen: { senderId: string; from: string }[] = []
@@ -95,9 +100,14 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
+    // Sala gravada ANTES de conectar (043, T045): `room_play_select` decide pela linha
+    // PERSISTIDA, e o adapter Supabase só assina `:play` depois de confirmar ali o próprio
+    // assento — bater na porta sem assento derruba a conexão inteira, então ele não bate. Em
+    // produção quem reaviva essa checagem é a sala difundida (ou a própria gravação, no caso
+    // da autoridade); aqui, onde não há difusão nenhuma, a montagem tem de dar o assento antes.
+    await asHost(host, ['t-guest'])
     await host.connect()
     await guest.connect()
-    await asHost(host, ['t-guest'])
     // Sem `host.watchSeat('t-guest')` — a autoridade não assinou aquele tópico.
 
     const seen: unknown[] = []
@@ -111,9 +121,14 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
+    // Sala gravada ANTES de conectar (043, T045): `room_play_select` decide pela linha
+    // PERSISTIDA, e o adapter Supabase só assina `:play` depois de confirmar ali o próprio
+    // assento — bater na porta sem assento derruba a conexão inteira, então ele não bate. Em
+    // produção quem reaviva essa checagem é a sala difundida (ou a própria gravação, no caso
+    // da autoridade); aqui, onde não há difusão nenhuma, a montagem tem de dar o assento antes.
+    await asHost(host, ['t-guest'])
     await host.connect()
     await guest.connect()
-    await asHost(host, ['t-guest'])
 
     const atHost: number[] = []
     const atGuest: number[] = []
@@ -148,9 +163,14 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
+    // Sala gravada ANTES de conectar (043, T045): `room_play_select` decide pela linha
+    // PERSISTIDA, e o adapter Supabase só assina `:play` depois de confirmar ali o próprio
+    // assento — bater na porta sem assento derruba a conexão inteira, então ele não bate. Em
+    // produção quem reaviva essa checagem é a sala difundida (ou a própria gravação, no caso
+    // da autoridade); aqui, onde não há difusão nenhuma, a montagem tem de dar o assento antes.
+    await asHost(host, ['t-guest'])
     await host.connect()
     await guest.connect()
-    await asHost(host, ['t-guest'])
 
     const a: number[] = []
     const b: number[] = []
@@ -166,9 +186,14 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
+    // Sala gravada ANTES de conectar (043, T045): `room_play_select` decide pela linha
+    // PERSISTIDA, e o adapter Supabase só assina `:play` depois de confirmar ali o próprio
+    // assento — bater na porta sem assento derruba a conexão inteira, então ele não bate. Em
+    // produção quem reaviva essa checagem é a sala difundida (ou a própria gravação, no caso
+    // da autoridade); aqui, onde não há difusão nenhuma, a montagem tem de dar o assento antes.
+    await asHost(host, ['t-guest'])
     await host.connect()
     await guest.connect()
-    await asHost(host, ['t-guest'])
 
     const a: number[] = []
     const b: number[] = []
@@ -185,9 +210,14 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
+    // Sala gravada ANTES de conectar (043, T045): `room_play_select` decide pela linha
+    // PERSISTIDA, e o adapter Supabase só assina `:play` depois de confirmar ali o próprio
+    // assento — bater na porta sem assento derruba a conexão inteira, então ele não bate. Em
+    // produção quem reaviva essa checagem é a sala difundida (ou a própria gravação, no caso
+    // da autoridade); aqui, onde não há difusão nenhuma, a montagem tem de dar o assento antes.
+    await asHost(host, ['t-guest'])
     await host.connect()
     await guest.connect()
-    await asHost(host, ['t-guest'])
 
     const seen: PublicRoom[] = []
     guest.onRoom((r) => seen.push(r))
@@ -200,9 +230,14 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
+    // Sala gravada ANTES de conectar (043, T045): `room_play_select` decide pela linha
+    // PERSISTIDA, e o adapter Supabase só assina `:play` depois de confirmar ali o próprio
+    // assento — bater na porta sem assento derruba a conexão inteira, então ele não bate. Em
+    // produção quem reaviva essa checagem é a sala difundida (ou a própria gravação, no caso
+    // da autoridade); aqui, onde não há difusão nenhuma, a montagem tem de dar o assento antes.
+    await asHost(host, ['t-guest'])
     await host.connect()
     await guest.connect()
-    await asHost(host, ['t-guest'])
 
     const seenRoom: PublicRoom[] = []
     guest.onRoom((r) => seenRoom.push(r))
@@ -275,9 +310,14 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
+    // Sala gravada ANTES de conectar (043, T045): `room_play_select` decide pela linha
+    // PERSISTIDA, e o adapter Supabase só assina `:play` depois de confirmar ali o próprio
+    // assento — bater na porta sem assento derruba a conexão inteira, então ele não bate. Em
+    // produção quem reaviva essa checagem é a sala difundida (ou a própria gravação, no caso
+    // da autoridade); aqui, onde não há difusão nenhuma, a montagem tem de dar o assento antes.
+    await asHost(host, ['t-guest'])
     await host.connect()
     await guest.connect()
-    await asHost(host, ['t-guest'])
     host.watchSeat('t-guest')
 
     const seen: PresenceChange[] = []
@@ -332,11 +372,18 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const t = f.make('t-host')
     await t.connect()
+    // 043, T043/T044: `write_snapshot`/`write_room` só aceitam quem já é o anfitrião da linha
+    // — precisa existir via `saveRoom` antes de qualquer `saveSnapshot` (é a ordem real de
+    // `host.ts`: `ensureOpen()` sempre grava a sala antes do 1º snapshot).
+    await t.saveRoom({ ...ROOM, status: 'playing', seats: [seat('t-host', true)] })
     // `log: []` e `paused: null` — supabaseTransport normaliza os dois no load (040/041).
     const game = { marcador: 'estado-da-partida', log: [], paused: null } as never
-    await t.saveSnapshot({ seq: 7, game, secrets: { hands: {}, decks: {} }, room: { ...ROOM, status: 'playing' } })
+    await t.saveSnapshot({ seq: 7, game, secrets: { hands: {}, decks: {} }, room: { ...ROOM, status: 'playing', seats: [seat('t-host', true)] } })
 
-    // Uma mudança de ASSENTOS no meio da partida não pode zerar `game`/`seq`.
+    // Uma mudança de ASSENTOS no meio da partida não pode zerar `game`/`seq`. `seats: []` de
+    // propósito — o anfitrião ATUAL da linha (já estabelecida acima) pode reescrever com
+    // QUALQUER conteúdo; a exigência de "estar marcado host DENTRO do payload" vale só pra
+    // sala NOVA (write_room, T043/T044), não pra quem já é o dono da linha existente.
     await t.saveRoom({ ...ROOM, status: 'playing', seats: [] })
 
     const snap = await t.loadSnapshot()
@@ -492,7 +539,10 @@ describe.each(ADAPTERS)('contrato de Transport (041/043) — %s', (_name, fixtur
   })
 
   describe('§4 gravação — durabilidade, ordem e monotonia', () => {
-    const ROOM_STUB: Room = { id: 'sala1', status: 'playing', seats: [] }
+    // 043, T043/T044: `write_snapshot` exige o chamador (`t-host`) declarado host DENTRO do
+    // payload pra sala nova — vale só o suficiente pra passar na autorização, o resto destes
+    // testes é sobre a fila de gravação (`durableWrites`)/guarda monotônica, não sobre sala.
+    const ROOM_STUB: Room = { id: 'sala1', status: 'playing', seats: [seat('t-host', true)] }
     const snap = (seq: number): PersistedSnapshot => ({ seq, game: { marcador: seq } as never, secrets: { hands: {}, decks: {} }, room: ROOM_STUB })
 
     async function tick(n = 15): Promise<void> {

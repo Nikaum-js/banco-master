@@ -81,7 +81,7 @@ const seatTopic = (roomId: string, uid: string): string => `room:${roomId}:s:${u
 
 export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: string): Transport {
   const submitCbs: ((cmd: CommandEnvelope, fromUid: string) => void)[] = []
-  const broadcastCbs: ((cmd: AcceptedCommand) => void)[] = []
+  const broadcastCbs: ((cmd: AcceptedCommand, origin: 'public' | 'private') => void)[] = []
   const roomCbs: ((room: PublicRoom) => void)[] = []
   const presenceCbs: ((change: PresenceChange) => void)[] = []
   const joinReqCbs: ((who: JoinRequest, fromUid: string) => void)[] = []
@@ -119,23 +119,177 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     emitPresenceSyncAll()
   }
 
-  // — status combinado: 'connected' só quando os TRÊS canais-base estão assinados —
-  const baseUp = { lobby: false, play: false, own: false }
+  // — status combinado: 'connected' quando `lobby`+`own` estão assinados. `play` SAI daqui —
+  // 043, achado ao rodar contra infra real (T043): `room_play_select` exige assento já
+  // existente na sala, e um convidado sem assento ainda (só entrou, ainda não pediu — ou
+  // acabou de entrar e o pedido está em voo) nunca teria a autorização na hora de assinar.
+  // Se `play` tivesse voto aqui, `connect()` travaria para sempre pra esse convidado — o
+  // canal nunca chega a 'SUBSCRIBED', e sem essa entrada `noteBaseStatus` nunca resolve
+  // (não há caminho de rejeição). `play` vira concern PRÓPRIO, resolvido por
+  // `ensurePlaySubscribed` — sem bloquear `connect()` nem aparecer como 'reconnecting' pra
+  // quem só ainda não tem assento (não é queda de rede, é autorização — 041 contrato §1.4 é
+  // sobre a PRÓPRIA conexão, não sobre isto).
+  const baseUp = { lobby: false, own: false }
   let resolveConnect: (() => void) | null = null
   function noteBaseStatus(key: keyof typeof baseUp, up: boolean): void {
     baseUp[key] = up
-    const allUp = baseUp.lobby && baseUp.play && baseUp.own
+    const allUp = baseUp.lobby && baseUp.own
     for (const cb of statusCbs) cb(allUp ? 'connected' : 'reconnecting')
     if (allUp) resolveConnect?.()
   }
 
+  // `play` — assinado SÓ depois de o assento estar na linha PERSISTIDA, nunca antes.
+  //
+  // Uma assinatura recusada num canal privado não é de graça: o Realtime derruba a CONEXÃO
+  // inteira ("Unauthorized: You do not have permissions to read from this Channel topic"), e
+  // junto vão `:lobby` e `:s:<uid>`, que estavam saudáveis. Enquanto o socket se restabelece,
+  // tudo o que o anfitrião difunde se perde — o convidado ficava para sempre em "Conectando…"
+  // esperando a resposta que já tinha passado. Medido em navegador: com `:play` fora do ar, o
+  // convidado entra na sala normalmente; com ele batendo na porta, não entra. Era mais caro
+  // insistir do que esperar.
+  //
+  // Então a autorização é conferida ANTES, por LEITURA (`room_preview`, barata e sem efeito
+  // sobre o socket): só quando a linha gravada já mostra o próprio assento é que o canal
+  // sobe — e aí sobe de primeira. A leitura é o que fecha a corrida real de
+  // `publishAndPersistRoom` (host.ts), que DIFUNDE a sala antes de gravá-la enquanto a
+  // política decide pela linha GRAVADA: o aviso "você ganhou assento" chega antes de o
+  // assento existir para o Postgres, e insistir na leitura custa uma consulta, não o socket.
+  //
+  // Reautorizar exige um canal NOVO (043, T043): o supabase-js guarda o resultado do join, e
+  // `.subscribe()` de novo no MESMO objeto recusado não refaz nada — por isso o holder é
+  // mutável, para o caso raro de uma recusa acontecer mesmo assim.
+  let play = makePlayChannel()
+  let playUp = false
+  let playAttemptInFlight = false
+
+  function makePlayChannel(): SupabaseChannelLike {
+    const ch = supabase.channel(`room:${roomId}:play`, { config: { broadcast: { self: true }, private: true } })
+    ch.on('broadcast', { event: EVENT.accepted }, ({ payload }) => {
+      for (const cb of broadcastCbs) cb(payload as AcceptedCommand, 'public')
+    })
+    return ch
+  }
+
+  const SEAT_LOOKUPS = 6 // ~9s de espera pela gravação, em leituras baratas
+  const SEAT_LOOKUP_MS = 1_500
+
+  async function seatIsPersisted(): Promise<boolean> {
+    const { data, error } = await supabase.rpc('room_preview', { room_id: roomId })
+    if (error || !data) return false
+    const row = data as { seats?: { uid: string }[] }
+    return (row.seats ?? []).some((s) => s.uid === uid)
+  }
+
+  async function ensurePlaySubscribed(lookupsLeft = SEAT_LOOKUPS): Promise<void> {
+    if (playUp || playAttemptInFlight) return
+    playAttemptInFlight = true
+    try {
+      if (!(await seatIsPersisted())) {
+        playAttemptInFlight = false
+        // Sem assento gravado ainda. Se ESTE cliente já se vê sentado (a sala difundida trouxe
+        // o assento), é só a gravação em trânsito — relê daqui a pouco. Se nem isso, não há o
+        // que esperar: quem der assento a ele vai difundir a sala, e a difusão chama de novo.
+        if (seated && lookupsLeft > 1) setTimeout(() => void ensurePlaySubscribed(lookupsLeft - 1), SEAT_LOOKUP_MS)
+        return
+      }
+    } catch {
+      playAttemptInFlight = false
+      if (lookupsLeft > 1) setTimeout(() => void ensurePlaySubscribed(lookupsLeft - 1), SEAT_LOOKUP_MS)
+      return
+    }
+    const attempt = play
+    attempt.subscribe((status) => {
+      if (attempt !== play) return // tentativa obsoleta — outra já a substituiu
+      playAttemptInFlight = false
+      playUp = status === 'SUBSCRIBED'
+      if (playUp || status === 'CLOSED') return
+      // Recusa apesar da leitura ter dito que sim — descarta o canal (que fica `errored` para
+      // sempre) e tenta de novo mais tarde, do zero.
+      void attempt.unsubscribe()
+      play = makePlayChannel()
+      if (lookupsLeft > 1) setTimeout(() => void ensurePlaySubscribed(lookupsLeft - 1), SEAT_LOOKUP_MS)
+    })
+  }
+
+  let seated = false
+
   // `broadcast.self: true` é OBRIGATÓRIO nos três: no modelo uniforme todo participante —
   // inclusive o host — submete/difunde pelo canal e aplica só o que volta (UI pessimista).
-  const lobby = supabase.channel(`room:${roomId}:lobby`, { config: { broadcast: { self: true }, private: true } })
-  const play = supabase.channel(`room:${roomId}:play`, { config: { broadcast: { self: true }, private: true } })
   const own = supabase.channel(seatTopic(roomId, uid), { config: { presence: { key: uid }, broadcast: { self: true }, private: true } })
 
-  lobby
+  // A permissão de ESCRITA de um canal privado é decidida no JOIN, não por mensagem — e fica
+  // como está pelo resto da vida daquele canal (043, T045; medido contra infra real, e o
+  // defeito mais escondido da spec). O anfitrião assina `:lobby` dentro de `connect()`, que
+  // roda ANTES de `host.open()` gravar a linha da sala; naquele instante `room_host_uid()` é
+  // NULL, a política de insert nega, e a negativa é cacheada. A partir daí TODO `publishRoom`
+  // é descartado em silêncio — `send()` continua resolvendo "ok", nenhum log de erro sai, e o
+  // convidado espera para sempre por uma sala que nunca é difundida.
+  //
+  // Por isso o canal é reconstruído uma vez, logo após a PRIMEIRA gravação bem-sucedida da
+  // sala: é exatamente o instante em que a permissão passa a existir, e um join novo é a única
+  // forma de reavaliá-la. Reconstruir, não reassinar: o supabase-js guarda o resultado do join
+  // no objeto, então `.subscribe()` de novo no mesmo canal não refaz nada.
+  //
+  // Isto esteve MASCARADO o tempo todo: a recusa de leitura do `:play` (sem assento) derrubava
+  // a conexão inteira, os canais re-entravam já com a linha gravada, e a permissão era
+  // reavaliada por acidente. Ao fechar o `:play`, o defeito real apareceu.
+  let lobby = makeLobbyChannel()
+  let lobbyReauthorized = false
+  let lastPublishedRoom: PublicRoom | null = null
+
+  function makeLobbyChannel(): SupabaseChannelLike {
+    const ch = supabase.channel(`room:${roomId}:lobby`, { config: { broadcast: { self: true }, private: true } })
+    bindLobby(ch)
+    return ch
+  }
+
+  // Só a AUTORIDADE escreve em `:lobby`, e só ela chama `saveRoom` — então este é o gatilho
+  // certo e não custa nada a quem nunca vai escrever.
+  // Devolve promessa e o chamador ESPERA: quem grava a sala publica logo em seguida
+  // (`ensureOpen`, host.ts), e publicar num canal ainda em join perde a mensagem — inclusive o
+  // auto-eco de que a própria tela do anfitrião depende para saber que a sala existe.
+  async function reauthorizeLobbyAfterFirstWrite(): Promise<void> {
+    if (lobbyReauthorized) return
+    lobbyReauthorized = true
+    // Solta o canal velho ANTES de montar o novo, e ESPERA: os dois têm o MESMO tópico, e um
+    // `unsubscribe()` que chega depois do join do substituto faz o servidor tratar a saída
+    // como saída do tópico — o canal novo fica joined do lado do cliente e não recebe mais
+    // nada. Foi assim que o anfitrião parou de enxergar os pedidos de assento: a difusão da
+    // sala saía, mas o `join` do convidado nunca voltava.
+    const stale = lobby
+    await stale.unsubscribe().catch(() => {})
+    lobby = makeLobbyChannel()
+    await subscribeLobby()
+    // Reemite a última sala publicada. Ela QUASE CERTAMENTE se perdeu: `durableWrites` resolve
+    // `saveRoom` no enfileiramento, não na gravação (041, D8/contrato §4), então `ensureOpen`
+    // publica bem antes de a linha existir — e naquele instante a autoridade ainda não tinha
+    // permissão de escrita neste canal. Sem esta reemissão, a primeira sala do anfitrião some
+    // para sempre: não há nada que a publique de novo, e o convidado espera indefinidamente
+    // por uma difusão que já aconteceu no vazio.
+    if (lastPublishedRoom) lobby.send({ type: 'broadcast', event: EVENT.room, payload: lastPublishedRoom }).catch(() => {})
+  }
+
+  // O status do canal ANTIGO não pode votar: ele ainda emite ao ser descartado, e um
+  // `'CLOSED'` atrasado derrubava o `connect()` do anfitrião para 'reconnecting' — a tela dele
+  // nem chegava a abrir a sala. Só a tentativa CORRENTE fala pelo `:lobby`.
+  function subscribeLobby(): Promise<void> {
+    const attempt = lobby
+    return new Promise<void>((resolve) => {
+      let settled = false
+      const done = (): void => { if (!settled) { settled = true; resolve() } }
+      // Teto: um canal que não sobe não pode travar o boot para sempre. `noteBaseStatus` já
+      // conta a história do status para a UI; aqui a espera é só para não publicar cedo demais.
+      setTimeout(done, 5_000)
+      attempt.subscribe((status) => {
+        if (attempt !== lobby) return // canal já substituído — ignora o eco do velho
+        noteBaseStatus('lobby', status === 'SUBSCRIBED')
+        if (status === 'SUBSCRIBED') done()
+      })
+    })
+  }
+
+  function bindLobby(ch: SupabaseChannelLike): void {
+    ch
     .on('broadcast', { event: EVENT.join }, ({ payload }) => {
       const p = payload as { who: JoinRequest; uid: string }
       for (const cb of joinReqCbs) cb(p.who, p.uid)
@@ -145,7 +299,12 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       for (const cb of joinRejCbs) cb(p.uid, p.reason)
     })
     .on('broadcast', { event: EVENT.room }, ({ payload }) => {
-      for (const cb of roomCbs) cb(payload as PublicRoom)
+      const r = payload as PublicRoom
+      for (const cb of roomCbs) cb(r)
+      // A sala publicada é a fonte de "eu tenho assento" que chega sozinha — e é ela que
+      // libera a rajada de retentativas do canal público (ver `ensurePlaySubscribed`).
+      seated = r.seats.some((s) => s.uid === uid)
+      void ensurePlaySubscribed() // sala mudou (ex.: acabei de ganhar assento) — reautoriza `:play`
     })
     // Aviso de reanexação (043, D4) — carimbado pela RPC `reattach_by_code`, que roda no
     // servidor fora da política normal de escrita de `:lobby`. Nenhum payload a interpretar:
@@ -153,10 +312,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     .on('broadcast', { event: EVENT.reattached }, () => {
       for (const cb of reattachCbs) cb()
     })
-
-  play.on('broadcast', { event: EVENT.accepted }, ({ payload }) => {
-    for (const cb of broadcastCbs) cb(payload as AcceptedCommand)
-  })
+  }
 
   own
     .on('broadcast', { event: EVENT.submit }, ({ payload }) => {
@@ -164,7 +320,11 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       for (const cb of submitCbs) cb((payload as { cmd: CommandEnvelope }).cmd, uid)
     })
     .on('broadcast', { event: EVENT.accepted }, ({ payload }) => {
-      for (const cb of broadcastCbs) cb(payload as AcceptedCommand) // parte PRIVADA do aceito (D9)
+      // Parte PRIVADA do aceito (D9) — SEMPRE a cópia completa, mesmo quando chega depois da
+      // pública (043, T043: `:play` e `:s:<uid>` são canais diferentes, sem ordem garantida
+      // entre si em rede real). `client.ts` usa a marca 'private' pra se corrigir se aplicou a
+      // redigida primeiro.
+      for (const cb of broadcastCbs) cb(payload as AcceptedCommand, 'private')
     })
     // TAKEOVER (FR-006a) por CONTAGEM de presenças vivas. Ver `supabaseTransport.ts` da 041
     // para o histórico do defeito 1 — aqui a fonte passa a ser o canal do PRÓPRIO assento.
@@ -178,14 +338,17 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
   return {
     uid,
 
-    // Resolve quando os TRÊS canais-base estiverem 'SUBSCRIBED'. `track()` só no PRÓPRIO —
-    // é o que faz uma queda de rede reanunciar presença ao voltar (041, D6), e só a presença
-    // do dono, nunca a de quem a autoridade observa por `watchSeat`.
+    // Resolve quando `lobby`+`own` estiverem 'SUBSCRIBED' — os dois que qualquer sessão
+    // autenticada consegue, com ou sem assento (043, T043). `play` sai da espera (ver
+    // `ensurePlaySubscribed`): uma tentativa aqui, sem bloquear e sem insistir — quem ainda não
+    // tem assento gravado será recusado, e quem reentra numa sala já em curso entra de primeira.
+    // `track()` só no PRÓPRIO — é o que faz uma queda de rede reanunciar presença ao voltar
+    // (041, D6), e só a presença do dono, nunca a de quem a autoridade observa por `watchSeat`.
     async connect(): Promise<void> {
       await new Promise<void>((resolve) => {
         resolveConnect = resolve
-        lobby.subscribe((status) => noteBaseStatus('lobby', status === 'SUBSCRIBED'))
-        play.subscribe((status) => noteBaseStatus('play', status === 'SUBSCRIBED'))
+        void subscribeLobby()
+        void ensurePlaySubscribed()
         own.subscribe((status) => {
           const up = status === 'SUBSCRIBED'
           if (up) void own.track({ uid }) // toda vez: reassinatura reanuncia presença (FR-001)
@@ -301,6 +464,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     // quem chama.
     publishRoom(room: PublicRoom): void {
       const safe = toPublicRoom(room as unknown as Room)
+      lastPublishedRoom = safe // guardado para a reemissão pós-reautorização (ver abaixo)
       void lobby.send({ type: 'broadcast', event: EVENT.room, payload: safe })
     },
     onRoom(cb): Unsubscribe {
@@ -308,12 +472,23 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       return off(roomCbs, cb)
     },
 
-    // Escreve só as colunas da SALA (upsert parcial): no lobby ainda não há `GameState`, e
-    // durante a partida o `game`/`seq` da linha não pode ser sobrescrito por uma mudança de
-    // assentos (o `ON CONFLICT DO UPDATE` do supabase-js toca apenas as colunas enviadas).
+    // Por RPC (`write_room`), não mais `.upsert()` direto (achado em produção, T043/T044):
+    // UPDATE sob RLS precisa de política de SELECT pra decidir quais linhas são candidatas
+    // (Postgres combina SELECT+UPDATE — "quais linhas você vê" AND "quais dessas você
+    // atualiza"), e `rooms` nunca teve select policy (D5). Sem RPC, TODO upsert contra uma
+    // linha JÁ existente afetava 0 linhas, em silêncio — a sala nunca era realmente salva.
+    // `write_room` valida "é o anfitrião" por dentro e grava bypassando RLS (mesmo padrão de
+    // `request_seat`/`reattach_by_code`). Upsert PARCIAL preservado: só toca `status`/`seats`,
+    // nunca `game`/`seq`/`secrets` — a função só declara essas duas colunas no `do update set`.
     async saveRoom(room: Room): Promise<void> {
-      const { error } = await supabase.from('rooms').upsert({ id: roomId, status: room.status, seats: room.seats })
+      const { error } = await supabase.rpc('write_room', { room_id: roomId, status: room.status, seats: room.seats })
       if (error) throw error
+      // A linha agora existe — e é ela que as políticas dos dois canais consultam. `:lobby`
+      // reavalia a ESCRITA (só a autoridade escreve lá); `:play` reavalia a LEITURA, que exige
+      // assento. Gravar é o instante exato em que as duas podem passar a valer, e depender da
+      // difusão da sala para isso deixaria o contrato refém de um efeito colateral.
+      await reauthorizeLobbyAfterFirstWrite()
+      await ensurePlaySubscribed() // aguardado: quem grava difunde logo em seguida
     },
 
     // 043, T025 — a PRÉVIA (`room_preview`, D5): não há mais `select` direto na tabela (a
@@ -332,14 +507,16 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       return off(presenceCbs, cb)
     },
 
+    // Por RPC (`write_snapshot`) — mesmo motivo de `saveRoom` acima: `.upsert()` direto contra
+    // `rooms` nunca afeta uma linha já existente sob RLS sem select policy.
     async saveSnapshot(snap: PersistedSnapshot): Promise<void> {
-      const { error } = await supabase.from('rooms').upsert({
-        id: roomId,
-        status: snap.room.status,
-        seats: snap.room.seats,
+      const { error } = await supabase.rpc('write_snapshot', {
+        room_id: roomId,
         seq: snap.seq,
         game: snap.game, // 043, T034/T037: já a parte PÚBLICA (host.ts separa via `splitSnapshot`)
         secrets: snap.secrets,
+        status: snap.room.status,
+        seats: snap.room.seats,
       })
       if (error) throw error
     },

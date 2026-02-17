@@ -169,10 +169,26 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   async function handleSeatReattached(): Promise<void> {
     const fresh = await transport.loadRoom()
     if (!fresh) return
-    room = fresh
+    room = withKnownCodes(fresh, room)
     syncWatchedSeats()
     publishAndPersistRoom()
     syncPause()
+  }
+
+  // 043, T043 (D-038): recarregar não pode ser DESAPRENDER. A autoridade grava a sala que
+  // acabou de montar, então todo assento que chegar sem `reentryCode` — porque veio de uma
+  // difusão (que nunca os carrega, T023) ou de uma leitura feita antes de esta sessão ser a
+  // autoridade — precisa recuperá-lo de `source` antes de a sala virar o que se persiste.
+  // Casa por `playerId`: é o que a reanexação preserva (ela troca `uid`, FR-027), e o código
+  // é imutável depois de mintado. Assento sem código nos dois lados fica vazio e recebe o seu
+  // no próximo mint. A rede tem a mesma guarda (`preserve_seat_codes`) — esta aqui é o que
+  // mantém a sala EM MEMÓRIA fiel, e é dela que sai o `taken` de `newReentryCode`.
+  function withKnownCodes(target: Room, source: Room): Room {
+    const known = new Map(source.seats.filter((s) => s.reentryCode).map((s) => [s.playerId, s.reentryCode]))
+    return {
+      ...target,
+      seats: target.seats.map((s) => (s.reentryCode ? s : { ...s, reentryCode: known.get(s.playerId) ?? '' })),
+    }
   }
 
   function handlePresence(change: PresenceChange): void {
@@ -226,6 +242,17 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   async function ensureOpen(): Promise<void> {
     if (opened) return
     opened = true
+    // 043, T043/T045 — achado ao rodar contra infra viva: `room_lobby_insert`/`room_play_select`
+    // decidem pela linha JÁ existente em `rooms` (via `room_host_uid()`/`has_seat()`), e o
+    // Realtime avalia a permissão de um canal NO JOIN, não por mensagem. Gravar primeiro é o
+    // que dá à política algo para autorizar.
+    //
+    // Isto sozinho NÃO fecha a corrida, e é importante não acreditar que fecha: `saveRoom` é
+    // embrulhado por `durableWrites`, cuja promessa resolve no ENFILEIRAMENTO, não na gravação
+    // (041, D8/contrato §4) — o `await` aqui volta antes de a linha existir. Quem fecha é o
+    // adapter, que reconstrói o canal de lobby e reemite a última sala assim que a escrita de
+    // fato acontece (`supabaseTransport.ts`). A ordem daqui é a metade barata da solução.
+    await transport.saveRoom(room)
     // 043, T015: assina o tópico de cada assento já existente ANTES de `onPresenceSync` — o
     // "estado inicial" que essa assinatura entrega na hora precisa já refletir todo mundo,
     // senão a 1ª reconciliação vê só o próprio uid, marca os demais desconectados, e a
@@ -248,7 +275,6 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     // todos por difusão, e a fila drena o estado (que já contém a pausa) quando o banco volta.
     subs.push(transport.onWriteExhausted(() => accept({ kind: 'pause', cause: 'persistence', at: now() })))
     subs.push(transport.onWriteRecovered(() => accept({ kind: 'resume', cause: 'persistence', at: now() })))
-    await transport.saveRoom(room)
   }
 
   async function startInternal(): Promise<void> {
@@ -270,6 +296,14 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
         game = snap.game
         seq = snap.seq
         room = snap.room
+      } else {
+        // Sem partida ainda (lobby): a sala com que esta autoridade foi construída pode vir de
+        // `Client.room()`, que NUNCA carrega código (T023) — é o caso do anfitrião que dá F5
+        // antes de iniciar. A prévia é íntegra para a autoridade (T043/D-038), e é dela que os
+        // códigos voltam; sem isto o `taken` de `newReentryCode` mintaria contra um conjunto de
+        // vazios, e a sala em memória divergiria da linha persistida.
+        const stored = await transport.loadRoom()
+        if (stored) room = withKnownCodes(room, stored)
       }
       await ensureOpen()
       transport.publishRoom(toPublicRoom(room))

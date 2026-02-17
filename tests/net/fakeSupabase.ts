@@ -308,31 +308,85 @@ export function fakeSupabase(): FakeSupabase {
             return Promise.resolve({ data: { ok: true }, error: null })
           }
           // 043, T022 — espelho de `room_preview`: sem `reentryCode` de ninguém, EXCETO o do
-          // assento de quem chamou (D5).
+          // assento de quem chamou (D5). A AUTORIDADE recebe todos (T043/D-038): no lobby não
+          // há snapshot, e é desta leitura que ela remonta a sala que grava em seguida.
           if (fn === 'room_preview') {
             const row = broker.rows.get(`rooms:${roomId}`)
             if (!row) return Promise.resolve({ data: null, error: null })
-            const seats = (row.seats as { uid: string; reentryCode?: string }[]) ?? []
-            const redacted = seats.map((s) => (s.uid === uid ? s : { ...s, reentryCode: undefined }))
-            return Promise.resolve({ data: { id: row.id, status: row.status, seats: redacted }, error: null })
+            const seats = (row.seats as { uid: string; isHost?: boolean; reentryCode?: string }[]) ?? []
+            const scoped = seats.find((s) => s.uid === uid)?.isHost
+              ? seats
+              : seats.map((s) => (s.uid === uid ? s : { ...s, reentryCode: undefined }))
+            return Promise.resolve({ data: { id: row.id, status: row.status, seats: scoped }, error: null })
           }
-          // 043, T036/T037 — espelho de `read_snapshot`: `secrets` filtrado por chave (D6). A
-          // autoridade (uid do assento `isHost`) recebe tudo; qualquer outro só a própria
-          // entrada de `secrets.hands`, nunca `decks`.
+          // 043, T036/T037 — espelho de `read_snapshot`: `secrets` E `seats` filtrados pela
+          // MESMA chave (D6). A autoridade (uid do assento `isHost`) recebe tudo — inclusive os
+          // códigos, que é ela quem regrava; qualquer outro só a própria entrada de
+          // `secrets.hands` (nunca `decks`) e só o PRÓPRIO `reentryCode` (T043).
           if (fn === 'read_snapshot') {
             if (broker.readFails) return Promise.resolve({ data: null, error: new Error('injected read failure') })
             const row = broker.rows.get(`rooms:${roomId}`)
             if (!row) return Promise.resolve({ data: null, error: null })
-            const seats = (row.seats as { uid: string; isHost: boolean }[]) ?? []
+            const seats = (row.seats as { uid: string; isHost: boolean; reentryCode?: string }[]) ?? []
             const isHost = seats.find((s) => s.uid === uid)?.isHost ?? false
             const secrets = (row.secrets as { hands?: Record<string, unknown>; decks?: Record<string, unknown> } | undefined) ?? { hands: {}, decks: {} }
             const scoped = isHost
               ? secrets
               : { hands: uid in (secrets.hands ?? {}) ? { [uid]: secrets.hands![uid] } : {}, decks: {} }
+            const scopedSeats = isHost
+              ? row.seats
+              : seats.map((s) => (s.uid === uid ? s : { ...s, reentryCode: undefined }))
             return Promise.resolve({
-              data: { id: row.id, status: row.status, seats: row.seats, seq: row.seq, game: row.game, secrets: scoped },
+              data: { id: row.id, status: row.status, seats: scopedSeats, seq: row.seq, game: row.game, secrets: scoped },
               error: null,
             })
+          }
+          // 043, T043/T044 — espelho de `write_room`/`write_snapshot`: sala NOVA exige o
+          // chamador declarado host DENTRO do payload (impede criar em nome de outro uid);
+          // sala EXISTENTE exige ser o anfitrião ATUAL da linha, com QUALQUER seats novo
+          // (inclusive vazio — ex.: limpeza). Faz o MESMO upsert parcial que
+          // `.from('rooms').upsert()` fazia antes. Achado em produção (não no headless): RLS
+          // sem select policy faz UPDATE direto sempre afetar 0 linhas — daí a RPC existir.
+          function authorizedToWrite(currentHost: string | undefined, claimedSeats: unknown): boolean {
+            if (currentHost !== undefined) return currentHost === uid
+            const seats = (claimedSeats as { uid: string; isHost: boolean }[]) ?? []
+            return seats.some((s) => s.isHost && s.uid === uid)
+          }
+          // Espelho de `preserve_seat_codes` (043, T043/D-038): o código já gravado sobrevive a
+          // qualquer escrita, casando por `playerId` — nem a autoridade o apaga.
+          type SeatRow = { playerId: string; reentryCode?: string }
+          function preserveSeatCodes(claimedSeats: unknown): unknown {
+            const existing = broker.rows.get(`rooms:${roomId}`)
+            const stored = (existing?.seats as SeatRow[] | undefined) ?? []
+            if (stored.length === 0) return claimedSeats
+            const known = new Map(stored.filter((s) => s.reentryCode).map((s) => [s.playerId, s.reentryCode]))
+            return ((claimedSeats as SeatRow[]) ?? []).map((s) => (s.reentryCode ? s : { ...s, reentryCode: known.get(s.playerId) ?? s.reentryCode }))
+          }
+          if (fn === 'write_room') {
+            if (consumeWriteFailure()) return Promise.resolve({ data: null, error: new Error('injected write failure') })
+            const key = `rooms:${roomId}`
+            if (!authorizedToWrite(hostUidOf(broker, roomId), args.seats)) {
+              return Promise.resolve({ data: null, error: new Error('not authorized to write this room') })
+            }
+            const existing = broker.rows.get(key)
+            broker.rows.set(key, { ...(existing ?? {}), id: roomId, status: args.status, seats: preserveSeatCodes(args.seats) })
+            return Promise.resolve({ data: null, error: null })
+          }
+          // Guarda monotônica (041, D9) igual ao trigger SQL.
+          if (fn === 'write_snapshot') {
+            if (consumeWriteFailure()) return Promise.resolve({ data: null, error: new Error('injected write failure') })
+            const key = `rooms:${roomId}`
+            if (!authorizedToWrite(hostUidOf(broker, roomId), args.seats)) {
+              return Promise.resolve({ data: null, error: new Error('not authorized to write this room') })
+            }
+            const existing = broker.rows.get(key)
+            if (existing && typeof args.seq === 'number' && typeof existing.seq === 'number' && args.seq < existing.seq) {
+              return Promise.resolve({ data: null, error: null }) // no-op silencioso, como o trigger real
+            }
+            broker.rows.set(key, {
+              ...(existing ?? {}), id: roomId, status: args.status, seats: preserveSeatCodes(args.seats), seq: args.seq, game: args.game, secrets: args.secrets,
+            })
+            return Promise.resolve({ data: null, error: null })
           }
           return Promise.resolve({ data: null, error: new Error(`rpc desconhecida no fake: ${fn}`) })
         },
