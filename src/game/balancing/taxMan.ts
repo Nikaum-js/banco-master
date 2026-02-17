@@ -7,6 +7,7 @@ import type { GameState } from '../turn/types'
 import { roll, type RNG } from '../turn/dice'
 import { ownerOf, isMortgaged, groupOwnedCount, groupSize, countOwned, groupHasSkyscraper } from '../economy/titles'
 import { rentCity, rentAirport, rentUtility, diceValue } from '../economy/rent'
+import { apagaoActive, greveActive, isBoycotted } from '../economy/tempEffects'
 
 export function rollTaxMan(state: GameState, rng: RNG): void {
   if (state.phase !== 'playing') return
@@ -19,12 +20,14 @@ export function rollTaxMan(state: GameState, rng: RNG): void {
   if (sq.kind !== 'property' && sq.kind !== 'airport' && sq.kind !== 'utility') return // outras casas: sem efeito
   const owner = ownerOf(state, sq.pos)
   if (owner === null || isMortgaged(state, sq.pos)) return // livre/hipotecada: sem cobrança
+  if (isBoycotted(state, sq.pos)) return // Boicote: não cobra (015, consistência)
 
   let amount = 0
   if (sq.kind === 'airport') {
-    amount = rentAirport(countOwned(state, 'airport', owner)) * (state.titles[sq.pos].hangar ? 2 : 1)
+    const hangarDobra = state.titles[sq.pos].hangar && !apagaoActive(state) // Apagão desliga a dobra
+    amount = rentAirport(countOwned(state, 'airport', owner)) * (hangarDobra ? 2 : 1)
   } else if (sq.kind === 'utility') {
-    amount = rentUtility(countOwned(state, 'utility', owner), diceValue(r)) // valor dos dados do Fiscal
+    amount = greveActive(state) ? 0 : rentUtility(countOwned(state, 'utility', owner), diceValue(r)) // Greve zera
   } else {
     const t = state.titles[sq.pos]
     amount = rentCity(
