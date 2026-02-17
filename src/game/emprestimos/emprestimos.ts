@@ -9,9 +9,29 @@ function clone(state: GameState): GameState {
   return structuredClone(state)
 }
 
+/**
+ * Prazo do empréstimo, em voltas do devedor (§15.6, D-054). Fonte única do número: a UI e
+ * os testes leem daqui em vez de escrever `3` por conta própria.
+ */
+export const LOAN_TERM_LAPS = 3
+
 // Empréstimo ativo em que o jogador é DEVEDOR (máx. 1, §15.3).
 export function activeLoanFor(state: GameState, debtorId: string): Loan | undefined {
   return state.loans.find((l) => l.debtorId === debtorId)
+}
+
+/**
+ * Voltas já corridas. Empréstimo vindo de snapshot anterior à D-054 não tem o campo e conta
+ * como recém-concedido: não há registro das passagens pelo GO que já aconteceram, e dar
+ * voltas a mais é o erro barato — o contrário cobraria o principal sem aviso.
+ */
+export function lapsElapsedOf(loan: Loan): number {
+  return loan.lapsElapsed ?? 0
+}
+
+/** Voltas até o vencimento (1..LOAN_TERM_LAPS). É o que a interface mostra ao devedor. */
+export function lapsRemainingOf(loan: Loan): number {
+  return Math.max(0, LOAN_TERM_LAPS - lapsElapsedOf(loan))
 }
 
 /**
@@ -52,7 +72,7 @@ export function grantLoan(
   const s = clone(state)
   s.players.find((p) => p.id === creditorId)!.cash -= principal
   s.players.find((p) => p.id === debtorId)!.cash += principal
-  s.loans.push({ debtorId, creditorId, principal, ratePct })
+  s.loans.push({ debtorId, creditorId, principal, ratePct, lapsElapsed: 0 }) // prazo começa a correr (§15.6)
   return s
 }
 
@@ -137,8 +157,18 @@ export function payOffLoan(state: GameState, debtorId: string): GameState {
   return s
 }
 
-// Cobra juros ao passar pelo GO (porta afterPassGo, dentro de advance). MUTA o state
-// (que já é um clone do turno). Insuficiente após o bônus → abre dívida ao credor (008).
+/**
+ * Cobrança da passagem pelo GO (porta afterPassGo, dentro de advance). MUTA o state (que já é
+ * um clone do turno).
+ *
+ * 1ª e 2ª voltas cobram só os juros; a 3ª é o VENCIMENTO (§15.6, D-054) e cobra os juros
+ * daquela volta MAIS o principal, encerrando o contrato — automaticamente, sem confirmação de
+ * ninguém. Nos dois casos, caixa insuficiente esvazia o devedor, credita o parcial ao credor e
+ * abre dívida ao credor (008): é por ali que hipoteca, venda e falência ficam disponíveis.
+ *
+ * A cobrança roda DEPOIS do bônus de GO (ordem fixada em `buildPorts`) — o mesmo caixa não
+ * pode reprovar aqui e aprovar um passo depois.
+ */
 export function chargeLoanInterest(state: GameState, debtorId: string): void {
   const loan = activeLoanFor(state, debtorId)
   if (!loan) return
@@ -146,19 +176,38 @@ export function chargeLoanInterest(state: GameState, debtorId: string): void {
   const creditor = state.players.find((p) => p.id === loan.creditorId)
   if (!debtor || !creditor) return
 
+  const lap = lapsElapsedOf(loan) + 1
+  const matures = lap >= LOAN_TERM_LAPS // 3ª passagem: juros + principal, contrato encerrado
   const interest = interestOfLoan(loan)
-  if (debtor.cash >= interest) {
-    debtor.cash -= interest
-    creditor.cash += interest
-    logEvent(state, { kind: 'loan-interest', who: debtorId, amount: interest, creditorId: loan.creditorId }) // feedback do débito (021/040)
+  const due = matures ? interest + loan.principal : interest
+
+  if (debtor.cash >= due) {
+    debtor.cash -= due
+    creditor.cash += due
+    logEvent(state, matures
+      ? { kind: 'loan-due', who: debtorId, amount: due, creditorId: loan.creditorId, principal: loan.principal, interest }
+      : { kind: 'loan-interest', who: debtorId, amount: interest, creditorId: loan.creditorId }) // feedback do débito (021/040)
   } else {
-    const resto = interest - debtor.cash
     const paid = debtor.cash
-    creditor.cash += debtor.cash
+    const resto = due - paid
+    creditor.cash += paid
     debtor.cash = 0
     // reuso 008; origin marca que a casa onde o jogador pousar AINDA precisa resolver —
-    // sem isso, economyResolve sobrescrevia esta dívida (juros residuais sumiam).
-    state.resolution = { kind: 'debt', amount: resto, creditorId: loan.creditorId, origin: 'loan-interest' }
-    logEvent(state, { kind: 'loan-interest-short', who: debtorId, amount: paid, creditorId: loan.creditorId, shortfall: resto })
+    // sem isso, economyResolve sobrescrevia esta dívida (o residual sumia).
+    state.resolution = {
+      kind: 'debt',
+      amount: resto,
+      creditorId: loan.creditorId,
+      origin: matures ? 'loan-due' : 'loan-interest',
+    }
+    logEvent(state, matures
+      ? { kind: 'loan-due-short', who: debtorId, amount: paid, creditorId: loan.creditorId, shortfall: resto }
+      : { kind: 'loan-interest-short', who: debtorId, amount: paid, creditorId: loan.creditorId, shortfall: resto })
   }
+
+  // O vencimento encerra o contrato mesmo quando o caixa não cobriu: o que ficou faltando é
+  // dívida comum ao credor, não empréstimo em aberto — senão o principal seria cobrado de
+  // novo na volta seguinte, e o devedor ficaria preso a um contrato já executado.
+  if (matures) state.loans = state.loans.filter((l) => l.debtorId !== debtorId)
+  else loan.lapsElapsed = lap
 }

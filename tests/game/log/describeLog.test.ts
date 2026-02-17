@@ -30,6 +30,8 @@ function sampleFor(kind: LogKind): LogEntry {
     case 'trade': return { kind, who: 'p1', toId: 'p2' }
     case 'loan-interest': return { kind, who: 'p1', amount: 10, creditorId: 'p2' }
     case 'loan-interest-short': return { kind, who: 'p1', amount: 5, creditorId: 'p2', shortfall: 5 }
+    case 'loan-due': return { kind, who: 'p1', amount: 110, creditorId: 'p2', principal: 100, interest: 10 }
+    case 'loan-due-short': return { kind, who: 'p1', amount: 40, creditorId: 'p2', shortfall: 70 }
     case 'legacy': return { kind, who: 'p1', what: 'evento antigo' }
   }
 }
@@ -128,5 +130,17 @@ describe('describeLogEntry — contrato do descritor (040, §2)', () => {
     }, ROOM)
 
     expect(textOf(sentence)).toBe('Beto: Boom econômico: todos que ainda estão na partida receberam $200')
+  })
+
+  it('Aniversário informa os mesmos R$ 50 por adversário definidos no SRS', () => {
+    const sentence = describeLogEntry({
+      kind: 'card-immediate',
+      who: 'p1',
+      deck: 'tesouro',
+      name: 'Aniversario',
+      delta: 50,
+    }, ROOM)
+
+    expect(textOf(sentence)).toBe('Ana: recebeu $50 de aniversário (cada adversário paga $50)')
   })
 })

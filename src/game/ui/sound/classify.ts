@@ -75,6 +75,8 @@ export function logKey(e: LogEntry): string {
     case 'trade': return [e.kind, e.who, e.toId].join('|')
     case 'loan-interest': return [e.kind, e.who, e.amount, e.creditorId].join('|')
     case 'loan-interest-short': return [e.kind, e.who, e.amount, e.creditorId, e.shortfall].join('|')
+    case 'loan-due': return [e.kind, e.who, e.amount, e.creditorId, e.principal, e.interest].join('|')
+    case 'loan-due-short': return [e.kind, e.who, e.amount, e.creditorId, e.shortfall].join('|')
     case 'legacy': return [e.kind, e.who, e.what].join('|')
     default: return assertNever(e)
   }
@@ -112,7 +114,9 @@ export function classifyLogEntry(e: LogEntry): SoundCue | null {
     case 'rent': return 'rent-paid'
     case 'go': return 'go-bonus'
     case 'loan-interest':
-    case 'loan-interest-short': return 'loan-interest'
+    case 'loan-interest-short':
+    case 'loan-due':
+    case 'loan-due-short': return 'loan-interest'
     case 'bus-ticket-gain': return 'busticket-gain'
     case 'bankruptcy': return 'bankruptcy'
     case 'card-draw': return 'card-draw'

@@ -46,6 +46,8 @@ export function logIcon(kind: LogEntry['kind']): ReactNode {
     case 'debt-paid':
     case 'loan-interest':
     case 'loan-interest-short':
+    case 'loan-due':
+    case 'loan-due-short':
       return <CoinIcon size={11} />
     case 'legacy':
       return null // única exceção — decisão explícita, não omissão (FR-021)

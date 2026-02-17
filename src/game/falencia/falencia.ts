@@ -3,6 +3,7 @@
 import { BOARD } from '@/lib/boardData'
 import type { Square, PropertySquare } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
+import type { ResolutionSlice } from '../economy/types'
 import { buildCost, cityLevel, HANGAR_COST } from '../economy/construction'
 import { activePlayer, completeResolution, advanceSeat, type TurnCtx } from '../turn/turnMachine'
 import { activeLoanFor } from '../emprestimos/emprestimos'
@@ -48,6 +49,14 @@ export function checkEndGame(state: GameState, now?: () => number): void {
   }
 }
 
+// Dívida que nasceu DENTRO do movimento (empréstimo), não da casa onde o jogador parou. Os
+// dois fatos são narrados separados no log, mas para o pagamento são o mesmo caso: quitar
+// libera o slot sem concluir a casa pendente.
+type DebtOrigin = Extract<ResolutionSlice, { kind: 'debt' }>['origin']
+function bornInMovement(origin: DebtOrigin): boolean {
+  return origin === 'loan-interest' || origin === 'loan-due'
+}
+
 // Paga a dívida pendente se o caixa cobrir. No-op senão (jogador precisa liquidar ou falir).
 export function payDebt(state: GameState): GameState {
   if (state.resolution?.kind !== 'debt') return state
@@ -62,9 +71,10 @@ export function payDebt(state: GameState): GameState {
     s.centerPot += amount // dívida ao banco (imposto) → pote do Free Parking
   }
   logEvent(s, { kind: 'debt-paid', who: activePlayer(s).id, amount }) // 021/040
-  if (origin === 'loan-interest' && s.turn.state === 'casa-a-resolver') {
-    // Dívida nascida no MOVIMENTO (juros do GO, §15.4), não da casa: quitar só limpa o slot —
-    // a casa onde o jogador pousou segue pendente e resolve na sequência (GameDriver/resolvePending).
+  if (bornInMovement(origin) && s.turn.state === 'casa-a-resolver') {
+    // Dívida nascida no MOVIMENTO (juros do GO §15.4, ou vencimento do empréstimo §15.6), não
+    // da casa: quitar só limpa o slot — a casa onde o jogador pousou segue pendente e resolve
+    // na sequência (GameDriver/resolvePending).
     s.resolution = null
   } else {
     completeResolution(s)

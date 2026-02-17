@@ -50,6 +50,11 @@ export interface Loan {
   creditorId: string // concedeu
   principal: number // valor emprestado (> 0)
   ratePct: number // 10..50 — juros simples sobre o principal (§15.4), cobrados por GO
+  // Passagens do devedor pelo GO desde a concessão (§15.6, D-054). Vence em LOAN_TERM_LAPS,
+  // e o empréstimo é removido no MESMO passo — o valor de vencimento nunca fica no estado.
+  // Opcional porque snapshot gravado antes da D-054 não tem o campo: `lapsElapsedOf` lê
+  // ausente como 0 (conservador — não há histórico de GO para recuperar).
+  lapsElapsed?: number
 }
 
 // Solicitação de empréstimo pendente (§15.2) — o devedor pediu a um credor específico;
@@ -83,7 +88,7 @@ export const ALL_LOG_KINDS = [
   'auction-won', 'auction-unsold', 'lot-won', 'lot-unsold',
   'free-parking', 'jail-fine',
   'debt-paid', 'bankruptcy', 'trade',
-  'loan-interest', 'loan-interest-short',
+  'loan-interest', 'loan-interest-short', 'loan-due', 'loan-due-short',
   'legacy',
 ] as const
 
@@ -91,7 +96,7 @@ export type LogKind = (typeof ALL_LOG_KINDS)[number]
 
 // Faces especiais do dado (espelha `SpecialMove`/`SpeedFace` de `turn/types.ts`, sem
 // importar de lá — este arquivo é autocontido para evitar ciclo de imports).
-type LogRollSpecial = 'mr-banco' | 'onibus' | 'triple' | null
+type LogRollSpecial = 'mr-magnata' | 'onibus' | 'triple' | null
 
 export type LogEntry =
   | { kind: 'roll'; who: string; white: [number, number]; isDouble: boolean; special: LogRollSpecial; speed: number | null; attempt: boolean }
@@ -119,6 +124,11 @@ export type LogEntry =
   | { kind: 'trade'; who: string; toId: string } // who = fromId (o proponente é o autor)
   | { kind: 'loan-interest'; who: string; amount: number; creditorId: string }
   | { kind: 'loan-interest-short'; who: string; amount: number; creditorId: string; shortfall: number }
+  // Vencimento das 3 voltas (§15.6): `amount` é o que SAIU do devedor. No `-short`, saiu tudo
+  // o que havia e `shortfall` virou dívida pendente ao credor. `principal`/`interest` quebram
+  // o total porque a narrativa precisa dizer que aquilo encerra o contrato, não é mais uma volta.
+  | { kind: 'loan-due'; who: string; amount: number; creditorId: string; principal: number; interest: number }
+  | { kind: 'loan-due-short'; who: string; amount: number; creditorId: string; shortfall: number }
   | { kind: 'legacy'; who: string; what: string } // NUNCA emitida por reducer — só normalização de snapshot velho (FR-022)
 
 export interface TempEffect {
@@ -164,9 +174,11 @@ export type ResolutionSlice =
   | { kind: 'card-reveal'; deckId: DeckId; cardId: CardSlot } // carta sacada revelada, aguardando "Continuar" (025)
   | { kind: 'card-discard'; deckId: DeckId; drawnId: CardSlot } // mão cheia: escolher descarte (006)
   | { kind: 'card-shortcut'; deckId: DeckId; cardId: string } // Atalho: escolher ±3 (006) — imediato, nunca oculto
-  // Dívida pendente: pagar/falir (008). `origin: 'loan-interest'` marca dívida nascida FORA
-  // da resolução da casa (juros no GO, §15.4) — quitar NÃO conclui a casa onde o jogador pousou.
-  | { kind: 'debt'; amount: number; creditorId: string | null; origin?: 'loan-interest' }
+  // Dívida pendente: pagar/falir (008). `origin` marca dívida nascida FORA da resolução da
+  // casa — juros no GO (§15.4) ou vencimento do empréstimo (§15.6) —, e quitar NÃO conclui a
+  // casa onde o jogador pousou. Dois nomes porque a narrativa distingue os dois fatos; para o
+  // fluxo de pagamento os dois são o mesmo caso (ver `bornInMovement` em falencia.ts).
+  | { kind: 'debt'; amount: number; creditorId: string | null; origin?: 'loan-interest' | 'loan-due' }
   // Reação pendente (017): a carta ofensiva fica "em voo" aqui até o alvo responder.
   | {
       kind: 'reaction-diplomacia'

@@ -69,8 +69,8 @@ function cardImmediatePhrase(name: string, delta: number): LogSentence {
         : [text('Crise imobiliária cobraria 5% do patrimônio, mas não havia o que cobrar')]
     case 'Aniversario':
       return delta > 0
-        ? [text('recebeu '), money(delta), text(' de aniversário (cada adversário paga $10)')]
-        : [text('Aniversário: cada adversário pagaria $10, mas não há outro jogador para cobrar')]
+        ? [text('recebeu '), money(delta), text(' de aniversário (cada adversário paga $50)')]
+        : [text('Aniversário: cada adversário pagaria $50, mas não há outro jogador para cobrar')]
     case 'Honorarios':
       return [text('pagou '), money(-delta), text(' de honorários')]
     case 'Boom Economico':
@@ -145,6 +145,10 @@ export function describeLogEntry(entry: LogEntry, room: Room | null): LogSentenc
       return [who(room, entry.who), text(' pagou '), money(entry.amount), text(' de juros a '), who(room, entry.creditorId)]
     case 'loan-interest-short':
       return [who(room, entry.who), text(' não cobriu os juros de '), who(room, entry.creditorId), text(' e ficou devendo '), money(entry.shortfall)]
+    case 'loan-due':
+      return [who(room, entry.who), text(' quitou o empréstimo no vencimento: '), money(entry.principal), text(' + '), money(entry.interest), text(' de juros a '), who(room, entry.creditorId)]
+    case 'loan-due-short':
+      return [who(room, entry.who), text(' não cobriu o vencimento do empréstimo de '), who(room, entry.creditorId), text(' e ficou devendo '), money(entry.shortfall)]
     case 'legacy':
       return [text(entry.what)] // FR-022: texto solto, sem resolução de identidade nem ícone
     default:

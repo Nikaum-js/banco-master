@@ -1,7 +1,8 @@
 import { cn } from '@/lib/utils'
-import { Bus } from 'lucide-react'
+import { Bus, ChevronRight } from 'lucide-react'
 import { motion } from 'motion/react'
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare } from '@/lib/boardData'
 import { BOARD } from '@/lib/boardData'
@@ -35,6 +36,7 @@ import { ShopIcon, GavelIcon, DiceIcon, CoinIcon, HouseIcon } from '@/game/ui/ic
 import { Button, SectionHeader, Chip, EmptyState, MoneyPulse } from '@/game/ui/primitives'
 import { useMoneyPulse } from '@/game/ui/useMoneyPulse'
 import type { TempEffect, TradeProposal } from '@/game/economy/types'
+import { interestOf, lapsRemainingOf } from '@/game/emprestimos/emprestimos'
 import { money } from '@/lib/money'
 import { describeLogEntry } from '@/game/ui/log/describeLog'
 import { logIcon } from '@/game/ui/log/logIcon'
@@ -625,6 +627,8 @@ export function PlayersPanel() {
           </ul>
         )}
       </div>
+
+      <LoanPanel />
     </aside>
   )
 }
@@ -1032,42 +1036,67 @@ export function DiceArena() {
 }
 
 // Empréstimo ativo do jogador da vez (010, §15) — visível e quitável a qualquer
-// momento do turno. Mostra credor, principal e o quanto sangra a cada GO.
+// momento do turno. Mostra credor, principal, o quanto sangra a cada GO e quantas
+// voltas faltam até o vencimento (§15.6, D-054), que é quando o principal é
+// descontado sozinho. O prazo vem do motor: a UI não reconta nada.
 function LoanPanel() {
   const game = useGameStore((s) => s.game)
   const room = useRoomStore((s) => s.room)
   const dispatch = useGameStore((s) => s.dispatch)
+  const local = useLocalView()
   const payOffLoan = (): void => dispatch({ kind: 'pay-off-loan' })
   const active = game.players[game.turnOrder[game.activeSeat]]
   const loan = game.loans.find((l) => l.debtorId === active.id)
   if (!loan) return null
+  const debtor = identityOf(room, loan.debtorId)
   const creditor = identityOf(room, loan.creditorId)
-  const interest = Math.round((loan.principal * loan.ratePct) / 100)
+  const interest = interestOf(loan.principal, loan.ratePct)
+  const lapsLeft = lapsRemainingOf(loan)
   const canPay = active.cash >= loan.principal
+  const mayPay = local.mayActAction({ kind: 'pay-off-loan' })
+  const localIsDebtor = local.seatId === null || local.seatId === loan.debtorId
+  const localIsCreditor = local.seatId === loan.creditorId
+  const relation = localIsDebtor
+    ? `Você deve a ${creditor.name}`
+    : localIsCreditor
+      ? `${debtor.name} deve a você`
+      : `${debtor.name} deve a ${creditor.name}`
+  const counterpart = localIsDebtor ? creditor : debtor
   return (
-    <div className="side-panel-section">
-      <SectionHeader title="Empréstimo ativo" meta={<Chip tone="alert">{loan.ratePct}% por volta</Chip>} />
-      <div className="flex items-center gap-2 mb-2.5">
-        <span className="label text-cream-muted">Você deve a</span>
-        <PlayerFace color={creditor.color} avatar={creditor.avatar} skin={creditor.skin} size={20} />
-        <span className="display text-cream text-sm leading-none">{creditor.name}</span>
+    <div className="side-panel-section loan-panel-section">
+      <SectionHeader title="Empréstimo ativo" meta={<Chip tone="alert">{loan.ratePct}% no GO</Chip>} />
+      <div className="loan-panel__creditor">
+        <PlayerFace color={counterpart.color} avatar={counterpart.avatar} skin={counterpart.skin} size={22} />
+        <p className="label text-cream">{relation}</p>
       </div>
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-cream-muted">Principal</span>
-        <span className="currency text-cream tabular-nums">{money(loan.principal)}</span>
+      <div className="loan-panel__facts">
+        <span className="text-cream-muted">Principal fixo</span>
+        <strong className="currency text-cream tabular-nums">{money(loan.principal)}</strong>
+        <span className="text-cream-muted">Cobrança por GO</span>
+        <strong className="currency text-logo tabular-nums">− {money(interest)}</strong>
+        <span className="text-cream-muted">Vence em</span>
+        <strong className="text-cream tabular-nums">{lapsLeft === 1 ? '1 volta' : `${lapsLeft} voltas`}</strong>
       </div>
-      <div className="flex items-center justify-between text-sm mt-1">
-        <span className="text-cream-muted">Juros ao passar pelo GO</span>
-        <span className="currency text-logo tabular-nums">− {money(interest)}</span>
-      </div>
-      <Button
-        disabled={!canPay}
-        onClick={payOffLoan}
-        title={canPay ? 'Pagar o principal e encerrar o empréstimo' : 'Caixa insuficiente para o principal'}
-        className="w-full mt-3"
-      >
-        {canPay ? `Quitar · ${money(loan.principal)}` : `Falta ${money(loan.principal - active.cash)} para quitar`}
-      </Button>
+      {/* O prazo é o fato que muda a decisão: na última volta o principal sai sozinho, e
+          quem não tiver caixa cai na cobrança de dívida (§15.6). */}
+      <p className="loan-panel__term">
+        {lapsLeft === 1
+          ? `No próximo GO o jogo desconta ${money(loan.principal + interest)} de uma vez.`
+          : `Ao vencer, o jogo desconta principal + juros de uma vez.`}
+      </p>
+      {mayPay ? (
+        <Button
+          disabled={!canPay}
+          onClick={payOffLoan}
+          aria-label={`Quitar ${money(loan.principal)}`}
+          title={canPay ? 'Pagar o principal e encerrar o empréstimo' : 'Caixa insuficiente para o principal'}
+          className="w-full mt-3"
+        >
+          {canPay ? `Quitar · ${money(loan.principal)}` : `Falta ${money(loan.principal - active.cash)} para quitar`}
+        </Button>
+      ) : (
+        <p className="loan-panel__readonly">Quitação disponível ao devedor</p>
+      )}
     </div>
   )
 }
@@ -1136,9 +1165,7 @@ export function ActionsPanel() {
 
       <HandPanel />
 
-      <LoanPanel />
-
-      <div className="side-panel-section">
+      <div className="side-panel-section trade-panel-section">
         <SectionHeader
           title="Negociações"
           meta={proposals.length > 0
@@ -1185,31 +1212,27 @@ function TradeRow({
   const from = identityById[trade.fromId] ?? identityOf(null, trade.fromId)
   const to = identityById[trade.toId] ?? identityOf(null, trade.toId)
   return (
-    <div className="trade-row">
-      <div className="trade-row__route" aria-label={`${from.name} propõe uma troca com ${to.name}`}>
-        <div className="trade-row__player">
+    <button
+      type="button"
+      className="trade-row"
+      onClick={() => useTradeUI.getState().view(proposal.id)}
+      aria-label={`Ver proposta de ${from.name} para ${to.name}`}
+    >
+      <span className="trade-row__route" aria-hidden>
+        <span className="trade-row__player">
           <PlayerFace color={from.color} avatar={from.avatar} skin={from.skin} size={28} />
           <span>{from.name}</span>
-        </div>
+        </span>
         <TradeArrowGlyph size={13} />
-        <div className="trade-row__player">
+        <span className="trade-row__player">
           <PlayerFace color={to.color} avatar={to.avatar} skin={to.skin} size={28} />
           <span>{to.name}</span>
-        </div>
-      </div>
-
-      <Button
-        variant="ghost"
-        onClick={() => useTradeUI.getState().view(proposal.id)}
-        aria-label={`Ver proposta de ${from.name} para ${to.name}`}
-        className="trade-row__action label text-gold"
-      >
-        <span>Ver proposta</span>
-        <span className="trade-row__action-arrow" aria-hidden>
-          <TradeArrowGlyph size={12} />
         </span>
-      </Button>
-    </div>
+      </span>
+      <span className="trade-row__open" aria-hidden>
+        <ChevronRight size={15} strokeWidth={2.25} />
+      </span>
+    </button>
   )
 }
 
@@ -1375,7 +1398,7 @@ export function CenterArena() {
       {boardTheme === 'atlas' ? (
         <>
           <div className="board-center__brand" aria-hidden>
-            <span>Banco Master</span>
+            <span>Magnata Imobiliário</span>
             <i />
             <span>Cidades do Mundo</span>
           </div>
@@ -1490,13 +1513,71 @@ function useViewportClamp() {
   return { ref, off }
 }
 
+// O tabuleiro inteiro é um stacking context isolado. Um z-index alto dentro dele
+// jamais ultrapassa o card fixo de dívida, portanto o deed precisa ser portado ao
+// `body` quando tem uma casa real como âncora. A posição continua visualmente presa
+// à casa e é recalculada em resize/scroll.
+function useAnchoredPopover(
+  anchor: HTMLElement | null | undefined,
+  side: Side,
+): { position: React.CSSProperties; centerTransform: string } {
+  const [, refresh] = useState(0)
+
+  useLayoutEffect(() => {
+    if (!anchor) return
+    const update = (): void => refresh((value) => value + 1)
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update)
+    observer?.observe(anchor)
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update, true)
+    }
+  }, [anchor])
+
+  const fallback = popoverPlacement(side)
+  if (!anchor || typeof window === 'undefined') {
+    return { position: fallback.position, centerTransform: fallback.centerTransform }
+  }
+
+  const gap = 10
+  const rect = anchor.getBoundingClientRect()
+  const centerX = rect.left + rect.width / 2
+  const centerY = rect.top + rect.height / 2
+  const position: React.CSSProperties = (() => {
+    switch (side) {
+      case 'bottom':
+        return { bottom: window.innerHeight - rect.top + gap, left: centerX }
+      case 'top':
+        return { top: rect.bottom + gap, left: centerX }
+      case 'left':
+        return { left: rect.right + gap, top: centerY }
+      case 'right':
+        return { right: window.innerWidth - rect.left + gap, top: centerY }
+      default:
+        return { left: centerX, top: centerY }
+    }
+  })()
+  return { position, centerTransform: fallback.centerTransform }
+}
+
+function deedPopoverLayer(node: ReactNode, anchored: boolean): ReactNode {
+  return anchored && typeof document !== 'undefined'
+    ? createPortal(node, document.body)
+    : node
+}
+
 export function PropertyPopover({
   square,
   side,
+  anchor,
   onClose,
 }: {
   square: PropertySquare
   side: Side
+  anchor?: HTMLElement | null
   onClose: () => void
 }) {
   const { ref: clampRef, off } = useViewportClamp()
@@ -1512,15 +1593,17 @@ export function PropertyPopover({
   // Posicionamento adjacente — sempre do lado interno do tabuleiro.
   // Geometria do balão vem de `./topology` — este bloco estava escrito TRÊS vezes,
   // uma por popover (property/airport/utility).
-  const { position: positionStyle, centerTransform, tail: tailStyle } = popoverPlacement(side)
+  const { tail: tailStyle } = popoverPlacement(side)
+  const { position: positionStyle, centerTransform } = useAnchoredPopover(anchor, side)
   const popoverAccent = deedPresentation(square).accent
 
-  return (
+  return deedPopoverLayer((
     <div
+      data-deed-popover-layer
       ref={clampRef}
       style={{
-        position: 'absolute',
-        zIndex: 65, // acima do card de dívida (z-60) — popover usável pra desipotecar
+        position: anchor ? 'fixed' : 'absolute',
+        zIndex: 65,
         transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`,
         ...positionStyle,
       }}
@@ -1549,7 +1632,7 @@ export function PropertyPopover({
         <div style={tailStyle} />
       </motion.div>
     </div>
-  )
+  ), Boolean(anchor))
 }
 
 // Botão de ação do deed — casca compacta (text-xs) sobre o primitivo Button.
@@ -1844,10 +1927,12 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
 export function AirportPopover({
   square,
   side,
+  anchor,
   onClose,
 }: {
   square: AirportSquare
   side: Side
+  anchor?: HTMLElement | null
   onClose: () => void
 }) {
   const { ref: clampRef, off } = useViewportClamp()
@@ -1859,11 +1944,12 @@ export function AirportPopover({
 
   // Geometria do balão vem de `./topology` — este bloco estava escrito TRÊS vezes,
   // uma por popover (property/airport/utility).
-  const { position: positionStyle, centerTransform, tail: tailStyle } = popoverPlacement(side)
+  const { tail: tailStyle } = popoverPlacement(side)
+  const { position: positionStyle, centerTransform } = useAnchoredPopover(anchor, side)
   const presentation = deedPresentation(square)
 
-  return (
-    <div ref={clampRef} style={{ position: 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
+  return deedPopoverLayer((
+    <div data-deed-popover-layer ref={clampRef} style={{ position: anchor ? 'fixed' : 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ position: 'relative' }}>
         <div className="atlas-surface atlas-surface--popover deed-popover w-[270px] overflow-hidden">
           {/* Header integrado à prancha Atlas. */}
@@ -1903,7 +1989,7 @@ export function AirportPopover({
         <div style={tailStyle} />
       </motion.div>
     </div>
-  )
+  ), Boolean(anchor))
 }
 
 // ---------------------------------------------------------------------
@@ -1912,10 +1998,12 @@ export function AirportPopover({
 export function UtilityPopover({
   square,
   side,
+  anchor,
   onClose,
 }: {
   square: UtilitySquare
   side: Side
+  anchor?: HTMLElement | null
   onClose: () => void
 }) {
   const { ref: clampRef, off } = useViewportClamp()
@@ -1927,13 +2015,14 @@ export function UtilityPopover({
 
   // Geometria do balão vem de `./topology` — este bloco estava escrito TRÊS vezes,
   // uma por popover (property/airport/utility).
-  const { position: positionStyle, centerTransform, tail: tailStyle } = popoverPlacement(side)
+  const { tail: tailStyle } = popoverPlacement(side)
+  const { position: positionStyle, centerTransform } = useAnchoredPopover(anchor, side)
 
   const accentColor = square.icon === 'fuel' ? 'var(--color-group-green)' : square.icon === 'bolt' ? 'var(--color-brass-glow)' : 'var(--color-group-orange)'
   const presentation = deedPresentation(square)
 
-  return (
-    <div ref={clampRef} style={{ position: 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
+  return deedPopoverLayer((
+    <div data-deed-popover-layer ref={clampRef} style={{ position: anchor ? 'fixed' : 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ position: 'relative' }}>
         <div
           className="atlas-surface atlas-surface--popover deed-popover w-[270px] overflow-hidden"
@@ -1980,7 +2069,7 @@ export function UtilityPopover({
         <div style={tailStyle} />
       </motion.div>
     </div>
-  )
+  ), Boolean(anchor))
 }
 
 // Linha compacta com valor textual (não monetário) — para utilidades.
