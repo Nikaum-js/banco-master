@@ -1,6 +1,6 @@
 # Banco Master — Software Requirements Specification (SRS)
 
-**Versão:** 1.10
+**Versão:** 1.12
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -83,6 +83,7 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Fim de jogo | Classificação completa por ordem inversa de eliminação, com patrimônio e duração (D-038) |
 | Acessibilidade | WCAG 2.2 AA no caminho de jogo, verificada automaticamente; paisagem é a orientação de jogo (D-039) |
 | Telemetria | Mínima e anônima — contagem de partidas no próprio Supabase, exceção em monitoramento de erro (D-040) |
+| Ordem inicial | Host escolhe no lobby entre Leilão secreto e Maior dado (D-046) |
 
 ---
 
@@ -180,8 +181,19 @@ Casa especial nova (1 no tabuleiro), inspirada no Mega Edition. Quem para nela *
 
 ### 3.1 Início de Partida
 
-- Cada jogador começa com **$2.000**. (Tabuleiro de 48 casas exige mais caixa inicial que o padrão de 40 — mais trânsito e mais propriedades para comprar. Meio-termo entre o $1.500 clássico e o $2.500 do Mega Edition.)
-- A ordem dos turnos é definida por rolagem de dados no lobby (maior valor começa).
+- Cada jogador recebe **$2.000 antes do Ritual de Largada**. (Tabuleiro de 48 casas exige mais caixa inicial que o padrão de 40 — mais trânsito e mais propriedades para comprar. Meio-termo entre o $1.500 clássico e o $2.500 do Mega Edition.)
+- Antes de iniciar, o host escolhe no lobby como a ordem será definida (D-046):
+  - **Leilão secreto**: o host abre uma única rodada simultânea para todos os assentos, inclusive o próprio;
+  - cada jogador lacra um lance de **$0 a $500**, em passos de **$50**, dentro de **15 segundos**;
+  - o lance não pode ser alterado depois de enviado; ausência de lance no prazo vale **$0**;
+  - a ordem é decrescente por valor; empates são resolvidos por sorteio da autoridade da mesa;
+  - cada jogador paga o próprio lance ao banco, e começa a partida com **$2.000 menos o lance**;
+  - o banco deposita a soma integral dos lances na **Loteria** (§13.4), além dos $500 iniciais;
+  - durante a coleta, valores permanecem secretos; a revelação publica os lances e a ordem para todos;
+  - **Maior dado**: a autoridade rola automaticamente dois dados brancos por jogador; a ordem é decrescente pela soma e empates são resolvidos pelo RNG da autoridade;
+  - em Maior dado, ninguém paga pela posição: todos começam com $2.000 e a Loteria com $500;
+  - o modo escolhido e o resultado ficam visíveis para todos; somente o host pode mudar o modo, e apenas antes de iniciar;
+  - terminada a revelação visual de qualquer modo, todas as telas entram automaticamente no tabuleiro, sem confirmação individual.
 - Todos os jogadores iniciam na casa **GO** (índice 0).
 - Todos os títulos de propriedade começam com o banco.
 
@@ -260,7 +272,7 @@ Enviado imediatamente à Prisão (índice 12). **NÃO** recebe o GO. Não move m
 
 ### 4.10 Férias (Free Parking)
 
-Coleta o prêmio acumulado no centro do tabuleiro (ver Seção 13.4).
+Coleta toda a **Loteria** acumulada no centro do tabuleiro (ver Seção 13.4).
 
 ### 4.11 Regras da Prisão
 
@@ -693,7 +705,7 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 ### 11.1 Criação de Sala
 
 - Host cria a sala e recebe um link único.
-- Host tem poderes especiais: **kickar jogadores** e **iniciar a partida**.
+- Host tem poderes especiais: **kickar jogadores**, **escolher o Ritual de Largada** e **iniciar a partida**, que entra no tabuleiro automaticamente depois da revelação.
 - Sala suporta de 2 a 8 jogadores humanos.
 - Host pode iniciar com pelo menos 2 jogadores.
 
@@ -884,7 +896,7 @@ Terceiro dado especial baseado na mecânica oficial do Monopoly (edição 2006+)
 
 **Regras adicionais:**
 
-- Não é usado na rolagem inicial de ordem de turno.
+- Não participa do Ritual de Largada; o modo Maior dado usa apenas os dois dados brancos.
 - Não é usado ao tentar sair da prisão com dupla.
 - Para Utilidades, o valor do Speed Die é somado aos outros dados.
 - Speed Die **não conta** para duplas — 3-3 nos brancos + 3 no Speed Die não é tripla dupla.
@@ -906,13 +918,14 @@ Jogadores podem construir possuindo **qualquer** quantidade de cidades do país 
 
 ### 13.4 Free Parking com Prêmio Acumulado
 
-A casa Férias (índice 24) acumula prêmio em dinheiro ao longo da partida:
+A casa Free Parking (índice 24) entrega a **Loteria**, prêmio em dinheiro acumulado desde a largada e ao longo da partida:
 
 - Todo valor pago em **impostos** (Income Tax, Luxury Tax) vai para o centro.
 - Todo valor pago em **multas** de cartas Acaso/Tesouro vai para o centro.
 - A multa da **Prisão** ($50) vai para o centro.
+- Todo valor pago no **Leilão secreto da largada** vai para o centro antes do primeiro turno (D-046); o modo Maior dado não acrescenta dinheiro.
 - **Prêmio inicial** colocado no centro ao início: **$500**.
-- O jogador que parar em Férias recebe **todo** o dinheiro acumulado.
+- O jogador que parar no Free Parking recebe **todo** o dinheiro acumulado.
 - Após coletado, o centro é **reabastecido** com $500 do banco.
 
 > 📌 Catch-up discreto e natural. Quem está perdendo torce para cair no Free Parking.
@@ -1067,4 +1080,4 @@ sendo a fonte de verdade da **regra**, o `CONTEXT.md` é a fonte dos **nomes**.
 
 ---
 
-**Banco Master — SRS v1.8 | Julho 2026 | Documento de fonte de verdade absoluta**
+**Banco Master — SRS v1.12 | Julho 2026 | Documento de fonte de verdade absoluta**

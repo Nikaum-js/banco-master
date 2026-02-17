@@ -12,9 +12,9 @@ Tema inicial: "Cidades do Mundo". Base extensível para outros temas no futuro.
 
 ## 2. Fase atual
 
-**Lançamento (M4).** As specs 001–044 estão implementadas e integradas ao `main`: motor fechado, multiplayer vivo sobre o Supabase, fronteira de erro, identidade de transporte atestada pelo servidor (043) e o polimento de lançamento (044 — fim de jogo com classificação, acessibilidade AA no caminho de jogo, paisagem em tablet/celular, telemetria anônima, gates de CI e deploy na Vercel).
+**Lançamento (M4).** As specs 001–045 estão implementadas e integradas ao `main`: motor fechado, multiplayer vivo sobre o Supabase, fronteira de erro, identidade de transporte atestada pelo servidor (043), o polimento de lançamento (044 — fim de jogo com classificação, acessibilidade AA no caminho de jogo, paisagem em tablet/celular, telemetria anônima, gates de CI e deploy na Vercel) e o Ritual de Largada configurável pelo host (045).
 
-**A operação de lançamento está concluída** (2026-07-27): as **quatro** migrations estão aplicadas no projeto de produção, os secrets da Vercel (`VERCEL_TOKEN`/`ORG_ID`/`PROJECT_ID`) estão no repo, e o `deploy.yml` promove produção **só** depois do CI fechar verde (D-041) — o auto-deploy nativo em `main` está desligado por `vercel.json`. O [`docs/RUNBOOK.md`](./docs/RUNBOOK.md) continua valendo como procedimento de operação, não como pendência.
+**A operação de lançamento está concluída** (atualizada em 2026-07-28): as **cinco** migrations estão aplicadas no projeto de produção, os secrets da Vercel (`VERCEL_TOKEN`/`ORG_ID`/`PROJECT_ID`) estão no repo, e o `deploy.yml` promove produção **só** depois do CI fechar verde (D-041) — o auto-deploy nativo em `main` está desligado por `vercel.json`. O [`docs/RUNBOOK.md`](./docs/RUNBOOK.md) continua valendo como procedimento de operação, não como pendência.
 
 Comportamento esperado:
 
@@ -101,5 +101,5 @@ Detalhe em [`docs/adr/README.md`](docs/adr/README.md).
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-[`specs/044-polimento-lancamento/plan.md`](./specs/044-polimento-lancamento/plan.md)
+[`specs/045-leilao-da-largada/plan.md`](./specs/045-leilao-da-largada/plan.md)
 <!-- SPECKIT END -->

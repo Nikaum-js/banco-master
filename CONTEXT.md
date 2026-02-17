@@ -13,8 +13,24 @@ Casa de índice 0. Passar por ela credita $200; parar exatamente nela credita $4
 _Avoid_: Início, Partida, Start
 
 **Free Parking**:
-Casa de índice 24, que acumula impostos e multas como prêmio para quem parar nela.
+Casa de índice 24. Quem para nela coleta toda a Loteria.
 _Avoid_: Férias, Estacionamento Livre
+
+**Loteria**:
+Prêmio acumulado no centro da mesa. Começa em $500, recebe impostos, multas e, quando escolhido, todos os lances do Leilão secreto; quem parar no Free Parking leva tudo ([D-006](./docs/adr/D-006-free-parking-com-premio-acumulado.md), [D-046](./docs/adr/D-046-leilao-da-largada-financia-a-loteria.md)).
+_Avoid_: centerPot (na interface), pote do Free Parking
+
+**Ritual de Largada**:
+Escolha pública do host no lobby para definir a ordem inicial: Leilão secreto ou Maior dado ([D-046](./docs/adr/D-046-leilao-da-largada-financia-a-loteria.md)).
+_Avoid_: sorteio oculto, ordem de entrada
+
+**Leilão da Largada**:
+Modo do Ritual de Largada em que cada jogador lacra e paga o próprio lance, e o total entra na Loteria ([D-046](./docs/adr/D-046-leilao-da-largada-financia-a-loteria.md)).
+_Avoid_: leilão aberto, pregão da largada
+
+**Maior dado**:
+Modo do Ritual de Largada em que a autoridade rola dois dados brancos por jogador e ordena a mesa pela maior soma, sem custo ([D-046](./docs/adr/D-046-leilao-da-largada-financia-a-loteria.md)).
+_Avoid_: shuffle, ordem aleatória
 
 **Dupla**:
 Mesmos valores nos dois dados brancos.
