@@ -122,7 +122,10 @@ export function describeLogEntry(entry: LogEntry, room: Room | null): LogSentenc
     case 'buy':
       return [who(room, entry.who), text(' comprou '), place(entry.pos), text(' por '), money(entry.price)]
     case 'rent':
-      return [who(room, entry.who), text(' pagou '), money(entry.amount), text(' de aluguel a '), who(room, entry.ownerId)]
+      // `ownerId: 'bank'` = aluguel confiscado pela Estatização (D-064): foi à Loteria, não ao dono.
+      return entry.ownerId === 'bank'
+        ? [who(room, entry.who), text(' pagou '), money(entry.amount), text(' de aluguel à Loteria (Estatização)')]
+        : [who(room, entry.who), text(' pagou '), money(entry.amount), text(' de aluguel a '), who(room, entry.ownerId)]
     case 'tax':
       return [who(room, entry.who), text(' pagou '), money(entry.amount), text(' de imposto')]
     case 'bus-ticket-gain':
@@ -190,9 +193,12 @@ export function describeLogEntry(entry: LogEntry, room: Room | null): LogSentenc
     case 'hostile-takeover':
       return [who(room, entry.who), text(' tomou '), place(entry.pos), text(' de '), who(room, entry.victimId), text(' por '), money(entry.amount)]
     case 'audit':
-      return [who(room, entry.who), text(' auditou '), who(room, entry.targetId), text(': '), money(entry.amount), text(' ao centro do tabuleiro')]
+      return [who(room, entry.who), text(' aplicou Imposto Federal em '), who(room, entry.targetId), text(': '), money(entry.amount), text(' à Loteria')]
     case 'evict':
-      return [who(room, entry.who), text(' despejou uma casa de '), who(room, entry.victimId), text(' em '), place(entry.pos)]
+      return [who(room, entry.who), text(' confiscou as construções de '), who(room, entry.victimId), text(' em '), place(entry.pos)]
+    // Permuta Forçada (D-064): troca seca de títulos, sem dinheiro — o fato nomeia os dois lados.
+    case 'swap':
+      return [who(room, entry.who), text(' permutou '), place(entry.posGiven), text(' por '), place(entry.posTaken), text(' de '), who(room, entry.victimId)]
     case 'card-collect':
       return entry.delta < 0
         ? [who(room, entry.who), text(` pagou `), money(-entry.delta), text(entry.counterpartId === 'bank' ? ' (' : ' a '), ...(entry.counterpartId === 'bank' ? [text(`${entry.name})`)] : [who(room, entry.counterpartId), text(` (${entry.name})`)])]

@@ -38,6 +38,7 @@ export function logIcon(kind: LogEntry['kind']): ReactNode {
     case 'sell-to-bank':
     case 'hostile-takeover':
     case 'evict':
+    case 'swap':
       return <GavelIcon size={11} />
     case 'go':
     case 'rent':

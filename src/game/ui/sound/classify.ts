@@ -80,6 +80,7 @@ export function logKey(e: LogEntry): string {
     case 'hostile-takeover': return [e.kind, e.who, e.pos, e.amount, e.victimId].join('|')
     case 'audit': return [e.kind, e.who, e.targetId, e.amount].join('|')
     case 'evict': return [e.kind, e.who, e.pos, e.victimId].join('|')
+    case 'swap': return [e.kind, e.who, e.posGiven, e.posTaken, e.victimId].join('|')
     case 'card-collect': return [e.kind, e.who, e.name, e.delta, e.counterpartId].join('|')
     case 'loan-interest': return [e.kind, e.who, e.amount, e.creditorId].join('|')
     case 'loan-interest-short': return [e.kind, e.who, e.amount, e.creditorId, e.shortfall].join('|')
@@ -137,6 +138,8 @@ export function classifyLogEntry(e: LogEntry): SoundCue | null {
     case 'tax-man': return 'tax-paid'
     case 'audit': return 'tax-paid'
     case 'hostile-takeover': return 'hostile-takeover'
+    // Permuta Forçada (D-064): mesma família da tomada hostil — títulos mudam de mão à força.
+    case 'swap': return 'hostile-takeover'
     case 'card-draw': return 'card-draw'
     // Leilão comum: família muda (antes 100% silenciosa — closeAuction nunca soava,
     // T023/040) — 'auction-close' já existe como cue e nunca tinha dono; sem conflito

@@ -90,7 +90,7 @@ export const ALL_LOG_KINDS = [
   'free-parking', 'jail-fine',
   'debt-open', 'debt-paid', 'bankruptcy', 'concede', 'trade',
   // D-063 — seis regras que moviam caixa sem emitir fato nenhum:
-  'tax-man', 'hostile-takeover', 'audit', 'evict', 'card-collect',
+  'tax-man', 'hostile-takeover', 'audit', 'evict', 'card-collect', 'swap',
   'loan-interest', 'loan-interest-short', 'loan-due', 'loan-due-short',
   'legacy',
 ] as const
@@ -148,8 +148,10 @@ export type LogEntry =
   | { kind: 'tax-man'; who: string; pos: number; amount: number; due: number }
   // Aquisição Hostil (§10.6) — `who` = atacante. Tinha `notice` efêmero, nunca fato no log.
   | { kind: 'hostile-takeover'; who: string; pos: number; amount: number; victimId: string }
-  | { kind: 'audit'; who: string; targetId: string; amount: number } // Auditoria Fiscal — who = atacante
-  | { kind: 'evict'; who: string; pos: number; victimId: string } // Despejo — sem dinheiro, mas destrói valor
+  | { kind: 'audit'; who: string; targetId: string; amount: number } // Imposto Federal (ex-Auditoria, D-064) — who = atacante
+  | { kind: 'evict'; who: string; pos: number; victimId: string } // Confisco Geral (ex-Despejo, D-064) — sem dinheiro, mas destrói valor
+  // Permuta Forçada (D-064) — who = atacante entrega `posGiven` e leva `posTaken` de `victimId`.
+  | { kind: 'swap'; who: string; posGiven: number; posTaken: number; victimId: string }
   // Carta imediata que move o caixa de quem NÃO sacou (Aniversário, Boom, Crise). `card-immediate`
   // registra só o delta do sacador; os outros mudavam de saldo sem fato. `delta` é assinado;
   // `counterpartId` é quem está do outro lado ('bank' quando é banco/pote).
@@ -157,10 +159,16 @@ export type LogEntry =
   | { kind: 'legacy'; who: string; what: string } // NUNCA emitida por reducer — só normalização de snapshot velho (FR-022)
 
 export interface TempEffect {
-  kind: 'apagao' | 'greve' | 'boicote' | 'imunidade-temp' // efeitos temporários de carta (015, §10.6)
+  // Efeitos temporários de carta (015, §10.6). D-064 acrescenta: estatização (aluguel → Loteria),
+  // valorização (aluguel ×2 numa propriedade própria), embargo (alvo não constrói) e
+  // imunidade-total (jogador não paga aluguel/imposto nem é alvo de efeito negativo).
+  // `imunidade-temp` não tem mais fonte (a carta virou Imunidade Total) — fica no tipo por
+  // compatibilidade de snapshot em voo.
+  kind: 'apagao' | 'greve' | 'boicote' | 'imunidade-temp' | 'estatizacao' | 'valorizacao' | 'embargo' | 'imunidade-total'
   ownerId: string // quem originou — relógio da expiração (passagem dele pelo GO)
-  pos: number | null // propriedade (boicote/imunidade-temp) ou null (apagao/greve, board-wide)
-  lapsRemaining: number // voltas restantes (apagao/greve: 1; boicote/imunidade-temp: 2)
+  pos: number | null // propriedade (boicote/valorizacao) ou null (efeitos board-wide/de jogador)
+  lapsRemaining: number // voltas restantes (apagao/greve/valorizacao/imunidade-total: 1; boicote/embargo/estatizacao: 2)
+  targetId?: string // embargo (D-064): jogador proibido de construir
 }
 
 // Negociação (013/024/047) — troca entre dois jogadores e seu envelope persistente.
@@ -232,6 +240,8 @@ export type ResolutionSlice =
       origin?: 'loan-interest' | 'loan-due'
     }
   // Reação pendente (017): a carta ofensiva fica "em voo" aqui até o alvo responder.
+  // `targetPos2` (D-064): segunda posição da Permuta Forçada (a propriedade PRÓPRIA do
+  // atacante); opcional para snapshot anterior continuar válido.
   | {
       kind: 'reaction-diplomacia'
       reactorId: string
@@ -241,5 +251,6 @@ export type ResolutionSlice =
       deck: DeckId
       targetPos: number | null
       targetPlayer: string | null
+      targetPos2?: number | null
     }
   | { kind: 'reaction-bunker'; reactorId: string; amount: number }
