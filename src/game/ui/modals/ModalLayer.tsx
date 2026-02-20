@@ -825,12 +825,13 @@ function AuctionCard({
   const stillBidding = view.activeBidders.includes(activeId)
   const players = useGameStore((s) => s.game.players)
   const room = useRoomStore((s) => s.room)
-  const [now, setNow] = useState(() => Date.now())
+  const clockOffsetMs = useRoomStore((s) => s.clockOffsetMs)
+  const [localNow, setLocalNow] = useState(() => Date.now())
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 200)
+    const t = setInterval(() => setLocalNow(Date.now()), 200)
     return () => clearInterval(t)
   }, [])
-  const msLeft = Math.max(0, view.deadline - now)
+  const msLeft = Math.max(0, view.deadline - (localNow + clockOffsetMs))
   const secLeft = Math.ceil(msLeft / 1000)
   const timeLeftPct = Math.max(0, Math.min(100, (msLeft / AUCTION_WINDOW) * 100))
   const sq = view.square

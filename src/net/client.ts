@@ -44,6 +44,9 @@ export interface Client {
   paused(): boolean
   seq(): number
   connection(): ConnectionState
+  /** Diferença estimada `relógio do host - relógio local`, atualizada pelos valores de
+   * `ctx.now()` gravados nos comandos aceitos. */
+  clockOffsetMs(): number
   // 043, D-036/T024/T026: o PRÓPRIO código de reentrada — só existe aqui porque a prévia
   // (`loadRoom`/`room_preview`) o devolve pra quem chamou; a sala publicada (`room()`) nunca
   // carrega código nenhum, nem o do dono. `null` até a 1ª leitura da prévia resolver.
@@ -86,6 +89,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
   const listeners = new Set<() => void>()
   const subs: Unsubscribe[] = []
   let connection: ConnectionState = 'connected'
+  let clockOffsetMs = 0
   let resyncing = false // no máximo UMA ressincronização em voo por vez (D11 do plan)
   let resyncTarget = -1 // maior `seq` mínimo pedido desde que a ressincronização em voo começou
 
@@ -131,6 +135,11 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
       return
     }
     if (cmd.seq > seq + 1) { void resync(cmd.seq); return } // lacuna na sequência → recupera via snapshot (FR-012)
+    // `deadline` é epoch do HOST. Subtrair o `Date.now()` de cada aparelho faria dois
+    // participantes verem tempos diferentes quando seus relógios civis estão desalinhados.
+    // O `now` autoritativo já vem gravado no comando aceito; esta amostra corrige a UI local.
+    const authoritativeNow = cmd.resolved.now.at(-1)
+    if (authoritativeNow !== undefined) clockOffsetMs = authoritativeNow - Date.now()
     const preGame = game
     game = applyCommand(game, cmd.action, replayCtx(baseCtx, cmd.resolved))
     seq = cmd.seq
@@ -324,6 +333,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
     paused: () => Boolean(game?.paused),
     seq: () => seq,
     connection: () => connection,
+    clockOffsetMs: () => clockOffsetMs,
     myReentryCode: () => myReentryCode,
 
     subscribe(cb): Unsubscribe {

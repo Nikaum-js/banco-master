@@ -29,6 +29,7 @@ export function connectMultiplayer(client: Client): () => void {
       room: client.room(),
       myUid: client.uid,
       connection: client.connection(),
+      clockOffsetMs: client.clockOffsetMs(),
       myReentryCode: client.myReentryCode(),
       commandFailure: client.lastCommandFailure(),
     })

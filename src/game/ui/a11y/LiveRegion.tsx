@@ -49,6 +49,7 @@ function sentenceToText(sentence: LogSentence): string {
 // leilão e a cada lance que a reseta), não um por segundo.
 function useAuctionUrgentAnnouncement(): string {
   const game = useGameStore((s) => s.game)
+  const clockOffsetMs = useRoomStore((s) => s.clockOffsetMs)
   const [text, setText] = useState('')
   const warnedDeadline = useRef<number | null>(null)
 
@@ -60,7 +61,7 @@ function useAuctionUrgentAnnouncement(): string {
     }
     const { deadline, square } = view
     const check = () => {
-      const msLeft = deadline - Date.now()
+      const msLeft = deadline - (Date.now() + clockOffsetMs)
       if (msLeft > 0 && msLeft <= 3000 && warnedDeadline.current !== deadline) {
         warnedDeadline.current = deadline
         setText(`Leilão de ${square.name} terminando`)
@@ -69,7 +70,7 @@ function useAuctionUrgentAnnouncement(): string {
     check()
     const t = setInterval(check, 250)
     return () => clearInterval(t)
-  }, [game])
+  }, [game, clockOffsetMs])
 
   return text
 }

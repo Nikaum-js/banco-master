@@ -18,6 +18,8 @@ interface RoomState {
   myUid: string | null
   /** Conexão da PRÓPRIA sessão (041, data-model §4) — espelhada do `client`, não do jogo. */
   connection: ConnectionState
+  /** Diferença estimada `Date.now()` do host menos `Date.now()` deste aparelho. */
+  clockOffsetMs: number
   /** 043, D-036/T026: o PRÓPRIO código de reentrada — vem da PRÉVIA (`Client.myReentryCode()`),
    * nunca de `room` (que não carrega código nenhum, nem o do dono). */
   myReentryCode: string | null
@@ -35,13 +37,14 @@ export const useRoomStore = create<RoomState>((set) => ({
   room: null,
   myUid: null,
   connection: 'connected',
+  clockOffsetMs: 0,
   myReentryCode: null,
   commandFailure: null,
   setRoom: (room) => set({ room }),
   setSession: (myUid) => set({ myUid }),
   setConnection: (connection) => set({ connection }),
   setMyReentryCode: (myReentryCode) => set({ myReentryCode }),
-  reset: () => set({ room: null, myUid: null, connection: 'connected', myReentryCode: null, commandFailure: null }),
+  reset: () => set({ room: null, myUid: null, connection: 'connected', clockOffsetMs: 0, myReentryCode: null, commandFailure: null }),
 }))
 
 // Perspectiva local viva. Sem sala → modo 'local' (nada bloqueado), preservando o
