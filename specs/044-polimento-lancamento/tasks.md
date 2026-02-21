@@ -181,3 +181,12 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 - [ ] **T070** `src/game/ui/modals/ModalLayer.tsx` (`BusLine`, `embark()`): o dispatch de `use-bus-ticket` é atrasado em `setTimeout(…, 560)` para "esperar o ônibus chegar visualmente" — comando de jogo esperando animação (FR-031). Separar as duas coisas: o comando sai imediatamente, a animação de embarque acontece por cima do estado já avançado. Sob movimento reduzido, nenhuma espera.
 - [ ] **T071** `src/boards/shared.tsx` (`ROLL_DURATION_MS`, `useDieAnimation`, `DiceArena`): a flag `rolling` de `tokenAnim` fica presa a 1050 ms fixos, independente de `prefers-reduced-motion` — o peão não anda e o botão não volta antes disso (FR-032). Derivar a duração do vocabulário (`motion.ts`) e zerá-la sob movimento reduzido, **preservando o handshake `rolling`/`animating`** com `GameDriver` (o modal de compra não pode abrir antes do peão chegar).
 - [ ] **T072** [test-first] Prova de que, sob movimento reduzido, o comando de Bus Ticket é despachado sem espera e o peão anda assim que o dado para — e de que o handshake com `GameDriver` continua valendo nos dois modos.
+
+---
+
+## Fase 7b — Contraste: o que corrigir sem trocar a paleta (FR-017)
+
+**Origem**: medição da Fase 4 (luminância relativa, não estimativa). Dois problemas de natureza diferente, e só um deles se resolve sem decisão de design:
+
+- [ ] **T073** **Texto secundário diluído por opacidade** (`text-cream-muted/60`, `/70` e similares): ~3,3–4,1:1, abaixo do 4,5:1. A causa é a **opacidade**, não o token de cor. Corrigir subindo a opacidade dos usos que ficam abaixo do limiar (a cor-base permanece) — ajuste mínimo, identidade visual preservada. É o que o gate `axe` vai acusar como `serious`.
+- [ ] **T074** **Bordas e superfícies de interface** (`--color-ink-500`, `--color-coffee-500`): ~1,5–1,7:1 contra os fundos escuros, abaixo do 3:1 de elemento de interface (WCAG 2.2 §1.4.11). **Não corrigir sem o usuário**: o token é onipresente (borda de todo cartão, input e botão) e clareá-lo muda visivelmente a cara do jogo. O `axe` não automatiza contraste de não-texto, então isto **não** bloqueia o gate — fica como decisão de design pendente, com a medição registrada. Sem referência visual do usuário, não se mexe.
