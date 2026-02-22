@@ -1,26 +1,10 @@
 import { lazy, Suspense } from 'react'
-import Board01Classic from '@/boards/Board01Classic'
-import { GameHUD } from '@/game/ui/GameHUD'
-import { GameDriver } from '@/game/ui/GameDriver'
-import { ModalLayer } from '@/game/ui/modals/ModalLayer'
-import { TradeLayer } from '@/game/ui/trade/TradeLayer'
-import { LandAuctionLayer } from '@/game/ui/landAuction/LandAuctionLayer'
-import { HandCardLayer } from '@/game/ui/cards/HandCardLayer'
-import { NoticeLayer } from '@/game/ui/NoticeLayer'
-import { LiveRegion } from '@/game/ui/a11y/LiveRegion'
-import { SoundLayer } from '@/game/ui/sound/SoundLayer'
-import { AudioControl } from '@/game/ui/sound/AudioControl'
-import { SoundBoard } from '@/game/ui/sound/SoundBoard'
-import { DebugLogger } from '@/game/ui/DebugLogger'
 import { OnlineGate } from '@/net/ui/OnlineGate'
-import { PauseBanner } from '@/net/ui/PauseBanner'
-import { ConnectionBanner } from '@/net/ui/ConnectionBanner'
-import { CommandFailureToast } from '@/net/ui/CommandFailureToast'
-import { AccessoryErrorBoundary } from '@/app/AccessoryErrorBoundary'
-// Import por efeito colateral (044/T049, D10 do plan): aplica `?scenario=endgame` na
-// avaliação do módulo, antes do primeiro render — mesmo timing de `freshGame(initialPlayerIds())`
-// em `game/store.ts`. Sem o parâmetro, não faz nada.
-import '@/game/ui/e2eScenario'
+
+const GameSurface = lazy(() => import('@/game/ui/GameSurface'))
+const SoundBoard = lazy(() =>
+  import('@/game/ui/sound/SoundBoard').then((module) => ({ default: module.SoundBoard })),
+)
 
 const VisualLab = lazy(() =>
   import('@/game/ui/lab/VisualLab').then((module) => ({ default: module.VisualLab })),
@@ -41,7 +25,13 @@ const VisualLab = lazy(() =>
 // (só sobrepõe um aviso por cima dos mesmos filhos).
 export default function App() {
   // `?sons` abre o board de auditoria dos SFX (dev) no lugar do jogo.
-  if (new URLSearchParams(window.location.search).has('sons')) return <SoundBoard />
+  if (new URLSearchParams(window.location.search).has('sons')) {
+    return (
+      <Suspense fallback={null}>
+        <SoundBoard />
+      </Suspense>
+    )
+  }
   // `?ui-lab` isola os componentes visuais reais em fixtures de desenvolvimento.
   if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('ui-lab')) {
     return (
@@ -51,26 +41,10 @@ export default function App() {
     )
   }
   return (
-    <>
-      <OnlineGate>
-        <Board01Classic />
-        <GameDriver />
-        <ModalLayer />
-        <TradeLayer />
-        <LandAuctionLayer />
-        <HandCardLayer />
-        <NoticeLayer />
-        <LiveRegion />
-        <AccessoryErrorBoundary label="Som">
-          <SoundLayer />
-        </AccessoryErrorBoundary>
-        <GameHUD />
-        <AudioControl />
-        <PauseBanner />
-        <ConnectionBanner />
-        <CommandFailureToast />
-        <DebugLogger />
-      </OnlineGate>
-    </>
+    <OnlineGate>
+      <Suspense fallback={null}>
+        <GameSurface />
+      </Suspense>
+    </OnlineGate>
   )
 }
