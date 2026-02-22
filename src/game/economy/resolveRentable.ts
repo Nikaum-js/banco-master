@@ -33,6 +33,7 @@ export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
   } else {
     const t = state.titles[pos]
     amount = rentCity(
+      square.group,
       square.rent,
       groupOwnedCount(state, square.group, owner),
       groupSize(square.group),

@@ -26,7 +26,6 @@ export interface DeedFlags {
 }
 
 export type BuildBlock =
-  | 'maioria'
   | 'hipoteca-no-grupo'
   | 'topo'
   | 'uniformidade'
@@ -77,7 +76,6 @@ function buildBlock(game: GameState, pos: number): BuildBlock {
   const owner = activeId(game)
   const cities = groupCities(game, sq.group, owner)
   const size = groupSize(sq.group)
-  if (cities.length < (size === 4 ? 3 : 2)) return 'maioria'
   if (cities.some((p) => game.titles[p]?.mortgaged)) return 'hipoteca-no-grupo'
   const cur = cityLevel(game.titles[pos])
   if (cur >= 7) return 'topo'

@@ -1,9 +1,9 @@
 // Construção — funções puras (clonam o estado). Build/sell de casas e hotel.
 //
-// VALORES DE TEMA (provisórios, research D3): o custo de construção e a tabela de
-// aluguel por nível são dado de tema. Aqui o custo entra como `round(price/2)` e a
-// tabela de aluguel vive em `rent.ts` (HOUSE_RENT_MULT/HOTEL_RENT_MULT). O tema
-// substitui esses números sem mudar a regra (uniformidade, 70%/100%, metade na venda).
+// VALORES DE TEMA (032/D-024): o custo de casa é um **tier por grupo** (`THEME.HOUSE_COST`,
+// não mais proporcional ao preço) e a tabela de aluguel por nível vem da FONTE ÚNICA
+// `rentLadder` (`rent.ts`, `THEME.RENT_MULT` por grupo). As regras (uniformidade, 70%/100%,
+// metade na venda) não mudam — só os valores, calibráveis no tema.
 import { BOARD } from '@/lib/boardData'
 import type { PropertySquare, GroupKey } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
@@ -15,13 +15,8 @@ function clone(state: GameState): GameState {
   return structuredClone(state)
 }
 
-// Maioria do grupo: 2 (grupo de 3) / 3 (grupo de 4). 001 FR-013 / D-004.
-function majority(size: number): number {
-  return size === 4 ? 3 : 2
-}
-
 export function buildCost(square: PropertySquare): number {
-  return Math.round(square.price * THEME.BUILD_COST_RATIO) // tema; Skyscraper usa o mesmo (≥ 2º hotel, §13.7)
+  return THEME.HOUSE_COST[square.group] // tier fixo por grupo (032); todos os níveis usam o mesmo custo
 }
 
 export const HANGAR_COST = THEME.HANGAR_COST // §13.6; venda = metade ($50)
@@ -41,7 +36,9 @@ function ownedGroupCities(state: GameState, group: GroupKey, ownerId: string): P
   )
 }
 
-// Pode construir no grupo desta cidade? (dono ativo, maioria, nada hipotecado)
+// Pode construir no grupo desta cidade? (dono ativo, nada hipotecado no que possui)
+// 034: NÃO exige mais a maioria do país — basta ser dono da cidade; o aluguel é que
+// escala pela posse (rent.ts/posseFactor). Arranha-céu ainda exige país completo (canBuildHouse).
 export function canBuild(state: GameState, pos: number): boolean {
   const sq = BOARD[pos]
   if (sq.kind !== 'property') return false
@@ -49,7 +46,6 @@ export function canBuild(state: GameState, pos: number): boolean {
   const title = state.titles[pos]
   if (!title || title.ownerId !== player.id) return false
   const cities = ownedGroupCities(state, sq.group, player.id)
-  if (cities.length < majority(groupSize(sq.group))) return false // precisa da maioria
   if (cities.some((c) => state.titles[c.pos]?.mortgaged)) return false // nenhuma hipotecada
   return true
 }
