@@ -607,16 +607,31 @@ function useLivePlayers(): Player[] {
 export function PlayersPanel() {
   const players = useLivePlayers()
   const effects = useGameStore((s) => s.game.tempEffects).map(effectRow) // 024.1 — efeitos reais
+  const activePlayers = players.filter((p) => !p.bankrupt).length
   return (
     <aside className="side-panel">
-      <div className="side-panel-section">
+      <div className="side-panel-section players-panel-section">
         <SectionHeader
           title="Jogadores"
-          meta={<p className="label text-cream-muted">{players.filter((p) => !p.bankrupt).length} / 8</p>}
+          meta={(
+            <div className="players-capacity" aria-label={`${activePlayers} de 8 jogadores`}>
+              <span className="players-capacity__count" aria-hidden>
+                <strong>{activePlayers}</strong>
+                <span>/ 8</span>
+              </span>
+              <span className="players-capacity__slots" aria-hidden>
+                {Array.from({ length: 8 }, (_, index) => (
+                  <i key={index} data-filled={index < activePlayers || undefined} />
+                ))}
+              </span>
+            </div>
+          )}
         />
-        <div className="flex flex-col gap-2">
-          {players.map((p) => <PlayerRow key={p.id ?? p.name} player={p} />)}
-        </div>
+        <ol className="players-roster" aria-label="Participantes da partida">
+          {players.map((p, index) => (
+            <PlayerRow key={p.id ?? p.name} player={p} seat={index + 1} />
+          ))}
+        </ol>
         {/* Negociar movido pra a seção única "Negociações" (painel direito). */}
       </div>
 
@@ -658,68 +673,85 @@ export function PlayersPanel() {
   )
 }
 
-function PlayerRow({ player: p }: { player: Player }) {
+function PlayerRow({ player: p, seat }: { player: Player; seat: number }) {
   // Feedback de caixa (024.1; extraído em 044/T020 pra `primitives.tsx` — mesmo pulso
   // que PotCard usa e que a tela de dívida do GameHUD passou a reusar).
   const pulse = useMoneyPulse(p.money)
 
   return (
-    <div
+    <li
+      aria-current={p.active ? 'step' : undefined}
       className={cn(
-        'player-row relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-card)]',
-        'border transition-colors',
-        p.active
-          ? 'player-row--active bg-coffee-700 border-gold shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-brass)_30%,transparent)]'
-          : 'bg-coffee-800/60 border-coffee-500',
+        'player-row',
+        p.active && 'player-row--active',
         // 044/T073: era `opacity-50` — mediu abaixo de 4,5:1 pro texto "Falido"/valor
         // desta linha. Sobe o piso pra manter o texto legível; a linha ainda fica
         // visivelmente mais apagada que as ativas (borda/fundo já mudam por conta própria).
-        p.bankrupt && 'opacity-90',
+        p.bankrupt && 'player-row--bankrupt',
       )}
+      style={{ '--player-accent': p.color } as React.CSSProperties}
     >
-      <MoneyPulse pulse={pulse} className="right-3 top-1.5" />
-      <PlayerFace color={p.color} avatar={p.avatar} skin={p.skin} active={p.active} asleep={p.bankrupt} size={40} />
-      <div className="player-row__identity flex-1 min-w-0">
-        <p className="display display--tight text-cream text-[17px] leading-none truncate">{p.name}</p>
-        <div className="player-row__meta flex items-center gap-2 mt-1">
-          {p.bankrupt ? (
-            <span className="label text-cream-muted">Falido</span>
-          ) : p.connected === false ? (
-            // Status de sessão (§12.3/FR-015): quem caiu segue com tudo intacto (FR-020).
-            <span title="Desconectado — a partida espera" className="label text-logo inline-flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-logo" aria-hidden />
-              Offline
-            </span>
-          ) : (
-            <span title="Cartas em mão (privadas)" className="label inline-flex items-center gap-1">
-              <CardGlyph size={13} />
-              {p.cardsInHand}/3
-            </span>
-          )}
-          {/* Estado do assento fica na segunda linha para preservar o nome completo.
-              A cor continua acompanhada de texto: não depende só do filete ativo. */}
-          <span className="flex items-center gap-1.5 ml-auto">
-            {p.active      && <span title="Turno atual" className="label !text-gold">VEZ</span>}
-            {p.you         && <span title="Seu assento" className="label !text-gold">VOCÊ</span>}
-            {p.loanActive  && <span title="Empréstimo ativo" className="label !text-logo">$$</span>}
-            {p.immune      && <span title="Imunidade ativa"  className="label !text-gold">IMU</span>}
-          </span>
+      <MoneyPulse pulse={pulse} className="player-row__pulse" />
+
+      <span className="player-row__seat" aria-hidden>
+        {String(seat).padStart(2, '0')}
+      </span>
+
+      <span className="player-row__portrait" aria-hidden>
+        <PlayerFace
+          color={p.color}
+          avatar={p.avatar}
+          skin={p.skin}
+          active={p.active}
+          asleep={p.bankrupt}
+          size={p.active ? 44 : 38}
+        />
+        {p.you && <span className="player-row__you" title="Seu assento">VOCÊ</span>}
+      </span>
+
+      <div className="player-row__identity">
+        <div className="player-row__headline">
+          <p className="display display--tight">{p.name}</p>
         </div>
       </div>
-      <p
-        className={cn(
-          'player-row__money currency text-right shrink-0',
-          p.bankrupt ? 'text-cream-muted line-through' : 'text-gold-glow',
+
+      <div className="player-row__meta">
+        {p.bankrupt ? (
+          <span className="player-row__state">Falido</span>
+        ) : p.connected === false ? (
+          // Status de sessão (§12.3/FR-015): quem caiu segue com tudo intacto (FR-020).
+          <span title="Desconectado — a partida espera" className="player-row__state player-row__state--offline">
+            <i aria-hidden />
+            Offline
+          </span>
+        ) : (
+          <span title="Cartas em mão (privadas)" className="player-row__cards">
+            <CardGlyph size={13} />
+            {p.cardsInHand}/3
+          </span>
         )}
-        style={{ fontSize: '16px' }}
-      >
-        {/* 044/T073: `text-gold-soft` cai abaixo de 4,5:1 quando diluído pelo `opacity-*`
-            da linha "Falido" (margem de sobra pequena demais pra qualquer diluição) — usa
-            a MESMA cor do valor ao lado nesse estado, que já fica dentro do limiar. */}
-        <span className={cn('text-[11px] mr-0.5', p.bankrupt ? 'text-cream-muted' : 'text-gold-soft')}>R$</span>
-        {p.money.toLocaleString('pt-BR')}
-      </p>
-    </div>
+
+        {/* Cor identifica o assento, mas todo estado também permanece textual. */}
+        <span className="player-row__signals">
+          {p.active && (
+            <span title="Turno atual" className="player-row__turn">
+              <i aria-hidden />
+              VEZ
+            </span>
+          )}
+          {p.loanActive && <span title="Empréstimo ativo" className="player-row__signal player-row__signal--alert">$$</span>}
+          {p.immune && <span title="Imunidade ativa" className="player-row__signal">IMU</span>}
+        </span>
+      </div>
+
+      <div className="player-row__money">
+        <span>Caixa</span>
+        <p className={cn('currency', p.bankrupt && 'line-through')}>
+          <small>R$</small>
+          {p.money.toLocaleString('pt-BR')}
+        </p>
+      </div>
+    </li>
   )
 }
 
