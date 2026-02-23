@@ -6,7 +6,7 @@ const AVATARS = [
   ['Olhos Orbitais', 'orbital-eyes'],
   ['Linha Única', 'single-line'],
   ['Prisma', 'prism-face'],
-  ['Totem', 'totem-face'],
+  ['Robô', 'totem-face'],
 ] as const
 
 const SKINS = [
@@ -16,7 +16,6 @@ const SKINS = [
   ['Cartola', 'cartola'],
   ['Safári', 'safari'],
   ['Aviador', 'aviador'],
-  ['Robô', 'robo'],
   ['Astronauta', 'astronauta'],
 ] as const
 
@@ -34,7 +33,7 @@ async function openIdentity(page: Page): Promise<void> {
   await page.goto('/?host=1')
   await expect(page.getByLabel('Seu nome')).toBeVisible()
   await expect(page.getByRole('button', { name: /^Escolher avatar / })).toHaveCount(5)
-  await expect(page.getByRole('button', { name: /^Escolher skin / })).toHaveCount(8)
+  await expect(page.getByRole('button', { name: /^Escolher skin / })).toHaveCount(7)
 }
 
 async function choose(
@@ -50,7 +49,7 @@ async function choose(
   await expect(preview.locator(`svg[data-avatar="${avatar[1]}"][data-skin="${skin[1]}"]`)).toBeVisible()
 }
 
-test('as quarenta combinações renderizam no menu e o layout desktop permanece íntegro', async ({ page }, testInfo: TestInfo) => {
+test('as trinta e cinco combinações renderizam no menu e o layout desktop permanece íntegro', async ({ page }, testInfo: TestInfo) => {
   await page.setViewportSize({ width: 1440, height: 820 })
   await openIdentity(page)
 
@@ -64,10 +63,10 @@ test('as quarenta combinações renderizam no menu e o layout desktop permanece 
   await page.screenshot({ path: testInfo.outputPath('avatar-skins-desktop.png'), fullPage: true })
 })
 
-test('o seletor continua legível e sem rolagem horizontal em 390px', async ({ page }, testInfo: TestInfo) => {
+test('o seletor inteiro permanece legível e sem rolagem em 390px', async ({ page }, testInfo: TestInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await openIdentity(page)
-  await choose(page, AVATARS[1], SKINS[7])
+  await choose(page, AVATARS[1], SKINS[6])
 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await expectNoBlockingA11y(page)
@@ -76,7 +75,7 @@ test('o seletor continua legível e sem rolagem horizontal em 390px', async ({ p
   const submit = page.getByRole('button', { name: 'Criar sala' })
   await submit.scrollIntoViewIfNeeded()
   await expect(submit).toBeInViewport()
-  expect(await page.locator('div.overflow-y-auto.overscroll-contain').evaluate((stage) => stage.scrollTop)).toBeGreaterThan(0)
+  expect(await page.locator('div.overflow-y-auto.overscroll-contain').evaluate((stage) => stage.scrollTop)).toBe(0)
   await page.screenshot({ path: testInfo.outputPath('avatar-skins-mobile-controls.png') })
 })
 

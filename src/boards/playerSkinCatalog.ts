@@ -5,7 +5,6 @@ export const SKINS = [
   { id: 'cartola', label: 'Cartola' },
   { id: 'safari', label: 'Safári' },
   { id: 'aviador', label: 'Aviador' },
-  { id: 'robo', label: 'Robô' },
   { id: 'astronauta', label: 'Astronauta' },
 ] as const
 

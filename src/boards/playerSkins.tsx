@@ -8,24 +8,13 @@ function tone(color: string, amount: number, mix = '#120c08') {
   return `color-mix(in srgb, ${color} ${amount}%, ${mix})`
 }
 
-function BehindSkin({ id, color }: { id: SkinId; color: string }) {
+function BehindSkin({ id }: { id: SkinId; color: string }) {
   switch (id) {
     case 'aviador':
       return (
         <g className="skin-aviator__behind">
           <path d="M37 55 Q22 72 31 104 Q46 94 48 68 Z" fill="#4a3323" stroke={INK} strokeWidth="5" />
           <path d="M123 55 Q138 72 129 104 Q114 94 112 68 Z" fill="#4a3323" stroke={INK} strokeWidth="5" />
-        </g>
-      )
-    case 'robo':
-      return (
-        <g className="skin-robot__behind">
-          <path d="M80 28 V9" stroke={INK} strokeWidth="7" strokeLinecap="round" />
-          <circle className="skin-robot__beacon" cx="80" cy="8" r="7" fill="#ff5f8d" stroke={INK} strokeWidth="4" />
-          <rect x="24" y="66" width="17" height="31" rx="7" fill={tone(color, 68)} stroke={INK} strokeWidth="5" />
-          <rect x="119" y="66" width="17" height="31" rx="7" fill={tone(color, 68)} stroke={INK} strokeWidth="5" />
-          <circle cx="32.5" cy="81.5" r="3.5" fill={BRASS} />
-          <circle cx="127.5" cy="81.5" r="3.5" fill={BRASS} />
         </g>
       )
     case 'astronauta':
@@ -127,21 +116,6 @@ function FrontSkin({ id, color }: { id: SkinId; color: string }) {
             <path d="M50 31 Q55 25 62 27" fill="none" stroke="#fff" strokeWidth="4" opacity="0.78" strokeLinecap="round" />
             <path d="M94 31 Q99 25 106 27" fill="none" stroke="#fff" strokeWidth="4" opacity="0.78" strokeLinecap="round" />
           </g>
-        </g>
-      )
-    case 'robo':
-      return (
-        <g className="skin-robot">
-          <path d="M52 43 L63 31 H97 L108 43" fill="none" stroke={tone(color, 64)} strokeWidth="9" strokeLinejoin="round" />
-          <rect x="68" y="29" width="24" height="13" rx="4" fill="#101820" stroke={INK} strokeWidth="4" />
-          <circle cx="75" cy="35.5" r="2.5" fill="#7ef0ff" />
-          <circle cx="85" cy="35.5" r="2.5" fill="#ff5f8d" />
-          <path d="M42 91 H51 L57 98" fill="none" stroke={BRASS} strokeWidth="4" strokeLinecap="round" />
-          <path d="M118 91 H109 L103 98" fill="none" stroke={BRASS} strokeWidth="4" strokeLinecap="round" />
-          <circle cx="42" cy="91" r="4" fill="#7ef0ff" stroke={INK} strokeWidth="2" />
-          <circle cx="118" cy="91" r="4" fill="#7ef0ff" stroke={INK} strokeWidth="2" />
-          <rect x="66" y="124" width="28" height="12" rx="4" fill="#101820" stroke={INK} strokeWidth="3" />
-          <path d="M73 127 V133 M80 127 V133 M87 127 V133" stroke="#6c7a87" strokeWidth="3" />
         </g>
       )
     case 'astronauta':

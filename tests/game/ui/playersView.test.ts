@@ -58,7 +58,7 @@ describe('playersView — GameState → painel (020)', () => {
       name: 'Ana',
       color: SEAT_COLORS[1],
       avatar: 'single-line',
-      skin: 'robo',
+      skin: 'astronauta',
     })
     if (!r.ok) throw new Error(r.reason)
     room = r.room
@@ -67,7 +67,7 @@ describe('playersView — GameState → painel (020)', () => {
     expect(view.map((p) => p.name)).toEqual(['Nik', 'Ana'])
     expect(view[1].color).toBe(SEAT_COLORS[1])
     expect(view.map((p) => p.avatar)).toEqual(['orbital-eyes', 'single-line'])
-    expect(view.map((p) => p.skin)).toEqual(['cavanhaque', 'robo'])
+    expect(view.map((p) => p.skin)).toEqual(['cavanhaque', 'astronauta'])
     expect(view[0].you).toBe(false)
     expect(view[1].you).toBe(true)
   })

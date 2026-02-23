@@ -31,7 +31,7 @@ describe('avatares canônicos do jogador', () => {
     expect(normalizeAvatar('totem-face')).toBe('totem-face')
   })
 
-  it('fecha o catálogo nas oito skins anteriores', () => {
+  it('fecha o catálogo nas sete skins finais', () => {
     expect(SKINS.map((skin) => skin.id)).toEqual([
       'careca',
       'cavanhaque',
@@ -39,7 +39,6 @@ describe('avatares canônicos do jogador', () => {
       'cartola',
       'safari',
       'aviador',
-      'robo',
       'astronauta',
     ])
   })
@@ -47,6 +46,7 @@ describe('avatares canônicos do jogador', () => {
   it('normaliza ausência e valor desconhecido para Careca', () => {
     expect(normalizeSkin(undefined)).toBe(DEFAULT_SKIN)
     expect(normalizeSkin('liquid-form')).toBe(DEFAULT_SKIN)
+    expect(normalizeSkin('robo')).toBe(DEFAULT_SKIN)
     expect(normalizeSkin('cartola')).toBe('cartola')
   })
 

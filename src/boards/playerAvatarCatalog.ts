@@ -3,7 +3,7 @@ export const AVATARS = [
   { id: 'orbital-eyes', label: 'Olhos Orbitais' },
   { id: 'single-line', label: 'Linha Única' },
   { id: 'prism-face', label: 'Prisma' },
-  { id: 'totem-face', label: 'Totem' },
+  { id: 'totem-face', label: 'Robô' },
 ] as const
 
 export type AvatarId = (typeof AVATARS)[number]['id']
