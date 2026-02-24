@@ -12,6 +12,7 @@
     "test": "vitest",
     "sim:replay": "bun run scripts/sim-replay.ts",
     "sim:batch": "bun run scripts/sim-batch.ts",
+    "attack": "bun run scripts/attack.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

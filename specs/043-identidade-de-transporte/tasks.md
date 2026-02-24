@@ -104,7 +104,7 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 
 **Meta**: sair do "o código recusa" para o "o servidor recusa". Nada aqui é opcional — política de banco falha em silêncio.
 
-- [ ] **T040** [US1] [US2] [US3] `scripts/attack.ts`: os seis vetores de [contracts/policies.md §6](./contracts/policies.md#6-os-seis-vetores--scriptsattackts), com a chave pública do bundle. Cria a própria sala de teste e a limpa no fim. Imprime recusa/sucesso por vetor.
+- [X] **T040** [US1] [US2] [US3] `scripts/attack.ts`: os seis vetores de [contracts/policies.md §6](./contracts/policies.md#6-os-seis-vetores--scriptsattackts), com a chave pública do bundle. Cria a própria sala de teste e a limpa no fim. Imprime recusa/sucesso por vetor.
 - [ ] **T041** ⚠️ **Confirmar com o usuário antes**: habilitar sessões anônimas no projeto `edppdqrkqljhjkbyjvsz` (config de painel) e aplicar `0003_attested_identity.sql` — que **apaga** `public.rooms` (FR-030).
 - [ ] **T042** [US1] [US2] [US3] Rodar `scripts/attack.ts` contra o projeto vivo: **6/6 recusados** (SC-001). Rodar o linter do Supabase: nenhum aviso `0024` em `rooms` (SC-005).
 - [ ] **T043** [US5] Medir SC-002 na prática: partida de três, inspeção do estado de um cliente, nenhuma carta alheia nomeável — exceto a reação exposta por janela aberta (FR-028).
