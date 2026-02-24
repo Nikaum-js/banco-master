@@ -51,7 +51,7 @@ jobs:
   simulation:
     name: simulação seedada
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -69,6 +69,13 @@ jobs:
       # `reports/` (ignorado pelo git, sem valor num runner efêmero).
       - name: Lote de simulação
         run: bun run sim:batch -- --games=10 --counts=2,3,6 --report=
+
+      # Lotes LONGOS (100 partidas × 2/3/6). Moram aqui, e não no `vitest run` do gate
+      # principal, porque são CPU-bound e sequenciais: no job generalista disputavam os 2
+      # vCPUs com ~100 outros arquivos e o de 6 jogadores estourou o timeout (run
+      # 30233981454). Sozinhos no runner, cabem com folga.
+      - name: Lotes headless completos
+        run: bun run test:sim
 
   e2e:
     name: smoke E2E (2/3/6 jogadores)
@@ -104,7 +111,7 @@ jobs:
   a11y:
     name: acessibilidade (axe, sobre o build)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -135,7 +142,7 @@ jobs:
   full-match:
     name: partida completa (semeada, sobre o build)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 

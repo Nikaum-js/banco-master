@@ -19,6 +19,7 @@ describe('simulação headless — 2 jogadores', () => {
       writeReport(report, 'reports/headless-2p') // inspecionável depois de `bun run test`, sem rodar sim:batch à parte
       expect(report.failed, formatReport(report)).toBe(0)
     },
-    180_000, // margem sobre SC-002 (<2min em condições normais) p/ máquina sob carga
+    600_000, // SC-002 pede <2min em condições normais; o teto é guarda contra trava, não
+             // medida de desempenho. 180s reprovava um lote SADIO em runner compartilhado.
   )
 })

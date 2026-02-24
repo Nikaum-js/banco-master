@@ -12,6 +12,7 @@
     "test": "vitest",
     "sim:replay": "bun run scripts/sim-replay.ts",
     "sim:batch": "bun run scripts/sim-batch.ts",
+    "test:sim": "SIM=1 vitest run tests/sim/headless",
     "attack": "bun run scripts/attack.ts",
     "test:e2e": "playwright test"
   },
