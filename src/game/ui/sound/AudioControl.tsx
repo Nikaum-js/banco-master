@@ -11,7 +11,7 @@ export function AudioControl() {
   // para não cobrir a cobrança de dívida, que ocupava a base da tela (D-056); desde a D-066 a
   // cobrança mora no miolo do tabuleiro e a base voltou a ser só dele.
   return (
-    <div className="audio-control group fixed left-3 z-[80] flex items-center gap-2">
+    <div className="audio-control group fixed left-3 z-[55] flex items-center gap-2">
       <button
         type="button"
         aria-label={muted ? 'Ativar som' : 'Silenciar'}

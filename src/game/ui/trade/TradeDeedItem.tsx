@@ -1,13 +1,13 @@
 import type { CSSProperties } from 'react'
 import { cn } from '@/lib/utils'
-import { BOARD } from '@/lib/boardData'
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { SquareIcon } from '@/boards/glyphs/squares'
 import { money } from '@/lib/money'
 import { CountryFlag } from '@/boards/glyphs/flags'
+import { activeBoard } from '@/game/ui/theme/boardTheme'
 
 function TradeDeedAvatar({ pos, compact }: { pos: number; compact: boolean }) {
-  const square = BOARD[pos]
+  const square = activeBoard()[pos]
   const deed = deedPresentation(square)
   const size = compact ? 28 : 36
 
@@ -31,7 +31,7 @@ function TradeDeedAvatar({ pos, compact }: { pos: number; compact: boolean }) {
 }
 
 export function TradeDeedItem({ pos, compact = false }: { pos: number; compact?: boolean }) {
-  const deed = deedPresentation(BOARD[pos])
+  const deed = deedPresentation(activeBoard()[pos])
 
   if (!deed) return null
 

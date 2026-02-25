@@ -5,6 +5,7 @@ import { buildCost } from '@/game/economy/construction'
 import { mortgageValue } from '@/game/economy/mortgage'
 import { rentLadder } from '@/game/economy/rent'
 import { THEME } from '@/game/theme'
+import { activeLabels, capLabel } from '@/game/ui/theme/boardTheme'
 import type { AirportSquare, PropertySquare, Square, UtilitySquare } from '@/lib/boardData'
 
 export type DeedSquare = PropertySquare | AirportSquare | UtilitySquare
@@ -37,7 +38,8 @@ interface DeedPresentationBase {
 
 export interface PropertyDeedPresentation extends DeedPresentationBase {
   kind: 'property'
-  flagCode: string
+  /** Código de bandeira no mapa Cidades do Mundo; null nos mapas por ícone (055). */
+  flagCode: string | null
   buildCost: number
   rents: {
     base: number
@@ -73,6 +75,7 @@ export function deedPresentation(square: UtilitySquare): UtilityDeedPresentation
 export function deedPresentation(square: DeedSquare): DeedPresentation
 export function deedPresentation(square: Square): DeedPresentation | null
 export function deedPresentation(square: Square): DeedPresentation | null {
+  const labels = activeLabels()
   if (square.kind === 'property') {
     const ladder = rentLadder(square.group, square.rent)
     const rents = {
@@ -90,20 +93,21 @@ export function deedPresentation(square: Square): DeedPresentation | null {
       name: square.name,
       subtitle: square.capital ?? '',
       accent: GROUP_COLOR[square.group],
-      flagCode: square.uf,
+      flagCode: square.uf ?? null,
       price: square.price,
       mortgage: mortgageValue(square),
       buildCost: buildCost(square),
       rents,
+      // Rótulos pelo catálogo do mapa ativo (055): casa/oficina, hotel/fábrica…
       rentRows: [
         { key: 'base', label: 'Base', kind: 'money', value: rents.base },
-        { key: 'house1', label: '1 casa', kind: 'money', value: rents.house1 },
-        { key: 'house2', label: '2 casas', kind: 'money', value: rents.house2 },
-        { key: 'house3', label: '3 casas', kind: 'money', value: rents.house3 },
-        { key: 'house4', label: '4 casas', kind: 'money', value: rents.house4 },
-        { key: 'hotel', label: 'Hotel', kind: 'money', value: rents.hotel },
-        { key: 'hotel2', label: '2º hotel', kind: 'money', value: rents.hotel2 },
-        { key: 'skyscraper', label: 'Arranha-céu', kind: 'money', value: rents.skyscraper },
+        { key: 'house1', label: `1 ${labels.house}`, kind: 'money', value: rents.house1 },
+        { key: 'house2', label: `2 ${labels.houses}`, kind: 'money', value: rents.house2 },
+        { key: 'house3', label: `3 ${labels.houses}`, kind: 'money', value: rents.house3 },
+        { key: 'house4', label: `4 ${labels.houses}`, kind: 'money', value: rents.house4 },
+        { key: 'hotel', label: capLabel(labels.hotel), kind: 'money', value: rents.hotel },
+        { key: 'hotel2', label: capLabel(labels.hotel2), kind: 'money', value: rents.hotel2 },
+        { key: 'skyscraper', label: capLabel(labels.skyscraper), kind: 'money', value: rents.skyscraper },
       ],
     }
   }
@@ -112,7 +116,7 @@ export function deedPresentation(square: Square): DeedPresentation | null {
     return {
       kind: 'airport',
       name: square.name,
-      subtitle: 'Aeroporto',
+      subtitle: labels.airport,
       accent: 'var(--color-brass)',
       flagCode: null,
       price: square.price,
@@ -121,7 +125,7 @@ export function deedPresentation(square: Square): DeedPresentation | null {
       hangar: { cost: THEME.HANGAR_COST, multiplier: 2 },
       rentRows: THEME.AIRPORT_RENT.map((value, index) => ({
         key: `airport${index + 1}`,
-        label: `${index + 1} aeroporto${index > 0 ? 's' : ''}`,
+        label: `${index + 1} ${labels.airport.toLowerCase()}${index > 0 ? 's' : ''}`,
         kind: 'money' as const,
         value,
       })),

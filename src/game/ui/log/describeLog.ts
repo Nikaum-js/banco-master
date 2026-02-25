@@ -6,6 +6,7 @@
 import type { DebtCause, LogEntry } from '@/game/economy/types'
 import { identityOf, type PlayerIdentity } from '@/net/identity'
 import type { Room } from '@/net/room'
+import { activeLabels } from '@/game/ui/theme/boardTheme'
 
 export type LogFragment =
   | { t: 'text'; text: string }
@@ -37,16 +38,24 @@ function who(room: Room | null, id: string): LogFragment {
 const CARD_FIXED_PHRASE: Record<string, string> = {
   'Va Prisao': 'foi para a Prisão',
   'Volte 3': 'voltou 3 casas',
-  'Apagao': 'Apagão: hangares ficam inativos por 1 volta',
   'Greve Utilidades': 'Greve: utilidades sem aluguel por 1 volta',
   'Investidor Anjo': 'Investidor Anjo: 20% de desconto na próxima compra',
-  'Passagem Onibus': 'ganhou 1 Bus Ticket',
+}
+
+// Frases que citam contratos do motor apresentados por mapa (055): resolvidas na hora
+// para o vocabulário do mapa ativo — 'Bus Ticket'/'Bilhete de Trem', 'hangares'/'Estações
+// de Carga'. O NOME canônico da carta no evento não muda.
+function mapAwareFixedPhrase(name: string): string | null {
+  const labels = activeLabels()
+  if (name === 'Passagem Onibus') return `ganhou 1 ${labels.busTicket}`
+  if (name === 'Apagao') return `Apagão: ${labels.hangar.toLowerCase()}s ficam inativas por 1 volta`
+  return null
 }
 
 // Cartas cujo efeito varia com `delta` (dCash de `describeImmediate`, pré-040) — a fase
 // verbal muda com o sinal, mas o valor em si é sempre o mesmo campo do evento.
 function cardImmediatePhrase(name: string, delta: number): LogSentence {
-  const fixed = CARD_FIXED_PHRASE[name]
+  const fixed = mapAwareFixedPhrase(name) ?? CARD_FIXED_PHRASE[name]
   if (fixed) return [text(fixed)]
   switch (name) {
     case 'Atalho':
@@ -85,10 +94,11 @@ function cardImmediatePhrase(name: string, delta: number): LogSentence {
 // Substantivo do degrau construído — deriva de `level` (nível RESULTANTE, D5 do plan):
 // 1-4 = casas, 5 = hotel, 6 = 2º hotel, 7 = arranha-céu (ladder de `construction.ts`).
 function buildingNoun(level: number): string {
-  if (level <= 4) return `${level}ª casa`
-  if (level === 5) return 'hotel'
-  if (level === 6) return '2º hotel'
-  return 'arranha-céu'
+  const labels = activeLabels()
+  if (level <= 4) return `${level}ª ${labels.house}`
+  if (level === 5) return labels.hotel
+  if (level === 6) return labels.hotel2
+  return labels.skyscraper
 }
 
 // De onde a dívida veio (D-063). Frase, não jargão: o jogador precisa reconhecer a cobrança
@@ -124,12 +134,12 @@ export function describeLogEntry(entry: LogEntry, room: Room | null): LogSentenc
     case 'rent':
       // `ownerId: 'bank'` = aluguel confiscado pela Estatização (D-064): foi à Loteria, não ao dono.
       return entry.ownerId === 'bank'
-        ? [who(room, entry.who), text(' pagou '), money(entry.amount), text(' de aluguel à Loteria (Estatização)')]
+        ? [who(room, entry.who), text(` pagou `), money(entry.amount), text(` de aluguel à ${activeLabels().lottery} (Estatização)`)]
         : [who(room, entry.who), text(' pagou '), money(entry.amount), text(' de aluguel a '), who(room, entry.ownerId)]
     case 'tax':
       return [who(room, entry.who), text(' pagou '), money(entry.amount), text(' de imposto')]
     case 'bus-ticket-gain':
-      return [who(room, entry.who), text(' parou no espaço Bus Ticket e ganhou uma passagem')]
+      return [who(room, entry.who), text(` parou no espaço ${activeLabels().busTicket} e ganhou uma passagem`)]
     case 'card-draw':
       return [who(room, entry.who), text(` sacou ${entry.deck === 'acaso' ? 'Acaso' : 'Tesouro'}`)]
     case 'card-immediate':
@@ -193,7 +203,7 @@ export function describeLogEntry(entry: LogEntry, room: Room | null): LogSentenc
     case 'hostile-takeover':
       return [who(room, entry.who), text(' tomou '), place(entry.pos), text(' de '), who(room, entry.victimId), text(' por '), money(entry.amount)]
     case 'audit':
-      return [who(room, entry.who), text(' aplicou Imposto Federal em '), who(room, entry.targetId), text(': '), money(entry.amount), text(' à Loteria')]
+      return [who(room, entry.who), text(' aplicou Imposto Federal em '), who(room, entry.targetId), text(': '), money(entry.amount), text(` à ${activeLabels().lottery}`)]
     case 'evict':
       return [who(room, entry.who), text(' confiscou as construções de '), who(room, entry.victimId), text(' em '), place(entry.pos)]
     // Permuta Forçada (D-064): troca seca de títulos, sem dinheiro — o fato nomeia os dois lados.

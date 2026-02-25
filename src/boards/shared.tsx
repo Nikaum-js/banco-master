@@ -5,7 +5,8 @@ import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 're
 import { createPortal } from 'react-dom'
 
 import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare } from '@/lib/boardData'
-import { BOARD } from '@/lib/boardData'
+import { activeBoard } from '@/game/ui/theme/boardTheme'
+import { BOARD as ENGINE_BOARD, type GroupKey } from '@/lib/boardData'
 import { useGameStore } from '@/game/store'
 import { useLocalView, useRoomStore } from '@/net/roomStore'
 import { cityLevel } from '@/game/economy/construction'
@@ -22,14 +23,14 @@ import {
   PlotBadgeIcon, HouseBadgeIcon, HotelBadgeIcon, SkyscraperBadgeIcon, HangarBadgeIcon,
   CalmGlyph, TradeArrowGlyph, PlusGlyph, SwapMiniGlyph,
 } from './glyphs/badges'
-import { ChartPattern, GridPattern } from './glyphs/patterns'
+import { ChartPattern, FoundryPattern } from './glyphs/patterns'
 import { playersView, type Player } from '@/game/ui/panels/playersView'
 import { ConcedeDialog } from '@/game/ui/concede/ConcedeDialog'
 import { diceArenaView } from '@/game/ui/panels/diceArenaView'
 import { Dice, SpeedDie, ROLL_DURATION_MS } from '@/game/ui/dice'
 import { toUiSpeedFace, type SpeedFace } from '@/game/ui/diceFaces'
 import { logKey, countNewLogEntries } from '@/game/ui/sound/classify'
-import { useBoardTheme } from '@/game/ui/theme/boardTheme'
+import { activeCatalog, activeLabels, capLabel, useBoardTheme } from '@/game/ui/theme/boardTheme'
 import { HandPanel } from '@/game/ui/cards/HandPanel'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
@@ -45,13 +46,18 @@ import { logIcon } from '@/game/ui/log/logIcon'
 import { AccessoryErrorBoundary } from '@/app/AccessoryErrorBoundary'
 import { identityOf } from '@/net/identity'
 import { CountryFlag } from '@/boards/glyphs/flags'
+import { PropertyIconArt } from '@/boards/glyphs/propertyIcons'
 
 // Este módulo exporta SÓ componentes — cada consumidor importa constante e seletor da
 // própria fonte (`./groupColors`, `./topology`, `./glyphs/squares`, `@/game/ui/panels/playersView`).
 // As reexportações de compatibilidade que moravam aqui custavam o fast refresh do arquivo.
 
 // ---------------------------------------------------------------------
-function FlagAvatar({ iso2, side }: { iso2: string; side: Side }) {
+// Avatar da propriedade: bandeira do país (mapa Cidades do Mundo) OU ícone
+// simples (mapa Cidade da Fuligem, sem bandeiras — 055/FR-006), no MESMO
+// disco de 32px cravado na borda interna.
+function FlagAvatar({ square, side }: { square: PropertySquare; side: Side }) {
+  const iso2 = square.uf
   // Leste/oeste: bandeira no TOPO da casa, dentro dela (início da pilha
   // avatar → nome → valor). Sul/norte: continua cravada na borda interna,
   // metade transbordando sobre o centro (anel de bandeiras).
@@ -82,13 +88,22 @@ function FlagAvatar({ iso2, side }: { iso2: string; side: Side }) {
         height: size,
         boxShadow: 'var(--shadow-card), inset 0 0 0 1.5px color-mix(in srgb, var(--color-brass) 60%, transparent)',
       }}
-      title={iso2}
+      title={iso2 ?? square.capital}
     >
-      <CountryFlag
-        code={iso2}
-        fill
-        style={{ transform: `rotate(${artRotation}deg)` }}
-      />
+      {iso2 ? (
+        <CountryFlag
+          code={iso2}
+          fill
+          style={{ transform: `rotate(${artRotation}deg)` }}
+        />
+      ) : (
+        <span
+          className="w-full h-full grid place-items-center text-brass"
+          style={{ transform: `rotate(${artRotation}deg)` }}
+        >
+          <PropertyIconArt icon={square.icon ?? 'building'} size={19} />
+        </span>
+      )}
     </div>
   )
 }
@@ -116,6 +131,17 @@ export function ClassicSquare({
   const ownerId = useGameStore((s) => s.game.titles[square.pos]?.ownerId)
   const room = useRoomStore((s) => s.room)
   const ownerColor = ownerId ? identityOf(room, ownerId).color : undefined
+  // Bairro Completo conecta as propriedades (055/FR-009, só na Fuligem): dono de todas
+  // as casas do grupo ganha o trilho de conexão na borda externa. Derivado do estado
+  // real; o esqueleto de grupos vem do motor (igual nos dois mapas).
+  const groupComplete = useGameStore((s) => {
+    if (square.kind !== 'property') return false
+    const owner = s.game.titles[square.pos]?.ownerId
+    if (!owner) return false
+    const group = (square as PropertySquare).group as GroupKey
+    return ENGINE_BOARD.every((q) => q.kind !== 'property' || q.group !== group || s.game.titles[q.pos]?.ownerId === owner)
+  })
+  const fuligemMap = activeCatalog().id === 'fuligem'
   // Feedback de posse (044, T020/FR-029): a troca de dono da célula não tinha NENHUM
   // aviso visual — cor aparecia/sumia de golpe. `key={ownerColor}` remonta o grupo a cada
   // transferência (compra, leilão, aquisição hostil) e o `pop` do vocabulário entra por cima.
@@ -155,11 +181,29 @@ export function ClassicSquare({
           </>
         </motion.div>
       )}
+      {/* Trilho de conexão do Bairro Completo (Fuligem): uma barra contínua na
+          borda EXTERNA, na cor do dono — as casas vizinhas do grupo desenham a
+          mesma barra e o conjunto lê como um só ramal. Estado, nunca decoração. */}
+      {fuligemMap && groupComplete && ownerColor && (
+        <div
+          className="absolute pointer-events-none z-30"
+          data-group-linked
+          aria-hidden
+          style={{
+            ...(side === 'bottom' ? { left: -1, right: -1, bottom: 0, height: 4 }
+              : side === 'top' ? { left: -1, right: -1, top: 0, height: 4 }
+              : side === 'left' ? { top: -1, bottom: -1, left: 0, width: 4 }
+              : { top: -1, bottom: -1, right: 0, width: 4 }),
+            background: `repeating-linear-gradient(${side === 'left' || side === 'right' ? '180deg' : '90deg'}, ${ownerColor} 0 6px, color-mix(in srgb, ${ownerColor} 35%, var(--color-ink-abyss)) 6px 9px)`,
+            boxShadow: `0 0 8px color-mix(in srgb, ${ownerColor} 60%, transparent)`,
+          }}
+        />
+      )}
       {/* Bandeira-avatar do país — fincada na borda INTERNA (voltada
           pro centro do tabuleiro); metade dentro da célula, metade
           transbordando sobre o centro. */}
       {isProperty && (
-        <FlagAvatar iso2={(square as PropertySquare).uf} side={side} />
+        <FlagAvatar square={square as PropertySquare} side={side} />
       )}
 
       {/* Marcas mockadas: construções, hipoteca. Dono é comunicado pela cor
@@ -338,6 +382,9 @@ export function ClassicSquare({
             >
               {(() => {
                 const icon = (square as UtilitySquare).icon
+                // Rótulo curto por mapa: a casa mede 14px fixos — o nome completo não cabe.
+                const fuligem = activeCatalog().id === 'fuligem'
+                if (fuligem) return icon === 'fuel' ? 'Carvão' : icon === 'bolt' ? 'Usina' : 'Água'
                 return icon === 'fuel' ? 'Petro' : icon === 'bolt' ? 'Eletro' : 'Gás'
               })()}
             </p>
@@ -365,7 +412,7 @@ export function ClassicSquare({
           )}
           {isBus && (
             <p className="board-square-label display mt-1 text-cream leading-none tracking-wide text-center" style={{ fontSize: '14px' }}>
-              Bus Ticket
+              {activeLabels().busTicket}
             </p>
           )}
         </div>
@@ -385,7 +432,7 @@ export function CornerSquare({ square, accent = 'cream' }:
   const label =
     square.kind === 'corner-go'       ? 'Start'         :
     square.kind === 'corner-jail'     ? 'Prisão'        :
-    square.kind === 'corner-parking'  ? 'Loteria'       :
+    square.kind === 'corner-parking'  ? activeLabels().lottery :
     square.kind === 'corner-gotojail' ? 'Vá pra Prisão' :
     ''
 
@@ -471,6 +518,10 @@ export function HangarMark({ pos }: { pos: number }) {
 export function MortgageMark({ pos }: { pos: number }) {
   const mortgaged = useGameStore((s) => s.game.titles[pos]?.mortgaged)
   if (!mortgaged) return null
+  // Na Fuligem a luz se apaga E entra a placa de fábrica "HIPOTECADA" — texto e
+  // listra de manutenção, nunca só o escurecimento (FR-009, dicromacia §12.6).
+  const fuligem = activeCatalog().id === 'fuligem'
+  const side = sideOf(pos)
   return (
     <div
       className="absolute inset-0 pointer-events-none z-[25]"
@@ -480,6 +531,24 @@ export function MortgageMark({ pos }: { pos: number }) {
         boxShadow: 'inset 0 0 14px 3px rgba(0,0,0,0.6)',
       }}
     >
+      {fuligem && (
+        <span
+          className="absolute left-1/2 top-1/2 label"
+          style={{
+            transform: `translate(-50%, -50%) rotate(${side === 'left' ? 90 : side === 'right' ? -90 : 0}deg)`,
+            fontSize: '7px',
+            letterSpacing: '0.14em',
+            padding: '1.5px 4px',
+            color: 'var(--color-starlight)',
+            background: 'repeating-linear-gradient(45deg, rgb(7 5 4 / 0.95) 0 5px, rgb(74 62 49 / 0.95) 5px 10px)',
+            border: '1px solid var(--color-ink-400)',
+            borderRadius: '2px',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          HIPOTECADA
+        </span>
+      )}
     </div>
   )
 }
@@ -488,10 +557,10 @@ export function MortgageMark({ pos }: { pos: number }) {
 // (utilidades), boicote/imunidade-temp (casa específica). Pulsa pra chamar atenção.
 export function EffectMark({ pos }: { pos: number }) {
   const effects = useGameStore((s) => s.game.tempEffects)
-  const sq = BOARD[pos]
+  const sq = activeBoard()[pos]
   let badge: { tag: string; tone: 'logo' | 'gold'; title: string } | null = null
   for (const e of effects) {
-    if (e.kind === 'apagao' && sq.kind === 'airport') badge = { tag: 'A', tone: 'logo', title: 'Hangar inativo pela Greve' }
+    if (e.kind === 'apagao' && sq.kind === 'airport') badge = { tag: 'A', tone: 'logo', title: `${activeLabels().hangar} inativo pela Greve` }
     else if (e.kind === 'greve' && sq.kind === 'utility') badge = { tag: 'G', tone: 'logo', title: 'Utilidade sem aluguel pela Greve' }
     else if (e.kind === 'boicote' && e.pos === pos) badge = { tag: 'B', tone: 'logo', title: 'Propriedade sob boicote, sem aluguel' }
     else if (e.kind === 'imunidade-temp' && e.pos === pos) badge = { tag: 'I', tone: 'gold', title: 'Imunidade temporária' }
@@ -532,15 +601,15 @@ function effectRow(e: TempEffect, i: number): {
   key: string; label: string; desc: string; detail: string; tag: string; laps: number; tone: 'logo' | 'gold'
 } {
   const laps = `${e.lapsRemaining} ${e.lapsRemaining === 1 ? 'volta' : 'voltas'}`
-  const place = BOARD[e.pos ?? 0]?.name ?? '—'
+  const place = activeBoard()[e.pos ?? 0]?.name ?? '—'
   switch (e.kind) {
-    case 'apagao': return { key: `a${i}`, label: 'Greve (Hangares)', desc: `Hangares inativos · ${laps}`, detail: 'Hangares inativos', tag: 'A', laps: e.lapsRemaining, tone: 'logo' }
+    case 'apagao': return { key: `a${i}`, label: `Greve (${activeLabels().hangar})`, desc: `${activeLabels().hangar} inativa · ${laps}`, detail: `${activeLabels().hangar} inativa`, tag: 'A', laps: e.lapsRemaining, tone: 'logo' }
     case 'greve': return { key: `g${i}`, label: 'Greve (Utilidades)', desc: `Utilidades sem aluguel · ${laps}`, detail: 'Utilidades sem aluguel', tag: 'G', laps: e.lapsRemaining, tone: 'logo' }
     case 'boicote': return { key: `b${i}`, label: 'Boicote', desc: `${place} sem aluguel · ${laps}`, detail: `${place} sem aluguel`, tag: 'B', laps: e.lapsRemaining, tone: 'logo' }
     case 'imunidade-temp': return { key: `i${i}`, label: 'Imunidade temp.', desc: `${place} · ${laps}`, detail: `${place} protegida`, tag: 'I', laps: e.lapsRemaining, tone: 'gold' }
     // D-064 — efeitos novos: Estatização (board-wide), Valorização (casa), Embargo e
     // Imunidade Total (jogador; a identidade é resolvida pela UI que consome, não aqui).
-    case 'estatizacao': return { key: `e${i}`, label: 'Estatização', desc: `Aluguéis vão à Loteria · ${laps}`, detail: 'Aluguéis confiscados para a Loteria', tag: 'E', laps: e.lapsRemaining, tone: 'logo' }
+    case 'estatizacao': return { key: `e${i}`, label: 'Estatização', desc: `Aluguéis vão à ${activeLabels().lottery} · ${laps}`, detail: `Aluguéis confiscados para a ${activeLabels().lottery}`, tag: 'E', laps: e.lapsRemaining, tone: 'logo' }
     case 'valorizacao': return { key: `v${i}`, label: 'Valorização', desc: `${place} cobra em dobro · ${laps}`, detail: `${place} com aluguel em dobro`, tag: 'V', laps: e.lapsRemaining, tone: 'gold' }
     case 'embargo': return { key: `em${i}`, label: 'Embargo de Obras', desc: `Alvo sem construir · ${laps}`, detail: 'Jogador embargado não constrói', tag: 'O', laps: e.lapsRemaining, tone: 'logo' }
     case 'imunidade-total': return { key: `it${i}`, label: 'Imunidade Total', desc: `Sem aluguel/imposto · ${laps}`, detail: 'Jogador protegido de cobranças e ofensivas', tag: 'I', laps: e.lapsRemaining, tone: 'gold' }
@@ -795,7 +864,7 @@ function useConcedeControl(p: Player): {
 //
 // `display--tight` e não só `display`: a zona de ação é uma coluna de 280px fixos e às
 // vezes carrega DOIS botões ("Comprar R$ 100" + "Leilão"). Medido, a display larga do tema
-// Fliperama (Press Start 2P) estourava a coluna em 17px e o "Leilão" saía por cima das
+// display largo (caso de tema futuro) estourava a coluna em 17px e o "Leilão" saía por cima das
 // casas da direita. A personalidade do tema segue nos títulos, no HUD e nos modais, onde
 // há espaço; aqui o que manda é caber.
 function TurnActionBtn({
@@ -840,14 +909,14 @@ function BusTicketAction({ count, onClick }: { count: number; onClick: () => voi
       variant="secondary"
       onClick={onClick}
       className="bus-ticket-action min-w-0 flex-[1.35] justify-start gap-2 px-2 text-sm"
-      title={`Usar Bus Ticket · ${count} ${count === 1 ? 'disponível' : 'disponíveis'}`}
+      title={`Usar ${activeLabels().busTicket} · ${count} ${count === 1 ? 'disponível' : 'disponíveis'}`}
     >
       <span className="bus-ticket-action__icon" aria-hidden="true">
         <Bus size={18} />
       </span>
       <span className="bus-ticket-action__label">
         <span className="bus-ticket-action__eyebrow">Usar</span>
-        <span className="bus-ticket-action__name">Bus Ticket</span>
+        <span className="bus-ticket-action__name">{activeLabels().busTicket}</span>
       </span>
       <span className="bus-ticket-action__count tabular-nums">×{count}</span>
     </TurnActionBtn>
@@ -1208,7 +1277,7 @@ function PotCard({ pot }: { pot: number }) {
       </div>
 
       <p className="label text-gold tracking-[var(--tracking-caps)] flex items-center justify-center gap-1.5">
-        <CoinIcon size={13} className="text-gold" /> Pote da Loteria
+        <CoinIcon size={13} className="text-gold" /> Pote da {activeLabels().lottery}
       </p>
 
       <motion.p
@@ -1223,8 +1292,27 @@ function PotCard({ pot }: { pot: number }) {
         {pot.toLocaleString('pt-BR')}
       </motion.p>
 
+      {/* Na Fuligem o pote é FÍSICO (FR-009): a pilha de moedas cresce com o valor —
+          o número continua sendo o canal principal; a pilha é redundância visível. */}
+      {activeCatalog().id === 'fuligem' && pot > 0 && (
+        <div className="mt-1.5 flex items-end justify-center gap-[3px]" aria-hidden>
+          {Array.from({ length: Math.min(8, Math.max(1, Math.floor(pot / 400) + 1)) }, (_, i) => (
+            <span
+              key={i}
+              className="inline-block rounded-[1px]"
+              style={{
+                width: 7,
+                height: 4 + ((i * 5) % 9),
+                background: 'linear-gradient(180deg, var(--color-brass-glow), var(--color-brass-soft))',
+                boxShadow: '0 1px 0 rgb(7 5 4 / 0.8)',
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       <p className="label text-cream-muted mt-2 text-micro">
-        {pot > 0 ? 'Pare em Loteria e leve tudo' : 'Impostos e multas acumulam aqui'}
+        {pot > 0 ? `Pare em ${activeLabels().lottery} e leve tudo` : 'Impostos e multas acumulam aqui'}
       </p>
 
       <MoneyPulse pulse={pulse} className="right-4 top-3" tone="gold" />
@@ -1335,7 +1423,7 @@ function LogSentenceView({ sentence }: { sentence: ReturnType<typeof describeLog
           case 'player':
             return <span key={i} className="font-semibold" style={{ color: f.identity.color }}>{f.identity.name}</span>
           case 'place':
-            return <span key={i}>{BOARD[f.pos]?.name ?? `#${f.pos}`}</span>
+            return <span key={i}>{activeBoard()[f.pos]?.name ?? `#${f.pos}`}</span>
           case 'text':
             return <span key={i}>{f.text}</span>
           default:
@@ -1473,9 +1561,9 @@ export function CenterArena() {
         }}
       />
 
-      {/* CENÁRIO por tema: carta náutica (Atlas) · poente synthwave (Fliperama) — um mundo
+      {/* CENÁRIO por tema: carta náutica (Atlas) · pátio da fábrica (Fuligem) — um mundo
           por tema, os dois em `glyphs/patterns`. */}
-      {boardTheme === 'neon' ? <GridPattern /> : <ChartPattern />}
+      {boardTheme === 'fuligem' ? <FoundryPattern /> : <ChartPattern />}
 
       {boardTheme === 'atlas' ? (
         <>
@@ -1757,8 +1845,16 @@ const BUILD_BLOCK_MSG: Record<NonNullable<BuildBlock>, string> = {
   'hipoteca-no-grupo': 'Há propriedade hipotecada no grupo',
   topo: 'Esta cidade já está no nível máximo',
   uniformidade: 'Suba as outras cidades do grupo antes de construir aqui.',
-  'limite-posse': 'Tenha mais cidades deste país para avançar.',
-  'grupo-incompleto': 'Tenha todas as cidades do país para construir o arranha-céu.',
+  get 'limite-posse'() {
+    return activeCatalog().id === 'fuligem'
+      ? 'Tenha mais propriedades deste bairro para avançar.'
+      : 'Tenha mais cidades deste país para avançar.'
+  },
+  get 'grupo-incompleto'() {
+    return activeCatalog().id === 'fuligem'
+      ? 'Tenha todas as propriedades do bairro para construir a Torre de Ferro.'
+      : 'Tenha todas as cidades do país para construir o arranha-céu.'
+  },
   caixa: 'Caixa insuficiente',
 }
 
@@ -1786,7 +1882,7 @@ function DeedActions({ pos }: { pos: number }) {
   const blockMsg = dv.buildBlock ? BUILD_BLOCK_MSG[dv.buildBlock] : undefined
   const mortgageTitle = !flags.podeHipotecar && !dv.mortgaged
     ? dv.kind === 'airport' && dv.hangar
-      ? 'Venda o Hangar antes de hipotecar.'
+      ? `Venda a ${activeLabels().hangar} antes de hipotecar.`
       : dv.kind === 'property'
         ? 'Venda todas as construções do grupo antes de hipotecar.'
         : `Hipotecar por $${dv.mortgageValue}`
@@ -1812,8 +1908,8 @@ function DeedActions({ pos }: { pos: number }) {
         )}
         {dv.kind === 'airport' && (
           <>
-            <DeedBtn variant="primary" disabled={!flags.podeConstruirHangar} onClick={() => buildHangar(pos)}>Hangar</DeedBtn>
-            <DeedBtn disabled={!flags.podeVenderHangar} onClick={() => sellHangar(pos)}>Vender Hangar</DeedBtn>
+            <DeedBtn variant="primary" disabled={!flags.podeConstruirHangar} onClick={() => buildHangar(pos)}>{activeLabels().hangar}</DeedBtn>
+            <DeedBtn disabled={!flags.podeVenderHangar} onClick={() => sellHangar(pos)}>Vender {activeLabels().hangar}</DeedBtn>
           </>
         )}
         {!dv.mortgaged ? (
@@ -1898,6 +1994,8 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
   const mortgage = dv.mortgageValue
   const stripeColor = presentation.accent
   const isMortgaged = dv.mortgaged
+  // Rótulos do mapa ativo (055): casa/oficina, hotel/fábrica, arranha-céu/Torre de Ferro.
+  const labels = activeLabels()
 
   // Linha de aluguel ATIVA (highlight) pelo nível real
   const activeRow: keyof typeof rents =
@@ -1933,10 +2031,16 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
               shadow-[var(--shadow-card)]
             "
           >
-            <CountryFlag
-              code={presentation.flagCode}
-              fill
-            />
+            {presentation.flagCode ? (
+              <CountryFlag
+                code={presentation.flagCode}
+                fill
+              />
+            ) : (
+              <span className="w-full h-full grid place-items-center text-brass">
+                <PropertyIconArt icon={square.icon ?? 'building'} size={20} />
+              </span>
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="display text-starlight text-xl leading-none truncate">
@@ -1954,13 +2058,13 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
           <p className="property-deed__section-label">Progressão de aluguel</p>
           <div className="property-deed__rent-grid">
             <PropertyRentTier label="Terreno"      value={rents.base}        kind="base"        active={activeRow === 'base'} />
-            <PropertyRentTier label="1 casa"       value={rents.house1}      kind="house"       active={activeRow === 'house1'} />
-            <PropertyRentTier label="2 casas"      value={rents.house2}      kind="house" count={2} active={activeRow === 'house2'} />
-            <PropertyRentTier label="3 casas"      value={rents.house3}      kind="house" count={3} active={activeRow === 'house3'} />
-            <PropertyRentTier label="4 casas"      value={rents.house4}      kind="house" count={4} active={activeRow === 'house4'} />
-            <PropertyRentTier label="Hotel"        value={rents.hotel}       kind="hotel"       active={activeRow === 'hotel'} />
-            <PropertyRentTier label="2º hotel"     value={rents.hotel2}      kind="hotel" count={2} active={activeRow === 'hotel2'} />
-            <PropertyRentTier label="Arranha-céu" value={rents.skyscraper} kind="skyscraper"  active={activeRow === 'skyscraper'} />
+            <PropertyRentTier label={`1 ${labels.house}`}  value={rents.house1} kind="house"       active={activeRow === 'house1'} />
+            <PropertyRentTier label={`2 ${labels.houses}`} value={rents.house2} kind="house" count={2} active={activeRow === 'house2'} />
+            <PropertyRentTier label={`3 ${labels.houses}`} value={rents.house3} kind="house" count={3} active={activeRow === 'house3'} />
+            <PropertyRentTier label={`4 ${labels.houses}`} value={rents.house4} kind="house" count={4} active={activeRow === 'house4'} />
+            <PropertyRentTier label={capLabel(labels.hotel)}  value={rents.hotel}  kind="hotel"       active={activeRow === 'hotel'} />
+            <PropertyRentTier label={capLabel(labels.hotel2)} value={rents.hotel2} kind="hotel" count={2} active={activeRow === 'hotel2'} />
+            <PropertyRentTier label={capLabel(labels.skyscraper)} value={rents.skyscraper} kind="skyscraper"  active={activeRow === 'skyscraper'} />
           </div>
         </section>
 
@@ -2054,7 +2158,7 @@ export function AirportPopover({
           </div>
           {/* Corpo */}
           <div className="px-3.5 py-3">
-            <p className="label text-gold mb-2 text-micro">Aluguel por aeroportos possuídos</p>
+            <p className="label text-gold mb-2 text-micro">Aluguel por {activeLabels().airport.toLowerCase()}s possuídos</p>
             <div className="flex flex-col gap-0.5">
               {presentation.rentRows.map((row, index) => (
                 <CompactRent key={row.key} label={row.label} value={row.value} accent={index === presentation.rentRows.length - 1} />
@@ -2063,7 +2167,7 @@ export function AirportPopover({
             {/* Hangar bonus */}
             <div className="mt-3 pt-2.5 border-t border-coffee-500/60">
               <p className="text-cream-muted text-micro">
-                O <span className="text-gold font-semibold">Hangar</span> dobra o aluguel deste aeroporto individualmente.
+                O bônus de <span className="text-gold font-semibold">{activeLabels().hangar}</span> dobra o aluguel individualmente.
               </p>
             </div>
             <div className="mt-2.5 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-0.5">

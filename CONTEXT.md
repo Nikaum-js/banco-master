@@ -32,6 +32,37 @@ _Avoid_: perfil, ranking global, leaderboard
 Objeto nomeado que seleciona somente configurações já existentes no lobby, sem criar regra ou estado paralelo ([D-067](./docs/adr/D-067-retencao-leve-fica-na-sala-privada.md)).
 _Avoid_: modo de jogo, regra personalizada
 
+### Mapa
+
+**Mapa**:
+Catálogo de conteúdo e apresentação de um tabuleiro jogável — identificador estável, nome público, grupos, 48 casas, ícones, textos, cenários. Escolhido pelo host antes da criação da sala, gravado nela e imutável depois; todos os participantes recebem o mesmo. Não altera motor, posições, economia nem regra ([D-069](./docs/adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md)).
+_Avoid_: tema (para o eixo jogável), skin de tabuleiro
+
+**Cidades do Mundo**:
+Mapa incumbente (`atlas`) — países e cidades, universo visual "Atlas da Meia-Noite". Fallback de sala antiga ou sem identificação de mapa.
+
+**Cidade da Fuligem**:
+Segundo mapa jogável (`fuligem`) — cidade da Revolução Industrial: bairros de fábricas, chaminés, ferrovias, ferro, madeira, cobre e luz de fornalha ([D-069](./docs/adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md)).
+_Avoid_: Fliperama Neon, Metrópole Neon, neon
+
+**Sorte Grande**:
+Nome de apresentação, no mapa Cidade da Fuligem, do prêmio acumulado da Loteria (Free Parking, §13.4). Mesma regra, mesmo `centerPot`.
+
+**Ferrovia**:
+Nome de apresentação, no mapa Cidade da Fuligem, das quatro casas de aeroporto (Ferrovia Norte/Sul/Leste/Oeste). Mesma regra de aluguel escalonado (§2.4).
+
+**Estação de Carga**:
+Nome de apresentação, no mapa Cidade da Fuligem, do Hangar (§13.6) — melhoria que dobra o aluguel da Ferrovia.
+
+**Bilhete de Trem**:
+Nome de apresentação, no mapa Cidade da Fuligem, do Bus Ticket (§10.7) — mesmo item, mesmo contador, mesmas janelas de uso.
+
+**Oficina**:
+Nome de apresentação, no mapa Cidade da Fuligem, da casa construída (níveis 1–4 da escada de construção).
+
+**Fábrica**:
+Nome de apresentação, no mapa Cidade da Fuligem, do Hotel; **Complexo de Fábricas** é o 2º hotel e **Torre de Ferro** é o Skyscraper. Mesma escada, mesmos custos e aluguéis.
+
 ### Tabuleiro e movimento
 
 **GO**:

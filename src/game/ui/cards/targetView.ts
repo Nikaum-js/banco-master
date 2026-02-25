@@ -9,13 +9,13 @@
  * Reusa `deedPresentation` (nome, subtítulo, cor do grupo, bandeira, aluguéis) e o motor para
  * dono e nível de construção — nenhum número é recalculado aqui.
  */
-import { BOARD } from '@/lib/boardData'
 import { cityLevel } from '@/game/economy/construction'
 import { rentDue } from '@/game/economy/rent'
 import { ownerOf, isMortgaged, groupOwnedCount, groupSize } from '@/game/economy/titles'
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { countryName } from '@/boards/glyphs/countries'
 import type { GameState } from '@/game/turn/types'
+import { activeBoard, activeLabels } from '@/game/ui/theme/boardTheme'
 
 export interface TargetFacts {
   pos: number
@@ -56,7 +56,7 @@ export interface TargetFacts {
  * utilidade varia com os dados em vez de apresentar o número como fixo.
  */
 export function targetFacts(game: GameState, pos: number): TargetFacts | null {
-  const sq = BOARD[pos]
+  const sq = activeBoard()[pos]
   if (sq.kind !== 'property' && sq.kind !== 'airport' && sq.kind !== 'utility') return null
   const deed = deedPresentation(sq)
   if (!deed) return null
@@ -68,7 +68,7 @@ export function targetFacts(game: GameState, pos: number): TargetFacts | null {
   return {
     pos,
     name: deed.name,
-    country: sq.kind === 'property' ? countryName(sq.uf) : null,
+    country: sq.kind === 'property' ? (sq.uf ? countryName(sq.uf) : sq.capital ?? null) : null,
     flagCode: deed.flagCode,
     accent: deed.accent,
     groupLabel: deed.subtitle,
@@ -110,12 +110,12 @@ export const TARGET_EFFECT: Record<string, { effect: string; duration: string; c
   aquisicaoHostil: {
     effect: 'Você compra a propriedade à força, pela metade do preço de tabela.',
     duration: 'permanente',
-    consequence: 'O dono recebe a metade e não pode recusar. Aeroporto e utilidade custam 1,5× da metade; hipoteca mantida cobra a taxa de transferência.',
+    get consequence() { return `O dono recebe a metade e não pode recusar. ${activeLabels().airport} e utilidade custam 1,5× da metade; hipoteca mantida cobra a taxa de transferência.` },
   },
   confiscoGeral: {
     effect: 'Demole TODAS as construções da propriedade.',
     duration: 'permanente',
-    consequence: 'Casas, hotéis e arranha-céu voltam ao banco e o dono NÃO é reembolsado. O terreno continua com ele.',
+    get consequence() { const l = activeLabels(); return `${l.houses.charAt(0).toUpperCase() + l.houses.slice(1)}, ${l.hotel}s e ${l.skyscraper} voltam ao banco e o dono NÃO é reembolsado. O terreno continua com ele.` },
   },
   valorizacao: {
     effect: 'A propriedade passa a cobrar aluguel em dobro.',
@@ -125,12 +125,12 @@ export const TARGET_EFFECT: Record<string, { effect: string; duration: string; c
   impostoFederal: {
     effect: 'O alvo paga 25% do patrimônio líquido.',
     duration: 'imediato',
-    consequence: 'O valor vai para a Loteria, no centro do tabuleiro. Sem caixa, ele paga o que tiver — esta cobrança não abre dívida.',
+    get consequence() { return `O valor vai para a ${activeLabels().lottery}, no centro do tabuleiro. Sem caixa, ele paga o que tiver — esta cobrança não abre dívida.` },
   },
   embargoDeObras: {
     effect: 'O alvo fica proibido de construir.',
     duration: '2 voltas',
-    consequence: 'Nenhuma casa, hotel, arranha-céu ou Hangar enquanto durar. Vender e hipotecar continuam livres.',
+    get consequence() { const l = activeLabels(); return `Nenhuma ${l.house}, ${l.hotel}, ${l.skyscraper} ou ${l.hangar} enquanto durar. Vender e hipotecar continuam livres.` },
   },
   permutaForcada: {
     effect: 'Troca uma propriedade sua por uma do adversário.',

@@ -11,10 +11,10 @@ import { identityOf } from '@/net/identity'
 import { WaitingBar } from '@/net/ui/WaitingBar'
 import { activeModal, type ModalView, type HandCardView } from './activeModal'
 import type { Rarity } from '@/game/cards/types'
-import { BOARD, GROUPS, type PropertySquare, type Square } from '@/lib/boardData'
+import { type PropertySquare, type Square } from '@/lib/boardData'
 import { busSideOf, canUseBusTicket } from '@/game/turn/turnMachine'
 import { AUCTION_WINDOW } from '@/game/economy/purchase'
-import { RARITY_COLOR, RARITY_LABEL, RARITY_PIPS, cardLabel, CARD_DESC } from '@/game/ui/cards/cardMeta'
+import { RARITY_COLOR, RARITY_LABEL, RARITY_PIPS, cardLabel, cardDesc } from '@/game/ui/cards/cardMeta'
 import { cardById } from '@/game/cards/catalog'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { PlayerFace } from '@/boards/PlayerFace'
@@ -33,6 +33,8 @@ import { useMotion } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { CountryFlag } from '@/boards/glyphs/flags'
+import { activeBoard, activeCatalog, activeLabels, capLabel } from '@/game/ui/theme/boardTheme'
+import { PropertyIconDisc } from '@/boards/glyphs/propertyIcons'
 
 // Botão de ação do modal — casca fina sobre o primitivo Button (flex-1).
 function ActionBtn({
@@ -140,7 +142,7 @@ function CardRevealCard({
                 <span className="label text-brass text-micro">O que faz</span>
                 <span className="h-px flex-1 bg-ink-500/70" />
               </div>
-              <p className="text-starlight text-sm leading-snug text-center">{CARD_DESC[view.effect] ?? 'Carta sorteada.'}</p>
+              <p className="text-starlight text-sm leading-snug text-center">{cardDesc(view.effect)}</p>
             </div>
           </div>
 
@@ -230,7 +232,7 @@ export function ModalLayer() {
         <Overlay key="bus-armed-backdrop" z={60}>
           <BusPicker
             fromPos={activePlayer.pos}
-            title="Usar Bus Ticket"
+            title={`Usar ${activeLabels().busTicket}`}
             onPick={spendBusTicket}
             onBoardingChange={setBusBoarding}
             onEmbarked={disarmBus}
@@ -266,7 +268,7 @@ export function ModalLayer() {
                   { dir: 'frente' as const, label: 'Frente', steps: 3, hint: 'no sentido do jogo' },
                   { dir: 'tras' as const, label: 'Trás', steps: -3, hint: 'no sentido contrário' },
                 ]).map(({ dir, label, steps, hint }) => {
-                  const dest = BOARD[(activePlayer.pos + steps + BOARD.length) % BOARD.length]
+                  const dest = activeBoard()[(activePlayer.pos + steps + activeBoard().length) % activeBoard().length]
                   return (
                     <button
                       key={dir}
@@ -283,13 +285,15 @@ export function ModalLayer() {
                           {hint}, cai em <span className="text-cream">{dest.name}</span>
                         </span>
                       </span>
-                      {dest.kind === 'property' ? (
+                      {dest.kind === 'property' && (dest as PropertySquare).uf ? (
                         <span className="w-7 h-7 shrink-0 rounded-full bg-coffee-900 border border-coffee-950 overflow-hidden shadow-[var(--shadow-card)]">
                           <CountryFlag
-                            code={(dest as PropertySquare).uf}
+                            code={(dest as PropertySquare).uf!}
                             fill
                           />
                         </span>
+                      ) : dest.kind === 'property' && (dest as PropertySquare).icon ? (
+                        <span className="shrink-0 scale-75"><PropertyIconDisc icon={(dest as PropertySquare).icon!} /></span>
                       ) : (
                         <span className="text-gold shrink-0"><SquareIcon square={dest} size={24} /></span>
                       )}
@@ -321,7 +325,7 @@ export function ModalLayer() {
                   { opt: 'die1' as const, label: `Dado B (${view.white[1]})`, steps: view.white[1] },
                   { opt: 'sum' as const, label: `Soma (${view.white[0] + view.white[1]})`, steps: view.white[0] + view.white[1] },
                 ]).map(({ opt, label, steps }) => {
-                  const dest = BOARD[(view.pos + steps) % BOARD.length]
+                  const dest = activeBoard()[(view.pos + steps) % activeBoard().length]
                   return (
                     <ActionBtn key={opt} onClick={() => chooseBusMove(opt)}>
                       {label} → {dest.name}
@@ -338,7 +342,7 @@ export function ModalLayer() {
               <div className="px-3.5 py-3">
                 <p className="text-cream-muted text-sm mb-2">Escolha o destino:</p>
                 <div className="max-h-[46vh] overflow-auto flex flex-col gap-1 pr-1">
-                  {BOARD.map((sq) => (
+                  {activeBoard().map((sq) => (
                     <button
                       key={sq.pos}
                       type="button"
@@ -404,9 +408,9 @@ function busStopFooterAccent(square: Square, ownerColor?: string): string {
 function busStopMeta(square: Square): string {
   switch (square.kind) {
     case 'property':
-      return square.capital ?? GROUPS[square.group].name
+      return square.capital ?? activeCatalog().groupNames[square.group]
     case 'airport':
-      return `Aeroporto · ${square.iata}`
+      return `${activeLabels().airport} · ${square.iata}`
     case 'utility':
       return 'Serviço público'
     case 'tax':
@@ -416,7 +420,7 @@ function busStopMeta(square: Square): string {
     case 'tesouro':
       return 'Carta de Tesouro'
     case 'bus-ticket':
-      return 'Ponto de ônibus'
+      return activeLabels().busTicket
     case 'corner-go':
     case 'corner-jail':
     case 'corner-parking':
@@ -435,7 +439,7 @@ function busStopValue(square: Square, ownerName?: string): string {
 }
 
 function BusStopGlyph({ square, size = 24 }: { square: Square; size?: number }) {
-  if (square.kind === 'property') {
+  if (square.kind === 'property' && square.uf) {
     return (
       <span
         className="bus-stop-flag"
@@ -472,7 +476,7 @@ function BusLine({
   const [departing, setDeparting] = useState<number | null>(null)
   const activeIdx = turnOrder[activeSeat] // índice em players do jogador da vez
   const side = busSideOf(fromPos)
-  const cells = BOARD.filter((sq) => busSideOf(sq.pos) === side).reverse() // casas do lado, na ordem do tabuleiro (de trás pra frente)
+  const cells = activeBoard().filter((sq) => busSideOf(sq.pos) === side).reverse() // casas do lado, na ordem do tabuleiro (de trás pra frente)
   // Rostos por casa (peão = carinha, nunca bolinha): cor por assento + destaque do jogador da vez.
   const facesAt: Record<number, {
     color: string
@@ -759,7 +763,7 @@ function AuctionDeedPanel({ sq, deed }: { sq: AuctionSquare; deed: AuctionDeed }
     ...(deed.kind === 'property'
       ? [{ label: 'Casa', value: money(deed.buildCost) }]
       : deed.kind === 'airport'
-        ? [{ label: 'Hangar', value: money(deed.hangar.cost) }]
+        ? [{ label: activeLabels().hangar, value: money(deed.hangar.cost) }]
         : []),
     { label: 'Hipoteca', value: money(deed.mortgage) },
   ]
@@ -779,8 +783,8 @@ function AuctionDeedPanel({ sq, deed }: { sq: AuctionSquare; deed: AuctionDeed }
             <AuctionRentTier label="3 casas" value={money(deed.rents.house3)} kind="house" count={3} />
             <AuctionRentTier label="4 casas" value={money(deed.rents.house4)} kind="house" count={4} />
             <AuctionRentTier label="Hotel" value={money(deed.rents.hotel)} kind="hotel" />
-            <AuctionRentTier label="2º hotel" value={money(deed.rents.hotel2)} kind="hotel" count={2} />
-            <AuctionRentTier label="Arranha-céu" value={money(deed.rents.skyscraper)} kind="skyscraper" />
+            <AuctionRentTier label={capLabel(activeLabels().hotel2)} value={money(deed.rents.hotel2)} kind="hotel" count={2} />
+            <AuctionRentTier label={capLabel(activeLabels().skyscraper)} value={money(deed.rents.skyscraper)} kind="skyscraper" />
           </>
         ) : (
           deed.rentRows.map((row, index) => (

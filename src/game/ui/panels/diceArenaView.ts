@@ -9,11 +9,11 @@
 // Aqui está tudo que a tela precisa decidir, como função pura. A affordance NÃO é a
 // autoridade: as perguntas de regra são delegadas ao motor (`canUseBusTicket`,
 // `purchasePrice`), e a de perspectiva ao `localView` — nenhuma é recomputada.
-import { BOARD } from '@/lib/boardData'
 import { canUseBusTicket, JAIL_FINE } from '@/game/turn/turnMachine'
 import { purchasePrice } from '@/game/economy/purchase'
 import type { GameState } from '@/game/turn/types'
 import type { LocalView } from '@/net/localView'
+import { activeBoard } from '@/game/ui/theme/boardTheme'
 
 export interface DiceArenaView {
   /** Rótulo de estado da vez ("Sua vez", "Preso · tentativa 2/3", "Vez de Ana"…). */
@@ -82,7 +82,7 @@ export function diceArenaView(game: GameState, local: LocalView, gates: DiceAren
   const purchasePos = game.resolution?.kind === 'purchase' ? game.resolution.pos : null
   const purchase = (() => {
     if (purchasePos === null) return null
-    const sq = BOARD[purchasePos]
+    const sq = activeBoard()[purchasePos]
     const listPrice = 'price' in sq ? sq.price : 0
     const price = purchasePrice(game, purchasePos) ?? 0
     return {

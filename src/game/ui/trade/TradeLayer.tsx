@@ -15,7 +15,7 @@ import { useLocalView, useRoomStore } from '@/net/roomStore'
 import { identityOf } from '@/net/identity'
 import { validateTrade } from '@/game/economy/trade'
 import type { Trade, Immunity } from '@/game/economy/types'
-import { BOARD, type Square } from '@/lib/boardData'
+import { type Square } from '@/lib/boardData'
 import { PlayerFace } from '@/boards/PlayerFace'
 import type { AvatarId } from '@/boards/playerAvatarCatalog'
 import type { SkinId } from '@/boards/playerSkinCatalog'
@@ -36,6 +36,7 @@ import {
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { TradeDeedItem } from './TradeDeedItem'
 import { CountryFlag } from '@/boards/glyphs/flags'
+import { activeBoard, activeLabels } from '@/game/ui/theme/boardTheme'
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n))
 const lapsLabel = (laps: number | null): string => (
@@ -56,9 +57,9 @@ function Backdrop({ children }: { children: ReactNode }) {
   return <Overlay z={65}>{children}</Overlay>
 }
 
-function Card({ children }: { children: ReactNode }) {
+function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <ModalShell className="w-[720px] max-w-[96vw] max-h-[92vh] flex flex-col">
+    <ModalShell className={cn('w-[720px] max-w-[96vw] max-h-[92vh] flex flex-col', className)}>
       {children}
     </ModalShell>
   )
@@ -123,7 +124,7 @@ function PropertyTermRow({
   onToggleGrant: () => void
   onSetGrantLaps: (laps: number | null) => void
 }) {
-  const sq = BOARD[pos]
+  const sq = activeBoard()[pos]
   const deed = deedPresentation(sq)
   if (!deed) return null
   const grantSelected = grantLaps !== undefined
@@ -221,7 +222,7 @@ function TransferRow({ pos, laps, on, onToggle }: { pos: number; laps: number | 
       )}
     >
       <ToggleDot on={on} />
-      <span className="flex-1 min-w-0 truncate text-cream text-xs">Transferir {BOARD[pos].name}</span>
+      <span className="flex-1 min-w-0 truncate text-cream text-xs">Transferir {activeBoard()[pos].name}</span>
       <span className="text-cream-muted text-nano shrink-0">
         {laps === null ? 'Permanente' : `${lapsLabel(laps)} restantes`}
       </span>
@@ -290,7 +291,7 @@ function TicketField({ value, max, onChange }: { value: number; max: number; onC
   return (
     <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-950/50 border border-coffee-500">
       <Bus size={14} className="text-gold shrink-0" />
-      <span className="label text-cream-muted flex-1 min-w-0 truncate">Bus Tickets</span>
+      <span className="label text-cream-muted flex-1 min-w-0 truncate">{`${activeLabels().busTicket}s`}</span>
       <button type="button" className={stepBtn} disabled={value <= 0} onClick={() => onChange(value - 1)} aria-label="Menos um ticket">−</button>
       <span className={cn('currency text-sm tabular-nums w-5 text-center leading-none', value > 0 ? 'text-gold-glow' : 'text-cream-muted/85')}>{value}</span>
       <button type="button" className={stepBtn} disabled={value >= max} onClick={() => onChange(value + 1)} aria-label="Mais um ticket">+</button>
@@ -307,7 +308,7 @@ function TicketField({ value, max, onChange }: { value: number; max: number; onC
 // ---------------------------------------------------------------------
 const faceValue = (positions: number[], cash: number): number =>
   positions.reduce((sum, pos) => {
-    const sq = BOARD[pos]
+    const sq = activeBoard()[pos]
     return sum + ('price' in sq ? (sq as { price: number }).price : 0)
   }, cash)
 
@@ -328,7 +329,7 @@ function PanTokens({ positions, cash, tickets, reduced }: { positions: number[];
     <div className="flex items-end justify-center min-h-[20px] -mb-[3px]">
       {shown.map((pos, i) => (
         <motion.span key={pos} {...drop} transition={landing} className={cn('relative', i > 0 && '-ml-2')} style={{ zIndex: i }}>
-          <DeedAvatar sq={BOARD[pos]} size={18} />
+          <DeedAvatar sq={activeBoard()[pos]} size={18} />
         </motion.span>
       ))}
       {extra > 0 && (
@@ -682,13 +683,13 @@ function Composer({ onClose, proposerId }: { onClose: () => void; proposerId: st
   const themIdentity = recipient ? identityOf(room, recipient.id) : null
 
   return (
-    <Card>
+    <Card className="trade-composer">
       <Header title="Negociação" subtitle="Monte os dois lados e confirme" />
 
       {/* Mesa — Você e o destinatário flanqueiam a balança; cada prato pesa um lado.
           Fundo translúcido: deixa o gradiente do shell respirar (nada de cor chapada). */}
-      <div className="px-4 pt-3 pb-2 bg-coffee-950/25 border-b border-coffee-700/50 shrink-0 flex flex-col gap-1.5">
-        <div className="flex items-center justify-center gap-1">
+      <div className="trade-composer__stage px-4 pt-3 pb-2 bg-coffee-950/25 border-b border-coffee-700/50 shrink-0 flex flex-col gap-1.5">
+        <div className="trade-composer__scale-row flex items-center justify-center gap-1">
           <FaceTag color={meIdentity.color} avatar={meIdentity.avatar} skin={meIdentity.skin} name="Você" />
           <TradeScale
             leftPositions={[...offered]}
@@ -729,7 +730,7 @@ function Composer({ onClose, proposerId }: { onClose: () => void; proposerId: st
         )}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden flex divide-x divide-coffee-500/40">
+      <div className="trade-composer__sides flex-1 min-h-0 overflow-hidden flex divide-x divide-coffee-500/40">
         <Side
           title="Você oferece"
           color={meIdentity.color}
@@ -802,7 +803,7 @@ function Composer({ onClose, proposerId }: { onClose: () => void; proposerId: st
       )}
 
       {/* Convenção de rodapé: secundário à ESQUERDA, primário à DIREITA */}
-      <div className="px-5 py-3 border-t-2 border-coffee-950 shrink-0 flex gap-2">
+      <div className="trade-composer__footer px-5 py-3 border-t-2 border-coffee-950 shrink-0 flex gap-2">
         <Button className="flex-1 py-2.5" variant="secondary" onClick={onClose}>Cancelar</Button>
         <Button className="flex-1 py-2.5" onClick={() => { proposeTrade(trade); onClose() }} disabled={!canPropose}>Confirmar</Button>
       </div>
@@ -864,7 +865,7 @@ function ReadSide({
           <div className="trade-value-item">
             <span className="trade-value-item__icon"><Bus size={18} /></span>
             <div>
-              <p>Bus Ticket{tickets > 1 ? 's' : ''}</p>
+              <p>{activeLabels().busTicket}{tickets > 1 ? 's' : ''}</p>
               <strong>{tickets}</strong>
             </div>
           </div>
@@ -877,7 +878,7 @@ function ReadSide({
             </div>
             <div className="trade-value-item__facts">
               <span>Local</span>
-              <strong>{BOARD[pos].name}</strong>
+              <strong>{activeBoard()[pos].name}</strong>
             </div>
           </div>
         ))}
@@ -885,7 +886,7 @@ function ReadSide({
           <div key={`g${g.pos}`} className="trade-value-item trade-value-item--immunity">
             <span className="trade-value-item__icon"><Shield size={18} /></span>
             <div className="trade-value-item__identity">
-              <p>Imunidade em {BOARD[g.pos].name}</p>
+              <p>Imunidade em {activeBoard()[g.pos].name}</p>
             </div>
             <div className="trade-value-item__facts">
               <span>Duração</span>

@@ -4,12 +4,6 @@
 @import "@fontsource/bebas-neue/400.css";
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/roboto-slab";
-/* Fonte de PERSONALIDADE do tema Fliperama (subconjunto latino só — o resto do
-   arquivo do fontsource é peso morto pra um jogo em pt-BR): Press Start 2P é a
-   fonte de gabinete de arcade de verdade. Entra apenas como `--font-display` do
-   tema, e NUNCA dentro da casa do tabuleiro — lá o nome da cidade é medido em
-   14px fixos e só cabe em condensada. */
-@import "@fontsource/press-start-2p/latin-400.css";
 
 /* =====================================================================
    Design tokens — "Atlas da Meia-Noite"
@@ -138,6 +132,27 @@
   /* ---------- Micro-tipografia (gera text-micro / text-nano) ---------- */
   --text-micro: 0.5625rem; /* 9px — sublabels de card/chip */
   --text-nano: 0.5rem;     /* 8px — legendas mínimas (stat de deed) */
+}
+
+/* Em celular paisagem, os dois cabeçalhos das colunas já identificam as partes.
+   A balança é o resumo visual redundante: ela cede espaço para os termos roláveis,
+   preservando a operação completa da troca em 740×360 (044/055). */
+@media (orientation: landscape) and (max-height: 420px) and (min-width: 641px) {
+  .trade-composer__stage {
+    padding-block: 0.25rem;
+  }
+
+  .trade-composer__scale-row {
+    display: none;
+  }
+
+  .trade-composer__sides > div > div:first-child {
+    padding-block: 0.4rem;
+  }
+
+  .trade-composer__footer {
+    padding-block: 0.5rem;
+  }
 }
 
 /* =====================================================================
@@ -749,141 +764,110 @@
    var(--font-*), trocar o atributo troca a pele inteira: casas, glifos,
    popovers, painéis, HUD, modais e a tela de entrada — sem re-render.
 
-     atlas → carta náutica noturna · tinta azul · latão · Bebas condensada
-     neon  → synthwave · roxo/ciano/rosa · corpo monoespaçado · tubo de imagem
+     atlas   → carta náutica noturna · tinta azul · latão · Bebas condensada
+     fuligem → Revolução Industrial · carvão/ferro/cobre · luz de fornalha
 
    TAMANHO de fonte nunca muda por tema (quebraria o tabuleiro, que fixa 14px
-   no nome da cidade): o que muda é a FAMÍLIA e o tracking que a compensa.
+   no nome da cidade); a Fuligem mantém até as FAMÍLIAS do Atlas — a
+   personalidade vem de cor, matéria e cenário (055/D-069).
    ===================================================================== */
 
 /* ---------------------------------------------------------------------
-   FLIPERAMA NEON — a cidade acesa vista de dentro de um tubo de imagem.
+   CIDADE DA FULIGEM — a Revolução Industrial vista da mesa (055/D-069).
+   Edição física premium: carvão, ferro, cobre, madeira e papel antigo; a
+   LUZ DE FORNALHA é o acento principal (o "latão" deste mundo). Elétrico
+   frio só em detalhe minúsculo. Os 10 --color-group-* NÃO são sobrescritos:
+   herdam a cartela do Atlas, já calibrada para contraste e dicromacia — a
+   identidade do mundo vem das superfícies, nunca da cor-informação.
    --------------------------------------------------------------------- */
-:root[data-board-theme="neon"] {
-  /* escala tinta → violeta profundo */
-  --color-ink-50:  #f6f2ff;
-  --color-ink-100: #ded2ff;
-  --color-ink-200: #b9a6ee;
-  --color-ink-300: #8e79c9;
-  --color-ink-400: #5f4b96;
-  --color-ink-500: #402f72;
-  --color-ink-600: #2e2158;
-  --color-ink-700: #241a48;
-  --color-ink-800: #190f38;
-  --color-ink-900: #120927;
-  --color-ink-950: #08041a;
-  --color-ink-abyss: #05010f;
+:root[data-board-theme="fuligem"] {
+  /* escala tinta → carvão quente */
+  --color-ink-50:  #f7f1e6;
+  --color-ink-100: #e8dcc6;
+  --color-ink-200: #c9b89c;
+  --color-ink-300: #9b8a6f;
+  --color-ink-400: #6b5c48;
+  --color-ink-500: #4a3e31;
+  --color-ink-600: #352c22;
+  --color-ink-700: #2a221a;
+  --color-ink-800: #1e1812;
+  --color-ink-900: #15100c;
+  --color-ink-950: #0c0906;
+  --color-ink-abyss: #070504;
 
-  /* acentos: o "metal" deste mundo é o tubo de neon ciano, não o latão */
-  --color-starlight: #f6f2ff;
-  --color-starlight-muted: #b6a7e2;
-  --color-brass: #56cdec;
-  --color-brass-soft: #2f9dbd;
-  --color-brass-glow: #a5e8fa;
-  --color-signal: #ff4d6d;
-  --color-signal-deep: #b81b3c;
-  --color-signal-glow: #ff96ab;
-  --color-table-felt: #160d2f;
-  --color-table-felt-highlight: #402f72;
-  --color-table-felt-deep: #070317;
+  /* acentos: papel antigo como conteúdo, fornalha/cobre como destaque */
+  --color-starlight: #f0e7d4;
+  --color-starlight-muted: #b3a58c;
+  --color-brass: #d9822e;
+  --color-brass-soft: #a35a1b;
+  --color-brass-glow: #ffb36b;
+  --color-signal: #e2574b;
+  --color-signal-deep: #a3322a;
+  --color-signal-glow: #f0917f;
+  --color-table-felt: #241a12;
+  --color-table-felt-highlight: #4a3520;
+  --color-table-felt-deep: #100b07;
 
-  /* grupos na cartela de arcade — mais saturados que no atlas */
-  --color-group-brown:   #e0913f;
-  --color-group-skyblue: #5ce1ff;
-  --color-group-pink:    #ff5fae;
-  --color-group-orange:  #ffa036;
-  --color-group-red:     #ff4f52;
-  --color-group-yellow:  #ffe14a;
-  --color-group-green:   #3bf58b;
-  --color-group-navy:    #5b9dff;
-  --color-group-purple:  #b478ff;
-  --color-group-platinum: #d5dae6;
+  /* tipografia: as MESMAS famílias do Atlas — Bebas já é letra de placa
+     fundida; nenhuma fonte nova entra no bundle (a de pixel saiu, D-069). */
 
-  /* tipografia: o CORPO vira monoespaçado (terminal de gabinete) e o número
-     também; o display segue condensado — trocar a família do display alargaria
-     o nome das cidades dentro da casa, que é medida em 14px fixos. */
-  --font-sans: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  --font-slab: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  /* Display = a fonte de gabinete de arcade DE VERDADE (Press Start 2P). Ela é
-     larguíssima e quadrada: vale nos títulos e no HUD, e o bloco abaixo a tira de
-     dentro da casa do tabuleiro, onde só condensada cabe. */
-  --font-display: "Press Start 2P", ui-monospace, monospace;
-  /* monoespaçada já é larga: o tracking cede o que a família tomou */
-  --tracking-mono: 0.03em;
-  --tracking-caps: 0.2em;
-  --tracking-display: 0;
-
-  /* sombras: menos preto, mais halo de tubo */
-  --shadow-card:    0 1px 0 0 #05010f, 0 2px 8px -2px rgb(5 1 15 / 0.7);
-  --shadow-lift:    0 8px 24px -8px rgb(5 1 15 / 0.8), 0 0 18px -6px rgb(167 107 245 / 0.5);
-  --shadow-dropdown:0 16px 40px -12px rgb(5 1 15 / 0.92), 0 0 24px -8px rgb(86 205 236 / 0.45);
-  --shadow-glow:    0 0 0 1px rgb(86 205 236 / 0.45), 0 0 26px -4px rgb(86 205 236 / 0.5);
-  --shadow-press:   inset 0 2px 4px 0 rgb(5 1 15 / 0.6);
+  /* sombras de fuligem: preto quente, halo de fornalha nos destaques */
+  --shadow-card:    0 1px 0 0 #070504, 0 2px 8px -2px rgb(7 5 4 / 0.7);
+  --shadow-lift:    0 8px 24px -8px rgb(7 5 4 / 0.85), 0 0 18px -8px rgb(217 130 46 / 0.35);
+  --shadow-dropdown:0 16px 40px -12px rgb(7 5 4 / 0.92), 0 0 24px -10px rgb(217 130 46 / 0.3);
+  --shadow-glow:    0 0 0 1px rgb(217 130 46 / 0.4), 0 0 22px -6px rgb(217 130 46 / 0.45);
+  --shadow-press:   inset 0 2px 4px 0 rgb(7 5 4 / 0.6);
 
   /* shadcn re-pintado */
-  --background: #120927;
-  --foreground: #f6f2ff;
-  --card: #241a48;
-  --card-foreground: #f6f2ff;
-  --popover: #241a48;
-  --popover-foreground: #f6f2ff;
-  --primary: #56cdec;
-  --primary-foreground: #08041a;
-  --secondary: #402f72;
-  --secondary-foreground: #f6f2ff;
-  --muted: #2e2158;
-  --muted-foreground: #b6a7e2;
-  --accent: #402f72;
-  --accent-foreground: #f6f2ff;
-  --destructive: #ff4d6d;
-  --destructive-foreground: #08041a;
-  --border: #402f72;
-  --input: #402f72;
-  --ring: #56cdec;
+  --background: #15100c;
+  --foreground: #f0e7d4;
+  --card: #2a221a;
+  --card-foreground: #f0e7d4;
+  --popover: #2a221a;
+  --popover-foreground: #f0e7d4;
+  --primary: #d9822e;
+  --primary-foreground: #0c0906;
+  --secondary: #4a3e31;
+  --secondary-foreground: #f0e7d4;
+  --muted: #352c22;
+  --muted-foreground: #b3a58c;
+  --accent: #4a3e31;
+  --accent-foreground: #f0e7d4;
+  --destructive: #e2574b;
+  --destructive-foreground: #0c0906;
+  --border: #4a3e31;
+  --input: #4a3e31;
+  --ring: #d9822e;
 }
 
-/* Fundo do Fliperama: grade fina em ciano + LINHAS DE VARREDURA. A varredura
-   anda, mas em `steps(4)` num ciclo longo — quatro repaints a cada 6s, não 60
-   por segundo: fundo de tela cheia animado a cada frame custaria a partida. */
-:root[data-board-theme="neon"] body::before {
+/* Fundo da Fuligem: grão de fuligem ESTÁTICO (fibra vertical de madeira/ferro
+   + poeira clara). NADA anima aqui (FR-012) — a vida do mundo mora no cenário
+   (FuligemBackdrop), com pouquíssimos elementos animados que congelam sob
+   movimento reduzido. O tema removido animava o fundo inteiro; esse erro não volta. */
+:root[data-board-theme="fuligem"] body::before {
   background-image:
-    repeating-linear-gradient(180deg, rgb(255 255 255 / 0.035) 0 1px, transparent 1px 3px),
-    linear-gradient(to right,  rgb(86 205 236 / 0.07) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(242 88 156 / 0.06) 1px, transparent 1px);
-  background-size: 100% 3px, 54px 54px, 54px 54px;
-  animation: bm-scan 6s steps(4, end) infinite;
+    repeating-linear-gradient(0deg, rgb(240 231 212 / 0.015) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgb(7 5 4 / 0.32) 0 2px, transparent 2px 9px);
+  background-size: 100% 4px, 9px 100%;
 }
-@keyframes bm-scan {
-  to { background-position: 0 3px, 0 0, 0 0; }
-}
-:root[data-board-theme="neon"] body::after {
+:root[data-board-theme="fuligem"] body::after {
   background:
-    radial-gradient(ellipse 80% 40% at 50% 108%, rgb(242 88 156 / 0.18) 0%, transparent 62%),
-    radial-gradient(ellipse 70% 40% at 50% -8%, rgb(86 205 236 / 0.1) 0%, transparent 60%),
-    radial-gradient(ellipse at center, transparent 38%, rgb(5 1 15 / 0.72) 100%);
+    radial-gradient(ellipse 85% 42% at 50% 110%, rgb(217 130 46 / 0.13) 0%, transparent 62%),
+    radial-gradient(ellipse 70% 36% at 50% -8%, rgb(240 231 212 / 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse at center, transparent 40%, rgb(7 5 4 / 0.75) 100%);
 }
 
-
-/* DENTRO DA CASA, a condensada continua. O nome da cidade é desenhado em 14px FIXOS
-   (boards/shared.tsx) e só cabe em condensada: medido, Press Start 2P fazia "Los
-   Angeles" invadir a casa vizinha e as laterais giradas se atropelarem. Redefinir o
-   TOKEN na subárvore resolve sem `font-family` em elemento nenhum — a personalidade
-   do tema segue valendo em todo o resto da interface. */
-:root[data-board-theme="neon"] .board-square {
-  --font-display: "Bebas Neue", "Oswald", system-ui, sans-serif;
-  --tracking-display: 0.04em;
-}
 
 /* =====================================================================
    Cromo por tema — a ESTRUTURA muda, não só a cor.
    Atlas: placas de carta náutica (marcas de registro nos cantos das casas,
-   régua de graduação na moldura). Fliperama: contorno de tubo com cantoneiras
-   acesas.
+   régua de graduação na moldura). Fuligem: placa de fábrica com rebites de
+   ferro nas quinas e moldura aparafusada.
    Pseudo-elementos usam ::before pra pintar ABAIXO do conteúdo da casa.
    ===================================================================== */
 
 /* ---- Atlas (default, inclusive antes de a preferência re-hidratar) ---- */
-:root:not([data-board-theme="neon"]) .board-square::before {
+:root:not([data-board-theme="fuligem"]) .board-square::before {
   content: "";
   position: absolute;
   inset: 3px;
@@ -900,7 +884,7 @@
     linear-gradient(var(--tick), var(--tick)) right bottom/ 1px 6px;
   background-repeat: no-repeat;
 }
-:root:not([data-board-theme="neon"]) .board-frame::before {
+:root:not([data-board-theme="fuligem"]) .board-frame::before {
   content: "";
   position: absolute;
   inset: 2px;
@@ -915,32 +899,31 @@
   background-repeat: no-repeat;
 }
 
-/* ---- Fliperama: cantoneiras acesas nas quinas da casa (o "L" de HUD de
-   arcade), em rosa sobre o filete ciano ---- */
-:root[data-board-theme="neon"] .board-square::before {
+/* ---- Fuligem: rebites de ferro nas quinas da placa, moldura aparafusada ---- */
+:root[data-board-theme="fuligem"] .board-square::before {
   content: "";
   position: absolute;
   inset: 2.5px;
   pointer-events: none;
-  --edge: color-mix(in srgb, var(--color-group-pink) 75%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-brass) 20%, transparent);
+  --rivet: color-mix(in srgb, var(--color-brass) 52%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-ink-400) 60%, transparent);
   background:
-    linear-gradient(var(--edge), var(--edge)) left top    / 7px 2px,
-    linear-gradient(var(--edge), var(--edge)) left top    / 2px 7px,
-    linear-gradient(var(--edge), var(--edge)) right bottom/ 7px 2px,
-    linear-gradient(var(--edge), var(--edge)) right bottom/ 2px 7px;
+    radial-gradient(circle 1.4px at 4.5px 4.5px, var(--rivet) 98%, transparent),
+    radial-gradient(circle 1.4px at calc(100% - 4.5px) 4.5px, var(--rivet) 98%, transparent),
+    radial-gradient(circle 1.4px at 4.5px calc(100% - 4.5px), var(--rivet) 98%, transparent),
+    radial-gradient(circle 1.4px at calc(100% - 4.5px) calc(100% - 4.5px), var(--rivet) 98%, transparent);
   background-repeat: no-repeat;
 }
-:root[data-board-theme="neon"] .board-frame::before {
+:root[data-board-theme="fuligem"] .board-frame::before {
   content: "";
   position: absolute;
   inset: 3px;
   z-index: 1;
   pointer-events: none;
-  border: 1px solid color-mix(in srgb, var(--color-brass) 40%, transparent);
-  outline: 2px solid color-mix(in srgb, var(--color-group-pink) 30%, transparent);
+  border: 2px solid color-mix(in srgb, var(--color-ink-500) 85%, var(--color-brass));
+  outline: 1px solid color-mix(in srgb, var(--color-brass) 28%, transparent);
   outline-offset: -6px;
-  box-shadow: 0 0 18px -4px color-mix(in srgb, var(--color-group-purple) 65%, transparent);
+  box-shadow: inset 0 0 28px -12px rgb(7 5 4 / 0.95);
 }
 
 
@@ -1085,7 +1068,7 @@
   /* Display em CAIXA DE LARGURA CRÍTICA — a que corta com ellipsis (nome de jogador no
      card, propriedade em linha de negociação/leilão) e a que simplesmente não pode
      crescer (os botões de ação do turno, numa coluna de 280px fixos). Nos temas cuja
-     display é larga — Press Start 2P no Fliperama — a condensada volta aqui: sem isso,
+     display é larga — caso de um tema futuro — a condensada volta aqui: sem isso,
      "JOGADOR 1" virava "JO…" e o par "Comprar R$ 100"/"Leilão" estourava a coluna por
      cima das casas. A personalidade do tema segue nos títulos, no HUD e nos
      modais, onde há espaço. */
@@ -2210,7 +2193,7 @@
   }
   .board-stage::before {
     opacity: 0.48;
-    /* Latão via token (não rgb fixo): no Fliperama os arcos e a rota viram
+    /* Latão via token (não rgb fixo): em outro tema os arcos e a rota viram
        ciano junto com o resto do mundo. */
     --survey: color-mix(in srgb, var(--color-brass) 9%, transparent);
     --survey-soft: color-mix(in srgb, var(--color-brass) 7%, transparent);
@@ -4300,20 +4283,22 @@
     font-size: 0.46rem;
     letter-spacing: 0.18em;
   }
-  .home-map-panel__neon-horizon {
-    stroke: rgb(242 88 156 / 0.72);
-    stroke-width: 1.2;
-    filter: drop-shadow(0 0 5px rgb(242 88 156 / 0.75));
+  .home-map-panel__fuligem-ground {
+    stroke: color-mix(in srgb, var(--color-brass) 58%, transparent);
+    stroke-width: 1.3;
   }
-  .home-map-panel__neon-grid {
-    stroke: rgb(86 205 236 / 0.2);
-    stroke-width: 0.8;
-  }
-  .home-map-panel__neon-blocks {
-    fill: rgb(167 107 245 / 0.08);
-    stroke: rgb(242 88 156 / 0.5);
+  .home-map-panel__fuligem-mills {
+    fill: rgb(7 5 4 / 0.85);
+    stroke: color-mix(in srgb, var(--color-brass) 32%, transparent);
     stroke-width: 0.9;
-    filter: drop-shadow(0 0 5px rgb(167 107 245 / 0.4));
+  }
+  .home-map-panel__fuligem-windows {
+    fill: var(--color-brass);
+    opacity: 0.85;
+  }
+  .home-map-panel__fuligem-rail {
+    stroke: rgb(240 231 212 / 0.2);
+    stroke-width: 1;
   }
   .home-map-panel__stats {
     position: relative;
@@ -4450,82 +4435,39 @@
     justify-content: center;
   }
 
-  /* Mesmo portal, hardware do fliperama: estrutura preservada e pele própria. */
-  .home-map-panel--neon {
-    --home-map-accent: var(--neon-cyan);
-    --home-map-hot: #ffe14a;
-    border: 3px solid #e9e4ff;
-    border-radius: 0;
-    outline: 2px solid rgb(242 88 156 / 0.5);
-    outline-offset: 4px;
-    background: linear-gradient(180deg, rgb(22 9 47 / 0.97), rgb(7 2 20 / 0.98));
+  /* Mesmo portal, ferro e madeira da fábrica: estrutura preservada, pele própria. */
+  .home-map-panel--fuligem {
+    --home-map-accent: var(--color-brass);
+    --home-map-hot: var(--color-brass-glow);
+    border: 2px solid color-mix(in srgb, var(--color-ink-400) 75%, var(--color-brass));
+    outline: 1px solid rgb(7 5 4 / 0.8);
+    outline-offset: 3px;
+    background: linear-gradient(180deg, rgb(42 34 26 / 0.97), rgb(21 16 12 / 0.98));
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.12),
-      0 0 40px -6px rgb(167 107 245 / 0.75),
+      inset 0 1px 0 rgb(240 231 212 / 0.07),
+      0 0 34px -10px rgb(217 130 46 / 0.5),
       0 22px 50px -20px #000;
   }
-  .home-map-panel--neon .home-map-panel__canvas {
-    border-right-width: 2px;
+  .home-map-panel--fuligem .home-map-panel__canvas {
     background:
-      linear-gradient(rgb(86 205 236 / 0.1) 1px, transparent 1px) 0 0 / 24px 24px,
-      linear-gradient(90deg, rgb(242 88 156 / 0.09) 1px, transparent 1px) 0 0 / 24px 24px,
-      radial-gradient(circle at 42% 44%, rgb(167 107 245 / 0.2), transparent 59%),
-      rgb(5 1 15 / 0.72);
+      radial-gradient(circle at 46% 40%, rgb(217 130 46 / 0.1), transparent 58%),
+      rgb(12 9 6 / 0.8);
   }
-  .home-map-panel--neon .home-map-panel__canvas::after {
-    border-color: rgb(86 205 236 / 0.24);
+  .home-map-panel--fuligem .home-map-panel__canvas::after {
+    border-color: color-mix(in srgb, var(--color-brass) 26%, transparent);
   }
-  .home-map-panel--neon .home-map-panel__map-head h2 {
-    color: #ffe14a;
-    font-size: 1rem;
-    line-height: 1.35;
+  .home-map-panel--fuligem .home-map-panel__map-head h2 {
+    color: var(--color-brass-glow);
   }
-  .home-map-panel--neon .home-map-panel__theme-button {
-    border-width: 2px;
-    border-radius: 0;
-    box-shadow: 3px 3px 0 #251044;
-  }
-  .home-map-panel--neon .home-map-panel__form h2 {
-    color: #f6f2ff;
-    font-size: 1.25rem;
-    line-height: 1.45;
-    text-shadow:
-      -2px 0 rgb(86 205 236 / 0.45),
-      2px 0 rgb(242 88 156 / 0.45);
-  }
-  .home-map-panel--neon .home-map-panel__primary,
-  .home-map-panel--neon .home-map-panel__join {
-    --ui-button-accent: #f2589c;
-    --ui-button-accent-hot: #ffe14a;
-    border-color: color-mix(in srgb, var(--ui-button-accent) 58%, var(--color-ink-500));
-    border-radius: 0;
-    background: color-mix(in srgb, var(--ui-button-accent) 11%, var(--color-ink-900));
-    color: var(--ui-button-accent-hot);
-    box-shadow: none;
-    text-transform: uppercase;
-  }
-  .home-map-panel--neon .home-map-panel__primary:hover:not(:disabled),
-  .home-map-panel--neon .home-map-panel__join:hover:not(:disabled) {
-    border-color: var(--ui-button-accent);
-    background: color-mix(in srgb, var(--ui-button-accent) 17%, var(--color-ink-900));
-    color: var(--ui-button-accent-hot);
-    box-shadow: 0 12px 26px -20px color-mix(in srgb, var(--ui-button-accent) 72%, transparent);
-  }
-  .home-map-panel--neon .home-map-panel__primary:active:not(:disabled),
-  .home-map-panel--neon .home-map-panel__join:active:not(:disabled) {
-    background: color-mix(in srgb, var(--ui-button-accent) 22%, var(--color-ink-950));
-    box-shadow: inset 0 1px 4px color-mix(in srgb, var(--color-ink-950) 64%, transparent);
-  }
-  .home-map-panel--neon .home-map-panel__invite {
-    border-color: #402f72;
-    color: #d7c9ff;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+  .home-map-panel--fuligem .home-map-panel__primary,
+  .home-map-panel--fuligem .home-map-panel__join {
+    --ui-button-accent: #d9822e;
+    --ui-button-accent-hot: #ffb36b;
   }
 
   @media (max-width: 767px) {
     .home-map-panel__canvas,
-    .home-map-panel--neon .home-map-panel__canvas {
+    .home-map-panel--fuligem .home-map-panel__canvas {
       min-height: 15rem;
       border-right: 0;
       border-bottom: 1px solid color-mix(in srgb, var(--home-map-accent) 28%, transparent);
@@ -4574,15 +4516,13 @@
   [data-home-switching] [data-home-screen] * {
     animation-play-state: paused !important;
   }
-  .home-theme-transition--neon {
-    --transition-ink: #08021a;
-    --transition-accent: #56cdec;
-    --transition-hot: #f2589c;
+  .home-theme-transition--fuligem {
+    --transition-ink: #0c0906;
+    --transition-accent: #d9822e;
+    --transition-hot: #ffb36b;
     background:
-      repeating-linear-gradient(180deg, rgb(255 255 255 / 0.035) 0 1px, transparent 1px 4px),
-      linear-gradient(rgb(86 205 236 / 0.08) 1px, transparent 1px) 0 0 / 42px 42px,
-      linear-gradient(90deg, rgb(242 88 156 / 0.08) 1px, transparent 1px) 0 0 / 42px 42px,
-      radial-gradient(circle at 50% 50%, rgb(167 107 245 / 0.2), transparent 44%),
+      repeating-linear-gradient(90deg, rgb(7 5 4 / 0.4) 0 2px, transparent 2px 9px),
+      radial-gradient(circle at 50% 86%, rgb(217 130 46 / 0.18), transparent 48%),
       var(--transition-ink);
   }
   .home-theme-transition__content {
@@ -6246,356 +6186,113 @@
 }
 
 /* =====================================================================
-   TELAS DE ENTRADA POR TEMA (src/net/ui/home/) — cada tema tem a SUA home, e o
-   botão de tema (canto inferior esquerdo) troca as duas coisas juntas. A do
-   Atlas já vive nas regras acima (.entry-*, .pass-*, .flap-*, .cta-*); aqui
-   mora a do Fliperama Neon, mais o alternador de tema.
+   TELAS DE ENTRADA POR TEMA (src/net/ui/home/) — cada mapa tem a SUA home, e o
+   seletor de mapas troca as duas coisas juntas (mapa e pele são o mesmo eixo,
+   055/D-069). A do Atlas já vive nas regras acima (.entry-*, .pass-*, .flap-*,
+   .cta-*); aqui mora a da Cidade da Fuligem.
    ===================================================================== */
 @layer components {
   /* =================================================================
-     TEMA "neon" — a home do Fliperama Neon (fusão de duas telas que eram parecidas)
-     As duas telas anteriores — "Metrópole Neon" e "Fliperama" — dividiam o
-     mesmo mundo (cidade acesa à noite, roxo/ciano/rosa) e brigavam pelo mesmo
-     lugar. Esta é uma só, com o melhor lado de cada:
+     TEMA "fuligem" — a home da Cidade da Fuligem (055/D-069).
 
-       da METRÓPOLE  →  sol partido no horizonte, piso em grade fugindo pro
-                        ponto de fuga, skyline com janelas nas cores dos grupos
-                        e torres-mastro, névoa de horizonte e o TICKER de
-                        cidades e preços vindos do tabuleiro;
-       do FLIPERAMA  →  letreiro em PIXEL de matriz 5×7 que boota, o tubo de
-                        imagem por cima (varredura, barra de sincronia, cantos
-                        escuros), o placar no topo, moedas caindo e o hardware
-                        do gabinete no painel
-                        (canto reto, contorno grosso, botão com espessura).
-
-     O que ficou de fora foi escolha, não esquecimento: as faíscas subindo do
-     neon saíram porque as moedas caindo já dão o movimento vertical (duas
-     coisas em sentidos opostos viravam sujeira), e o xadrez de chão do
-     fliperama saiu porque a grade em perspectiva faz o mesmo trabalho melhor.
+     A cidade escura em planos vive no SVG do FuligemBackdrop (gerador
+     semeado, determinístico); aqui ficam só o céu, a névoa, a vinheta e
+     as TRÊS animações do mundo — fumaça, fornalha e trem —, todas por
+     transform/opacity, em amostra pequena, congeláveis sob movimento
+     reduzido. Nada de fundo de tela cheia animado (a lição do tema que
+     este substituiu).
      ================================================================= */
-  .neon-stage {
-    --neon-cyan: #56cdec;
-    --neon-pink: #f2589c;
-    background-color: #07021a;
-    color: #f4f0ff;
-    font-family: ui-monospace, SFMono-Regular, "Courier New", monospace;
+  .fuligem-stage {
+    background-color: #0c0906;
+    color: #f0e7d4;
   }
-
-  .neon-sky {
+  .fuligem-sky {
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(120% 58% at 50% 82%, rgb(242 88 156 / 0.2) 0%, transparent 62%),
-      linear-gradient(180deg, #06021a 0%, #170a3b 32%, #33104e 54%, #5c1550 70%, #170a2e 100%);
+      radial-gradient(ellipse 120% 60% at 50% 108%, rgb(217 130 46 / 0.15) 0%, transparent 58%),
+      linear-gradient(180deg, #0a0806 0%, #14100b 52%, #1d150d 78%, #241a10 100%);
   }
-
-  /* O sol é uma CÚPULA (meio disco) apoiada na linha do horizonte, na altura
-     exata da base da cidade: disco inteiro descia abaixo dela e o sol parecia
-     estar na avenida, na frente dos prédios. As fendas clássicas engrossam pra
-     baixo — são uma sobreposição escura, não uma máscara: máscara recortaria o
-     glow junto, e é o glow que faz a cena. A cúpula é baixa e larga de
-     propósito: assim ela aparece dos DOIS lados do painel e nunca sobe até o
-     texto. */
-  .neon-sun {
+  /* Fumaça: UM keyframe; 4 chaminés × 3 sopros no total do cenário. */
+  .fuligem-smoke {
+    animation: fuligem-smoke 16s ease-in-out infinite;
+  }
+  @keyframes fuligem-smoke {
+    0% { transform: translateY(0) scale(0.9); opacity: 1; }
+    60% { transform: translateY(-30px) scale(1.12); opacity: 0.6; }
+    100% { transform: translateY(-56px) scale(1.28); opacity: 0; }
+  }
+  /* Fornalha piscando: amostra pequena (delay %11), ciclo longo, sem flash. */
+  .fuligem-furnace {
+    animation: fuligem-furnace 7s steps(2, end) infinite;
+  }
+  @keyframes fuligem-furnace {
+    0%, 76% { opacity: 0.8; }
+    77%, 88% { opacity: 0.4; }
+    89%, 100% { opacity: 0.8; }
+  }
+  /* Trem de carga: um grupo só, uma travessia lenta do viewBox. */
+  .fuligem-train {
+    animation: fuligem-train 84s linear infinite;
+  }
+  @keyframes fuligem-train {
+    from { transform: translateX(0); }
+    to { transform: translateX(2100px); }
+  }
+  .fuligem-haze {
     position: absolute;
-    left: 50%;
-    bottom: 33.3%;
-    width: 86vmin;
-    height: 16vmin;
-    margin-left: -43vmin;
-    border-radius: 43vmin 43vmin 0 0;
-    background: linear-gradient(180deg, #ffeeb8 0%, #ffd23f 22%, #ff9b45 55%, #f2589c 100%);
-    box-shadow: 0 0 18vmin -1vmin rgb(255 155 69 / 0.5);
-    overflow: hidden;
+    inset: auto 0 0 0;
+    height: 46%;
+    background:
+      linear-gradient(180deg, transparent, rgb(20 16 11 / 0.5) 55%, rgb(12 9 6 / 0.82)),
+      radial-gradient(ellipse 90% 60% at 30% 100%, rgb(240 231 212 / 0.045), transparent 60%);
   }
-  .neon-sun::after {
-    content: "";
-    position: absolute;
-    inset: 22% 0 0 0;
-    --slit: rgb(9 3 26 / 0.92);
-    background: linear-gradient(
-      180deg,
-      transparent 0 6%,
-      var(--slit) 6% 9%,
-      transparent 9% 18%,
-      var(--slit) 18% 23%,
-      transparent 23% 34%,
-      var(--slit) 34% 40%,
-      transparent 40% 52%,
-      var(--slit) 52% 60%,
-      transparent 60% 74%,
-      var(--slit) 74% 100%
-    );
-  }
-
-  /* Piso em grade: um plano alto deitado por perspectiva, com a grade correndo
-     PARA a câmera. `background-position` repinta esta camada maior que a viewport;
-     passos discretos preservam o ritmo de arcade sem manter a rasterização ocupada
-     a 60 fps. A máscara desbota antes do horizonte — grade que chega até a linha do
-     céu mata a profundidade. Menos inclinação = mais chão: a 73° sobrava uma faixa
-     de 10% da tela e a grade não se lia. */
-  .neon-floor {
-    position: absolute;
-    left: -30%;
-    right: -30%;
-    bottom: 0;
-    height: 90vh;
-    transform: perspective(560px) rotateX(66deg);
-    transform-origin: bottom center;
-    overflow: hidden;
-    contain: paint;
-    -webkit-mask-image: linear-gradient(to top, #000 0 42%, transparent 88%);
-    mask-image: linear-gradient(to top, #000 0 42%, transparent 88%);
-  }
-  .neon-floor::before {
-    content: "";
-    position: absolute;
-    inset: -40px 0 0;
-    background-image:
-      repeating-linear-gradient(to right, rgb(120 226 250 / 0.85) 0 1.5px, transparent 1.5px 86px),
-      repeating-linear-gradient(to bottom, rgb(255 122 184 / 0.8) 0 1.5px, transparent 1.5px 40px);
-    animation: neon-floor-run 6s steps(8, end) infinite;
-    will-change: transform;
-  }
-  @keyframes neon-floor-run {
-    to { transform: translateY(40px); }
-  }
-
-  /* Névoa acesa na linha do horizonte — é o que "cola" o skyline no piso. */
-  .neon-haze {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 58%;
-    height: 22vh;
-    background: linear-gradient(180deg, transparent, rgb(242 88 156 / 0.16) 55%, transparent);
-    filter: blur(24px);
-  }
-
-  /* A cidade ROLA (herança do fliperama): cada faixa é desenhada duas vezes e o
-     grupo anda a largura de um padrão, então a volta não tem emenda. Duas
-     velocidades = parallax. */
-  .neon-scroll { animation: neon-scroll linear infinite; }
-  .neon-scroll--far { animation-duration: 72s; }
-  .neon-scroll--near { animation-duration: 42s; }
-  @keyframes neon-scroll {
-    to { transform: translateX(-1440px); }
-  }
-
-  /* Janelas e balizas do skyline — o atraso vem inline (gerador semeado no TSX). */
-  .neon-window { animation: neon-window 9s steps(1, end) infinite; }
-  @keyframes neon-window {
-    0%, 41%   { opacity: 0.9; }
-    43%, 47%  { opacity: 0.1; }
-    49%, 71%  { opacity: 0.75; }
-    73%, 76%  { opacity: 0.18; }
-    78%, 100% { opacity: 0.9; }
-  }
-  .neon-beacon { animation: neon-beacon 2.2s var(--ease-standard) infinite; }
-  @keyframes neon-beacon {
-    0%, 100% { opacity: 0.25; }
-    50%      { opacity: 1; }
-  }
-
-  /* Moedas caindo da borda de cima, em passos discretos (nada de queda suave:
-     é uma tela de 60Hz dos anos 80). Delay negativo espalha a chuva. */
-  .neon-coin {
-    position: absolute;
-    top: -18px;
-    width: 12px;
-    height: 12px;
-    background: radial-gradient(circle at 50% 50%, #fff3c4 0 26%, #ffd23f 26% 62%, #b8842f 62% 82%, transparent 82%);
-    animation-name: neon-coin;
-    animation-timing-function: steps(18, end);
-    animation-iteration-count: infinite;
-  }
-  @keyframes neon-coin {
-    0%   { transform: translateY(0); opacity: 0; }
-    9%   { opacity: 1; }
-    100% { transform: translateY(106vh); opacity: 1; }
-  }
-
-  /* ---- Tubo de imagem (do fliperama): varredura, sincronia e cantos ---- */
-  .neon-scan {
+  .fuligem-vignette {
     position: absolute;
     inset: 0;
-    background: repeating-linear-gradient(180deg, rgb(0 0 0 / 0.3) 0 2px, transparent 2px 4px);
+    background: radial-gradient(ellipse at center, transparent 44%, rgb(7 5 4 / 0.72) 100%);
   }
-  .neon-roll {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 16vh;
-    background: linear-gradient(180deg, transparent, rgb(255 255 255 / 0.06), transparent);
-    animation: neon-roll 7.5s linear infinite;
-  }
-  @keyframes neon-roll {
-    from { transform: translateY(-20vh); }
-    to   { transform: translateY(120vh); }
-  }
-  .neon-crt {
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse 74% 68% at 50% 50%, transparent 46%, rgb(0 0 0 / 0.92) 100%);
-  }
-
-  /* Placar do gabinete, colado no topo como em toda tela de atração. */
-  .neon-hud {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.55rem 1rem;
-    font-size: 0.62rem;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-    color: var(--neon-cyan);
-    text-shadow: 2px 2px 0 #17032e;
-  }
-  .neon-hud b { color: #ffd23f; }
-  .neon-hud__mid { color: var(--neon-pink); }
-
-  /* Letreiro: pixel de verdade (matriz 5×7 em retângulos, do fliperama) com o
-     GLOW de tubo de neon (do estilo 2) por cima — franja ciano/rosa e sombra
-     dura. É o ponto onde as duas telas viraram uma. */
-  .neon-pixelmark svg {
-    display: block;
-    margin-inline: auto;
-    width: min(46vw, 350px);
-    height: auto;
-    filter:
-      drop-shadow(-1px 0 0 rgb(86 205 236 / 0.48))
-      drop-shadow(1px 0 0 rgb(242 88 156 / 0.48))
-      drop-shadow(0 0 14px rgb(167 107 245 / 0.55))
-      drop-shadow(0 4px 0 rgb(0 0 0 / 0.78));
-  }
-
-  .neon-tube {
-    height: 2px;
-    width: min(19rem, 70vw);
-    margin-inline: auto;
-    border-radius: var(--radius-pill);
-    background: linear-gradient(90deg, transparent, var(--neon-cyan) 20%, #fff 50%, var(--neon-pink) 80%, transparent);
-    box-shadow: 0 0 14px rgb(167 107 245 / 0.9);
-    animation: neon-buzz 3.1s var(--ease-standard) infinite;
-  }
-  @keyframes neon-buzz {
-    0%, 100% { opacity: 0.75; }
-    50%      { opacity: 1; }
-  }
-
-  .neon-sub {
-    font-size: 0.82rem;
-    color: #efe7ff;
-    text-shadow: 0 1px 10px rgb(6 2 18 / 0.95), 0 0 26px rgb(6 2 18 / 0.8);
-  }
-
-  .neon-label {
-    font-size: 0.6rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    color: var(--neon-cyan);
-  }
-  .neon-input {
-    padding: 0.6rem 0.8rem;
-    background-color: #05030f;
-    border: 3px solid #4b3b7a;
-    border-radius: 0;
-    color: #ffd23f;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-    font-size: 1rem;
-    transition: border-color var(--motion-base) var(--ease-standard),
-                box-shadow var(--motion-base) var(--ease-standard);
-  }
-  .neon-input::placeholder { color: #6b5aa0; }
-  .neon-input:focus {
-    outline: none;
-    border-color: var(--neon-cyan);
-    box-shadow: 0 0 0 3px rgb(86 205 236 / 0.25), 0 0 22px -4px rgb(86 205 236 / 0.7);
-  }
-
-  /* Ticker da bolsa de imóveis — trilha DUPLICADA no TSX e deslocada por metade:
-     a emenda cai exatamente onde o conteúdo se repete, então a volta é contínua. */
-  .neon-ticker {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 2.1rem;
-    display: flex;
-    align-items: center;
-    overflow: hidden;
-    background-color: rgb(6 2 18 / 0.86);
-    border-top: 2px solid rgb(242 88 156 / 0.7);
-    box-shadow: 0 -8px 24px -12px rgb(242 88 156 / 0.6);
-  }
-  .neon-ticker__rail {
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    padding-left: 2rem;
-    white-space: nowrap;
-    animation: neon-ticker 70s linear infinite;
-  }
-  @keyframes neon-ticker {
-    to { transform: translateX(-50%); }
-  }
-  .neon-ticker__item {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.6rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: #e6dcff;
-  }
-  .neon-ticker__item b {
-    font-family: var(--font-slab);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0;
-    color: #ffd23f;
-  }
-  .neon-ticker__pip {
-    width: 6px;
+  /* Filete rebitado — o par do OrnamentRule do Atlas. */
+  .fuligem-rivet-rule {
     height: 6px;
-    border-radius: var(--radius-pill);
-    box-shadow: 0 0 7px currentColor;
+    background:
+      radial-gradient(circle 2px at 8px 50%, var(--color-brass) 98%, transparent),
+      radial-gradient(circle 2px at calc(100% - 8px) 50%, var(--color-brass) 98%, transparent),
+      linear-gradient(var(--color-brass), var(--color-brass)) center / calc(100% - 28px) 1px;
+    background-repeat: no-repeat;
+    opacity: 0.7;
+  }
+  /* Portões do complexo: fechados no lobby, abertos na partida. A duração vem do
+     vocabulário de movimento — o freio de movimento reduzido a zera e o fato fica. */
+  .fuligem-gates rect {
+    transition: transform var(--motion-slow) var(--ease-emphasis);
+  }
+  .fuligem-gates[data-open] rect:first-child { transform: translateX(-26px); }
+  .fuligem-gates[data-open] rect:last-child { transform: translateX(26px); }
+
+  /* Placa fundida: sombra de estampa + halo de fornalha discreto. */
+  .fuligem-wordmark {
+    text-shadow: 0 2px 0 rgb(7 5 4 / 0.9), 0 0 26px rgb(217 130 46 / 0.26);
+  }
+  /* Palco de PARTIDA: a mesma cidade, atenuada — o tabuleiro é o foco. As
+     janelas do complexo seguem acesas nas cores dos assentos. */
+  .fuligem-backdrop--stage {
+    opacity: 0.4;
+  }
+  .fuligem-backdrop--stage .fuligem-vignette {
+    background: radial-gradient(ellipse at center, transparent 28%, rgb(7 5 4 / 0.92) 100%);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .neon-floor,
-    .neon-scroll,
-    .neon-roll,
-    .neon-window,
-    .neon-beacon,
-    .neon-tube,
-    .neon-ticker__rail { animation: none; }
-    .neon-coin { display: none; }
+    /* O fato permanece (fumaça presente, fornalha acesa, trem parado no
+       cenário); só a interpolação some. */
+    .fuligem-smoke,
+    .fuligem-furnace,
+    .fuligem-train {
+      animation: none;
+    }
+    .fuligem-smoke { opacity: 0.55; }
   }
-  /* =================================================================
-     Tela BAIXA (paisagem de celular) na home do Fliperama — mesmo princípio da do Atlas:
-     o que é ambiente sai primeiro, e o formulário cabe sem rolagem. Em 390px de
-     altura, placar, ticker, subtítulo e letreiro grande empurravam os botões
-     secundários para fora da dobra.
-     ================================================================= */
-  @media (max-height: 640px) {
-    .neon-sub,
-    .neon-tube,
-    .neon-hud,
-    .neon-ticker { display: none; }
-    .neon-coin { display: none; }
-    .neon-pixelmark svg { width: min(36vw, 210px); }
-  }
-
 }
 
 /* =====================================================================
@@ -6723,8 +6420,8 @@
     outline: 0;
   }
 
-  .home-map-panel--neon.atlas-surface {
-    --atlas-surface-accent: var(--neon-pink);
+  .home-map-panel--fuligem.atlas-surface {
+    --atlas-surface-accent: var(--color-brass);
   }
 
   /* Cabeçalho integrado: nada de placa dourada; o acento vive no ícone,

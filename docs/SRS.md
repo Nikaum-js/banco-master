@@ -98,6 +98,8 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 
 O tabuleiro é composto por **48 casas** dispostas em um quadrado, percorridas no sentido horário (11 casas por lado + 4 cantos).
 
+> 📌 **Mapas** (v1.30, [D-069](adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md)): a estrutura desta seção — 48 posições, tipos de casa, grupos, valores econômicos e todas as regras — é **compartilhada por todos os mapas jogáveis**. Um mapa fornece apenas conteúdo de apresentação (nomes, ícones, textos, cenários) por catálogo de fonte única. Os nomes e o tema descritos neste §2 são do mapa **Cidades do Mundo** (`atlas`); o mapa **Cidade da Fuligem** (`fuligem`) apresenta as mesmas posições e valores com bairros e ruas da Revolução Industrial — os aeroportos como **Ferrovias**, o Hangar como **Estação de Carga**, o espaço Bus Ticket como **Bilhete de Trem** e a Loteria do Free Parking como **Sorte Grande**. O mapa é gravado na sala na criação e é imutável (§11.1).
+
 > **Nota de design (v1.1):** o tabuleiro foi expandido de 40 → 48 casas, inspirado no **Monopoly: The Mega Edition** (52 casas), para suportar partidas de 7-8 jogadores com mais profundidade. A escolha é coerente: as mecânicas que o Mega introduziu para fazer um tabuleiro maior funcionar — Speed Die (§13.2), Skyscraper (§13.7), Bus Tickets (§10.7), Hangares ≈ Train Depots (§13.6) e construção com grupo parcial (§13.3) — **já existiam neste SRS**. A expansão completa esse design em vez de divergir do Richup.
 
 | Tipo de casa | Quantidade |
@@ -834,6 +836,7 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 ### 11.1 Criação de Sala
 
 - Host cria a sala e recebe um link único.
+- **Mapa da sala** (v1.30, [D-069](adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md)): o host escolhe o mapa (`atlas` ou `fuligem`) **antes** de criar a sala; o identificador fica gravado na sala e **não pode ser alterado** depois. Todos os participantes — convidado pelo link, reload, reconexão — recebem o mesmo mapa da autoridade; sala antiga ou sem identificação usa `atlas`. A escolha nunca depende apenas de estado local do navegador.
 - Host tem poderes especiais: **kickar jogadores**, **escolher o Ritual de Largada** e **iniciar a partida**. Em Maior dado, iniciar abre a sequência compartilhada de rolagens; nos dois modos, a mesa entra no tabuleiro automaticamente depois da revelação.
 - Sala suporta de 2 a 8 jogadores humanos.
 - Host pode iniciar com pelo menos 2 jogadores.
@@ -1250,7 +1253,7 @@ Todo empréstimo nasce com **prazo de 3 voltas do devedor**, contadas pelas pass
 | Inteligência Artificial (bots) | Decidido: fora do escopo. Apenas jogadores humanos |
 | Timer de turno | Decidido: sem timer. Jogador finaliza quando quiser |
 | Modo local (hotseat) | Apenas multiplayer online via sala |
-| Múltiplos temas simultâneos | Apenas "Cidades do Mundo" no v1. Arquitetura preparada |
+| Múltiplos temas simultâneos | Revisado em v1.30 ([D-069](adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md)): **dois mapas jogáveis** — Cidades do Mundo (`atlas`) e Cidade da Fuligem (`fuligem`) —, escolhidos **por sala** na criação e imutáveis depois. "Simultâneos" no sentido de mais de um mapa na **mesma partida** segue fora de escopo |
 | Transferência de host | Host desconectado pausa a partida indefinidamente |
 | Chat em tempo real | Não previsto no v1 |
 | Espectadores | Não previsto no v1 |
@@ -1271,4 +1274,4 @@ sendo a fonte de verdade da **regra**, o `CONTEXT.md` é a fonte dos **nomes**.
 
 ---
 
-**Magnata Imobiliário — SRS v1.28 | Julho 2026 | Documento de fonte de verdade absoluta**
+**Magnata Imobiliário — SRS v1.30 | Julho 2026 | Documento de fonte de verdade absoluta**

@@ -9,14 +9,14 @@
 import { useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useGameStore } from '@/game/store'
-import { BOARD } from '@/lib/boardData'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 import { useDialogA11y } from '@/game/ui/a11y/dialog'
 import { useMotion, MOTION } from '@/game/ui/motion'
 import { money } from '@/lib/money'
+import { activeBoard } from '@/game/ui/theme/boardTheme'
 
-const propName = (pos: number) => BOARD[pos]?.name ?? `#${pos}`
+const propName = (pos: number) => activeBoard()[pos]?.name ?? `#${pos}`
 
 const CONFETTI_COLORS = [
   'var(--color-group-orange)',

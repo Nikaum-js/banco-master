@@ -78,6 +78,7 @@
 - [D-066](D-066-cobranca-de-divida-vai-para-o-miolo-do-tabuleiro.md) — Cobrança de dívida vai para o miolo do tabuleiro: não cobre casa, não reposiciona a mesa e continua sem ser modal (refina D-056, que acertou o motivo e errou o lugar)
 - [D-067](D-067-retencao-leve-fica-na-sala-privada.md) — Retenção leve fica na sala privada: até 10 resumos, estatísticas derivadas e presets sem regra nova (refina D-019/D-038/D-046/D-052)
 - [D-064](D-064-rebalanceamento-do-catalogo-de-cartas.md) — Rebalanceamento do catálogo de cartas: Acaso 21 / Tesouro 18, lendárias reforçadas (Confisco Geral, Aquisição a ½ preço, Imposto Federal 25%), Greve unificada, Imunidade total de 1 volta, 8 cartas novas e Refinanciamento removido (SRS §10, v1.26)
+- [D-069](D-069-segundo-mapa-jogavel-cidade-da-fuligem.md) — Segundo mapa jogável selecionado por sala: Cidade da Fuligem (`fuligem`); mapa é conteúdo + apresentação sobre o mesmo motor, gravado na sala e imutável; fallback `atlas`; conceito Fliperama Neon removido (revisa SRS §16; *D-068 reservada pela worktree da 054*)
 
 > ℹ️ **Renumeração na integração da 043** (a colisão que este arquivo avisava): a worktree da 043
 > tinha escrito a identidade de transporte como `D-035` e o código de reentrada como `D-038`, e

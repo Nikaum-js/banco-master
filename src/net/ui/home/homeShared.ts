@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import type { BoardTheme } from '@/game/ui/theme/boardTheme'
 import { BOARD, GROUPS, type PropertySquare } from '@/lib/boardData'
+import { catalogOf } from '@/lib/mapCatalog'
 import { extractRoomId, rememberPlayerName, recallPlayerName, NAME_MAX } from '@/net/session'
 
 // Injetado pelo `vite.config.ts` a partir do sha do commit publicado (Vercel/Actions).
@@ -32,9 +33,11 @@ interface HomeMapDefinition {
   facts: readonly HomeMapFact[]
 }
 
+// Os DOIS mapas são jogáveis (055/D-069). Os fatos derivam do catálogo de cada um —
+// mesma estrutura, vocabulário próprio.
 export const HOME_MAPS = {
   atlas: {
-    name: 'Cidades do Mundo',
+    name: catalogOf('atlas').name,
     playable: true,
     facts: [
       { kind: 'squares', value: STATS.squares, label: 'casas' },
@@ -42,16 +45,20 @@ export const HOME_MAPS = {
       { kind: 'bus-ticket', value: STATS.busTickets, label: 'Bus Ticket' },
     ],
   },
-  neon: {
-    name: 'Metrópole Neon',
-    playable: false,
-    facts: [],
+  fuligem: {
+    name: catalogOf('fuligem').name,
+    playable: true,
+    facts: [
+      { kind: 'squares', value: STATS.squares, label: 'casas' },
+      { kind: 'countries', value: STATS.countries, label: 'bairros' },
+      { kind: 'bus-ticket', value: STATS.busTickets, label: 'Bilhete de Trem' },
+    ],
   },
 } as const satisfies Record<BoardTheme, HomeMapDefinition>
 
 // A frase da home. Diz o que o jogo É e que não cobra nada, em três negativas curtas —
 // é o que responde "por que eu clicaria?" antes de qualquer botão. Cada estilo pode
-// falar com a própria voz (a tela neon grita, a de feltro conta caso), mas o FATO
+// falar com a própria voz (o Atlas conta caso de viagem, a Fuligem bate placa), mas o FATO
 // (multiplayer, banco imobiliário, de graça, sem instalar) é o mesmo em todas.
 export const TAGLINE = 'Compre cidades, negocie propriedades e domine o tabuleiro com seus amigos.'
 export { NAME_MAX }

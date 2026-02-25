@@ -604,11 +604,19 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         opening_mode: room.openingMode ?? 'sealed-bid',
         opening_auction: room.openingAuction ?? null,
         match_history: room.matchHistory ?? [],
+        board_id: room.boardId ?? 'atlas',
       }
       let { error } = await supabase.rpc('write_room', args)
-      // Janela segura de deploy: 0007 pode chegar depois do frontend. A 0006 continua
-      // persistindo toda a partida (só ainda não o histórico). Se também faltar, somente a
-      // geração inicial pode recuar à 0005, pois depois disso a geração é identidade.
+      // Janela segura de deploy: 0009 pode chegar depois do frontend — a 0007 persiste tudo
+      // menos o mapa (que então só vive na difusão/snapshot em memória até a migration).
+      if (isMissingRpcSignature(error)) {
+        const { board_id: _boardId, ...withoutBoard } = args
+        const step = await supabase.rpc('write_room', withoutBoard)
+        error = step.error
+      }
+      // A 0006 continua persistindo toda a partida (só ainda não o histórico). Se também
+      // faltar, somente a geração inicial pode recuar à 0005, pois depois disso a geração é
+      // identidade.
       if (isMissingRpcSignature(error)) {
         const previous = await supabase.rpc('write_room', {
           room_id: args.room_id,
@@ -655,6 +663,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         openingMode?: Room['openingMode']
         openingAuction?: Room['openingAuction']
         matchHistory?: Room['matchHistory']
+        boardId?: Room['boardId']
       }
       return normalizeRoom({
         id: row.id,
@@ -665,6 +674,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         openingMode: row.openingMode,
         openingAuction: row.openingAuction ?? null,
         matchHistory: row.matchHistory,
+        boardId: row.boardId,
       })
     },
 
@@ -672,12 +682,23 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     // limpa `game`/`secrets`. A Promise representa o commit real: só depois dela o host
     // publica o lobby da geração seguinte.
     async reopenRoom(room: Room): Promise<void> {
-      const { error } = await supabase.rpc('reopen_room', {
+      let { error } = await supabase.rpc('reopen_room', {
         room_id: roomId,
         seats: room.seats,
         match_generation: room.matchGeneration ?? 0,
         opening_mode: room.openingMode ?? 'sealed-bid',
+        board_id: room.boardId ?? 'atlas',
       })
+      // Janela de deploy da 0009 — a coluna tem default e o mapa não muda na revanche.
+      if (isMissingRpcSignature(error)) {
+        const previous = await supabase.rpc('reopen_room', {
+          room_id: roomId,
+          seats: room.seats,
+          match_generation: room.matchGeneration ?? 0,
+          opening_mode: room.openingMode ?? 'sealed-bid',
+        })
+        error = previous.error
+      }
       if (error) throw error
     },
 
@@ -700,8 +721,14 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         opening_mode: snap.room.openingMode ?? 'sealed-bid',
         opening_auction: snap.room.openingAuction ?? null,
         match_history: snap.room.matchHistory ?? [],
+        board_id: snap.room.boardId ?? 'atlas',
       }
       let { error } = await supabase.rpc('write_snapshot', args)
+      if (isMissingRpcSignature(error)) {
+        const { board_id: _boardId, ...withoutBoard } = args
+        const step = await supabase.rpc('write_snapshot', withoutBoard)
+        error = step.error
+      }
       if (isMissingRpcSignature(error)) {
         const previous = await supabase.rpc('write_snapshot', {
           room_id: args.room_id,
@@ -754,6 +781,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         openingMode?: Room['openingMode']
         openingAuction?: Room['openingAuction']
         matchHistory?: Room['matchHistory']
+        boardId?: Room['boardId']
         seq: number
         game: unknown
         secrets: Secrets
@@ -768,6 +796,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         openingMode: row.openingMode,
         openingAuction: row.openingAuction ?? null,
         matchHistory: row.matchHistory,
+        boardId: row.boardId,
       })
       const publicGame = normalizeSnapshot(row.game as PersistedSnapshot['game'])
       const game = mergeSnapshot(publicGame, row.secrets, room)

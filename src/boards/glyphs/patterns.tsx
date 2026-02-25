@@ -5,8 +5,8 @@
 // ~0.08) — o desenho existia e ninguém via, então o tabuleiro parecia não ter tema nenhum
 // enquanto a tela de entrada tinha personalidade de sobra.
 //
-//   atlas → `ChartPattern` carta náutica: rosa dos ventos graduada, equador, rotas
-//   neon  → `GridPattern`  poente synthwave: sol partido, grade em fuga, skyline
+//   atlas   → `ChartPattern`   carta náutica: rosa dos ventos graduada, equador, rotas
+//   fuligem → `FoundryPattern` pátio da fábrica: silhueta industrial, ferrovia, engrenagem
 //
 // Tudo é SVG decorativo, sem lógica, e o conteúdo (dados, histórico) fica por cima com
 // fundo próprio. O que gira usa a classe `.bm-spin-slow` (index.css), que para sob
@@ -210,84 +210,122 @@ export function ChartPattern() {
 }
 
 // ---------------------------------------------------------------------
-// FLIPERAMA — o poente synthwave, o mesmo da tela de entrada
+// FULIGEM — o pátio da fábrica visto da mesa (055/D-069)
+//
+// Mesmo papel do ChartPattern no Atlas: o miolo é onde o mapa se apresenta.
+// Silhueta industrial no horizonte com chaminés soltando fumaça PARADA (traço,
+// não partícula), a linha férrea cortando o pátio, uma engrenagem-instrumento
+// no canto (o análogo da rosa dos ventos — gira com `.bm-spin-slow`, que já
+// congela sob prefers-reduced-motion) e um medidor simples no canto oposto.
 // ---------------------------------------------------------------------
 
-const HORIZON = 60
-// Skyline em blocos, longe do centro pros dois lados: [x, largura, altura].
-const NEON_BLOCKS: [number, number, number][] = [
-  [0, 8, 14], [9, 6, 22], [16, 7, 10], [24, 5, 17],
-  [71, 6, 16], [78, 7, 11], [86, 6, 21], [93, 7, 13],
-]
-const NEON_RAYS = Array.from({ length: 13 }, (_, i) => -60 + i * 10)
+const FOUNDRY_HORIZON = 42
 
-export function GridPattern() {
+// Silhueta do complexo: [x, largura, altura] + chaminés como pares [x, altura].
+const FOUNDRY_BLOCKS: [number, number, number][] = [
+  [2, 14, 12], [17, 9, 18], [27, 12, 9], [58, 13, 15], [72, 10, 8], [83, 14, 13],
+]
+const FOUNDRY_STACKS: [number, number][] = [[8, 22], [21, 30], [63, 26], [88, 21]]
+
+// Dentes da engrenagem-instrumento — mesmo truque da rosa: rotação, não polígono à mão.
+const GEAR_TEETH = Array.from({ length: 12 }, (_, i) => i * 30)
+const GEAR_CX = 86.5
+const GEAR_CY = 82.5
+
+export function FoundryPattern() {
   return (
     <svg
       className="absolute inset-0 w-full h-full pointer-events-none"
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
     >
-      {/* céu: estrelas ralas no alto */}
-      <g fill="var(--color-starlight)" opacity="0.35">
-        {([[14, 12], [31, 7], [46, 15], [63, 9], [79, 14], [88, 6], [22, 22], [72, 24]] as const).map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r="0.4" />
-        ))}
-      </g>
-
-      {/* SOL PARTIDO apoiado no horizonte — cúpula com as fendas engrossando pra baixo,
-          a mesma da home: é a assinatura do tema. */}
-      <defs>
-        <linearGradient id="bm-neon-sun" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--color-group-yellow)" />
-          <stop offset="55%" stopColor="var(--color-group-orange)" />
-          <stop offset="100%" stopColor="var(--color-group-pink)" />
-        </linearGradient>
-        <clipPath id="bm-neon-dome">
-          <path d={`M 22 ${HORIZON} A 28 28 0 0 1 78 ${HORIZON} Z`} />
-        </clipPath>
-      </defs>
-      <g opacity="0.32">
-        <path d={`M 22 ${HORIZON} A 28 28 0 0 1 78 ${HORIZON} Z`} fill="url(#bm-neon-sun)" />
-        <g clipPath="url(#bm-neon-dome)" fill="var(--color-ink-950)">
-          {[
-            [HORIZON - 17, 1.1],
-            [HORIZON - 12, 1.6],
-            [HORIZON - 7.5, 2.2],
-            [HORIZON - 3, 3],
-          ].map(([y, h]) => (
-            <rect key={y} x="20" y={y} width="60" height={h} />
-          ))}
-        </g>
-      </g>
-
-      {/* skyline nas duas laterais, deixando o meio (onde o sol nasce) livre */}
-      <g opacity="0.55">
-        {NEON_BLOCKS.map(([x, w, h]) => (
-          <g key={`${x}-${h}`}>
-            <rect x={x} y={HORIZON - h} width={w} height={h} fill="var(--color-ink-950)" />
-            <rect x={x} y={HORIZON - h} width={w} height={h} fill="none" stroke="var(--color-group-purple)" strokeWidth="0.16" opacity="0.7" />
-            {[0.3, 0.6].map((f) => (
-              <rect key={f} x={x + w * 0.25} y={HORIZON - h + h * f} width="1.1" height="1.1" fill="var(--color-group-skyblue)" opacity="0.8" />
+      {/* complexo fabril no horizonte — silhueta em tinta, janelas de fornalha acesas */}
+      <g>
+        {FOUNDRY_BLOCKS.map(([x, w, h]) => (
+          <g key={`${x}-${h}`} opacity="0.5">
+            <rect x={x} y={FOUNDRY_HORIZON - h} width={w} height={h} fill="var(--color-ink-abyss)" />
+            <rect x={x} y={FOUNDRY_HORIZON - h} width={w} height={h} fill="none" stroke="var(--color-brass)" strokeOpacity="0.28" strokeWidth="0.18" />
+            {[0.35, 0.68].map((f) => (
+              <rect key={f} x={x + w * 0.3} y={FOUNDRY_HORIZON - h + h * f} width="1.4" height="1" fill="var(--color-brass)" opacity="0.75" />
             ))}
           </g>
         ))}
+        {FOUNDRY_STACKS.map(([x, h]) => (
+          <g key={x} opacity="0.55">
+            <path d={`M ${x} ${FOUNDRY_HORIZON} L ${x + 0.9} ${FOUNDRY_HORIZON - h} h 1.6 L ${x + 3.4} ${FOUNDRY_HORIZON} Z`} fill="var(--color-ink-abyss)" />
+            {/* fumaça: traço estático, nunca partícula (FR-012) */}
+            <path
+              d={`M ${x + 1.7} ${FOUNDRY_HORIZON - h - 1} q 2 -2.4 1 -4.6 q 2.6 0.6 3.4 -2.2`}
+              fill="none"
+              stroke="var(--color-starlight)"
+              strokeOpacity="0.16"
+              strokeWidth="1.1"
+              strokeLinecap="round"
+            />
+          </g>
+        ))}
+        <line x1="0" y1={FOUNDRY_HORIZON} x2="100" y2={FOUNDRY_HORIZON} stroke="var(--color-brass)" strokeWidth="0.22" opacity="0.3" />
       </g>
 
-      {/* linha do horizonte */}
-      <line x1="0" y1={HORIZON} x2="100" y2={HORIZON} stroke="var(--color-group-pink)" strokeWidth="0.3" opacity="0.6" />
+      {/* linha férrea cortando o pátio — dormentes espaçando com a fuga */}
+      <g stroke="var(--color-starlight)" opacity="0.2">
+        <path d="M 34 100 L 46 42" strokeWidth="0.4" fill="none" />
+        <path d="M 58 100 L 50 42" strokeWidth="0.4" fill="none" />
+        {[92, 82, 73, 65, 58, 52, 47].map((y) => {
+          const t = (100 - y) / 58
+          const x1 = 34 + (46 - 34) * t
+          const x2 = 58 + (50 - 58) * t
+          return <line key={y} x1={x1 - 1} y1={y} x2={x2 + 1} y2={y} strokeWidth="0.5" />
+        })}
+      </g>
 
-      {/* PISO EM GRADE: raios convergindo no ponto de fuga + travessas que se afastam
-          (espaçamento crescente é o que faz a fuga; igual vira grade chapada) */}
-      <g stroke="var(--color-group-skyblue)" strokeWidth="0.16" opacity="0.4">
-        {NEON_RAYS.map((dx) => (
-          <line key={dx} x1="50" y1={HORIZON} x2={50 + dx * 2.2} y2="100" />
+      {/* ENGRENAGEM-INSTRUMENTO — o mostrador do mundo, girando devagar no canto */}
+      <g opacity="0.42">
+        <circle cx={GEAR_CX} cy={GEAR_CY} r="8.2" fill="none" stroke="var(--color-brass)" strokeWidth="0.24" strokeDasharray="0.5 1.1" />
+      </g>
+      <g className="bm-spin-slow" opacity="0.45" style={{ transformOrigin: `${GEAR_CX}px ${GEAR_CY}px` }}>
+        {GEAR_TEETH.map((a) => (
+          <rect
+            key={a}
+            x={GEAR_CX - 0.7}
+            y={GEAR_CY - 7.4}
+            width="1.4"
+            height="2"
+            fill="var(--color-brass)"
+            transform={`rotate(${a} ${GEAR_CX} ${GEAR_CY})`}
+          />
+        ))}
+        <circle cx={GEAR_CX} cy={GEAR_CY} r="5.6" fill="none" stroke="var(--color-brass)" strokeWidth="0.5" />
+        <circle cx={GEAR_CX} cy={GEAR_CY} r="1.4" fill="none" stroke="var(--color-brass)" strokeWidth="0.4" />
+        {[0, 60, 120].map((a) => (
+          <line
+            key={a}
+            x1={GEAR_CX}
+            y1={GEAR_CY - 5.6}
+            x2={GEAR_CX}
+            y2={GEAR_CY - 1.4}
+            stroke="var(--color-brass)"
+            strokeWidth="0.4"
+            transform={`rotate(${a} ${GEAR_CX} ${GEAR_CY})`}
+          />
         ))}
       </g>
-      <g stroke="var(--color-group-pink)" strokeWidth="0.16" opacity="0.3">
-        {[1.5, 4, 7.5, 12, 17.5, 24, 31.5, 40].map((d) => (
-          <line key={d} x1="0" y1={HORIZON + d} x2="100" y2={HORIZON + d} />
+
+      {/* MEDIDOR — o carimbo técnico no canto oposto, par do "escala gráfica" do Atlas */}
+      <g opacity="0.42" stroke="var(--color-brass)" strokeWidth="0.24" fill="none">
+        <path d="M 10 90 a 6 6 0 0 1 12 0" />
+        {[-60, -30, 0, 30, 60].map((a) => (
+          <line
+            key={a}
+            x1="16"
+            y1="84.6"
+            x2="16"
+            y2="85.6"
+            transform={`rotate(${a} 16 90)`}
+          />
         ))}
+        <line x1="16" y1="90" x2="13.4" y2="86.4" strokeWidth="0.4" />
+        <line x1="8.8" y1="90" x2="23.2" y2="90" />
       </g>
     </svg>
   )

@@ -7,7 +7,6 @@ import { AnimatePresence } from 'motion/react'
 import { useGameStore } from '@/game/store'
 import { useLocalView } from '@/net/roomStore'
 import { PlayerName } from '@/net/ui/PlayerName'
-import { BOARD } from '@/lib/boardData'
 import { cardById } from '@/game/cards/catalog'
 import { cardLabel } from './cardMeta'
 import { cardTargets } from './handView'
@@ -18,6 +17,7 @@ import { money } from '@/lib/money'
 import { useHandCardUI } from './handCardUI'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
+import { activeBoard } from '@/game/ui/theme/boardTheme'
 
 
 function Backdrop({ children }: { children: ReactNode }) {
@@ -68,7 +68,7 @@ function TargetDeedRow({ facts, onClick, myId }: { facts: TargetFacts; onClick: 
       {facts.flagCode ? (
         <CountryFlagDisc code={facts.flagCode} size={30} />
       ) : (
-        <span className="target-deed__glyph" aria-hidden><SquareIcon square={BOARD[facts.pos]} size={22} /></span>
+        <span className="target-deed__glyph" aria-hidden><SquareIcon square={activeBoard()[facts.pos]} size={22} /></span>
       )}
 
       <span className="target-deed__identity">

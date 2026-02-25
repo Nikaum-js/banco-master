@@ -20,8 +20,8 @@ import { useGameStore } from '@/game/store'
 import { useRoomStore, useLocalView } from '@/net/roomStore'
 import { describeLogEntry, type LogSentence } from '@/game/ui/log/describeLog'
 import { activeModal } from '@/game/ui/modals/activeModal'
-import { BOARD } from '@/lib/boardData'
 import { money } from '@/lib/money'
+import { activeBoard } from '@/game/ui/theme/boardTheme'
 
 // Mesmos fragmentos que `LogSentenceView` (boards/shared.tsx) já usa pra colorir a tela —
 // aqui só viram concatenação em texto puro, porque região viva não tem estilo.
@@ -36,7 +36,7 @@ function sentenceToText(sentence: LogSentence): string {
         case 'player':
           return f.identity.name
         case 'place':
-          return BOARD[f.pos]?.name ?? `#${f.pos}`
+          return activeBoard()[f.pos]?.name ?? `#${f.pos}`
         default:
           return ''
       }

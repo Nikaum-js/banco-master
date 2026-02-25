@@ -14,6 +14,7 @@ export type SoundCue =
   | 'apagao' | 'greve' | 'hostile-takeover' | 'reaction' | 'immunity'
   | 'free-parking' | 'jail-in' | 'jail-out' | 'win' | 'bankruptcy'
   | 'your-turn' | 'turn-end' | 'pause' | 'resume'
+  | 'match-start'
 
 // Auto-mapa: qualquer arquivo `<cue>.{webm,mp3,ogg,wav}` em src/assets/sfx vira CUE_SRC[cue].
 // import.meta.glob é do Vite (e suportado pelo vitest); em ambiente sem assets retorna {}.
@@ -24,7 +25,16 @@ const modules = import.meta.glob('../../../assets/sfx/*.{webm,mp3,ogg,wav}', {
 }) as Record<string, string>
 
 export const CUE_SRC: Partial<Record<SoundCue, string>> = {}
+/** Variantes por MAPA (055/D-069): `fuligem--buy.wav` toca no lugar de `buy` quando o
+ * mapa ativo é a Cidade da Fuligem. Sem variante, o cue base vale para todos os mapas. */
+export const CUE_VARIANTS: Record<string, Partial<Record<SoundCue, string>>> = {}
 for (const [path, url] of Object.entries(modules)) {
   const name = path.split('/').pop()!.replace(/\.(webm|mp3|ogg|wav)$/, '')
-  CUE_SRC[name as SoundCue] = url
+  const variant = name.match(/^([a-z]+)--(.+)$/)
+  if (variant) {
+    const [, mapId, cue] = variant
+    ;(CUE_VARIANTS[mapId] ??= {})[cue as SoundCue] = url
+  } else {
+    CUE_SRC[name as SoundCue] = url
+  }
 }

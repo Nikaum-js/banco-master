@@ -91,3 +91,54 @@ function applyE2EAvatarSkinScenario(): void {
 }
 
 applyE2EAvatarSkinScenario()
+
+// `?players=2&scenario=fuligem-showcase&map=fuligem` (055/SC-005): estado LEGAL de mesa
+// rica para a validação visual do segundo mapa — bairro completo com construções (oficinas,
+// fábrica, Complexo, Torre de Ferro), hipoteca com placa, Ferrovia com Estação de Carga e
+// Sorte Grande acumulada. Mesmo andaime dos cenários acima: só ativa com o parâmetro,
+// nenhum reducer é tocado — o estado plantado é exatamente o que o motor produziria.
+function applyE2EFuligemShowcaseScenario(): void {
+  if (typeof window === 'undefined') return
+  if (new URLSearchParams(window.location.search).get('scenario') !== 'fuligem-showcase') return
+
+  const g = createSeedState(['p1', 'p2'], Date.now() - 65_000)
+  const [ana, bia] = g.players
+  ana.cash = 1420
+  bia.cash = 860
+
+  // Bairro da Fumaça completo (pos 1/3/5) com a escada visível: 4 oficinas,
+  // fábrica e Torre de Ferro — o trilho de conexão do Bairro Completo acende.
+  g.titles[1] = { ...g.titles[1], ownerId: ana.id, houses: 4 }
+  g.titles[3] = { ...g.titles[3], ownerId: ana.id, houses: 0, hotel: true }
+  g.titles[5] = { ...g.titles[5], ownerId: ana.id, houses: 0, hotel: true, hotel2: true, skyscraper: true }
+  // Ferrovia Sul (pos 6) com Estação de Carga.
+  g.titles[6] = { ...g.titles[6], ownerId: ana.id, hangar: true }
+  // Propriedades da adversária: uma hipotecada (placa HIPOTECADA) e uma normal.
+  g.titles[7] = { ...g.titles[7], ownerId: bia.id, mortgaged: true }
+  g.titles[9] = { ...g.titles[9], ownerId: bia.id }
+  // Sorte Grande acumulada — o pote físico cresce.
+  g.centerPot = 1850
+
+  useGameStore.setState({ game: g })
+
+  let room = createRoom('fuligem-visual', {
+    uid: 'fuligem-p1',
+    name: 'Ana',
+    color: SEAT_COLORS[0],
+    avatar: 'prism-face',
+    skin: 'cartola',
+  }, { boardId: 'fuligem' })
+  const guest = joinRoom(room, {
+    uid: 'fuligem-p2',
+    name: 'Bia',
+    color: SEAT_COLORS[1],
+    avatar: 'totem-face',
+    skin: 'aviador',
+  })
+  if (!guest.ok) throw new Error(`Cenário fuligem inválido: ${guest.reason}`)
+  room = { ...guest.room, status: 'playing' }
+  useRoomStore.getState().setRoom(room)
+  useRoomStore.setState({ myUid: 'fuligem-p1' })
+}
+
+applyE2EFuligemShowcaseScenario()

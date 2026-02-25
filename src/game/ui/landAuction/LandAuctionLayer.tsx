@@ -14,7 +14,7 @@ import { useLocalView, useName } from '@/net/roomStore'
 import { PlayerName } from '@/net/ui/PlayerName'
 import { committedCash, LAND_AUCTION_WINDOW } from '@/game/economy/landAuction'
 import type { LandLot } from '@/game/economy/types'
-import { BOARD, type Square } from '@/lib/boardData'
+import { type Square } from '@/lib/boardData'
 import { SquareIcon } from '@/boards/glyphs/squares'
 import { CoinIcon, HouseIcon, HotelIcon, GavelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
@@ -24,6 +24,7 @@ import { money } from '@/lib/money'
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { CountryFlagDisc } from '@/boards/glyphs/flags'
 import { countryName } from '@/boards/glyphs/countries'
+import { activeBoard } from '@/game/ui/theme/boardTheme'
 
 const INCREMENTS = [10, 50, 100] as const
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
@@ -106,7 +107,7 @@ function LotCard(props: {
   const [sentAmount, setSentAmount] = useState(0)
   const inFlight = (amount: number): boolean => sentAmount === amount && amount > lot.currentBid
 
-  const sq = BOARD[lot.pos]
+  const sq = activeBoard()[lot.pos]
   const deed = deedPresentation(sq)
   if (!deed) return null
 

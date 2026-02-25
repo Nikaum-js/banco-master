@@ -1,15 +1,15 @@
 // Casca das telas de ENTRADA (home, identidade, sala, reentrada). O cenário acompanha o
 // tema do app: Atlas recebe uma carta de ESPAÇO AÉREO (rotas, pista e aeronaves);
-// Neon reutiliza sua metrópole arcade. Essa escolha acontece aqui porque as telas depois
+// Fuligem reutiliza seu pátio de fábricas. Essa escolha acontece aqui porque as telas depois
 // da home também passam por `EntryStage` — deixar o palco fixo no Atlas vazava um tema no
 // outro.
 import { createContext, useContext, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { useMotion } from '@/game/ui/motion'
-import { useBoardTheme } from '@/game/ui/theme/boardTheme'
+import { useBoardTheme, useMapCatalog } from '@/game/ui/theme/boardTheme'
 import { AtlasCityscape } from './home/AtlasCityscape'
-import { NeonBackdrop } from './home/NeonBackdrop'
+import { FuligemBackdrop } from './home/FuligemBackdrop'
 
 const RUNWAY_LIGHTS = [578, 628, 680, 734, 790, 848] as const
 
@@ -287,13 +287,13 @@ export function EntryStage({ children }: { children: ReactNode }) {
     <div
       className={cn(
         'fixed inset-0 z-[70] overflow-y-auto overscroll-contain',
-        theme === 'neon' && 'neon-stage',
+        theme === 'fuligem' && 'fuligem-stage',
       )}
       onPointerMove={track}
     >
       <ParallaxCtx.Provider value={theme === 'atlas' && !reduced ? { x: px, y: py } : null}>
-        {theme === 'neon' ? (
-          <NeonBackdrop />
+        {theme === 'fuligem' ? (
+          <FuligemBackdrop />
         ) : (
           <div
             className="pointer-events-none fixed inset-0 overflow-hidden"
@@ -351,7 +351,7 @@ export function OrnamentRule({ className }: { className?: string }) {
 // Header de prancha — kicker em versalete de latão, título display, filete. Substitui a
 // faixa dourada chapada do ModalHeader nessas telas: latão como FIO, não como placa.
 export function EntryHeader({
-  kicker = 'Magnata Imobiliário · Cidades do Mundo',
+  kicker,
   title,
   subtitle,
 }: {
@@ -359,9 +359,12 @@ export function EntryHeader({
   title: string
   subtitle?: string
 }) {
+  const catalog = useMapCatalog()
   return (
     <header className="px-5 pt-5 text-center">
-      <p className="label text-brass/90 tracking-caps text-[0.6rem]">{kicker}</p>
+      <p className="label text-brass/90 tracking-caps text-[0.6rem]">
+        {kicker ?? `Magnata Imobiliário · ${catalog.name}`}
+      </p>
       <h2 className="display text-3xl leading-none mt-2">{title}</h2>
       {subtitle && <p className="text-starlight-muted text-[0.8rem] leading-snug mt-1.5">{subtitle}</p>}
       <OrnamentRule className="mt-4" />

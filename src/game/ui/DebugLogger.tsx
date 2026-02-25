@@ -4,7 +4,7 @@
 // nova entrada do log de eventos aparece como `[log] kind (who)` + o objeto (040). Headless.
 import { useEffect, useRef } from 'react'
 import { useGameStore } from '@/game/store'
-import { BOARD } from '@/lib/boardData'
+import { activeBoard } from '@/game/ui/theme/boardTheme'
 
 export function DebugLogger() {
   const game = useGameStore((s) => s.game)
@@ -24,7 +24,7 @@ export function DebugLogger() {
         players: game.players.map((p) => ({
           id: p.id,
           pos: p.pos,
-          casa: BOARD[p.pos]?.name,
+          casa: activeBoard()[p.pos]?.name,
           cash: p.cash,
           hand: p.hand,
           busTickets: p.busTickets,

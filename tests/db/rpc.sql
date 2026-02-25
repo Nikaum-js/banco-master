@@ -344,4 +344,89 @@ end $$;
 
 delete from public.rooms where id = 'TEST01';
 
+-- ---------------------------------------------------------------------------------------------
+-- 11. Mapa da sala (0009/D-069): gravado na criação, imutável no upsert, lido nas prévias.
+-- ---------------------------------------------------------------------------------------------
+delete from public.rooms where id = 'TEST02';
+select pg_temp.act_as(:'host_uid');
+
+select public.write_room(
+  'TEST02',
+  'lobby',
+  format('[{"playerId":"p1","uid":"%s","name":"Anfitria","color":"#e11d48","isHost":true,"connected":true,"reentryCode":"HOST02"}]', :'host_uid')::jsonb,
+  0,
+  'sealed-bid',
+  null,
+  '[]'::jsonb,
+  'fuligem'
+);
+
+do $$
+declare r public.rooms%rowtype;
+begin
+  select * into r from public.rooms where id = 'TEST02';
+  assert r.board_id = 'fuligem', 'mapa gravado na criação: ' || r.board_id;
+end $$;
+
+-- Upsert posterior tentando trocar o mapa: o valor gravado permanece.
+select public.write_room(
+  'TEST02',
+  'lobby',
+  format('[{"playerId":"p1","uid":"%s","name":"Anfitria","color":"#e11d48","isHost":true,"connected":true,"reentryCode":"HOST02"}]', :'host_uid')::jsonb,
+  0,
+  'sealed-bid',
+  null,
+  '[]'::jsonb,
+  'atlas'
+);
+
+do $$
+declare r public.rooms%rowtype;
+begin
+  select * into r from public.rooms where id = 'TEST02';
+  assert r.board_id = 'fuligem', 'mapa deveria ser imutável: ' || r.board_id;
+  assert (public.room_preview('TEST02')->>'boardId') = 'fuligem',
+    'room_preview sem boardId: ' || public.room_preview('TEST02')::text;
+  assert (public.read_snapshot('TEST02')->>'boardId') = 'fuligem',
+    'read_snapshot sem boardId';
+end $$;
+
+-- Assinatura ANTIGA (0007, sem board_id) continua válida e cai no default 'atlas'.
+delete from public.rooms where id = 'TEST03';
+select public.write_room(
+  'TEST03',
+  'lobby',
+  format('[{"playerId":"p1","uid":"%s","name":"Anfitria","color":"#e11d48","isHost":true,"connected":true,"reentryCode":"HOST03"}]', :'host_uid')::jsonb,
+  0,
+  'sealed-bid',
+  null,
+  '[]'::jsonb
+);
+
+do $$
+declare r public.rooms%rowtype;
+begin
+  select * into r from public.rooms where id = 'TEST03';
+  assert r.board_id = 'atlas', 'assinatura 0007 deveria cair no default atlas: ' || r.board_id;
+end $$;
+
+-- Valor fora do catálogo é recusado pelo CHECK.
+do $$
+declare recusou boolean := false;
+begin
+  begin
+    perform public.write_room(
+      'TEST04', 'lobby',
+      format('[{"playerId":"p1","uid":"%s","name":"A","color":"#e11d48","isHost":true,"connected":true,"reentryCode":"HOST04"}]',
+        (select current_setting('request.jwt.claims', true)::json->>'sub'))::jsonb,
+      0, 'sealed-bid', null, '[]'::jsonb, 'neon'
+    );
+  exception when others then
+    recusou := true;
+  end;
+  assert recusou, 'write_room aceitou board_id fora do catálogo';
+end $$;
+
+delete from public.rooms where id in ('TEST02', 'TEST03', 'TEST04');
+
 \echo 'contrato das RPCs: OK'

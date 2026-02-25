@@ -329,6 +329,7 @@ export function fakeSupabase(): FakeSupabase {
                 openingMode: row.openingMode,
                 openingAuction: row.openingAuction,
                 matchHistory: row.matchHistory ?? [],
+                boardId: row.boardId ?? 'atlas',
                 seats: scoped,
               },
               error: null,
@@ -360,6 +361,7 @@ export function fakeSupabase(): FakeSupabase {
                 openingMode: row.openingMode,
                 openingAuction: row.openingAuction,
                 matchHistory: row.matchHistory ?? [],
+                boardId: row.boardId ?? 'atlas',
                 seats: scopedSeats,
                 seq: row.seq,
                 game: row.game,
@@ -408,6 +410,9 @@ export function fakeSupabase(): FakeSupabase {
               openingMode: args.opening_mode,
               openingAuction: args.opening_auction,
               matchHistory: mergeMatchHistory(existing?.matchHistory, args.match_history),
+              // Espelho da 0009: a coluna tem default 'atlas' e o valor gravado nunca muda
+              // depois de existir (o CHECK real valida; aqui basta preservar/defaultar).
+              boardId: existing?.boardId ?? args.board_id ?? 'atlas',
             })
             return Promise.resolve({ data: null, error: null })
           }
@@ -442,6 +447,7 @@ export function fakeSupabase(): FakeSupabase {
               openingMode: args.opening_mode,
               openingAuction: args.opening_auction,
               matchHistory: mergeMatchHistory(existing?.matchHistory, args.match_history),
+              boardId: existing?.boardId ?? args.board_id ?? 'atlas',
               seq: args.seq,
               game: args.game,
               secrets: args.secrets,
@@ -470,6 +476,7 @@ export function fakeSupabase(): FakeSupabase {
               matchGeneration: requested,
               openingMode: args.opening_mode,
               openingAuction: null,
+              boardId: existing?.boardId ?? args.board_id ?? 'atlas',
               game: null,
               secrets: {},
             })

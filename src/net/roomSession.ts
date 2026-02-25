@@ -18,6 +18,7 @@ import { nullTelemetry, type Telemetry, type TelemetryEvent } from '@/telemetry/
 import { matchKey } from '@/telemetry/matchKey'
 import type { AvatarId } from '@/boards/playerAvatarCatalog'
 import type { SkinId } from '@/boards/playerSkinCatalog'
+import type { BoardId } from '@/lib/mapCatalog'
 import {
   applyRoomPreset,
   type RoomPreset,
@@ -114,6 +115,9 @@ export interface RoomSessionOptions {
   initialRoomPreset?: RoomPreset
   /** Chamado somente depois de a autoridade aceitar a mudança publicada. */
   onRoomPresetSelected?(id: RoomPresetId): void
+  /** 055/D-069: mapa escolhido na home ANTES da criação. Consultado somente por
+   * `create()` — `enter()` sempre recebe o mapa da sala publicada. */
+  initialBoardId?: BoardId
 }
 
 export function createRoomSession(opts: RoomSessionOptions): RoomSession {
@@ -323,7 +327,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
           ...who,
           reentryCode: mintReentryCode(),
           historyId: mintHistoryId(),
-        })
+        }, { boardId: opts.initialBoardId })
         const preferred = opts.initialRoomPreset
           ? applyRoomPreset(created, opts.initialRoomPreset)
           : { ok: true as const, room: created }
