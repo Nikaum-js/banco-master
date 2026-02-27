@@ -18,6 +18,8 @@
 | `SUPABASE_ACCESS_TOKEN`, senha do banco | máquina do operador | migrations **não** passam pelo CI (§1) |
 
 > ⚠️ **Nunca** colocar `service_role` ou `sb_secret_*` em variável `VITE_*`. Tudo que começa com `VITE_` entra no bundle e é público por construção do Vite. O único segredo do frontend é não ter segredo.
+>
+> Na Vercel, `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` precisam ser do tipo **Non-sensitive**. O deploy de produção compila no GitHub após `vercel pull`; uma variável marcada como **Sensitive** não pode ser recuperada e chega ao build como o marcador `[Sensitive]`, que não é uma URL nem uma chave válida.
 
 ---
 

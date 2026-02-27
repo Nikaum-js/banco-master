@@ -4,6 +4,7 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
+import { validateSupabaseEnv } from './src/config/supabaseEnv'
 
 // Referência do commit publicado (044, FR-048): aparece no rodapé da home e vira o
 // `release` do Sentry, para um relato de erro apontar a versão exata. A Vercel e o
@@ -19,17 +20,19 @@ const COMMIT_SHA =
  * que o bundle compila, não para publicar.
  */
 function requireEnv(): Plugin {
-  const REQUIRED = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY']
   return {
     name: 'banco-master:require-env',
     apply: 'build',
     config(_, { mode }) {
       if (process.env.VERCEL !== '1' && process.env.REQUIRE_ENV !== '1') return
       const env = { ...loadEnv(mode, process.cwd(), 'VITE_'), ...process.env }
-      const missing = REQUIRED.filter((k) => !env[k])
-      if (missing.length > 0) {
+      const issues = validateSupabaseEnv({
+        url: env.VITE_SUPABASE_URL,
+        anonKey: env.VITE_SUPABASE_ANON_KEY,
+      })
+      if (issues.length > 0) {
         throw new Error(
-          `[banco-master] build de produção abortado: falta ${missing.join(', ')}. ` +
+          `[banco-master] build de produção abortado: configuração Supabase inválida (${issues.join(', ')}). ` +
             `Sem elas a sala não persiste e o jogo sobe quebrado — ver docs/RUNBOOK.md §0.`,
         )
       }

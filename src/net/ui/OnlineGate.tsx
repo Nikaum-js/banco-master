@@ -15,7 +15,12 @@ import { parseRoomLink, roomLink } from '@/net/session'
 import { createRoomSession, type RoomSession } from '@/net/roomSession'
 import { setActiveSession } from '@/net/activeSession'
 import { MatchErrorBoundary } from '@/app/MatchErrorBoundary'
-import { createSupabaseTransport, describeInfraError, isSupabaseConfigured } from '@/net/supabaseClient'
+import {
+  createSupabaseTransport,
+  describeInfraError,
+  describeSupabaseConfiguration,
+  isSupabaseConfigured,
+} from '@/net/supabaseClient'
 import { resolveTelemetry } from '@/telemetry'
 import { IdentityForm, LobbyMessage, ReentryForm, RoomLobby, TurnOrderReveal } from './LobbyScreen'
 import { HomeScreen } from './HomeScreen'
@@ -51,7 +56,8 @@ export function OnlineGate({ children }: { children: ReactNode }) {
     return (
       <LobbyMessage
         title="Multiplayer indisponível"
-        message="Este build não tem Supabase configurado (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY). Abra sem parâmetros para jogar local."
+        message={describeSupabaseConfiguration() ?? 'Não foi possível validar a configuração do multiplayer.'}
+        action={<Button onClick={() => { window.location.search = '' }}>Voltar ao início</Button>}
       />
     )
   }

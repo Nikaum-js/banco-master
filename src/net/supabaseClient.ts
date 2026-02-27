@@ -6,12 +6,22 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { supabaseTransport, type SupabaseLike } from './supabaseTransport'
 import { durableWrites } from './durableWrites'
 import type { Transport } from './transport'
+import { validateSupabaseEnv } from '@/config/supabaseEnv'
 
 const url = import.meta.env.VITE_SUPABASE_URL
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export function isSupabaseConfigured(): boolean {
-  return Boolean(url && anonKey)
+  return validateSupabaseEnv({ url, anonKey }).length === 0
+}
+
+export function describeSupabaseConfiguration(): string | null {
+  const issues = validateSupabaseEnv({ url, anonKey })
+  if (issues.length === 0) return null
+  if (issues.every((issue) => issue.startsWith('missing-'))) {
+    return 'Este build não tem o multiplayer configurado. Volte ao início para jogar local.'
+  }
+  return 'A configuração do multiplayer deste deployment é inválida. A equipe precisa corrigir as credenciais do Supabase e publicar novamente.'
 }
 
 let client: SupabaseClient | null = null
@@ -33,8 +43,9 @@ function devPerTabStorage(): Storage | undefined {
 }
 
 export function getSupabase(): SupabaseClient {
-  if (!url || !anonKey) {
-    throw new Error('Supabase não configurado: defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env')
+  const issues = validateSupabaseEnv({ url, anonKey })
+  if (issues.length > 0) {
+    throw new Error(`Supabase não configurado corretamente (${issues.join(', ')})`)
   }
   const storage = devPerTabStorage()
   client ??= createClient(url, anonKey, {
