@@ -22,8 +22,17 @@ export const SEAT_COLORS = ['#d9a650', '#3b8bd0', '#36dde7', '#00bca5', '#e77376
 
 export const MIN_SEATS = 2
 export const MAX_SEATS = 8
+export const OPENING_BID_MIN = 0
+export const OPENING_BID_MAX = 500
+export const OPENING_BID_STEP = 50
+export const OPENING_AUCTION_MS = 15_000
 
-export type RoomStatus = 'lobby' | 'playing' | 'paused' | 'ended'
+export type RoomStatus = 'lobby' | 'bidding' | 'playing' | 'paused' | 'ended'
+export type OpeningMode = 'sealed-bid' | 'dice-roll'
+
+export interface OpeningAuction {
+  closesAt: number
+}
 
 export interface Seat {
   playerId: string // id serializável usado pelo GameState ('p1'..'p8')
@@ -32,6 +41,14 @@ export interface Seat {
   color: string // cor (única por sala)
   isHost: boolean
   connected: boolean
+  /** D-046: privado enquanto `Room.status === 'bidding'`; público na revelação. Opcional
+   * apenas para absorver salas persistidas antes da spec 045. */
+  openingBid?: number | null
+  /** Estado público do compromisso. $0 também é lance lacrado, por isso não se deriva por
+   * truthiness de `openingBid`. Opcional para compatibilidade com salas legadas. */
+  bidLocked?: boolean
+  /** D-046: dois dados brancos atestados pela autoridade no modo Maior dado. */
+  openingRoll?: [number, number] | null
   /** Código de reentrada (041, D-033) — estável pela vida do assento; sobrevive à perda do
    * uid (celular sem bateria, dados do navegador limpos). `kickSeat`/`shuffleSeatOrder`
    * preservam por construção (nunca reescrevem o campo). */
@@ -42,35 +59,73 @@ export interface Room {
   id: string
   status: RoomStatus
   seats: Seat[] // ordem de entrada; host = seats[0]
+  /** Escolha pública do host; opcional apenas para absorver salas anteriores à 045. */
+  openingMode?: OpeningMode
+  /** Prazo da rodada pré-partida. Opcional só para shapes legados. */
+  openingAuction?: OpeningAuction | null
 }
 
 // Sala PUBLICADA (043, D-036/data-model §3) — o que trafega em `publishRoom`/`onRoom`. Sem
 // `reentryCode` de NINGUÉM, nem do dono: código é credencial PORTADORA (§2 de policies.md),
 // e a difusão alcança todo mundo igual — não há "exceto quem chamou" numa transmissão. O
 // `uid` permanece: não é credencial, conhecê-lo não permite usá-lo (D-042).
-export type PublicSeat = Omit<Seat, 'reentryCode'>
+export type PublicSeat = Omit<Seat, 'reentryCode' | 'openingBid' | 'bidLocked'> & {
+  /** O fio novo sempre envia os dois campos; opcionais aqui para aceitar fixtures/salas
+   * produzidas antes da 045 sem espalhar casts. */
+  openingBid?: number | null
+  bidLocked?: boolean
+}
 export interface PublicRoom {
   id: string
   status: RoomStatus
   seats: PublicSeat[]
+  openingMode?: OpeningMode
+  openingAuction?: OpeningAuction | null
 }
 
 export function toPublicRoom(room: Room): PublicRoom {
-  return { id: room.id, status: room.status, seats: room.seats.map(({ reentryCode: _reentryCode, ...rest }) => rest) }
+  const normalized = normalizeRoom(room)
+  const reveal = normalized.status !== 'bidding'
+  return {
+    id: normalized.id,
+    status: normalized.status,
+    openingMode: normalized.openingMode,
+    openingAuction: normalized.openingAuction,
+    seats: normalized.seats.map(({ reentryCode: _reentryCode, openingBid, bidLocked, ...rest }) => ({
+      ...rest,
+      openingBid: reveal ? (openingBid ?? null) : null,
+      bidLocked: bidLocked ?? false,
+    })),
+  }
 }
 
 // Reidrata para o shape que o resto da app já conhece — `reentryCode` SINTÉTICO vazio, nunca
 // o real. Quem precisa do PRÓPRIO código lê `Client.myReentryCode()` (da prévia, `loadRoom`),
 // nunca daqui — este helper existe só para não espalhar `PublicRoom` pela UI inteira.
 export function fromPublicRoom(room: PublicRoom): Room {
-  return { ...room, seats: room.seats.map((s) => ({ ...s, reentryCode: '' })) }
+  return normalizeRoom({ ...room, seats: room.seats.map((s) => ({ ...s, reentryCode: '' })) })
 }
 
 // Redige TODO `reentryCode` de `room`, sem exceção — nem o do dono (mesma garantia de
 // `toPublicRoom`, mas partindo de uma `Room` já em mãos em vez de uma volta pela rede).
 // `Client.room()` nunca carrega código nenhum; quem quer o PRÓPRIO lê `myReentryCode()`.
 export function redactRoom(room: Room): Room {
-  return { ...room, seats: room.seats.map((s) => ({ ...s, reentryCode: '' })) }
+  return normalizeRoom({ ...room, seats: room.seats.map((s) => ({ ...s, reentryCode: '' })) })
+}
+
+/** Compatibilidade aditiva da 045: salas anteriores não têm fase/lance. */
+export function normalizeRoom(room: Room): Room {
+  return {
+    ...room,
+    openingMode: room.openingMode === 'dice-roll' ? 'dice-roll' : 'sealed-bid',
+    openingAuction: room.openingAuction ?? null,
+    seats: room.seats.map((seat) => ({
+      ...seat,
+      openingBid: seat.openingBid ?? null,
+      bidLocked: seat.bidLocked ?? false,
+      openingRoll: seat.openingRoll ?? null,
+    })),
+  }
 }
 
 export type JoinResult = { ok: true; room: Room; seat: Seat } | { ok: false; reason: JoinError }
@@ -95,7 +150,7 @@ export function seatByUid(room: Room, uid: string): Seat | undefined {
 }
 
 export function hostSeat(room: Room): Seat {
-  return room.seats[0]
+  return room.seats.find((seat) => seat.isHost) ?? room.seats[0]
 }
 
 // Cria a sala com o host ocupando o 1º assento (FR-001). Cor livre entre as da paleta.
@@ -104,9 +159,12 @@ export function createRoom(id: string, host: Identity): Room {
   return {
     id,
     status: 'lobby',
+    openingMode: 'sealed-bid',
+    openingAuction: null,
     seats: [{
       playerId: seatIdFor(0), uid: host.uid, name: host.name, color: host.color,
-      isHost: true, connected: true, reentryCode: host.reentryCode ?? '',
+      isHost: true, connected: true, openingBid: null, bidLocked: false, openingRoll: null,
+      reentryCode: host.reentryCode ?? '',
     }],
   }
 }
@@ -140,6 +198,9 @@ export function joinRoom(room: Room, who: Identity): JoinResult {
     color: who.color,
     isHost: false,
     connected: true,
+    openingBid: null,
+    bidLocked: false,
+    openingRoll: null,
     reentryCode: who.reentryCode ?? '',
   }
   return { ok: true, room: { ...room, seats: [...room.seats, seat] }, seat }
@@ -194,11 +255,186 @@ export function shuffleSeatOrder(room: Room, rng: () => number): Room {
   return { ...room, seats }
 }
 
+export function selectOpeningMode(
+  room: Room,
+  mode: OpeningMode,
+): { ok: true; room: Room } | { ok: false; reason: 'not-in-lobby' } {
+  if (room.status !== 'lobby') return { ok: false, reason: 'not-in-lobby' }
+  const normalized = normalizeRoom(room)
+  return {
+    ok: true,
+    room: {
+      ...normalized,
+      openingMode: mode,
+      openingAuction: null,
+      seats: normalized.seats.map((seat) => ({
+        ...seat,
+        openingBid: null,
+        bidLocked: false,
+        openingRoll: null,
+      })),
+    },
+  }
+}
+
+export type OpenOpeningAuctionResult =
+  | { ok: true; room: Room }
+  | { ok: false; reason: 'too-few' | 'already-started' | 'wrong-mode' }
+
+/** Lobby → coleta lacrada. O prazo é absoluto para todas as telas contarem a mesma rodada. */
+export function openOpeningAuction(room: Room, closesAt: number): OpenOpeningAuctionResult {
+  if (room.status !== 'lobby') return { ok: false, reason: 'already-started' }
+  if (room.seats.length < MIN_SEATS) return { ok: false, reason: 'too-few' }
+  if (normalizeRoom(room).openingMode !== 'sealed-bid') return { ok: false, reason: 'wrong-mode' }
+  return {
+    ok: true,
+    room: {
+      ...normalizeRoom(room),
+      status: 'bidding',
+      openingAuction: { closesAt },
+      seats: room.seats.map((seat) => ({
+        ...seat,
+        openingBid: null,
+        bidLocked: false,
+        openingRoll: null,
+      })),
+    },
+  }
+}
+
+export type LockOpeningBidResult =
+  | { ok: true; room: Room }
+  | { ok: false; reason: 'not-bidding' | 'unknown-uid' | 'invalid-bid' | 'already-locked' }
+
+function validOpeningBid(amount: number): boolean {
+  return Number.isInteger(amount)
+    && amount >= OPENING_BID_MIN
+    && amount <= OPENING_BID_MAX
+    && amount % OPENING_BID_STEP === 0
+}
+
+/** Autoridade lacra por uid atestado pelo tópico, nunca por identidade declarada no payload. */
+export function lockOpeningBid(room: Room, uid: string, amount: number): LockOpeningBidResult {
+  if (room.status !== 'bidding') return { ok: false, reason: 'not-bidding' }
+  const seat = room.seats.find((candidate) => candidate.uid === uid)
+  if (!seat) return { ok: false, reason: 'unknown-uid' }
+  if (!validOpeningBid(amount)) return { ok: false, reason: 'invalid-bid' }
+  if (seat.bidLocked) return { ok: false, reason: 'already-locked' }
+  return {
+    ok: true,
+    room: {
+      ...normalizeRoom(room),
+      seats: room.seats.map((candidate) => (
+        candidate.uid === uid
+          ? { ...candidate, openingBid: amount, bidLocked: true }
+          : candidate
+      )),
+    },
+  }
+}
+
+export function allOpeningBidsLocked(room: Room): boolean {
+  return room.seats.length > 0 && room.seats.every((seat) => seat.bidLocked === true)
+}
+
+/** Ordena por valor e embaralha apenas cada grupo empatado. Assentos sem lance viram $0. */
+export function finalizeOpeningAuction(
+  room: Room,
+  rng: () => number,
+): { ok: true; room: Room } | { ok: false; reason: 'not-bidding' } {
+  if (room.status !== 'bidding') return { ok: false, reason: 'not-bidding' }
+  const completed = normalizeRoom(room).seats.map((seat) => (
+    seat.bidLocked
+      ? seat
+      : { ...seat, openingBid: 0, bidLocked: true }
+  ))
+  const byAmount = new Map<number, Seat[]>()
+  for (const seat of completed) {
+    const amount = seat.openingBid ?? 0
+    const group = byAmount.get(amount) ?? []
+    group.push(seat)
+    byAmount.set(amount, group)
+  }
+  const order: Seat[] = []
+  const amounts = [...byAmount.keys()].sort((a, b) => b - a)
+  for (const amount of amounts) {
+    const group = [...byAmount.get(amount)!]
+    for (let i = group.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1))
+      ;[group[i], group[j]] = [group[j], group[i]]
+    }
+    order.push(...group)
+  }
+  return {
+    ok: true,
+    room: {
+      ...normalizeRoom(room),
+      status: 'playing',
+      openingAuction: null,
+      seats: order.map((seat, index) => ({
+        ...seat,
+        playerId: seatIdFor(index),
+        openingRoll: null,
+      })),
+    },
+  }
+}
+
+function openingDie(rng: () => number): number {
+  return Math.floor(rng() * 6) + 1
+}
+
+/** Maior dado: dois d6 por assento, maior soma primeiro, RNG somente dentro dos empates. */
+export function rollOpeningOrder(
+  room: Room,
+  rng: () => number,
+): { ok: true; room: Room } | {
+  ok: false
+  reason: 'too-few' | 'already-started' | 'wrong-mode'
+} {
+  if (room.status !== 'lobby') return { ok: false, reason: 'already-started' }
+  if (room.seats.length < MIN_SEATS) return { ok: false, reason: 'too-few' }
+  const normalized = normalizeRoom(room)
+  if (normalized.openingMode !== 'dice-roll') return { ok: false, reason: 'wrong-mode' }
+
+  const rolled = normalized.seats.map((seat) => ({
+    ...seat,
+    openingBid: null,
+    bidLocked: false,
+    openingRoll: [openingDie(rng), openingDie(rng)] as [number, number],
+  }))
+  const bySum = new Map<number, Seat[]>()
+  for (const seat of rolled) {
+    const sum = (seat.openingRoll?.[0] ?? 0) + (seat.openingRoll?.[1] ?? 0)
+    const group = bySum.get(sum) ?? []
+    group.push(seat)
+    bySum.set(sum, group)
+  }
+  const order: Seat[] = []
+  for (const sum of [...bySum.keys()].sort((a, b) => b - a)) {
+    const group = [...bySum.get(sum)!]
+    for (let i = group.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1))
+      ;[group[i], group[j]] = [group[j], group[i]]
+    }
+    order.push(...group)
+  }
+  return {
+    ok: true,
+    room: {
+      ...normalized,
+      status: 'playing',
+      openingAuction: null,
+      seats: order.map((seat, index) => ({ ...seat, playerId: seatIdFor(index) })),
+    },
+  }
+}
+
 // Host inicia a partida com 2+ jogadores (FR-006). A ordem de turno é a ordem dos assentos.
 export function startGame(room: Room): { ok: true; room: Room } | { ok: false; reason: 'not-host' | 'too-few' | 'already-started' } {
   if (room.status !== 'lobby') return { ok: false, reason: 'already-started' }
   if (room.seats.length < MIN_SEATS) return { ok: false, reason: 'too-few' }
-  return { ok: true, room: { ...room, status: 'playing' } }
+  return { ok: true, room: { ...normalizeRoom(room), status: 'playing', openingAuction: null } }
 }
 
 // Ids de jogador na ordem de entrada — insumo do `createSeedState` (host).

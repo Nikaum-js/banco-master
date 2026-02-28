@@ -33,6 +33,12 @@ export interface CommandEnvelope {
   action: PlayerAction
 }
 
+// Lance selado da largada. A identidade não viaja no payload: como nos comandos, o host
+// deriva `fromUid` do tópico privado do assento observado.
+export interface OpeningBidMessage {
+  amount: number
+}
+
 // Comando ACEITO difundido host→todos: com o não-determinismo já resolvido (FR-011) e o
 // número de sequência monotônico (FR-010). Inclui ações de sistema (pausa/fecho de leilão).
 export interface AcceptedCommand {
@@ -102,6 +108,11 @@ export interface Transport {
   // payload. "A identidade não viaja, ela é o endereço": nenhum campo de identidade
   // sobrevive no `CommandEnvelope`, e nenhuma assinatura é necessária.
   onSubmit(cb: (cmd: CommandEnvelope, fromUid: string) => void): Unsubscribe
+
+  // guest/host → host, no mesmo tópico privado do assento. Separado de `submit` porque o
+  // leilão acontece antes de existir um `GameState`.
+  submitOpeningBid(amount: number): void
+  onOpeningBid(cb: (message: OpeningBidMessage, fromUid: string) => void): Unsubscribe
 
   // host → remetente: recusa por FALHA ao aplicar um comando (042, contracts/transport-delta.md)
   rejectCommand(toToken: string, info: CommandFailure): void

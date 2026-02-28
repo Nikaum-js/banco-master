@@ -19,9 +19,9 @@
 // agora é uma garantia da AUTORIDADE (que soma `own` + todo assento observado) — um convidado
 // só enxerga o próprio tópico, e é assim que deveria ser: ele nunca precisou ver a presença
 // alheia, só a autoridade precisa reconciliar `seats[].connected` (FR-021 da 041).
-import type { AcceptedCommand, CommandEnvelope, CommandFailure, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
+import type { AcceptedCommand, CommandEnvelope, CommandFailure, ConnStatus, JoinRequest, OpeningBidMessage, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import { mergeSnapshot, type Secrets } from './perspective'
-import { toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
+import { normalizeRoom, toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
 import { normalizeGame, normalizeLog } from '@/game/log'
 import type { PauseState } from '@/game/turn/types'
 
@@ -74,15 +74,17 @@ interface RoomRow {
   id: string
   status: string
   seats: Room['seats']
+  openingAuction?: Room['openingAuction']
   seq: number
   game: PersistedSnapshot['game'] | null
 }
 
-const EVENT = { submit: 'submit', accepted: 'accepted', room: 'room', join: 'join', rejected: 'rejected', reattached: 'reattached', commandRejected: 'command-rejected' } as const
+const EVENT = { submit: 'submit', openingBid: 'opening-bid', accepted: 'accepted', room: 'room', join: 'join', rejected: 'rejected', reattached: 'reattached', commandRejected: 'command-rejected' } as const
 const seatTopic = (roomId: string, uid: string): string => `room:${roomId}:s:${uid}`
 
 export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: string): Transport {
   const submitCbs: ((cmd: CommandEnvelope, fromUid: string) => void)[] = []
+  const openingBidCbs: ((message: OpeningBidMessage, fromUid: string) => void)[] = []
   const broadcastCbs: ((cmd: AcceptedCommand, origin: 'public' | 'private') => void)[] = []
   const roomCbs: ((room: PublicRoom) => void)[] = []
   const presenceCbs: ((change: PresenceChange) => void)[] = []
@@ -330,6 +332,9 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       // O remetente é o DONO deste canal — `uid` do closure, nunca do payload (D3).
       for (const cb of submitCbs) cb((payload as { cmd: CommandEnvelope }).cmd, uid)
     })
+    .on('broadcast', { event: EVENT.openingBid }, ({ payload }) => {
+      for (const cb of openingBidCbs) cb(payload as OpeningBidMessage, uid)
+    })
     .on('broadcast', { event: EVENT.accepted }, ({ payload }) => {
       // Parte PRIVADA do aceito (D9) — SEMPRE a cópia completa, mesmo quando chega depois da
       // pública (043, T043: `:play` e `:s:<uid>` são canais diferentes, sem ordem garantida
@@ -395,6 +400,14 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       return off(submitCbs, cb)
     },
 
+    submitOpeningBid(amount: number): void {
+      void own.send({ type: 'broadcast', event: EVENT.openingBid, payload: { amount } })
+    },
+    onOpeningBid(cb): Unsubscribe {
+      openingBidCbs.push(cb)
+      return off(openingBidCbs, cb)
+    },
+
     broadcast(cmd: AcceptedCommand): void {
       void play.send({ type: 'broadcast', event: EVENT.accepted, payload: cmd })
     },
@@ -418,6 +431,9 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       ch
         .on('broadcast', { event: EVENT.submit }, ({ payload }) => {
           for (const cb of submitCbs) cb((payload as { cmd: CommandEnvelope }).cmd, seatUid)
+        })
+        .on('broadcast', { event: EVENT.openingBid }, ({ payload }) => {
+          for (const cb of openingBidCbs) cb(payload as OpeningBidMessage, seatUid)
         })
         .on('presence', { event: 'join' }, ({ key, newPresences }) => onSeatPresenceJoin(key, newPresences))
         .on('presence', { event: 'leave' }, ({ key, leftPresences }) => onSeatPresenceLeave(key, leftPresences))
@@ -500,7 +516,13 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     // `request_seat`/`reattach_by_code`). Upsert PARCIAL preservado: só toca `status`/`seats`,
     // nunca `game`/`seq`/`secrets` — a função só declara essas duas colunas no `do update set`.
     async saveRoom(room: Room): Promise<void> {
-      const { error } = await supabase.rpc('write_room', { room_id: roomId, status: room.status, seats: room.seats })
+      const { error } = await supabase.rpc('write_room', {
+        room_id: roomId,
+        status: room.status,
+        seats: room.seats,
+        opening_mode: room.openingMode ?? 'sealed-bid',
+        opening_auction: room.openingAuction ?? null,
+      })
       if (error) throw error
       // A linha agora existe — e é ela que as políticas dos dois canais consultam. `:lobby`
       // reavalia a ESCRITA (só a autoridade escreve lá); `:play` reavalia a LEITURA, que exige
@@ -517,8 +539,20 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       const { data, error } = await supabase.rpc('room_preview', { room_id: roomId })
       if (error) throw error
       if (!data) return null
-      const row = data as { id: string; status: Room['status']; seats: Room['seats'] }
-      return { id: row.id, status: row.status, seats: row.seats.map((s) => ({ ...s, reentryCode: s.reentryCode ?? '' })) }
+      const row = data as {
+        id: string
+        status: Room['status']
+        seats: Room['seats']
+        openingMode?: Room['openingMode']
+        openingAuction?: Room['openingAuction']
+      }
+      return normalizeRoom({
+        id: row.id,
+        status: row.status,
+        seats: row.seats.map((s) => ({ ...s, reentryCode: s.reentryCode ?? '' })),
+        openingMode: row.openingMode,
+        openingAuction: row.openingAuction ?? null,
+      })
     },
 
     onPresence(cb): Unsubscribe {
@@ -536,6 +570,8 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         secrets: snap.secrets,
         status: snap.room.status,
         seats: snap.room.seats,
+        opening_mode: snap.room.openingMode ?? 'sealed-bid',
+        opening_auction: snap.room.openingAuction ?? null,
       })
       if (error) throw error
     },
@@ -553,9 +589,24 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       const { data, error } = await supabase.rpc('read_snapshot', { room_id: roomId })
       if (error) throw error
       if (!data) return null
-      const row = data as { id: string; status: Room['status']; seats: Room['seats']; seq: number; game: unknown; secrets: Secrets }
+      const row = data as {
+        id: string
+        status: Room['status']
+        seats: Room['seats']
+        openingMode?: Room['openingMode']
+        openingAuction?: Room['openingAuction']
+        seq: number
+        game: unknown
+        secrets: Secrets
+      }
       if (row.game == null || row.seq < 0) return null
-      const room: Room = { id: row.id, status: row.status, seats: row.seats }
+      const room = normalizeRoom({
+        id: row.id,
+        status: row.status,
+        seats: row.seats,
+        openingMode: row.openingMode,
+        openingAuction: row.openingAuction ?? null,
+      })
       const publicGame = normalizeSnapshot(row.game as PersistedSnapshot['game'])
       const game = mergeSnapshot(publicGame, row.secrets, room)
       return { seq: row.seq, game, secrets: row.secrets, room }

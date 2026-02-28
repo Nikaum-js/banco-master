@@ -3,11 +3,12 @@
 // na mesma pilha, tornando os testes headless determinísticos. É o transporte da suíte
 // `tests/net/` e prova SC-001/003/004/005 sem infra. O `supabaseTransport` implementa a mesma
 // porta sobre Realtime/Postgres.
-import type { AcceptedCommand, CommandEnvelope, CommandFailure, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
+import type { AcceptedCommand, CommandEnvelope, CommandFailure, ConnStatus, JoinRequest, OpeningBidMessage, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import { mergeSnapshot, type Secrets } from './perspective'
-import { reattachByCode, toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
+import { normalizeRoom, reattachByCode, toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
 
 type SubmitCb = (cmd: CommandEnvelope, fromUid: string) => void
+type OpeningBidCb = (message: OpeningBidMessage, fromUid: string) => void
 type BroadcastCb = (cmd: AcceptedCommand, origin: 'public' | 'private') => void
 type RoomCb = (room: PublicRoom) => void
 type PresenceCb = (change: PresenceChange) => void
@@ -47,6 +48,7 @@ export class LocalHub {
   private nextId = 1
   private conns = new Map<number, Connection>()
   private submitCbs: SubmitCb[] = []
+  private openingBidCbs: OpeningBidCb[] = []
   private presenceCbs: PresenceCb[] = []
   private joinReqCbs: JoinReqCb[] = []
   private reattachCbs: ReattachCb[] = []
@@ -180,6 +182,15 @@ export class LocalHub {
 
   submit(cmd: CommandEnvelope, fromUid: string): void {
     for (const cb of this.submitCbs) cb(cmd, fromUid)
+  }
+
+  addOpeningBid(cb: OpeningBidCb): Unsubscribe {
+    this.openingBidCbs.push(cb)
+    return () => { this.openingBidCbs = this.openingBidCbs.filter((c) => c !== cb) }
+  }
+
+  openingBid(message: OpeningBidMessage, fromUid: string): void {
+    for (const cb of this.openingBidCbs) cb(message, fromUid)
   }
 
   addJoinRequest(cb: JoinReqCb): Unsubscribe {
@@ -352,6 +363,16 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
       return hub.addSubmit((cmd, fromUid) => { if (watched.has(fromUid)) cb(cmd, fromUid) })
     },
 
+    submitOpeningBid(amount: number): void {
+      hub.openingBid({ amount }, uid)
+    },
+
+    onOpeningBid(cb): Unsubscribe {
+      return hub.addOpeningBid((message, fromUid) => {
+        if (watched.has(fromUid)) cb(message, fromUid)
+      })
+    },
+
     broadcast(cmd: AcceptedCommand): void {
       hub.broadcast(cmd, uid)
     },
@@ -433,8 +454,14 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
     async loadRoom(): Promise<Room | null> {
       const r = await hub.loadRoom()
       if (!r) return null
-      if (r.seats.find((s) => s.uid === uid)?.isHost) return r
-      return { ...r, seats: r.seats.map((s) => (s.uid === uid ? s : { ...s, reentryCode: '' })) }
+      const normalized = normalizeRoom(r)
+      if (normalized.seats.find((s) => s.uid === uid)?.isHost) return normalized
+      return {
+        ...normalized,
+        seats: normalized.seats.map((s) => (s.uid === uid
+          ? s
+          : { ...s, reentryCode: '', openingBid: normalized.status === 'bidding' ? null : s.openingBid })),
+      }
     },
 
     onRoom(cb): Unsubscribe {
@@ -488,7 +515,12 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
         : { hands: uid in snap.secrets.hands ? { [uid]: snap.secrets.hands[uid] } : {}, decks: {} }
       const room: Room = isHost
         ? snap.room
-        : { ...snap.room, seats: snap.room.seats.map((s) => (s.uid === uid ? s : { ...s, reentryCode: '' })) }
+        : {
+            ...snap.room,
+            seats: snap.room.seats.map((s) => (s.uid === uid
+              ? s
+              : { ...s, reentryCode: '', openingBid: snap.room.status === 'bidding' ? null : s.openingBid })),
+          }
       return { ...snap, room, game: mergeSnapshot(snap.game, mySecrets, snap.room) }
     },
 
