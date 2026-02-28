@@ -23,6 +23,8 @@ A regra do Esc não é detalhe de implementação: é a diferença entre acessib
 
 Paisagem como orientação de jogo vem da geometria, não de preguiça: o tabuleiro é quadrado e limitado pela altura da viewport (`.board-frame` em `index.css:590`). Em retrato de celular, um quadrado que caiba na largura deixa cada casa com poucos pixels — nomes ilegíveis, alvos abaixo do mínimo e uma mesa que ninguém consegue ler. Servir isso seria pior que pedir para girar.
 
+**Exceção registrada (2026-07-26, durante a implementação da 044):** a medição de contraste encontrou as **bordas de superfície** (`--color-ink-500`, `--color-coffee-500`) em ~1,5–1,7:1 contra os fundos escuros — abaixo do 3:1 de elemento de interface. O autor decidiu **não clarear**: o token é borda de todo cartão, campo e botão, e mexer nele reescreve a aparência do jogo inteiro por um ganho que não muda o que ninguém consegue fazer. A exceção vale **apenas** para a borda decorativa; texto (≥4,5:1) e indicador de foco (≥3:1) seguem obrigatórios e verificados no gate. O compromisso do AA não vira "quando der" — ele ganha uma exceção nomeada, medida e reversível, em vez de uma promessa que o produto não cumpre. Registrado em §12.6 do SRS.
+
 **Alternativa descartada — subset pragmático sem gate no CI:** entrega rápido e regride em silêncio na spec seguinte. O custo do gate é uma dependência de auditoria e um job; o custo de não tê-lo é redescobrir o mesmo problema em toda feature.
 
 **Alternativa descartada — reescrever o tabuleiro para retrato:** é redesenho do layout principal, não polimento. Se virar necessidade, é spec própria.

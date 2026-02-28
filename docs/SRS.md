@@ -815,6 +815,8 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor d
 | Movimento | `prefers-reduced-motion` respeitado em toda animação; com movimento reduzido o fato continua legível — nenhuma informação existe só na animação |
 | Zoom | Até 200% sem perda de função |
 
+> 📌 **Exceção de contraste, medida e aceita** (2026-07-26, spec 044): as **bordas de superfície** (`--color-ink-500`, `--color-coffee-500` — borda de todo cartão, campo e botão) medem **~1,5–1,7:1** contra os fundos escuros, abaixo do 3:1 exigido para elemento de interface. Corrigir significaria clarear um token onipresente e mudar a aparência de toda borda do jogo; o autor decidiu **manter a identidade visual**. A exceção é **só da borda decorativa**: contraste de **texto** (≥4,5:1) e do **indicador de foco** (≥3:1) continuam obrigatórios e verificados. Nenhuma informação depende de enxergar a borda — ela separa superfícies que já se distinguem por preenchimento. Revisitar quando houver referência visual nova.
+
 **Orientação e tamanho:** o tabuleiro é servido em **paisagem**, a partir de 740 × 360 px (celular em paisagem) e 1024 × 768 px (tablet). Em **retrato**, o produto exibe um aviso para girar o aparelho em vez de servir a mesa ilegível — a sessão não é perdida na rotação, e a tela de aviso segue as mesmas regras acima. Nenhuma superfície do caminho de jogo exige rolagem horizontal; modal que não cabe rola por dentro.
 
 ### 12.7 Telemetria Mínima
