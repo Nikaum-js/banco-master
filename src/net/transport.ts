@@ -22,7 +22,7 @@
 import type { GameAction, PlayerAction } from '@/game/commands'
 import type { GameState } from '@/game/turn/types'
 import type { Resolved } from './recorder'
-import type { JoinError, PieceId, Room } from './room'
+import type { JoinError, PieceId, PublicRoom, Room } from './room'
 
 // Comando em trânsito guest→host: carrega o `playerId` DECLARADO pelo remetente. O host
 // confere contra a identidade real da conexão — o `uid` da conexão que entregou o comando,
@@ -124,13 +124,16 @@ export interface Transport {
   // recarrega a sala e reconcilia os tópicos observados (T020).
   onReattachNotice(cb: () => void): Unsubscribe
 
-  // estado da sala (host publica; todos observam)
-  publishRoom(room: Room): void
-  onRoom(cb: (room: Room) => void): Unsubscribe
+  // estado da sala (host publica; todos observam). 043, D-036/T024: a projeção PÚBLICA — sem
+  // `reentryCode` de ninguém (data-model §3). Uma difusão não tem "exceto quem chamou".
+  publishRoom(room: PublicRoom): void
+  onRoom(cb: (room: PublicRoom) => void): Unsubscribe
 
   // sala persistida — existe ANTES da partida (no lobby ainda não há `GameState`, então o
   // snapshot completo não serve): o convidado lê para saber que o link é válido; o host
-  // escreve a cada mudança de assentos (FR-001/002).
+  // escreve a cada mudança de assentos (FR-001/002). `saveRoom` grava a linha inteira (com
+  // códigos — é onde eles moram). `loadRoom` lê pela prévia (`room_preview`, T025): cada
+  // assento sem código, EXCETO o de quem chamou — é assim que o dono lê o próprio (D5).
   saveRoom(room: Room): Promise<void>
   loadRoom(): Promise<Room | null>
 

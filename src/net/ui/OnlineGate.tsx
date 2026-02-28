@@ -159,6 +159,7 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
     <RoomLobby
       room={room}
       myUid={state.uid ?? ''}
+      myReentryCode={state.myReentryCode}
       isHost={hostSeat(room).uid === state.uid}
       link={roomLink(room.id, window.location.origin)}
       starting={busy}

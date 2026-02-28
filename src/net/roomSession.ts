@@ -38,6 +38,9 @@ export interface RoomSessionState {
   readonly roomId: string | null
   /** Identidade atestada desta sessão (043, D-035) — `null` até o transporte conectar. */
   readonly uid: string | null
+  /** 043, D-036/T026: o PRÓPRIO código de reentrada (da prévia — `room` nunca carrega
+   * código nenhum, nem o do dono). `null` até a prévia resolver. */
+  readonly myReentryCode: string | null
 }
 
 export interface RoomSession {
@@ -93,7 +96,9 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
   const subs: Unsubscribe[] = []
   const listeners: (() => void)[] = []
 
-  let state: RoomSessionState = { phase: 'identity', room: null, error: null, busy: false, isHost: false, roomId: null, uid: null }
+  let state: RoomSessionState = {
+    phase: 'identity', room: null, error: null, busy: false, isHost: false, roomId: null, uid: null, myReentryCode: null,
+  }
 
   function emit(patch: Partial<RoomSessionState>): void {
     state = { ...state, ...patch }
@@ -119,17 +124,18 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
     const room = c.room()
     const joinError = c.joinError()
     const game = c.game()
+    const myReentryCode = c.myReentryCode()
 
     // Partida em curso mas AINDA sem assento (041, D-033): reentrada pendente ou recusada
     // por código inválido. Fica no formulário — NUNCA pula para 'playing'/'order' sem
     // assento, mesmo com o `GameState` já carregado (é o mesmo `game` de todo mundo).
     if (game && !c.playerId()) {
-      emit({ room, error: joinError, busy: false, phase: 'reentry' })
+      emit({ room, error: joinError, busy: false, phase: 'reentry', myReentryCode })
       return
     }
     if (game) {
       disconnectStore ??= connectStore(c)
-      emit({ room, error: joinError, busy: false, phase: isReentry(c) ? 'playing' : 'order' })
+      emit({ room, error: joinError, busy: false, phase: isReentry(c) ? 'playing' : 'order', myReentryCode })
       return
     }
     // O pedido de assento é fire-and-forget na porta; a RESPOSTA é o `room` com o nosso
@@ -140,6 +146,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
       error: joinError,
       busy: answered ? false : state.busy,
       phase: c.playerId() ? 'lobby' : state.phase,
+      myReentryCode,
     })
   }
 

@@ -125,6 +125,7 @@ export function IdentityForm({
 export function RoomLobby({
   room,
   myUid,
+  myReentryCode,
   isHost,
   link,
   starting,
@@ -133,6 +134,9 @@ export function RoomLobby({
 }: {
   room: Room
   myUid: string
+  /** 043, D-036/T026: da PRÉVIA (`Client.myReentryCode()`) — `room` nunca carrega código
+   * nenhum, nem o do dono. `null` até a prévia resolver. */
+  myReentryCode: string | null
   isHost: boolean
   link: string
   starting?: boolean
@@ -201,10 +205,10 @@ export function RoomLobby({
         </div>
         {/* Código de reentrada do PRÓPRIO assento (041, D-033/FR-030): visível desde o lobby,
             para quem nunca anotou conseguir ler antes de precisar. */}
-        {room.seats.find((s) => s.uid === myUid)?.reentryCode && (
+        {myReentryCode && (
           <p className="label text-cream-muted/60">
             Seu código de reentrada:{' '}
-            <span className="text-cream tracking-[0.2em] font-mono">{room.seats.find((s) => s.uid === myUid)!.reentryCode}</span>
+            <span className="text-cream tracking-[0.2em] font-mono">{myReentryCode}</span>
           </p>
         )}
       </div>

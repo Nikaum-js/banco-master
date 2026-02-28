@@ -68,13 +68,13 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 
 **Meta**: o código de reentrada vira segredo do dono sem perder a funcionalidade que motivou a D-033.
 
-- [ ] **T022** [US4] `0003_attested_identity.sql`: `room_preview(room_id)` — assentos sem `reentryCode`, **exceto** o do assento de quem chamou ([contracts/policies.md §4](./contracts/policies.md)).
-- [ ] **T023** [test-first] [US4] `tests/net/seat-secrets.test.ts`: nada do que chega a um cliente contém código alheio — nem na sala publicada, nem na prévia, nem no estado lido; e o dono continua obtendo o seu. Varredura no payload inteiro, não em campo esperado: o teste precisa pegar o código escondido num lugar em que ninguém pensou.
-- [ ] **T024** [US4] `src/net/host.ts` + `transport.ts`: `publishRoom` passa a difundir a projeção `PublicRoom` ([data-model §3](./data-model.md#3-sala-publicada-vs-sala-da-autoridade)). O `uid` permanece — não é credencial, e esse é o ponto inteiro da D-035.
-- [ ] **T025** [US4] `src/net/supabaseTransport.ts`: `loadRoom` por `room_preview`.
-- [ ] **T026** [P] [US4] `src/net/ui/SessionBadge.tsx` e `LobbyScreen.tsx`: o dono lê o próprio código da prévia, no mesmo lugar em que a 041 o colocou. A redação não pode custar a funcionalidade (FR-019).
+- [X] **T022** [US4] `0003_attested_identity.sql`: `room_preview(room_id)` — assentos sem `reentryCode`, **exceto** o do assento de quem chamou ([contracts/policies.md §4](./contracts/policies.md)).
+- [X] **T023** [test-first] [US4] `tests/net/seat-secrets.test.ts`: nada do que chega a um cliente contém código alheio — nem na sala publicada, nem na prévia, nem no estado lido (`loadSnapshot`, redigido no cliente até a Fase 5 trazer `read_snapshot`); e o dono continua obtendo o seu. Varredura no payload inteiro (`JSON.stringify` + `toContain`). **Achado real**: `Room` é estruturalmente um superconjunto de `PublicRoom` — TS não barra passar a linha inteira pra `publishRoom` por engano — então a redação roda TAMBÉM dentro dos dois adapters (defesa em profundidade), não só em `host.ts`.
+- [X] **T024** [US4] `src/net/room.ts` (`PublicRoom`/`toPublicRoom`/`fromPublicRoom`/`redactRoom`), `transport.ts` (`publishRoom`/`onRoom` tipados em `PublicRoom`) e `host.ts` (`publishRoom(toPublicRoom(room))`). O `uid` permanece — não é credencial (D-035).
+- [X] **T025** [US4] `src/net/supabaseTransport.ts`: `loadRoom` por `room_preview` (RPC, não mais `select`). `localTransport.ts` ganha o mesmo recorte no facade, para os dois adapters proverem a MESMA garantia headless.
+- [X] **T026** [P] [US4] `src/net/ui/SessionBadge.tsx`/`LobbyScreen.tsx`/`roomStore.ts`/`connectStore.ts`/`roomSession.ts`: novo `Client.myReentryCode()` (só a prévia o alimenta) chega à UI por `useRoomStore.myReentryCode` (fase `'playing'`) e por `RoomSessionState.myReentryCode` (fase `'lobby'`, antes do `connectStore` ligar) — dois caminhos porque o store do jogo só é ligado quando `game` existe. A redação não custou a funcionalidade (FR-019).
 
-**Checkpoint**: `seat-secrets.test.ts` verde e vermelha contra a Fase 3. A tela do dono não muda em nada.
+**Checkpoint**: `seat-secrets.test.ts` (6 casos, nos dois adapters) e as 81 suítes (734 testes) verdes. A tela do dono não muda em nada.
 
 ---
 

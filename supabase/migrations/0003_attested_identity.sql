@@ -232,3 +232,33 @@ begin
   return jsonb_build_object('ok', true);
 end;
 $$;
+
+-- ============================================================================================
+-- FASE 4 (T022) — o segredo do assento para de trafegar. `room_preview` é a ÚNICA leitura da
+-- sala fora de `read_snapshot` (Fase 5): devolve a sala sem `reentryCode` de ninguém, EXCETO o
+-- do assento de quem chamou (D5) — sustenta a escada de entrada da 038 sem abrir a linha, e é
+-- o que torna a enumeração impossível (sem id, não devolve nada).
+-- ============================================================================================
+
+create or replace function public.room_preview(room_id text) returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'id', r.id,
+    'status', r.status,
+    'seats', (
+      select coalesce(jsonb_agg(
+        case when seat->>'uid' = (select auth.uid())::text
+          then seat
+          else seat - 'reentryCode'
+        end
+      ), '[]'::jsonb)
+      from jsonb_array_elements(r.seats) as seat
+    )
+  )
+  from public.rooms r
+  where r.id = room_id;
+$$;

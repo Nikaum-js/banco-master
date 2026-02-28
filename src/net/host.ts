@@ -20,6 +20,7 @@ import {
   playerIdsInOrder,
   seatByUid,
   startGame as startGameRoom,
+  toPublicRoom,
   type Room,
 } from './room'
 import type { AcceptedCommand, CommandEnvelope, JoinRequest, PresenceChange, Transport, Unsubscribe } from './transport'
@@ -72,7 +73,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   // Publica a sala para todos e a persiste. Com partida em curso, a sala vive DENTRO do
   // snapshot (uma linha só); no lobby, `saveRoom` escreve apenas as colunas de sala.
   function publishAndPersistRoom(): void {
-    transport.publishRoom(room)
+    transport.publishRoom(toPublicRoom(room))
     if (game) void transport.saveSnapshot({ seq, game, room })
     else void transport.saveRoom(room)
     notify()
@@ -221,7 +222,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     game = buildInitialGame(playerIdsInOrder(room), rng)
     seq = 0
     await transport.saveSnapshot({ seq, game, room }) // 1º snapshot (FR-006/013): clientes leem ao entrar
-    transport.publishRoom(room) // status já 'playing' (definido por startGame antes de criar o host)
+    transport.publishRoom(toPublicRoom(room)) // status já 'playing' (definido por startGame antes de criar o host)
     notify()
   }
 
@@ -236,7 +237,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
         room = snap.room
       }
       await ensureOpen()
-      transport.publishRoom(room)
+      transport.publishRoom(toPublicRoom(room))
       notify()
     },
 

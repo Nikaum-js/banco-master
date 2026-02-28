@@ -9,7 +9,7 @@ import type { TurnCtx } from '@/game/turn/turnMachine'
 import { applyCommand, type PlayerAction } from '@/game/commands'
 import { buildGameCtx } from '@/game/setup'
 import { replayCtx } from './recorder'
-import { seatByUid, type JoinError, type Room } from './room'
+import { fromPublicRoom, redactRoom, seatByUid, type JoinError, type Room } from './room'
 import type { AcceptedCommand, JoinRequest, Transport, Unsubscribe } from './transport'
 
 // Conexão da PRÓPRIA sessão (041, data-model §4) — não é regra de jogo (difere por cliente,
@@ -37,6 +37,10 @@ export interface Client {
   paused(): boolean
   seq(): number
   connection(): ConnectionState
+  // 043, D-036/T024/T026: o PRÓPRIO código de reentrada — só existe aqui porque a prévia
+  // (`loadRoom`/`room_preview`) o devolve pra quem chamou; a sala publicada (`room()`) nunca
+  // carrega código nenhum, nem o do dono. `null` até a 1ª leitura da prévia resolver.
+  myReentryCode(): string | null
   subscribe(cb: () => void): Unsubscribe // notifica a cada mudança de estado (liga a UI/store)
 }
 
@@ -55,6 +59,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
   let seq = -1
   let playerId: string | null = null
   let joinError: JoinError | null = null
+  let myReentryCode: string | null = null
   const pending: AcceptedCommand[] = [] // difusões chegadas antes do snapshot (buffer de corrida)
   const listeners = new Set<() => void>()
   const subs: Unsubscribe[] = []
@@ -108,7 +113,11 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
           const snap = await transport.loadSnapshot()
           if (!snap) return // ainda no lobby (sem partida) — não é falha, não repete
           game = snap.game
-          room = snap.room
+          // 043, T023: `loadSnapshot` ainda lê a linha inteira (a leitura por RPC é a Fase 5,
+          // `read_snapshot`) — extrai o PRÓPRIO código antes de redigir tudo, para nenhum
+          // código alheio sobreviver até lá e `myReentryCode` continuar disponível em partida.
+          myReentryCode = snap.room.seats.find((s) => s.uid === transport.uid)?.reentryCode || null
+          room = redactRoom(snap.room)
           seq = snap.seq
           resolvePlayerId()
           drainPending() // difusões chegadas DURANTE a ressincronização — aplicadas em ordem, não descartadas
@@ -136,7 +145,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
       await transport.connect()
       subs.push(transport.onBroadcast(applyAccepted))
       subs.push(transport.onRoom((r) => {
-        room = r
+        room = fromPublicRoom(r) // nunca carrega código nenhum — nem o do dono (D-036)
         resolvePlayerId()
         // Host iniciou a partida enquanto estávamos no lobby: o 1º snapshot já existe, mas
         // nenhuma difusão o traz (a difusão só carrega comandos) → busca-o agora (FR-006/014).
@@ -166,7 +175,8 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
       const snap = await transport.loadSnapshot() // entrada/reconexão: snapshot completo (FR-014/015)
       if (snap) {
         game = snap.game
-        room = snap.room
+        myReentryCode = snap.room.seats.find((s) => s.uid === transport.uid)?.reentryCode || null // ver `resync`
+        room = redactRoom(snap.room)
         seq = snap.seq
         resolvePlayerId()
         drainPending()
@@ -174,9 +184,14 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
         return
       }
       // Sem partida ainda (lobby): a sala persistida diz se o link é válido e quem já sentou.
+      // `loadRoom` é a PRÉVIA (043, T025) — devolve o próprio código, e só o próprio (D5); é
+      // o único lugar de onde `myReentryCode` pode vir.
       const persisted = await transport.loadRoom()
+      if (persisted) {
+        myReentryCode = persisted.seats.find((s) => s.uid === transport.uid)?.reentryCode || null
+      }
       if (persisted && !room) {
-        room = persisted
+        room = redactRoom(persisted) // room() nunca carrega código nenhum, nem o do dono
         resolvePlayerId()
         notify()
       }
@@ -205,6 +220,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
     paused: () => Boolean(game?.paused),
     seq: () => seq,
     connection: () => connection,
+    myReentryCode: () => myReentryCode,
 
     subscribe(cb): Unsubscribe {
       listeners.add(cb)

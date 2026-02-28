@@ -307,6 +307,15 @@ export function fakeSupabase(): FakeSupabase {
             FakeChannel.deliverBroadcast(broker.channels, `room:${roomId}:lobby`, 'reattached', {})
             return Promise.resolve({ data: { ok: true }, error: null })
           }
+          // 043, T022 — espelho de `room_preview`: sem `reentryCode` de ninguém, EXCETO o do
+          // assento de quem chamou (D5).
+          if (fn === 'room_preview') {
+            const row = broker.rows.get(`rooms:${roomId}`)
+            if (!row) return Promise.resolve({ data: null, error: null })
+            const seats = (row.seats as { uid: string; reentryCode?: string }[]) ?? []
+            const redacted = seats.map((s) => (s.uid === uid ? s : { ...s, reentryCode: undefined }))
+            return Promise.resolve({ data: { id: row.id, status: row.status, seats: redacted }, error: null })
+          }
           return Promise.resolve({ data: null, error: new Error(`rpc desconhecida no fake: ${fn}`) })
         },
       }

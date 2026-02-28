@@ -9,11 +9,15 @@ import { useRoomStore } from '@/net/roomStore'
 export function SessionBadge({ link }: { link: string }) {
   const room = useRoomStore((s) => s.room)
   const myUid = useRoomStore((s) => s.myUid)
+  // 043, D-036/T026: o código vem da PRÉVIA (`room_preview`), nunca da sala publicada — `room`
+  // não carrega código nenhum, nem o do dono (é assim que "nada vaza na difusão" vira garantia
+  // estrutural, não promessa de código que esqueceu de redigir algum campo).
+  const myReentryCode = useRoomStore((s) => s.myReentryCode)
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState<'link' | 'code' | null>(null)
 
   const seat = room && myUid ? seatByUid(room, myUid) : undefined
-  if (!seat) return null
+  if (!seat || !myReentryCode) return null
 
   function copy(what: 'link' | 'code', value: string): void {
     void navigator.clipboard?.writeText(value).then(() => {
@@ -45,8 +49,8 @@ export function SessionBadge({ link }: { link: string }) {
       <button type="button" onClick={() => copy('link', link)} title={link} className="text-left text-xs text-cream-muted truncate hover:text-cream">
         {copied === 'link' ? 'Link copiado!' : `Link: ${link}`}
       </button>
-      <button type="button" onClick={() => copy('code', seat.reentryCode)} className="text-left text-sm tracking-[0.25em] text-cream font-mono hover:text-gold">
-        {copied === 'code' ? 'Código copiado!' : seat.reentryCode}
+      <button type="button" onClick={() => copy('code', myReentryCode)} className="text-left text-sm tracking-[0.25em] text-cream font-mono hover:text-gold">
+        {copied === 'code' ? 'Código copiado!' : myReentryCode}
       </button>
       <p className="text-cream-muted/60" style={{ fontSize: 10 }}>
         Com o código, você reanexa a este assento de qualquer aparelho — mesmo sem este link salvo.

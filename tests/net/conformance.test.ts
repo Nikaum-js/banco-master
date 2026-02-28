@@ -22,7 +22,7 @@ import { LocalHub, localTransport } from '@/net/localTransport'
 import { supabaseTransport } from '@/net/supabaseTransport'
 import { durableWrites } from '@/net/durableWrites'
 import { fakeSupabase } from './fakeSupabase'
-import type { Room, Seat } from '@/net/room'
+import type { PublicRoom, Room, Seat } from '@/net/room'
 
 // Fábrica de N transportes ligados na MESMA sala — a única coisa que difere entre adapters.
 // 041: ganhou `dropChannel`/`restoreChannel` — a queda/restauração de CANAL sem contar como
@@ -189,7 +189,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     await guest.connect()
     await asHost(host, ['t-guest'])
 
-    const seen: Room[] = []
+    const seen: PublicRoom[] = []
     guest.onRoom((r) => seen.push(r))
     host.publishRoom({ ...ROOM, status: 'playing' })
 
@@ -204,7 +204,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     await guest.connect()
     await asHost(host, ['t-guest'])
 
-    const seenRoom: Room[] = []
+    const seenRoom: PublicRoom[] = []
     guest.onRoom((r) => seenRoom.push(r))
     const seenRejects: string[] = []
     host.onJoinRejected((uid) => seenRejects.push(uid)) // host também "recebe" (mesmo canal)

@@ -66,6 +66,35 @@ export interface Room {
   seats: Seat[] // ordem de entrada; host = seats[0]
 }
 
+// Sala PUBLICADA (043, D-036/data-model §3) — o que trafega em `publishRoom`/`onRoom`. Sem
+// `reentryCode` de NINGUÉM, nem do dono: código é credencial PORTADORA (§2 de policies.md),
+// e a difusão alcança todo mundo igual — não há "exceto quem chamou" numa transmissão. O
+// `uid` permanece: não é credencial, conhecê-lo não permite usá-lo (D-035).
+export type PublicSeat = Omit<Seat, 'reentryCode'>
+export interface PublicRoom {
+  id: string
+  status: RoomStatus
+  seats: PublicSeat[]
+}
+
+export function toPublicRoom(room: Room): PublicRoom {
+  return { id: room.id, status: room.status, seats: room.seats.map(({ reentryCode: _reentryCode, ...rest }) => rest) }
+}
+
+// Reidrata para o shape que o resto da app já conhece — `reentryCode` SINTÉTICO vazio, nunca
+// o real. Quem precisa do PRÓPRIO código lê `Client.myReentryCode()` (da prévia, `loadRoom`),
+// nunca daqui — este helper existe só para não espalhar `PublicRoom` pela UI inteira.
+export function fromPublicRoom(room: PublicRoom): Room {
+  return { ...room, seats: room.seats.map((s) => ({ ...s, reentryCode: '' })) }
+}
+
+// Redige TODO `reentryCode` de `room`, sem exceção — nem o do dono (mesma garantia de
+// `toPublicRoom`, mas partindo de uma `Room` já em mãos em vez de uma volta pela rede).
+// `Client.room()` nunca carrega código nenhum; quem quer o PRÓPRIO lê `myReentryCode()`.
+export function redactRoom(room: Room): Room {
+  return { ...room, seats: room.seats.map((s) => ({ ...s, reentryCode: '' })) }
+}
+
 export type JoinResult = { ok: true; room: Room; seat: Seat } | { ok: false; reason: JoinError }
 export type JoinError = 'room-full' | 'color-taken' | 'piece-taken' | 'already-started' | 'unknown-uid' | 'kicked' | 'bad-code'
 

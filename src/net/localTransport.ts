@@ -4,11 +4,11 @@
 // `tests/net/` e prova SC-001/003/004/005 sem infra. O `supabaseTransport` implementa a mesma
 // porta sobre Realtime/Postgres.
 import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
-import { reattachByCode, type JoinError, type Room } from './room'
+import { reattachByCode, toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
 
 type SubmitCb = (cmd: CommandEnvelope, fromUid: string) => void
 type BroadcastCb = (cmd: AcceptedCommand) => void
-type RoomCb = (room: Room) => void
+type RoomCb = (room: PublicRoom) => void
 type PresenceCb = (change: PresenceChange) => void
 type JoinReqCb = (who: JoinRequest, fromUid: string) => void
 type JoinRejCb = (uid: string, reason: JoinError) => void
@@ -49,7 +49,7 @@ export class LocalHub {
   private reattachCbs: ReattachCb[] = []
   private snapshot: PersistedSnapshot | null = null
   private storedRoom: Room | null = null // sala persistida (existe já no lobby, sem GameState)
-  private lastRoom: Room | null = null
+  private lastRoom: PublicRoom | null = null
   private dropped = new Set<string>() // uids com difusão suprimida (fault-injection de teste: perda de pacote)
 
   // — faltas injetáveis de escrita/leitura (041, D14) — só testes; produção não usa isto.
@@ -190,7 +190,7 @@ export class LocalHub {
     const result = reattachByCode(this.storedRoom, code, uid)
     if (!result.ok) return result
     this.storedRoom = result.room
-    this.lastRoom = result.room
+    this.lastRoom = toPublicRoom(result.room)
     if (this.snapshot) this.snapshot = { ...this.snapshot, room: result.room }
     for (const cb of this.reattachCbs) cb()
     return { ok: true }
@@ -244,10 +244,16 @@ export class LocalHub {
   }
 
   // Paridade de recusa: só a autoridade publica (043, T013) — espelha `room:<id>:lobby`.
-  publishRoom(room: Room, fromUid: string): void {
+  //
+  // Defesa em profundidade (T023): `toPublicRoom` roda AQUI, não só na disciplina de quem
+  // chama — `Room` é estruturalmente um superconjunto de `PublicRoom` (mais campos, não
+  // menos), então o TypeScript não barra alguém passando uma `Room` completa por engano. O
+  // FIO é o lugar onde a garantia vira estrutural, não convenção.
+  publishRoom(room: PublicRoom, fromUid: string): void {
     if (fromUid !== this.currentHostUid()) return
-    this.lastRoom = room
-    for (const conn of this.conns.values()) for (const cb of conn.onRoom) cb(room)
+    const safe = toPublicRoom(room as unknown as Room)
+    this.lastRoom = safe
+    for (const conn of this.conns.values()) for (const cb of conn.onRoom) cb(safe)
   }
 
   async saveSnapshot(snap: PersistedSnapshot): Promise<void> {
@@ -280,7 +286,7 @@ export class LocalHub {
     return this.storedRoom
   }
 
-  currentRoom(): Room | null {
+  currentRoom(): PublicRoom | null {
     return this.lastRoom
   }
 
@@ -379,7 +385,7 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
       return detach(conn.onJoinRejected, cb)
     },
 
-    publishRoom(room: Room): void {
+    publishRoom(room: PublicRoom): void {
       hub.publishRoom(room, uid)
     },
 
@@ -387,8 +393,12 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
       return hub.saveRoom(room)
     },
 
-    loadRoom(): Promise<Room | null> {
-      return hub.loadRoom()
+    // Paridade com `room_preview` (043, T022/T025): redige o código de todo mundo, EXCETO o
+    // do próprio uid — é daqui que `Client.myReentryCode()` lê o dono, e só o dono (D5).
+    async loadRoom(): Promise<Room | null> {
+      const r = await hub.loadRoom()
+      if (!r) return null
+      return { ...r, seats: r.seats.map((s) => (s.uid === uid ? s : { ...s, reentryCode: '' })) }
     },
 
     onRoom(cb): Unsubscribe {

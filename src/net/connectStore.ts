@@ -25,7 +25,10 @@ export function connectMultiplayer(client: Client): () => void {
   const sync = (): void => {
     const g = client.game()
     if (g) useGameStore.setState({ game: g })
-    useRoomStore.setState({ room: client.room(), myUid: client.uid, connection: client.connection() })
+    useRoomStore.setState({
+      room: client.room(), myUid: client.uid, connection: client.connection(),
+      myReentryCode: client.myReentryCode(),
+    })
   }
   const unsub = client.subscribe(sync)
   sync()

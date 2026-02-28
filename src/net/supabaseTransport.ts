@@ -20,7 +20,7 @@
 // só enxerga o próprio tópico, e é assim que deveria ser: ele nunca precisou ver a presença
 // alheia, só a autoridade precisa reconciliar `seats[].connected` (FR-021 da 041).
 import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
-import type { JoinError, Room } from './room'
+import { toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
 import { normalizeLog } from '@/game/log'
 import type { PauseState } from '@/game/turn/types'
 
@@ -81,7 +81,7 @@ const seatTopic = (roomId: string, uid: string): string => `room:${roomId}:s:${u
 export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: string): Transport {
   const submitCbs: ((cmd: CommandEnvelope, fromUid: string) => void)[] = []
   const broadcastCbs: ((cmd: AcceptedCommand) => void)[] = []
-  const roomCbs: ((room: Room) => void)[] = []
+  const roomCbs: ((room: PublicRoom) => void)[] = []
   const presenceCbs: ((change: PresenceChange) => void)[] = []
   const joinReqCbs: ((who: JoinRequest, fromUid: string) => void)[] = []
   const joinRejCbs: ((target: string, reason: JoinError) => void)[] = []
@@ -144,7 +144,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       for (const cb of joinRejCbs) cb(p.uid, p.reason)
     })
     .on('broadcast', { event: EVENT.room }, ({ payload }) => {
-      for (const cb of roomCbs) cb(payload as Room)
+      for (const cb of roomCbs) cb(payload as PublicRoom)
     })
     // Aviso de reanexação (043, D4) — carimbado pela RPC `reattach_by_code`, que roda no
     // servidor fora da política normal de escrita de `:lobby`. Nenhum payload a interpretar:
@@ -294,8 +294,13 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       return off(reattachCbs, cb)
     },
 
-    publishRoom(room: Room): void {
-      void lobby.send({ type: 'broadcast', event: EVENT.room, payload: room })
+    // Defesa em profundidade (043, T023) — ver o mesmo ponto em `localTransport.ts`: `Room` é
+    // estruturalmente um superconjunto de `PublicRoom`, então o TypeScript não impede alguém
+    // de passar a linha inteira aqui por engano. A garantia mora no FIO, não na disciplina de
+    // quem chama.
+    publishRoom(room: PublicRoom): void {
+      const safe = toPublicRoom(room as unknown as Room)
+      void lobby.send({ type: 'broadcast', event: EVENT.room, payload: safe })
     },
     onRoom(cb): Unsubscribe {
       roomCbs.push(cb)
@@ -310,11 +315,15 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       if (error) throw error
     },
 
+    // 043, T025 — a PRÉVIA (`room_preview`, D5): não há mais `select` direto na tabela (a
+    // política fecha a partir da Fase 2). Devolve os assentos sem `reentryCode` de ninguém,
+    // EXCETO o do assento de quem chamou — é daqui que o dono lê o próprio código.
     async loadRoom(): Promise<Room | null> {
-      const { data, error } = await supabase.from('rooms').select('id,status,seats,seq,game').eq('id', roomId).maybeSingle()
+      const { data, error } = await supabase.rpc('room_preview', { room_id: roomId })
       if (error) throw error
       if (!data) return null
-      return { id: data.id, status: data.status as Room['status'], seats: data.seats }
+      const row = data as { id: string; status: Room['status']; seats: Room['seats'] }
+      return { id: row.id, status: row.status, seats: row.seats.map((s) => ({ ...s, reentryCode: s.reentryCode ?? '' })) }
     },
 
     onPresence(cb): Unsubscribe {
