@@ -20,7 +20,7 @@ import {
   HouseBadgeIcon, HotelBadgeIcon, SkyscraperBadgeIcon, HangarBadgeIcon,
   CalmGlyph, TradeArrowGlyph, PlusGlyph, SwapMiniGlyph, CheckTinyGlyph,
 } from './glyphs/badges'
-import { ChartPattern, GuillochePattern } from './glyphs/patterns'
+import { ChartPattern, GridPattern } from './glyphs/patterns'
 import { playersView, PLAYER_COLORS, type Player } from '@/game/ui/panels/playersView'
 import { diceArenaView } from '@/game/ui/panels/diceArenaView'
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
@@ -111,8 +111,6 @@ export function ClassicSquare({
     const i = s.game.players.findIndex((p) => p.id === t.ownerId)
     return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : undefined
   })
-  // Tema ativo — decide o TRATAMENTO da casa (não só cor): posse, chip etc.
-  const boardTheme = useBoardTheme((t) => t.theme)
   // Feedback de posse (044, T020/FR-029): a troca de dono da célula não tinha NENHUM
   // aviso visual — cor aparecia/sumia de golpe. `key={ownerColor}` remonta o grupo a cada
   // transferência (compra, leilão, aquisição hostil) e o `pop` do vocabulário entra por cima.
@@ -125,10 +123,9 @@ export function ClassicSquare({
   // `overflow-hidden` pra metade externa do círculo não ser cortada.
   return (
     <div className="board-square relative w-full h-full">
-      {/* POSSE por TEMA:
-            Atlas — a cidade ACENDE: luz interna na cor do dono + fio de néon
-            na borda, como cidade iluminada vista do alto à noite.
-            Café — tratamento clássico de papel: tint + moldura na cor do dono. */}
+      {/* POSSE: a cidade ACENDE — luz interna na cor do dono + fio de néon na borda,
+          como cidade iluminada vista do alto à noite. Vale nos dois temas: os dois são
+          cidade à noite, e a diferença entre eles está na paleta que a luz usa. */}
       {ownerColor && (
         <motion.div
           key={ownerColor}
@@ -137,35 +134,20 @@ export function ClassicSquare({
           animate={ownerPop.animate}
           aria-hidden
         >
-          {boardTheme === 'atlas' ? (
-            <>
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: `radial-gradient(ellipse 95% 75% at 50% 50%, color-mix(in srgb, ${ownerColor} 30%, transparent) 0%, transparent 78%)`,
-                }}
-              />
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  boxShadow: `inset 0 0 0 1.5px ${ownerColor}, inset 0 0 12px color-mix(in srgb, ${ownerColor} 45%, transparent)`,
-                }}
-              />
-            </>
-          ) : (
-            <>
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{ background: ownerColor, opacity: 0.14 }}
-              />
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  boxShadow: `inset 0 0 0 2px ${ownerColor}, inset 0 0 0 3px color-mix(in srgb, var(--color-ink-950) 55%, transparent)`,
-                }}
-              />
-            </>
-          )}
+          <>
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: `radial-gradient(ellipse 95% 75% at 50% 50%, color-mix(in srgb, ${ownerColor} 30%, transparent) 0%, transparent 78%)`,
+              }}
+            />
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                boxShadow: `inset 0 0 0 1.5px ${ownerColor}, inset 0 0 12px color-mix(in srgb, ${ownerColor} 45%, transparent)`,
+              }}
+            />
+          </>
         </motion.div>
       )}
       {/* Bandeira-avatar do país — fincada na borda INTERNA (voltada
@@ -590,11 +572,11 @@ export function HangarMark({ pos }: { pos: number }) {
   )
 }
 
-// Marca de hipoteca — apenas SOMBREAMENTO: a célula escurece e ganha uma
-// sombra interna, parecendo "bloqueada / fora de jogo". Sem selo nem texto.
+// Marca de hipoteca — apenas SOMBREAMENTO: a célula escurece e ganha uma sombra interna,
+// parecendo "bloqueada / fora de jogo". Sem selo nem texto: o carimbo de cartório que
+// existia aqui era do tema Cofre, e saiu com ele.
 export function MortgageMark({ pos }: { pos: number }) {
   const mortgaged = useGameStore((s) => s.game.titles[pos]?.mortgaged)
-  const boardTheme = useBoardTheme((t) => t.theme)
   if (!mortgaged) return null
   return (
     <div
@@ -605,25 +587,6 @@ export function MortgageMark({ pos }: { pos: number }) {
         boxShadow: 'inset 0 0 14px 3px rgba(0,0,0,0.6)',
       }}
     >
-      {/* Café: carimbo de cartório torto · Atlas: só o apagão da cidade */}
-      {boardTheme === 'cafe' && (
-        <span
-          className="absolute left-1/2 top-1/2 font-bold uppercase whitespace-nowrap"
-          style={{
-            transform: 'translate(-50%, -50%) rotate(-12deg)',
-            fontFamily: 'var(--font-slab)',
-            fontSize: 8,
-            letterSpacing: '0.14em',
-            color: 'var(--color-signal-glow)',
-            border: '1.5px solid var(--color-signal-glow)',
-            borderRadius: 2,
-            padding: '1px 4px',
-            opacity: 0.9,
-          }}
-        >
-          Hipoteca
-        </span>
-      )}
     </div>
   )
 }
@@ -842,7 +805,7 @@ function PlayerRow({ player: p }: { player: Player }) {
       <PlayerFace color={p.color} active={p.active} asleep={p.bankrupt} size={40} />
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-1.5">
-          <p className="display text-cream text-[17px] leading-none truncate">{p.name}</p>
+          <p className="display display--tight text-cream text-[17px] leading-none truncate">{p.name}</p>
           {/* 044/T030 (D-039 ponto 3): "jogador da vez" tinha só borda/fundo diferentes —
               cor sem segundo canal. A DiceArena já diz o nome de quem joga em texto; esta
               é a mesma informação na lista lateral, mesmo padrão de tag do "VOCÊ"/"$$"/"IMU". */}
@@ -900,8 +863,14 @@ function toUiSpeedFace(speed: number | 'mr-banco' | 'onibus'): SpeedFace {
 const ROLL_DURATION_MS = 1050
 
 // Botão único das ações do turno (Rolar / Comprar / Leilão / Finalizar) —
-// casca sobre o primitivo Button com a voz display (Bebas) e porte maior;
+// casca sobre o primitivo Button com a voz display CONDENSADA e porte maior;
 // a primária ganha borda gold-soft + glow no hover (é O botão do jogo).
+//
+// `display--tight` e não só `display`: a zona de ação é uma coluna de 280px fixos e às
+// vezes carrega DOIS botões ("Comprar R$ 100" + "Leilão"). Medido, a display larga do tema
+// Fliperama (Press Start 2P) estourava a coluna em 17px e o "Leilão" saía por cima das
+// casas da direita. A personalidade do tema segue nos títulos, no HUD e nos modais, onde
+// há espaço; aqui o que manda é caber.
 function TurnActionBtn({
   variant = 'primary',
   icon,
@@ -926,7 +895,7 @@ function TurnActionBtn({
       disabled={disabled}
       title={title}
       className={cn(
-        'px-5 py-3 display font-normal text-base tracking-wide gap-2',
+        'px-5 py-3 display display--tight font-normal text-base tracking-wide gap-2',
         variant === 'primary' &&
           'border border-gold-soft hover:bg-gold-glow hover:brightness-100 hover:shadow-[var(--shadow-glow)] disabled:hover:bg-gold disabled:hover:shadow-none',
         className,
@@ -1282,10 +1251,10 @@ function TradeRow({ trade, done, colorById }: { trade: Trade; done: boolean; col
     >
       <div className="flex items-center gap-1.5 min-w-0">
         <PlayerFace color={colorById[trade.fromId] ?? 'var(--color-ink-400)'} size={22} />
-        <span className="display text-cream text-sm leading-none truncate">{trade.fromId}</span>
+        <span className="display display--tight text-cream text-sm leading-none truncate">{trade.fromId}</span>
         <TradeArrowGlyph size={11} />
         <PlayerFace color={colorById[trade.toId] ?? 'var(--color-ink-400)'} size={22} />
-        <span className="display text-cream text-sm leading-none truncate">{trade.toId}</span>
+        <span className="display display--tight text-cream text-sm leading-none truncate">{trade.toId}</span>
         {done ? (
           <Chip className="ml-auto" title="Negociação aceita">
             <span className="text-gold"><CheckTinyGlyph size={9} /></span> Aceita
@@ -1641,8 +1610,9 @@ export function CenterArena() {
         }}
       />
 
-      {/* Fundo por tema: carta náutica (Atlas) · rosácea de cédula (Café) */}
-      {boardTheme === 'atlas' ? <ChartPattern /> : <GuillochePattern />}
+      {/* CENÁRIO por tema: carta náutica (Atlas) · poente synthwave (Fliperama) — um mundo
+          por tema, os dois em `glyphs/patterns`. */}
+      {boardTheme === 'neon' ? <GridPattern /> : <ChartPattern />}
 
       {boardTheme === 'atlas' ? (
         <>
@@ -1670,22 +1640,30 @@ export function CenterArena() {
         </>
       ) : (
         <>
-          {/* Moldura de cédula: dupla com tracejado + losangos nos meios */}
-          <div className="absolute inset-3 border-2 border-gold/25 rounded-[var(--radius-sharp)] pointer-events-none" />
-          <div className="absolute inset-[19px] border border-dashed border-gold/20 rounded-[var(--radius-sharp)] pointer-events-none" />
-          {(['t', 'b', 'l', 'r'] as const).map((e) => (
+          {/* Moldura de gabinete: filete de néon com cantoneiras acesas */}
+          <div
+            className="absolute inset-3 pointer-events-none rounded-[var(--radius-sharp)]"
+            style={{
+              border: '1px solid color-mix(in srgb, var(--color-group-skyblue) 45%, transparent)',
+              boxShadow: '0 0 14px -2px color-mix(in srgb, var(--color-group-purple) 55%, transparent)',
+            }}
+          />
+          {(['tl', 'tr', 'bl', 'br'] as const).map((c) => (
             <span
-              key={e}
-              className="absolute pointer-events-none rotate-45 bg-gold/40"
+              key={c}
+              className="absolute pointer-events-none"
               style={{
-                width: 7,
-                height: 7,
-                top: e === 't' ? 9 : e === 'b' ? 'auto' : '50%',
-                bottom: e === 'b' ? 9 : 'auto',
-                left: e === 'l' ? 9 : e === 'r' ? 'auto' : '50%',
-                right: e === 'r' ? 9 : 'auto',
-                marginLeft: e === 't' || e === 'b' ? -3.5 : 0,
-                marginTop: e === 'l' || e === 'r' ? -3.5 : 0,
+                width: 18,
+                height: 18,
+                top: c.includes('t') ? 9 : 'auto',
+                bottom: c.includes('b') ? 9 : 'auto',
+                left: c.includes('l') ? 9 : 'auto',
+                right: c.includes('r') ? 9 : 'auto',
+                borderTop: c.includes('t') ? '2px solid var(--color-group-pink)' : 'none',
+                borderBottom: c.includes('b') ? '2px solid var(--color-group-pink)' : 'none',
+                borderLeft: c.includes('l') ? '2px solid var(--color-group-pink)' : 'none',
+                borderRight: c.includes('r') ? '2px solid var(--color-group-pink)' : 'none',
+                filter: 'drop-shadow(0 0 4px color-mix(in srgb, var(--color-group-pink) 70%, transparent))',
               }}
             />
           ))}

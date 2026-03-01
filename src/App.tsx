@@ -56,12 +56,15 @@ export default function App() {
         </AccessoryErrorBoundary>
         <GameHUD />
         <AudioControl />
-        <ThemeControl />
         <PauseBanner />
         <ConnectionBanner />
         <CommandFailureToast />
         <DebugLogger />
       </OnlineGate>
+      {/* FORA do `OnlineGate` de propósito: o gate devolve a home antes de montar os
+          filhos, e o alternador de tema precisa existir na home também — é lá que a troca
+          se vê inteira (a tela de entrada é parte do tema). */}
+      <ThemeControl />
     </OrientationGate>
   )
 }

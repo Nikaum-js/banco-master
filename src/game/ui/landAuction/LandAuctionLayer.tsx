@@ -94,7 +94,7 @@ function LotCard(props: { lot: LandLot; now: number; cashAvail: number; onBid: (
       <div className="px-3 py-2.5 flex items-center gap-2 border-b border-coffee-500/60" style={{ background: `color-mix(in srgb, ${accent} 24%, transparent)` }}>
         <LandDeedIcon sq={sq} size={34} />
         <div className="min-w-0">
-          <p className="display text-cream text-sm leading-tight truncate">{sq.name}</p>
+          <p className="display display--tight text-cream text-sm leading-tight truncate">{sq.name}</p>
           <p className="label text-cream-muted leading-none">{isProp ? (sq as PropertySquare).capital ?? '' : sq.kind === 'airport' ? 'Aeroporto' : 'Utilidade'}</p>
         </div>
       </div>

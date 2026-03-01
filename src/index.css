@@ -4,6 +4,12 @@
 @import "@fontsource/bebas-neue/400.css";
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/roboto-slab";
+/* Fonte de PERSONALIDADE do tema Fliperama (subconjunto latino só — o resto do
+   arquivo do fontsource é peso morto pra um jogo em pt-BR): Press Start 2P é a
+   fonte de gabinete de arcade de verdade. Entra apenas como `--font-display` do
+   tema, e NUNCA dentro da casa do tabuleiro — lá o nome da cidade é medido em
+   14px fixos e só cabe em condensada. */
+@import "@fontsource/press-start-2p/latin-400.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -199,104 +205,145 @@
 }
 
 /* =====================================================================
-   Tema de tabuleiro — "Café Coado" (legado, selecionável em runtime)
-   Ativado via data-board-theme="cafe" no <html> (store useBoardTheme).
-   O default (sem atributo) é o Atlas da Meia-Noite definido no @theme.
-   Como TODA a UI resolve cor via var(--color-*), trocar o atributo troca
-   a pele inteira — casas, glifos, popovers, painéis — sem re-render.
+   TEMAS DO APP (skin inteira, selecionável em runtime)
+   Ativados por data-board-theme no <html> (store `useBoardTheme`). O default
+   do `@theme` acima é o ATLAS — vale no primeiro paint, antes de a preferência
+   re-hidratar. Como TODA a UI resolve cor por var(--color-*) e fonte por
+   var(--font-*), trocar o atributo troca a pele inteira: casas, glifos,
+   popovers, painéis, HUD, modais e a tela de entrada — sem re-render.
+
+     atlas → carta náutica noturna · tinta azul · latão · Bebas condensada
+     neon  → synthwave · roxo/ciano/rosa · corpo monoespaçado · tubo de imagem
+
+   TAMANHO de fonte nunca muda por tema (quebraria o tabuleiro, que fixa 14px
+   no nome da cidade): o que muda é a FAMÍLIA e o tracking que a compensa.
    ===================================================================== */
-:root[data-board-theme="cafe"] {
-  /* escala tinta → escala café (papel envelhecido) */
-  --color-ink-50:  #f4e8d0;
-  --color-ink-100: #d9c9a5;
-  --color-ink-200: #b89e7a;
-  --color-ink-300: #8c7556;
-  --color-ink-400: #5c4a36;
-  --color-ink-500: #3d3528;
-  --color-ink-600: #2d271f;
-  --color-ink-700: #252018;
-  --color-ink-800: #1f1a13;
-  --color-ink-900: #1a1410;
-  --color-ink-950: #0f0c09;
-  --color-ink-abyss: #0a0805;
 
-  /* acentos: starlight→cream, latão→ouro, signal→vermelho logo */
-  --color-starlight: #f4e8d0;
-  --color-starlight-muted: #a89683;
-  --color-brass: #d4af37;
-  --color-brass-soft: #b8941f;
-  --color-brass-glow: #ffd97a;
-  --color-signal: #dc2626;
-  --color-signal-deep: #991b1b;
-  --color-signal-glow: #e8836f;
+/* ---------------------------------------------------------------------
+   FLIPERAMA NEON — a cidade acesa vista de dentro de um tubo de imagem.
+   --------------------------------------------------------------------- */
+:root[data-board-theme="neon"] {
+  /* escala tinta → violeta profundo */
+  --color-ink-50:  #f6f2ff;
+  --color-ink-100: #ded2ff;
+  --color-ink-200: #b9a6ee;
+  --color-ink-300: #8e79c9;
+  --color-ink-400: #5f4b96;
+  --color-ink-500: #402f72;
+  --color-ink-600: #2e2158;
+  --color-ink-700: #241a48;
+  --color-ink-800: #190f38;
+  --color-ink-900: #120927;
+  --color-ink-950: #08041a;
+  --color-ink-abyss: #05010f;
 
-  /* grupos na cartela original */
-  --color-group-brown:   #b07a4a;
-  --color-group-skyblue: #67c3e0;
-  --color-group-pink:    #ec4899;
-  --color-group-orange:  #fb923c;
-  --color-group-red:     #ef4444;
-  --color-group-yellow:  #facc15;
-  --color-group-green:   #22c55e;
-  --color-group-navy:    #3b82f6;
-  --color-group-purple:  #a855f7;
-  --color-group-platinum: #c4c9d2; /* mesma prata/platina do Atlas — precisa destacar sobre a tinta escura em qualquer tema */
+  /* acentos: o "metal" deste mundo é o tubo de neon ciano, não o latão */
+  --color-starlight: #f6f2ff;
+  --color-starlight-muted: #b6a7e2;
+  --color-brass: #56cdec;
+  --color-brass-soft: #2f9dbd;
+  --color-brass-glow: #a5e8fa;
+  --color-signal: #ff4d6d;
+  --color-signal-deep: #b81b3c;
+  --color-signal-glow: #ff96ab;
 
-  /* sombras sépia (pretas), glow de ouro */
-  --shadow-card:    0 1px 0 0 #0f0c09, 0 2px 8px -2px rgb(0 0 0 / 0.6);
-  --shadow-lift:    0 8px 24px -8px rgb(0 0 0 / 0.7), 0 2px 6px -2px rgb(0 0 0 / 0.4);
-  --shadow-dropdown:0 16px 40px -12px rgb(0 0 0 / 0.85);
-  --shadow-glow:    0 0 0 1px rgb(212 175 55 / 0.4), 0 0 28px -4px rgb(212 175 55 / 0.35);
-  --shadow-press:   inset 0 2px 4px 0 rgb(0 0 0 / 0.5);
+  /* grupos na cartela de arcade — mais saturados que no atlas */
+  --color-group-brown:   #e0913f;
+  --color-group-skyblue: #5ce1ff;
+  --color-group-pink:    #ff5fae;
+  --color-group-orange:  #ffa036;
+  --color-group-red:     #ff4f52;
+  --color-group-yellow:  #ffe14a;
+  --color-group-green:   #3bf58b;
+  --color-group-navy:    #5b9dff;
+  --color-group-purple:  #b478ff;
+  --color-group-platinum: #d5dae6;
+
+  /* tipografia: o CORPO vira monoespaçado (terminal de gabinete) e o número
+     também; o display segue condensado — trocar a família do display alargaria
+     o nome das cidades dentro da casa, que é medida em 14px fixos. */
+  --font-sans: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-slab: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  /* Display = a fonte de gabinete de arcade DE VERDADE (Press Start 2P). Ela é
+     larguíssima e quadrada: vale nos títulos e no HUD, e o bloco abaixo a tira de
+     dentro da casa do tabuleiro, onde só condensada cabe. */
+  --font-display: "Press Start 2P", ui-monospace, monospace;
+  /* monoespaçada já é larga: o tracking cede o que a família tomou */
+  --tracking-mono: 0.03em;
+  --tracking-caps: 0.2em;
+  --tracking-display: 0;
+
+  /* sombras: menos preto, mais halo de tubo */
+  --shadow-card:    0 1px 0 0 #05010f, 0 2px 8px -2px rgb(5 1 15 / 0.7);
+  --shadow-lift:    0 8px 24px -8px rgb(5 1 15 / 0.8), 0 0 18px -6px rgb(167 107 245 / 0.5);
+  --shadow-dropdown:0 16px 40px -12px rgb(5 1 15 / 0.92), 0 0 24px -8px rgb(86 205 236 / 0.45);
+  --shadow-glow:    0 0 0 1px rgb(86 205 236 / 0.45), 0 0 26px -4px rgb(86 205 236 / 0.5);
+  --shadow-press:   inset 0 2px 4px 0 rgb(5 1 15 / 0.6);
 
   /* shadcn re-pintado */
-  --background: #1a1410;
-  --foreground: #f4e8d0;
-  --card: #252018;
-  --card-foreground: #f4e8d0;
-  --popover: #252018;
-  --popover-foreground: #f4e8d0;
-  --primary: #d4af37;
-  --primary-foreground: #1a1410;
-  --secondary: #3d3528;
-  --secondary-foreground: #f4e8d0;
-  --muted: #2d271f;
-  --muted-foreground: #a89683;
-  --accent: #3d3528;
-  --accent-foreground: #f4e8d0;
-  --destructive: #dc2626;
-  --destructive-foreground: #f4e8d0;
-  --border: #3d3528;
-  --input: #3d3528;
-  --ring: #d4af37;
+  --background: #120927;
+  --foreground: #f6f2ff;
+  --card: #241a48;
+  --card-foreground: #f6f2ff;
+  --popover: #241a48;
+  --popover-foreground: #f6f2ff;
+  --primary: #56cdec;
+  --primary-foreground: #08041a;
+  --secondary: #402f72;
+  --secondary-foreground: #f6f2ff;
+  --muted: #2e2158;
+  --muted-foreground: #b6a7e2;
+  --accent: #402f72;
+  --accent-foreground: #f6f2ff;
+  --destructive: #ff4d6d;
+  --destructive-foreground: #08041a;
+  --border: #402f72;
+  --input: #402f72;
+  --ring: #56cdec;
 }
 
-/* Fundo do Café Coado: papel envelhecido (turbulência SVG em overlay) no
-   lugar do graticule, e vinheta sépia sem aurora. */
-:root[data-board-theme="cafe"] body::before {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1, 0 0 0 0 0.91, 0 0 0 0 0.82, 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 240px 240px;
-  mix-blend-mode: overlay;
-  opacity: 0.05;
+/* Fundo do Fliperama: grade fina em ciano + LINHAS DE VARREDURA. A varredura
+   anda, mas em `steps(4)` num ciclo longo — quatro repaints a cada 6s, não 60
+   por segundo: fundo de tela cheia animado a cada frame custaria a partida. */
+:root[data-board-theme="neon"] body::before {
+  background-image:
+    repeating-linear-gradient(180deg, rgb(255 255 255 / 0.035) 0 1px, transparent 1px 3px),
+    linear-gradient(to right,  rgb(86 205 236 / 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(242 88 156 / 0.06) 1px, transparent 1px);
+  background-size: 100% 3px, 54px 54px, 54px 54px;
+  animation: bm-scan 6s steps(4, end) infinite;
 }
-:root[data-board-theme="cafe"] body::after {
-  background: radial-gradient(
-    ellipse at center,
-    transparent 40%,
-    rgb(0 0 0 / 0.4) 100%
-  );
+@keyframes bm-scan {
+  to { background-position: 0 3px, 0 0, 0 0; }
+}
+:root[data-board-theme="neon"] body::after {
+  background:
+    radial-gradient(ellipse 80% 40% at 50% 108%, rgb(242 88 156 / 0.18) 0%, transparent 62%),
+    radial-gradient(ellipse 70% 40% at 50% -8%, rgb(86 205 236 / 0.1) 0%, transparent 60%),
+    radial-gradient(ellipse at center, transparent 38%, rgb(5 1 15 / 0.72) 100%);
+}
+
+
+/* DENTRO DA CASA, a condensada continua. O nome da cidade é desenhado em 14px FIXOS
+   (boards/shared.tsx) e só cabe em condensada: medido, Press Start 2P fazia "Los
+   Angeles" invadir a casa vizinha e as laterais giradas se atropelarem. Redefinir o
+   TOKEN na subárvore resolve sem `font-family` em elemento nenhum — a personalidade
+   do tema segue valendo em todo o resto da interface. */
+:root[data-board-theme="neon"] .board-square {
+  --font-display: "Bebas Neue", "Oswald", system-ui, sans-serif;
+  --tracking-display: 0.04em;
 }
 
 /* =====================================================================
    Cromo por tema — a ESTRUTURA muda, não só a cor.
    Atlas: placas de carta náutica (marcas de registro nos cantos das casas,
-   régua de graduação na moldura). Café: casas de PAPEL CLARO com perfuração
-   de selo postal, tinta escura e tipografia slab de impressão antiga.
+   régua de graduação na moldura). Fliperama: contorno de tubo com cantoneiras
+   acesas.
    Pseudo-elementos usam ::before pra pintar ABAIXO do conteúdo da casa.
    ===================================================================== */
 
-/* ---- Atlas (default): marcas de registro nos cantos das casas ---- */
-:root:not([data-board-theme="cafe"]) .board-square::before {
+/* ---- Atlas (default, inclusive antes de a preferência re-hidratar) ---- */
+:root:not([data-board-theme="neon"]) .board-square::before {
   content: "";
   position: absolute;
   inset: 3px;
@@ -313,9 +360,7 @@
     linear-gradient(var(--tick), var(--tick)) right bottom/ 1px 6px;
   background-repeat: no-repeat;
 }
-
-/* ---- Atlas: régua de graduação na moldura do tabuleiro ---- */
-:root:not([data-board-theme="cafe"]) .board-frame::before {
+:root:not([data-board-theme="neon"]) .board-frame::before {
   content: "";
   position: absolute;
   inset: 2px;
@@ -330,29 +375,34 @@
   background-repeat: no-repeat;
 }
 
-/* ---- Café: perfuração de selo postal em ouro velho, sobre o papel
-   escuro original (as casas mantêm a superfície sépia do Café Coado —
-   papel claro quebrava a largura dos nomes e o contraste do conjunto) ---- */
-:root[data-board-theme="cafe"] .board-square::before {
+/* ---- Fliperama: cantoneiras acesas nas quinas da casa (o "L" de HUD de
+   arcade), em rosa sobre o filete ciano ---- */
+:root[data-board-theme="neon"] .board-square::before {
   content: "";
   position: absolute;
-  inset: 3px;
+  inset: 2.5px;
   pointer-events: none;
-  border: 1px dashed rgb(212 175 55 / 0.26); /* perfuração do selo */
-  border-radius: 1px;
+  --edge: color-mix(in srgb, var(--color-group-pink) 75%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-brass) 20%, transparent);
+  background:
+    linear-gradient(var(--edge), var(--edge)) left top    / 7px 2px,
+    linear-gradient(var(--edge), var(--edge)) left top    / 2px 7px,
+    linear-gradient(var(--edge), var(--edge)) right bottom/ 7px 2px,
+    linear-gradient(var(--edge), var(--edge)) right bottom/ 2px 7px;
+  background-repeat: no-repeat;
 }
-
-/* ---- Café: moldura de Historico (dupla, ouro velho) ---- */
-:root[data-board-theme="cafe"] .board-frame::before {
+:root[data-board-theme="neon"] .board-frame::before {
   content: "";
   position: absolute;
   inset: 3px;
   z-index: 1;
   pointer-events: none;
-  border: 1px solid rgb(212 175 55 / 0.4);
-  outline: 1px dashed rgb(212 175 55 / 0.22);
-  outline-offset: -5px;
+  border: 1px solid color-mix(in srgb, var(--color-brass) 40%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--color-group-pink) 30%, transparent);
+  outline-offset: -6px;
+  box-shadow: 0 0 18px -4px color-mix(in srgb, var(--color-group-purple) 65%, transparent);
 }
+
 
 /* =====================================================================
    Base layer — defaults com personalidade
@@ -469,6 +519,18 @@
     font-variant-numeric: tabular-nums;
     font-weight: 500;
     letter-spacing: var(--tracking-tight);
+  }
+
+  /* Display em CAIXA DE LARGURA CRÍTICA — a que corta com ellipsis (nome de jogador no
+     card, propriedade em linha de negociação/leilão) e a que simplesmente não pode
+     crescer (os botões de ação do turno, numa coluna de 280px fixos). Nos temas cuja
+     display é larga — Press Start 2P no Fliperama — a condensada volta aqui: sem isso,
+     "JOGADOR 1" virava "JO…" e o par "Comprar R$ 100"/"Leilão" estourava a coluna por
+     cima das casas. A personalidade do tema segue nos títulos, no HUD e nos
+     modais, onde há espaço. */
+  .display--tight {
+    font-family: "Bebas Neue", "Oswald", system-ui, sans-serif;
+    letter-spacing: 0.04em;
   }
 
   /* Etiqueta pequena com letterspacing — "ALUGUEL", "VALOR" */
@@ -785,11 +847,23 @@
     to   { transform: translateX(1720px); }
   }
 
-  /* Token de latão passeando pela trilha do rodapé — mesma mecânica de
-     `.entry-flyer`, mas com timing em STEPS: a peça pula de casa em casa em vez
-     de deslizar, que é como um peão anda num tabuleiro. O número de passos vem
-     inline (uma passada = uma casa da trilha). */
-  .entry-hop { animation-timing-function: steps(30, end) !important; }
+  /* Janelas do horizonte de cidade (entryShell/CityHorizon) — acendem e apagam em
+     ritmos próprios: o atraso vem inline, do mesmo gerador determinístico que planta
+     os prédios. Uma cidade que pisca junto pareceria um pisca-pisca de Natal. */
+  .entry-window {
+    opacity: 0.5;
+    animation: entry-window 11s var(--ease-standard) infinite;
+  }
+  @keyframes entry-window {
+    0%, 38%   { opacity: 0.5; }
+    40%, 46%  { opacity: 0.08; }
+    48%, 74%  { opacity: 0.62; }
+    76%, 80%  { opacity: 0.16; }
+    82%, 100% { opacity: 0.5; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .entry-window { animation: none; }
+  }
 
   /* Wordmark — varredura de luz de latão atravessando as letras a cada ciclo.
      É uma CÓPIA do título por cima, com o gradiente recortado no desenho das
@@ -916,55 +990,19 @@
     .flap-anim { animation: none; }
   }
 
-  /* =================================================================
-     Ação primária da entrada — botão de latão com varredura de brilho no
-     hover e realce de luz na borda. Estende o `Button` primário (mesma
-     régua de padding/foco) em vez de reinventá-lo.
-     ================================================================= */
+  /* Ação primária da entrada — superfície de tinta com latão contido.
+     O botão anterior era uma placa dourada grande demais para o cartão. */
   .cta-embark {
     position: relative;
     overflow: hidden;
+    letter-spacing: 0.025em;
     box-shadow:
-      inset 0 1px 0 0 rgb(255 255 255 / 0.35),
-      0 6px 18px -8px rgb(217 166 80 / 0.75);
+      inset 0 1px 0 color-mix(in srgb, var(--color-brass) 18%, transparent),
+      0 5px 14px -10px color-mix(in srgb, var(--color-brass) 60%, transparent);
   }
-  /* A lâmina de luz é um retângulo estreito ESTACIONADO fora do botão, que
-     atravessa no hover. Posição por transform (não por background-position):
-     é o único jeito de garantir que, parado, nada dela apareça na face. */
-  .cta-embark::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: -55%;
-    width: 42%;
-    pointer-events: none;
-    background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.55), transparent);
-    transform: translateX(0);
-    transition: transform 700ms var(--ease-paper);
-  }
-  .cta-embark:hover::after,
-  .cta-embark:focus-visible::after { transform: translateX(330%); }
-  @media (prefers-reduced-motion: reduce) {
-    .cta-embark::after { transition: none; }
-  }
-
-  /* Halo pulsante do CTA — anel de latão respirando atrás do botão, o único
-     ponto da tela que se move sozinho DENTRO do painel (guia o olho pra ação). */
-  .cta-halo {
-    position: absolute;
-    inset: -3px;
-    border-radius: var(--radius-sharp);
-    pointer-events: none;
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-brass) 45%, transparent);
-    animation: cta-breathe 3.4s var(--ease-paper) infinite;
-  }
-  @keyframes cta-breathe {
-    0%, 100% { opacity: 0.25; transform: scale(1); }
-    50%      { opacity: 0.75; transform: scale(1.012); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .cta-halo { animation: none; opacity: 0.4; }
+  .cta-embark:hover,
+  .cta-embark:focus-visible {
+    filter: none;
   }
 
   /* Input das telas de entrada — vão de tinta funda com foco em latão. */
@@ -996,5 +1034,579 @@
     word-break: keep-all;
     hyphens: manual;
     text-wrap: balance;
+  }
+}
+
+/* =====================================================================
+   TELAS DE ENTRADA POR TEMA (src/net/ui/home/) — cada tema tem a SUA home, e o
+   botão de tema (canto inferior esquerdo) troca as duas coisas juntas. A do
+   Atlas já vive nas regras acima (.entry-*, .pass-*, .flap-*, .cta-*); aqui
+   mora a do Fliperama Neon, mais o alternador de tema.
+   ===================================================================== */
+@layer components {
+  /* =================================================================
+     TEMA "neon" — a home do Fliperama Neon (fusão de duas telas que eram parecidas)
+     As duas telas anteriores — "Metrópole Neon" e "Fliperama" — dividiam o
+     mesmo mundo (cidade acesa à noite, roxo/ciano/rosa) e brigavam pelo mesmo
+     lugar. Esta é uma só, com o melhor lado de cada:
+
+       da METRÓPOLE  →  sol partido no horizonte, piso em grade fugindo pro
+                        ponto de fuga, skyline com janelas nas cores dos grupos
+                        e torres-mastro, névoa de horizonte e o TICKER de
+                        cidades e preços vindos do tabuleiro;
+       do FLIPERAMA  →  letreiro em PIXEL de matriz 5×7 que boota, o tubo de
+                        imagem por cima (varredura, barra de sincronia, cantos
+                        escuros), o placar no topo, "insert coin" piscando,
+                        moedas caindo e o hardware do gabinete no painel
+                        (canto reto, contorno grosso, botão com espessura).
+
+     O que ficou de fora foi escolha, não esquecimento: as faíscas subindo do
+     neon saíram porque as moedas caindo já dão o movimento vertical (duas
+     coisas em sentidos opostos viravam sujeira), e o xadrez de chão do
+     fliperama saiu porque a grade em perspectiva faz o mesmo trabalho melhor.
+     ================================================================= */
+  .neon-stage {
+    --neon-cyan: #56cdec;
+    --neon-pink: #f2589c;
+    --neon-violet: #a76bf5;
+    --neon-text: #d7c9ff;
+    background-color: #07021a;
+    color: #f4f0ff;
+    font-family: ui-monospace, SFMono-Regular, "Courier New", monospace;
+  }
+
+  .neon-sky {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(120% 58% at 50% 82%, rgb(242 88 156 / 0.2) 0%, transparent 62%),
+      linear-gradient(180deg, #06021a 0%, #170a3b 32%, #33104e 54%, #5c1550 70%, #170a2e 100%);
+  }
+
+  /* O sol é uma CÚPULA (meio disco) apoiada na linha do horizonte, na altura
+     exata da base da cidade: disco inteiro descia abaixo dela e o sol parecia
+     estar na avenida, na frente dos prédios. As fendas clássicas engrossam pra
+     baixo — são uma sobreposição escura, não uma máscara: máscara recortaria o
+     glow junto, e é o glow que faz a cena. A cúpula é baixa e larga de
+     propósito: assim ela aparece dos DOIS lados do painel e nunca sobe até o
+     texto. */
+  .neon-sun {
+    position: absolute;
+    left: 50%;
+    bottom: 33.3%;
+    width: 86vmin;
+    height: 16vmin;
+    margin-left: -43vmin;
+    border-radius: 43vmin 43vmin 0 0;
+    background: linear-gradient(180deg, #ffeeb8 0%, #ffd23f 22%, #ff9b45 55%, #f2589c 100%);
+    box-shadow: 0 0 18vmin -1vmin rgb(255 155 69 / 0.5);
+    overflow: hidden;
+  }
+  .neon-sun::after {
+    content: "";
+    position: absolute;
+    inset: 22% 0 0 0;
+    --slit: rgb(9 3 26 / 0.92);
+    background: linear-gradient(
+      180deg,
+      transparent 0 6%,
+      var(--slit) 6% 9%,
+      transparent 9% 18%,
+      var(--slit) 18% 23%,
+      transparent 23% 34%,
+      var(--slit) 34% 40%,
+      transparent 40% 52%,
+      var(--slit) 52% 60%,
+      transparent 60% 74%,
+      var(--slit) 74% 100%
+    );
+  }
+
+  /* Piso em grade: um plano alto deitado por perspectiva, com a grade correndo
+     PARA a câmera. Anima `background-position` (composita) e desbota antes do
+     horizonte por máscara — grade que chega até a linha do céu mata a
+     profundidade. Menos inclinação = mais chão: a 73° sobrava uma faixa de 10%
+     da tela e a grade não se lia. */
+  .neon-floor {
+    position: absolute;
+    left: -30%;
+    right: -30%;
+    bottom: 0;
+    height: 90vh;
+    transform: perspective(560px) rotateX(66deg);
+    transform-origin: bottom center;
+    background-image:
+      repeating-linear-gradient(to right, rgb(120 226 250 / 0.85) 0 1.5px, transparent 1.5px 86px),
+      repeating-linear-gradient(to bottom, rgb(255 122 184 / 0.8) 0 1.5px, transparent 1.5px 40px);
+    -webkit-mask-image: linear-gradient(to top, #000 0 42%, transparent 88%);
+    mask-image: linear-gradient(to top, #000 0 42%, transparent 88%);
+    animation: neon-floor-run 2.6s linear infinite;
+  }
+  @keyframes neon-floor-run {
+    to { background-position: 0 0, 0 40px; }
+  }
+
+  /* Névoa acesa na linha do horizonte — é o que "cola" o skyline no piso. */
+  .neon-haze {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 58%;
+    height: 22vh;
+    background: linear-gradient(180deg, transparent, rgb(242 88 156 / 0.16) 55%, transparent);
+    filter: blur(24px);
+  }
+
+  /* A cidade ROLA (herança do fliperama): cada faixa é desenhada duas vezes e o
+     grupo anda a largura de um padrão, então a volta não tem emenda. Duas
+     velocidades = parallax. */
+  .neon-scroll { animation: neon-scroll linear infinite; }
+  .neon-scroll--far { animation-duration: 72s; }
+  .neon-scroll--near { animation-duration: 42s; }
+  @keyframes neon-scroll {
+    to { transform: translateX(-1440px); }
+  }
+
+  /* Janelas e balizas do skyline — o atraso vem inline (gerador semeado no TSX). */
+  .neon-window { animation: neon-window 9s steps(1, end) infinite; }
+  @keyframes neon-window {
+    0%, 41%   { opacity: 0.9; }
+    43%, 47%  { opacity: 0.1; }
+    49%, 71%  { opacity: 0.75; }
+    73%, 76%  { opacity: 0.18; }
+    78%, 100% { opacity: 0.9; }
+  }
+  .neon-beacon { animation: neon-beacon 2.2s var(--ease-standard) infinite; }
+  @keyframes neon-beacon {
+    0%, 100% { opacity: 0.25; }
+    50%      { opacity: 1; }
+  }
+
+  /* Moedas caindo da borda de cima, em passos discretos (nada de queda suave:
+     é uma tela de 60Hz dos anos 80). Delay negativo espalha a chuva. */
+  .neon-coin {
+    position: absolute;
+    top: -18px;
+    width: 12px;
+    height: 12px;
+    background: radial-gradient(circle at 50% 50%, #fff3c4 0 26%, #ffd23f 26% 62%, #b8842f 62% 82%, transparent 82%);
+    animation-name: neon-coin;
+    animation-timing-function: steps(18, end);
+    animation-iteration-count: infinite;
+  }
+  @keyframes neon-coin {
+    0%   { transform: translateY(0); opacity: 0; }
+    9%   { opacity: 1; }
+    100% { transform: translateY(106vh); opacity: 1; }
+  }
+
+  /* ---- Tubo de imagem (do fliperama): varredura, sincronia e cantos ---- */
+  .neon-scan {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(180deg, rgb(0 0 0 / 0.3) 0 2px, transparent 2px 4px);
+  }
+  .neon-roll {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 16vh;
+    background: linear-gradient(180deg, transparent, rgb(255 255 255 / 0.06), transparent);
+    animation: neon-roll 7.5s linear infinite;
+  }
+  @keyframes neon-roll {
+    from { transform: translateY(-20vh); }
+    to   { transform: translateY(120vh); }
+  }
+  .neon-crt {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 74% 68% at 50% 50%, transparent 46%, rgb(0 0 0 / 0.92) 100%);
+  }
+
+  /* Placar do gabinete, colado no topo como em toda tela de atração. */
+  .neon-hud {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.55rem 1rem;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--neon-cyan);
+    text-shadow: 2px 2px 0 #17032e;
+  }
+  .neon-hud b { color: #ffd23f; }
+  .neon-hud__mid { color: var(--neon-pink); }
+
+  /* Letreiro: pixel de verdade (matriz 5×7 em retângulos, do fliperama) com o
+     GLOW de tubo de neon (do estilo 2) por cima — franja ciano/rosa e sombra
+     dura. É o ponto onde as duas telas viraram uma. */
+  .neon-pixelmark svg {
+    display: block;
+    margin-inline: auto;
+    width: min(56vw, 430px);
+    height: auto;
+    filter:
+      drop-shadow(-2px 0 0 rgb(86 205 236 / 0.55))
+      drop-shadow(2px 0 0 rgb(242 88 156 / 0.55))
+      drop-shadow(0 0 18px rgb(167 107 245 / 0.65))
+      drop-shadow(0 5px 0 rgb(0 0 0 / 0.85));
+  }
+
+  .neon-tube {
+    height: 2px;
+    width: min(19rem, 70vw);
+    margin-inline: auto;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(90deg, transparent, var(--neon-cyan) 20%, #fff 50%, var(--neon-pink) 80%, transparent);
+    box-shadow: 0 0 14px rgb(167 107 245 / 0.9);
+    animation: neon-buzz 3.1s var(--ease-standard) infinite;
+  }
+  @keyframes neon-buzz {
+    0%, 100% { opacity: 0.75; }
+    50%      { opacity: 1; }
+  }
+
+  .neon-blink {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.26em;
+    color: #ffd23f;
+    animation: neon-blink 1.25s steps(1, end) infinite;
+  }
+  @keyframes neon-blink {
+    0%, 58%   { opacity: 1; }
+    59%, 100% { opacity: 0.3; }
+  }
+  .neon-sub {
+    font-size: 0.82rem;
+    color: #efe7ff;
+    text-shadow: 0 1px 10px rgb(6 2 18 / 0.95), 0 0 26px rgb(6 2 18 / 0.8);
+  }
+
+  /* Painel: o VIDRO da fachada (glow violeta, marquise de lâmpadas correndo) com
+     o HARDWARE do gabinete (canto reto, contorno grosso de 1 bit, cabeçalho
+     invertido). Nenhum dos dois painéis anteriores tinha as duas coisas. */
+  .neon-card {
+    position: relative;
+    overflow: hidden;
+    border: 3px solid #e9e4ff;
+    background: linear-gradient(180deg, rgb(22 9 47 / 0.96) 0%, rgb(7 2 20 / 0.97) 100%);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.12),
+      0 0 40px -6px rgb(167 107 245 / 0.75),
+      0 22px 50px -20px #000;
+    backdrop-filter: blur(6px);
+  }
+  /* Fileira de lâmpadas de marquise, com a luz CORRENDO pela fileira: os pontos
+     são um gradiente repetido, e o brilho que passa é o mesmo desenho usado como
+     máscara — assim a luz só existe onde há lâmpada. */
+  .neon-marquee {
+    --bulbs: repeating-radial-gradient(circle at 7px 5px, #ffe6a8 0 2.2px, transparent 2.6px 15px);
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 10px;
+    background-image: var(--bulbs);
+    opacity: 0.8;
+  }
+  .neon-marquee::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(90deg, transparent, #fff 45%, transparent 70%);
+    background-size: 45% 100%;
+    background-repeat: no-repeat;
+    -webkit-mask-image: var(--bulbs);
+    mask-image: var(--bulbs);
+    animation: neon-chase 2.8s linear infinite;
+  }
+  @keyframes neon-chase {
+    from { background-position: -60% 0; }
+    to   { background-position: 160% 0; }
+  }
+  .neon-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 10px;
+    padding: 0.5rem 0.8rem;
+    background-color: #e9e4ff;
+    color: #1a0b33;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+  .neon-card__head .neon-dot { background-color: #c22a72; box-shadow: none; }
+
+  .neon-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .neon-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-pill);
+    background-color: currentColor;
+    box-shadow: 0 0 8px currentColor;
+    animation: neon-beacon 1.8s var(--ease-standard) infinite;
+  }
+
+  .neon-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--neon-cyan);
+  }
+  .neon-input {
+    padding: 0.6rem 0.8rem;
+    background-color: #05030f;
+    border: 3px solid #4b3b7a;
+    border-radius: 0;
+    color: #ffd23f;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 1rem;
+    transition: border-color var(--motion-base) var(--ease-standard),
+                box-shadow var(--motion-base) var(--ease-standard);
+  }
+  .neon-input::placeholder { color: #6b5aa0; }
+  .neon-input:focus {
+    outline: none;
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 0 3px rgb(86 205 236 / 0.25), 0 0 22px -4px rgb(86 205 236 / 0.7);
+  }
+
+  /* Ação primária: o rosa que pulsa (metrópole) com a espessura sólida e a seta
+     piscando (fliperama) — apertar consome a espessura. */
+  .neon-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.9rem 1rem;
+    border: 0;
+    border-radius: 0;
+    background: linear-gradient(180deg, #ff8cc3 0%, #f2589c 45%, #c22a72 100%);
+    color: #1a0512;
+    font-weight: 800;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    box-shadow: 0 6px 0 0 #7d1749, 0 0 26px -4px rgb(242 88 156 / 0.85);
+    animation: neon-cta-pulse 3s var(--ease-standard) infinite;
+    transition: transform var(--motion-fast) var(--ease-press), filter var(--motion-fast) var(--ease-standard);
+  }
+  .neon-cta:hover { filter: brightness(1.08); }
+  .neon-cta:active { transform: translateY(5px); }
+  @keyframes neon-cta-pulse {
+    0%, 100% { box-shadow: 0 6px 0 0 #7d1749, 0 0 20px -6px rgb(242 88 156 / 0.7); }
+    50%      { box-shadow: 0 6px 0 0 #7d1749, 0 0 34px -2px rgb(242 88 156 / 0.95); }
+  }
+  .neon-cta__arrow {
+    width: 0;
+    height: 0;
+    border-left: 9px solid #1a0512;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    animation: neon-arrow 0.7s steps(2, end) infinite alternate;
+  }
+  @keyframes neon-arrow {
+    from { transform: translateX(0); }
+    to   { transform: translateX(5px); }
+  }
+
+  .neon-ghost {
+    padding: 0.6rem 0.7rem;
+    background-color: #2a1a52;
+    border: 3px solid #4b3b7a;
+    border-radius: 0;
+    color: #cfe9f6;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    box-shadow: 0 4px 0 0 #180d33;
+    transition: transform var(--motion-fast) var(--ease-press), box-shadow var(--motion-fast) var(--ease-press),
+                background-color var(--motion-fast) var(--ease-standard);
+  }
+  .neon-ghost:hover:not(:disabled) { background-color: #3a2470; border-color: var(--neon-cyan); }
+  .neon-ghost:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 0 #180d33; }
+  .neon-ghost:disabled { opacity: 0.42; cursor: not-allowed; }
+  .neon-ghost--go { background-color: #f2589c; color: #1a0b33; border-color: #8f1b52; }
+  .neon-ghost--go:hover:not(:disabled) { background-color: #ff74ae; border-color: #ffb4d4; }
+
+  /* Ticker da bolsa de imóveis — trilha DUPLICADA no TSX e deslocada por metade:
+     a emenda cai exatamente onde o conteúdo se repete, então a volta é contínua. */
+  .neon-ticker {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2.1rem;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    background-color: rgb(6 2 18 / 0.86);
+    border-top: 2px solid rgb(242 88 156 / 0.7);
+    box-shadow: 0 -8px 24px -12px rgb(242 88 156 / 0.6);
+  }
+  .neon-ticker__rail {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding-left: 2rem;
+    white-space: nowrap;
+    animation: neon-ticker 70s linear infinite;
+  }
+  @keyframes neon-ticker {
+    to { transform: translateX(-50%); }
+  }
+  .neon-ticker__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #e6dcff;
+  }
+  .neon-ticker__item b {
+    font-family: var(--font-slab);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    color: #ffd23f;
+  }
+  .neon-ticker__pip {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-pill);
+    box-shadow: 0 0 7px currentColor;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .neon-floor,
+    .neon-scroll,
+    .neon-roll,
+    .neon-window,
+    .neon-beacon,
+    .neon-dot,
+    .neon-blink,
+    .neon-tube,
+    .neon-cta,
+    .neon-cta__arrow,
+    .neon-marquee::after,
+    .neon-ticker__rail { animation: none; }
+    .neon-coin { display: none; }
+  }
+  /* =================================================================
+     Tela BAIXA (paisagem de celular) na home do Fliperama — mesmo princípio da do Atlas:
+     o que é ambiente sai primeiro, e o formulário cabe sem rolagem. Em 390px de
+     altura, placar, ticker, subtítulo e letreiro grande empurravam os botões
+     secundários para fora da dobra.
+     ================================================================= */
+  @media (max-height: 640px) {
+    .neon-sub,
+    .neon-tube,
+    .neon-blink,
+    .neon-hud,
+    .neon-ticker,
+    .neon-marquee { display: none; }
+    .neon-coin { display: none; }
+    .neon-pixelmark svg { width: min(36vw, 210px); }
+    .neon-card__head { margin-top: 0; padding-block: 0.4rem; }
+  }
+
+  /* =================================================================
+     Alternador de TEMA (ThemeControl) — canto inferior esquerdo, acima do
+     controle de áudio. É o único elemento que não muda de pele por tema: ele
+     precisa ser reconhecível como controle do app em qualquer um dos três.
+     Em repouso é só o glifo; o nome do tema cresce no hover/foco.
+     ================================================================= */
+  .theme-control {
+    position: fixed;
+    left: 0.75rem;
+    bottom: 3.5rem;
+    z-index: 80;
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    height: 2.25rem;
+    padding: 0 0.6rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid color-mix(in srgb, var(--color-brass) 45%, transparent);
+    background-color: color-mix(in srgb, var(--color-ink-950) 78%, transparent);
+    color: var(--color-starlight);
+    backdrop-filter: blur(6px);
+    box-shadow: var(--shadow-lift);
+    transition: color var(--motion-base) var(--ease-standard),
+                border-color var(--motion-base) var(--ease-standard),
+                background-color var(--motion-base) var(--ease-standard);
+  }
+  .theme-control:hover,
+  .theme-control:focus-visible {
+    color: var(--color-brass-glow);
+    border-color: var(--color-brass);
+    background-color: color-mix(in srgb, var(--color-ink-950) 92%, transparent);
+  }
+  /* O nome abre em LARGURA (grid de 0fr → 1fr): sem isso o botão precisaria de
+     largura fixa pro maior nome, e ficaria uma placa parada no canto. */
+  .theme-control__name {
+    display: grid;
+    grid-template-columns: 0fr;
+    overflow: hidden;
+    white-space: nowrap;
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    line-height: 1;
+    letter-spacing: 0.06em;
+    opacity: 0;
+    transition: grid-template-columns var(--motion-base) var(--ease-emphasis),
+                opacity var(--motion-base) var(--ease-standard),
+                padding-left var(--motion-base) var(--ease-emphasis);
+  }
+  .theme-control__name > * { min-width: 0; }
+  .theme-control:hover .theme-control__name,
+  .theme-control:focus-visible .theme-control__name {
+    grid-template-columns: 1fr;
+    padding-left: 0.5rem;
+    opacity: 1;
+  }
+  /* Toque não tem hover: no celular o botão é só o glifo, e o nome vive no
+     `aria-label`/`title` (que o leitor de tela e o toque longo alcançam). */
+  @media (hover: none) {
+    .theme-control__name { display: none; }
+  }
+}
+
+/* =====================================================================
+   Rotação do CENÁRIO do miolo (boards/glyphs/patterns.tsx) — a rosa dos ventos
+   do Atlas. Em CSS, não em SMIL: `<animateTransform>` ignora
+   `prefers-reduced-motion`, e fundo que gira não é informação nenhuma. Ciclo
+   longuíssimo de propósito: é presença de instrumento, não animação.
+   ===================================================================== */
+@layer components {
+  .bm-spin-slow { animation: bm-spin 240s linear infinite; }
+  @keyframes bm-spin {
+    to { transform: rotate(360deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bm-spin-slow { animation: none; }
   }
 }
