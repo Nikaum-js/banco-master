@@ -179,6 +179,41 @@
   background: color-mix(in srgb, var(--atlas-surface-accent) 5%, var(--color-ink-950));
 }
 
+/* Título sem dono (058/US1) — o estado "à venda" é DITO, não inferido da ausência de bloco. */
+.property-deed__free {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--color-starlight-muted);
+  font-family: var(--font-sans);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.property-deed__free > i {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  border: 1.5px dashed color-mix(in srgb, var(--atlas-surface-accent) 60%, var(--color-ink-400));
+  border-radius: 999px;
+}
+
+/* O nome do dono quebra em duas linhas antes de virar reticências: num celular não há
+   ponteiro para revelar um `title`, e nome truncado sem saída é informação perdida. */
+.property-deed__owner-copy > strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  text-overflow: clip;
+  line-height: 1.1;
+}
+
 .property-deed__owner {
   display: grid;
   grid-template-columns: 1.875rem minmax(0, 1fr);

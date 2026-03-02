@@ -18,6 +18,7 @@ import { cityLevel } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
 import { deedView, type BuildBlock } from '@/game/ui/deed/deedView'
 import { deedPresentation } from '@/game/ui/deed/presentation'
+import { TitleOwnership } from '@/game/ui/deed/TitleOwnership'
 import '@/game/ui/deed/propertyPopover.css'
 import { PlayerFace } from './PlayerFace'
 import { useTradeUI } from '@/game/ui/trade/tradeUI'
@@ -25,10 +26,11 @@ import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { markLayout, popoverPlacement, sideOf, type Side } from './topology'
 import { SquareIcon, CardGlyph, LotteryGlyph } from './glyphs/squares'
 import {
-  CalmGlyph, TradeArrowGlyph, PlusGlyph, SwapMiniGlyph,
+  TradeArrowGlyph, PlusGlyph, SwapMiniGlyph,
 } from './glyphs/badges'
 import { ChartPattern, FoundryPattern } from './glyphs/patterns'
 import { playersView, type Player } from '@/game/ui/panels/playersView'
+import { ActiveEffectsSection, LoansSection, ImmunitySignal } from '@/game/ui/panels/StatePanels'
 import { ConcedeDialog } from '@/game/ui/concede/ConcedeDialog'
 import { diceArenaView } from '@/game/ui/panels/diceArenaView'
 import { Dice, SpeedDie, ROLL_DURATION_MS } from '@/game/ui/dice'
@@ -41,9 +43,8 @@ import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import { ShopIcon, GavelIcon, DiceIcon, CoinIcon, HouseIcon } from '@/game/ui/icons'
 import { Button, SectionHeader, Chip, EmptyState, MoneyPulse } from '@/game/ui/primitives'
 import { useMoneyPulse } from '@/game/ui/useMoneyPulse'
-import type { TempEffect, TradeProposal } from '@/game/economy/types'
+import type { TradeProposal } from '@/game/economy/types'
 import type { GameState } from '@/game/turn/types'
-import { interestOf, lapsRemainingOf } from '@/game/emprestimos/emprestimos'
 import { money } from '@/lib/money'
 import { describeLogEntry } from '@/game/ui/log/describeLog'
 import { logIcon } from '@/game/ui/log/logIcon'
@@ -667,48 +668,6 @@ function EffectMarkBadge({ badge }: { badge: { tag: string; tone: 'logo' | 'gold
 }
 
 
-// Efeitos ativos no tabuleiro — SRS §12.3. Derivado do estado real (`tempEffects`).
-// `tag` espelha a letra do EffectMark na casa (A/G/B/I); `detail`/`laps` são a
-// versão estruturada do `desc` (mantido para tooltip/compat).
-function effectRow(e: TempEffect, i: number): {
-  key: string; label: string; desc: string; detail: string; tag: string; laps: number; tone: 'logo' | 'gold'
-} {
-  const laps = `${e.lapsRemaining} ${e.lapsRemaining === 1 ? 'volta' : 'voltas'}`
-  const place = activeBoard()[e.pos ?? 0]?.name ?? '·'
-  switch (e.kind) {
-    case 'apagao': return { key: `a${i}`, label: `Greve (${activeLabels().hangar})`, desc: `${activeLabels().hangar} inativa · ${laps}`, detail: `${activeLabels().hangar} inativa`, tag: 'A', laps: e.lapsRemaining, tone: 'logo' }
-    case 'greve': return { key: `g${i}`, label: 'Greve (Utilidades)', desc: `Utilidades sem aluguel · ${laps}`, detail: 'Utilidades sem aluguel', tag: 'G', laps: e.lapsRemaining, tone: 'logo' }
-    case 'boicote': return { key: `b${i}`, label: 'Boicote', desc: `${place} sem aluguel · ${laps}`, detail: `${place} sem aluguel`, tag: 'B', laps: e.lapsRemaining, tone: 'logo' }
-    case 'imunidade-temp': return { key: `i${i}`, label: 'Imunidade temp.', desc: `${place} · ${laps}`, detail: `${place} protegida`, tag: 'I', laps: e.lapsRemaining, tone: 'gold' }
-    // D-064 — efeitos novos: Estatização (board-wide), Valorização (casa), Embargo e
-    // Imunidade Total (jogador; a identidade é resolvida pela UI que consome, não aqui).
-    case 'estatizacao': return { key: `e${i}`, label: 'Estatização', desc: `Aluguéis vão à ${activeLabels().lottery} · ${laps}`, detail: `Aluguéis confiscados para a ${activeLabels().lottery}`, tag: 'E', laps: e.lapsRemaining, tone: 'logo' }
-    case 'valorizacao': return { key: `v${i}`, label: 'Valorização', desc: `${place} cobra em dobro · ${laps}`, detail: `${place} com aluguel em dobro`, tag: 'V', laps: e.lapsRemaining, tone: 'gold' }
-    case 'embargo': return { key: `em${i}`, label: 'Embargo de Obras', desc: `Alvo sem construir · ${laps}`, detail: 'Jogador embargado não constrói', tag: 'O', laps: e.lapsRemaining, tone: 'logo' }
-    case 'imunidade-total': return { key: `it${i}`, label: 'Imunidade Total', desc: `Sem aluguel/imposto · ${laps}`, detail: 'Jogador protegido de cobranças e ofensivas', tag: 'I', laps: e.lapsRemaining, tone: 'gold' }
-  }
-}
-
-// Badge circular do efeito — mesma letra e tom do EffectMark na casa, pra
-// leitura cruzada painel ⇄ tabuleiro. Pulsa junto (salvo reduced-motion).
-function EffectBadge({ tag, tone, size = 20 }: { tag: string; tone: 'logo' | 'gold'; size?: number }) {
-  const { reduced } = useMotion()
-  return (
-    <motion.span
-      className={cn(
-        'shrink-0 rounded-full font-bold flex items-center justify-center leading-none',
-        tone === 'logo' ? 'bg-logo text-cream' : 'bg-gold text-coffee-950',
-      )}
-      style={{ width: size, height: size, fontSize: size * 0.55, boxShadow: 'var(--shadow-card)' }}
-      animate={reduced ? undefined : { opacity: [0.75, 1, 0.75] }}
-      transition={{ duration: 1.6, repeat: Infinity }}
-      aria-hidden
-    >
-      {tag}
-    </motion.span>
-  )
-}
-
 function useLivePlayers(): Player[] {
   const game = useGameStore((s) => s.game)
   const room = useRoomStore((s) => s.room)
@@ -732,7 +691,6 @@ function dockProps(dock: DockPanel | undefined) {
 
 export function PlayersPanel({ dock }: { dock?: DockPanel } = {}) {
   const players = useLivePlayers()
-  const effects = useGameStore((s) => s.game.tempEffects).map(effectRow) // 024.1 — efeitos reais
   const activePlayers = players.filter((p) => !p.bankrupt).length
   return (
     <aside className="side-panel side-panel--players" {...dockProps(dock)}>
@@ -758,41 +716,9 @@ export function PlayersPanel({ dock }: { dock?: DockPanel } = {}) {
       </div>
 
 
-      <div className="side-panel-section">
-        <SectionHeader
-          title="Efeitos ativos"
-          meta={effects.length > 0 ? <Chip tone="neutral">{effects.length}</Chip> : undefined}
-        />
-        {effects.length === 0 ? (
-          <EmptyState icon={<CalmGlyph />} title="Tabuleiro em paz" />
-        ) : (
-          <ul className="flex flex-col gap-1.5">
-            {effects.map((e) => (
-              <li
-                key={e.key}
-                title={e.desc}
-                className={cn(
-                  'flex items-center gap-2.5 px-2.5 py-2 rounded-[var(--radius-card)] border bg-coffee-800/60',
-                  e.tone === 'logo' ? 'border-logo/30' : 'border-gold/30',
-                )}
-              >
-                <EffectBadge tag={e.tag} tone={e.tone} />
-                <div className="flex-1 min-w-0">
-                  <p className={cn('display text-sm leading-none', e.tone === 'logo' ? 'text-logo' : 'text-gold')}>
-                    {e.label}
-                  </p>
-                  <p className="text-cream-muted text-xs leading-snug mt-1 truncate">{e.detail}</p>
-                </div>
-                <Chip tone={e.tone === 'logo' ? 'alert' : 'gold'} title="Voltas restantes">
-                  {e.laps} {e.laps === 1 ? 'volta' : 'voltas'}
-                </Chip>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <ActiveEffectsSection />
 
-      <LoanPanel />
+      <LoansSection />
     </aside>
   )
 }
@@ -872,9 +798,12 @@ function PlayerRow({ player: p }: { player: Player }) {
         )}
 
         {/* Cor identifica o assento, mas todo estado também permanece textual. */}
+        {/* 058/US4 — o sinal de imunidade deixa de ser um booleano com `title`: vira botão
+            que abre o escopo real (total × por propriedade, contra quem, por quanto tempo).
+            `title` sozinho não existe no toque, e foi num celular que a partida rodou. */}
         <span className="player-row__signals">
           {p.loanActive && <span title="Empréstimo ativo" className="player-row__signal player-row__signal--alert">$$</span>}
-          {p.immune && <span title="Imunidade ativa" className="player-row__signal">IMU</span>}
+          {p.id && <ImmunitySignal playerId={p.id} playerName={p.name} />}
         </span>
       </div>
 
@@ -1272,72 +1201,6 @@ export function DiceArena() {
           </div>
         )}
       </div>
-      )}
-    </div>
-  )
-}
-
-// Empréstimo ativo do jogador da vez (010, §15) — visível e quitável a qualquer
-// momento do turno. Mostra credor, principal, o quanto sangra a cada GO e quantas
-// voltas faltam até o vencimento (§15.6, D-054), que é quando o principal é
-// descontado sozinho. O prazo vem do motor: a UI não reconta nada.
-function LoanPanel() {
-  const game = useGameStore((s) => s.game)
-  const room = useRoomStore((s) => s.room)
-  const dispatch = useGameStore((s) => s.dispatch)
-  const local = useLocalView()
-  const payOffLoan = (): void => dispatch({ kind: 'pay-off-loan' })
-  const active = game.players[game.turnOrder[game.activeSeat]]
-  const loan = game.loans.find((l) => l.debtorId === active.id)
-  if (!loan) return null
-  const debtor = identityOf(room, loan.debtorId)
-  const creditor = identityOf(room, loan.creditorId)
-  const interest = interestOf(loan.principal, loan.ratePct)
-  const lapsLeft = lapsRemainingOf(loan)
-  const canPay = active.cash >= loan.principal
-  const mayPay = local.mayActAction({ kind: 'pay-off-loan' })
-  const localIsDebtor = local.seatId === null || local.seatId === loan.debtorId
-  const localIsCreditor = local.seatId === loan.creditorId
-  const relation = localIsDebtor
-    ? `Você deve a ${creditor.name}`
-    : localIsCreditor
-      ? `${debtor.name} deve a você`
-      : `${debtor.name} deve a ${creditor.name}`
-  const counterpart = localIsDebtor ? creditor : debtor
-  return (
-    <div className="side-panel-section loan-panel-section">
-      <SectionHeader title="Empréstimo ativo" meta={<Chip tone="alert">{loan.ratePct}% no GO</Chip>} />
-      <div className="loan-panel__creditor">
-        <PlayerFace color={counterpart.color} avatar={counterpart.avatar} skin={counterpart.skin} size={22} />
-        <p className="label text-cream">{relation}</p>
-      </div>
-      <div className="loan-panel__facts">
-        <span className="text-cream-muted">Principal fixo</span>
-        <strong className="currency text-cream tabular-nums">{money(loan.principal)}</strong>
-        <span className="text-cream-muted">Cobrança por GO</span>
-        <strong className="currency text-logo tabular-nums">− {money(interest)}</strong>
-        <span className="text-cream-muted">Vence em</span>
-        <strong className="text-cream tabular-nums">{lapsLeft === 1 ? '1 volta' : `${lapsLeft} voltas`}</strong>
-      </div>
-      {/* O prazo é o fato que muda a decisão: na última volta o principal sai sozinho, e
-          quem não tiver caixa cai na cobrança de dívida (§15.6). */}
-      <p className="loan-panel__term">
-        {lapsLeft === 1
-          ? `No próximo GO o jogo desconta ${money(loan.principal + interest)} de uma vez.`
-          : `Ao vencer, o jogo desconta principal + juros de uma vez.`}
-      </p>
-      {mayPay ? (
-        <Button
-          disabled={!canPay}
-          onClick={payOffLoan}
-          aria-label={`Quitar ${money(loan.principal)}`}
-          title={canPay ? 'Pagar o principal e encerrar o empréstimo' : 'Caixa insuficiente para o principal'}
-          className="w-full mt-3"
-        >
-          {canPay ? `Quitar · ${money(loan.principal)}` : `Falta ${money(loan.principal - active.cash)} para quitar`}
-        </Button>
-      ) : (
-        <p className="loan-panel__readonly">Quitação disponível ao devedor</p>
       )}
     </div>
   )
@@ -2100,17 +1963,13 @@ function PropertyRentTier({
 
 function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onClose: () => void }) {
   const game = useGameStore((s) => s.game)
-  const room = useRoomStore((s) => s.room)
   const dv = deedView(game, square.pos)!
   const presentation = deedPresentation(square)
-  const owner = dv.owner
-  const ownerIdentity = owner ? identityOf(room, owner) : null
   const buildings = dv.level // 0–7 real
   const rents = presentation.rents
   const houseCost = dv.buildCost
   const mortgage = dv.mortgageValue
   const stripeColor = presentation.accent
-  const isMortgaged = dv.mortgaged
   // Rótulos do mapa ativo (055): casa/oficina, hotel/fábrica, arranha-céu/Torre de Ferro.
   const labels = activeLabels()
 
@@ -2203,28 +2062,10 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
           </div>
         </dl>
 
-        {(ownerIdentity || isMortgaged) && (
-          <div className="property-deed__status">
-            {ownerIdentity && (
-              <div className="property-deed__owner">
-                <PlayerFace
-                  color={ownerIdentity.color}
-                  avatar={ownerIdentity.avatar}
-                  skin={ownerIdentity.skin}
-                  size={30}
-                  className="property-deed__owner-avatar"
-                />
-                <span className="property-deed__owner-copy">
-                  <span>Dono</span>
-                  <strong>{ownerIdentity.name}</strong>
-                </span>
-              </div>
-            )}
-            {isMortgaged && (
-              <Chip tone="alert" className="ml-auto text-nano">Hipotecada</Chip>
-            )}
-          </div>
-        )}
+        {/* 058/US1 — a posse sai daqui e vai para a primitiva compartilhada, que agora
+            também diz "sem dono" (esta versão omitia o bloco inteiro quando o título
+            estava livre) e é a MESMA que aeroporto, utilidade e mina passaram a usar. */}
+        <TitleOwnership pos={square.pos} />
 
         <DeedActions pos={square.pos} />
       </div>
@@ -2286,6 +2127,10 @@ export function AirportPopover({
             <div className="mt-2.5 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-0.5">
               <CompactRent label="Preço"    value={presentation.price}    muted />
               <CompactRent label="Hipoteca" value={presentation.mortgage} muted />
+            </div>
+            {/* 058/US1 — posse: estas tres superficies nunca tiveram bloco de dono. */}
+            <div className="mt-2.5">
+              <TitleOwnership pos={square.pos} />
             </div>
             <DeedActions pos={square.pos} />
           </div>
@@ -2356,6 +2201,10 @@ export function MinePopover({
               <CompactRent label="Preço"    value={presentation.price}    muted />
               <CompactRent label="Hipoteca" value={presentation.mortgage} muted />
             </div>
+            {/* 058/US1 — posse: estas tres superficies nunca tiveram bloco de dono. */}
+            <div className="mt-2.5">
+              <TitleOwnership pos={square.pos} />
+            </div>
             <DeedActions pos={square.pos} />
           </div>
     </DeedSurface>
@@ -2420,6 +2269,10 @@ export function UtilityPopover({
             <div className="mt-2.5 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-0.5">
               <CompactRent label="Preço"    value={presentation.price}    muted />
               <CompactRent label="Hipoteca" value={presentation.mortgage} muted />
+            </div>
+            {/* 058/US1 — posse: estas tres superficies nunca tiveram bloco de dono. */}
+            <div className="mt-2.5">
+              <TitleOwnership pos={square.pos} />
             </div>
             <DeedActions pos={square.pos} />
           </div>

@@ -147,9 +147,18 @@ export function CountryFlag({
   size?: number
   title?: string
   /**
-   * Preenche o contêiner recortando o excesso — o equivalente exato de
-   * `<img class="w-full h-full object-cover">`, que é como as cinco molduras existentes
-   * consumiam a bandeira remota. `preserveAspectRatio="…slice"` é o `object-cover` do SVG.
+   * Ajusta a bandeira ao contêiner **sem recortar** — o `object-fit: contain` do SVG.
+   *
+   * Era `slice` (`object-cover`), e o custo disso só aparece quando o holder é QUADRADO,
+   * que é o caso de todos eles: um retângulo 3:2 que cobre um quadrado perde **um terço
+   * da largura**, um sexto de cada lado. Para nove bandeiras isso mordia as pontas; para
+   * a dos Emirados, cuja composição é uma barra vertical de exatamente 25% na tralha,
+   * comia **dois terços da barra** e o que sobrava era um fio — o relato de "bandeira
+   * desalinhada" em Abu Dhabi e Dubai, as duas únicas casas `AE` do tabuleiro.
+   *
+   * Contendo, o círculo do holder volta a cortar só as quinas, como já cortava antes de
+   * qualquer zoom, e a composição — que é o que identifica uma bandeira neste tamanho,
+   * conforme o docblock acima — sobrevive inteira nas dez.
    */
   fill?: boolean
   className?: string
@@ -162,7 +171,7 @@ export function CountryFlag({
       viewBox="0 0 60 40"
       width={fill ? '100%' : size}
       height={fill ? '100%' : (size * 2) / 3}
-      preserveAspectRatio={fill ? 'xMidYMid slice' : undefined}
+      preserveAspectRatio={fill ? 'xMidYMid meet' : undefined}
       role={title ? 'img' : undefined}
       aria-hidden={title ? undefined : true}
       aria-label={title}
@@ -176,12 +185,21 @@ export function CountryFlag({
 }
 
 /**
- * Bandeira recortada em DISCO, com a moldura de tinta que a escritura usa. É a forma que
- * aparece na maioria das superfícies (leilão, troca, popover de propriedade), e ela existia
+ * Bandeira em DISCO, com a moldura de tinta que a escritura usa. É a forma que aparece na
+ * maioria das superfícies (leilão, pregão, troca, popover de propriedade), e ela existia
  * copiada em cinco lugares — cada cópia com uma borda ligeiramente diferente.
  *
- * O SVG é escalado a 1,5× dentro do disco: uma bandeira 3:2 recortada em círculo perde as
- * pontas, e sem o zoom o corte come faixa demais nas verticais (França, Itália).
+ * ANTES o SVG era escalado a **1,5×** e o excedente ficava por conta do `overflow: hidden`,
+ * com a justificativa de que uma bandeira 3:2 recortada em círculo perde as pontas. A cura
+ * saiu mais cara que a doença, e por um motivo que não era o esperado: um item de grade
+ * MAIOR que a própria área não fica centrado por `place-items: center` — a borda inicial é
+ * ancorada e todo o excesso transborda para **um** lado só. Medido num disco de 30px: 2px
+ * cortados à esquerda (a borda) contra **17px à direita**. A janela visível virava o
+ * `viewBox` 0–34,7 de 60, e a Itália aparecia no pregão sem a faixa vermelha inteira — um
+ * emblema verde-e-branco que não identifica país nenhum.
+ *
+ * Agora o SVG **cabe** no disco (`fill` → `contain`). O círculo volta a cortar só as quinas,
+ * que era o custo original e é o menor dos dois.
  */
 export function CountryFlagDisc({ code, size = 40, title }: { code: string; size?: number; title?: string }) {
   const upper = code.toUpperCase()
@@ -191,7 +209,7 @@ export function CountryFlagDisc({ code, size = 40, title }: { code: string; size
       className="rounded-full bg-ink-900 border-2 border-ink-950 overflow-hidden shrink-0 shadow-[var(--shadow-card)] grid place-items-center"
       style={{ width: size, height: size }}
     >
-      <CountryFlag code={upper} size={size * 1.5} title={title} />
+      <CountryFlag code={upper} fill title={title} />
     </span>
   )
 }
