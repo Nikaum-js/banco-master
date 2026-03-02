@@ -1445,15 +1445,6 @@ function useLivePlayers(): Player[] {
 export function PlayersPanel() {
   const players = useLivePlayers()
   const effects = useGameStore((s) => s.game.tempEffects).map(effectRow) // 024.1 — efeitos reais
-  const bankHouses = useGameStore((s) => s.game.bank.houses) // 026
-  const auctionOpen = useGameStore((s) => s.game.houseAuction !== null)
-  const openHouseAuction = useGameStore((s) => s.openHouseAuction)
-  // Selecionar a lista ESTÁVEL e derivar no corpo: um seletor que faz .filter().map()
-  // devolve array novo a cada chamada → useSyncExternalStore entra em loop ("getSnapshot
-  // should be cached"). `s.game.players` é ref estável (só muda quando o estado muda).
-  const allPlayers = useGameStore((s) => s.game.players)
-  const liveIds = allPlayers.filter((p) => !p.eliminated).map((p) => p.id)
-  const canAuctionHouses = bankHouses >= 1 && liveIds.length >= 2 && !auctionOpen
   return (
     <aside className="side-panel">
       <div className="side-panel-section">
@@ -1471,15 +1462,6 @@ export function PlayersPanel() {
             className="mt-3 w-full px-3 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-700 border border-coffee-500 text-cream text-sm font-bold hover:border-gold hover:bg-coffee-600 transition-colors"
           >
             Negociar
-          </button>
-        )}
-        {canAuctionHouses && (
-          <button
-            type="button"
-            onClick={() => openHouseAuction(bankHouses, liveIds)}
-            className="mt-2 w-full px-3 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-700 border border-coffee-500 text-cream text-sm font-bold hover:border-gold hover:bg-coffee-600 transition-colors"
-          >
-            Leilão de casas ({bankHouses})
           </button>
         )}
       </div>
@@ -2857,7 +2839,6 @@ const BUILD_BLOCK_MSG: Record<string, string> = {
   topo: 'Já está no nível máximo',
   uniformidade: 'Construa primeiro na cidade de menor nível',
   'grupo-incompleto': 'Arranha-céu exige o grupo completo',
-  estoque: 'Banco sem estoque',
   caixa: 'Caixa insuficiente',
 }
 
