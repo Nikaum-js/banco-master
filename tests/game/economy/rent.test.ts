@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { rentCity, rentAirport, rentUtility, diceValue } from '@/game/economy/rent'
+import { rentCity, rentAirport, rentUtility, diceValue, posseFactor } from '@/game/economy/rent'
 import { economyResolve } from '@/game/economy/resolveRentable'
 import { createSeedState, defaultPorts } from '@/game/store'
 import { BOARD } from '@/lib/boardData'
@@ -7,14 +7,14 @@ import type { Roll } from '@/game/turn/types'
 
 describe('Aluguel — cálculo puro (US2)', () => {
   it('SC-003: cidade base / 150% maioria / 200% completo', () => {
-    // grupo de 3
-    expect(rentCity(10, 1, 3)).toBe(10) // não-maioria
-    expect(rentCity(10, 2, 3)).toBe(15) // maioria (2 de 3)
-    expect(rentCity(10, 3, 3)).toBe(20) // completo
+    // grupo de 3 (sem construção, o grupo não afeta — base/150/200)
+    expect(rentCity('pink', 10, 1, 3)).toBe(10) // não-maioria
+    expect(rentCity('pink', 10, 2, 3)).toBe(15) // maioria (2 de 3)
+    expect(rentCity('pink', 10, 3, 3)).toBe(20) // completo
     // grupo de 4
-    expect(rentCity(8, 2, 4)).toBe(8) // 2 de 4 → base
-    expect(rentCity(8, 3, 4)).toBe(12) // 3 de 4 (maioria) → 150%
-    expect(rentCity(8, 4, 4)).toBe(16) // completo → 200%
+    expect(rentCity('pink', 8, 2, 4)).toBe(8) // 2 de 4 → base
+    expect(rentCity('pink', 8, 3, 4)).toBe(12) // 3 de 4 (maioria) → 150%
+    expect(rentCity('pink', 8, 4, 4)).toBe(16) // completo → 200%
   })
 
   it('SC-004: aeroporto $25/$50/$100/$200', () => {
@@ -81,13 +81,32 @@ describe('Aluguel — resolução (US2)', () => {
   })
 })
 
-describe('Aluguel com construção (US2, 004)', () => {
-  it('SC-003: tabela × 70% (parcial) / 100% (completo) substitui o escalonamento por posse', () => {
-    // base 10, grupo de 3, 1 casa → 10×5 = 50
-    expect(rentCity(10, 3, 3, { houses: 1, hotel: false })).toBe(50) // completo
-    expect(rentCity(10, 2, 3, { houses: 1, hotel: false })).toBe(35) // parcial (maioria) → 50×0.7
-    expect(rentCity(10, 3, 3, { houses: 0, hotel: true })).toBe(1000) // hotel completo → 10×100
-    // sem construção mantém a regra da 003 (200% no grupo completo)
-    expect(rentCity(10, 3, 3, { houses: 0, hotel: false })).toBe(20)
+describe('Aluguel com construção — escala por posse do país (034)', () => {
+  it('posseFactor: trio 50/75/100, duo 50/100', () => {
+    expect(posseFactor(1, 3)).toBe(0.5)
+    expect(posseFactor(2, 3)).toBe(0.75)
+    expect(posseFactor(3, 3)).toBe(1)
+    expect(posseFactor(1, 2)).toBe(0.5)
+    expect(posseFactor(2, 2)).toBe(1)
+  })
+
+  it('SC-002/034: aluguel construído = tabela × fator de posse', () => {
+    // base 10, pink (1 casa ×5 → tabela 50; hotel ×44 → 440), grupo de 3
+    expect(rentCity('pink', 10, 1, 3, { houses: 1, hotel: false })).toBe(25) // 1/3 → 50×0,5
+    expect(rentCity('pink', 10, 2, 3, { houses: 1, hotel: false })).toBe(38) // 2/3 → 50×0,75 (37,5→38)
+    expect(rentCity('pink', 10, 3, 3, { houses: 1, hotel: false })).toBe(50) // 3/3 → 50×1,0
+    expect(rentCity('pink', 10, 1, 3, { houses: 0, hotel: true })).toBe(220) // hotel 1/3 → 440×0,5
+    expect(rentCity('pink', 10, 3, 3, { houses: 0, hotel: true })).toBe(440) // hotel completo → 440×1,0
+  })
+
+  it('SC-003/034: monotonicidade — construir sempre rende ≥ sem construir (mesma posse)', () => {
+    // 1/3: sem construção = base 10; com 1 casa = 25 (> 10)
+    expect(rentCity('pink', 10, 1, 3, { houses: 1, hotel: false })).toBeGreaterThan(rentCity('pink', 10, 1, 3))
+    // 2/3: sem construção = 150% = 15; com 1 casa = 38 (> 15)
+    expect(rentCity('pink', 10, 2, 3, { houses: 1, hotel: false })).toBeGreaterThan(rentCity('pink', 10, 2, 3))
+  })
+
+  it('sem construção mantém a regra da 003 (200% no grupo completo)', () => {
+    expect(rentCity('pink', 10, 3, 3, { houses: 0, hotel: false })).toBe(20)
   })
 })

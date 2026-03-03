@@ -25,15 +25,18 @@ describe('Construir (US1)', () => {
     expect(g.titles[3].houses).toBe(1)
   })
 
-  it('SC-002: bloqueia sem maioria / hipoteca / caixa', () => {
+  it('SC-002/034: permite construir com 1 cidade do país; bloqueia hipoteca / caixa', () => {
+    // 034: maioria não é mais exigida — dono de 1 de 3 PODE construir (aluguel é que escala).
     const g1 = createSeedState(['p1', 'p2'])
-    g1.titles[1].ownerId = 'p1' // 1 de 3 < maioria
-    expect(buildHouse(g1, 1)).toBe(g1)
+    g1.titles[1].ownerId = 'p1' // 1 de 3
+    expect(buildHouse(g1, 1).titles[1].houses).toBe(1)
 
+    // qualquer cidade do país hipotecada → bloqueia
     const g2 = withBrownMajority()
     g2.titles[3].mortgaged = true
     expect(buildHouse(g2, 1)).toBe(g2)
 
+    // caixa insuficiente → bloqueia
     const g3 = withBrownMajority()
     g3.players[0].cash = 0
     expect(buildHouse(g3, 1)).toBe(g3)
