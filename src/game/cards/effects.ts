@@ -79,7 +79,7 @@ const handlers: Record<string, Handler> = {
   voltaGo: (s, id, ports) => {
     const p = pl(s, id)
     p.pos = 0
-    p.cash += ports.onPassGo(s, p.id)
+    p.cash += ports.onPassGo(s, p.id) * 2 // cai exatamente no GO → $400 (2×)
     p.completouPrimeiraVolta = true
   },
   vaPrisao: (s, id) => {
