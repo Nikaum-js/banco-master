@@ -36,12 +36,12 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
     <link rel="alternate icon" type="image/png" href="/favicon.png?v=2" />
     <link rel="apple-touch-icon" href="/favicon.png?v=2" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="application-name" content="Magnata Imobiliário" />
     <title>Magnata Imobiliário: jogo de tabuleiro online com amigos</title>
     <meta
       name="description"
-      content="Jogo de tabuleiro online de propriedades, negociação e estratégia. Crie uma sala privada, compartilhe o link e jogue com 2 a 8 amigos em tempo real, direto no navegador, sem criar conta. Dois tabuleiros: Cidade da Fuligem e Cidades do Mundo."
+      content="Jogo de tabuleiro online de propriedades, negociação e estratégia. Reúna de 2 a 8 jogadores, compre propriedades, cobre aluguéis e dispute leilões em dois tabuleiros: Cidade da Fuligem e Cidades do Mundo."
     />
     <link rel="canonical" href="%SITE_URL%/" />
     <meta property="og:type" content="website" />
@@ -50,18 +50,18 @@
     <meta property="og:title" content="Magnata Imobiliário: jogo de tabuleiro online com amigos" />
     <meta
       property="og:description"
-      content="A cidade trabalha a noite inteira. Quem cobra o aluguel é você. Sala privada por convite, 2 a 8 jogadores, direto no navegador."
+      content="Construa sua fortuna, uma propriedade por vez. Compre propriedades, cobre aluguéis e dispute leilões com 2 a 8 jogadores."
     />
     <meta property="og:url" content="%SITE_URL%/" />
     <meta property="og:image" content="%SITE_URL%/og.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Tabuleiro Cidades do Mundo em perspectiva, com rotas do Atlas ao fundo" />
+    <meta property="og:image:alt" content="Tabuleiro Cidades do Mundo em perspectiva, com a cidade acesa no horizonte e uma aeronave cruzando as rotas do Atlas" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Magnata Imobiliário: jogo de tabuleiro online com amigos" />
     <meta
       name="twitter:description"
-      content="A cidade trabalha a noite inteira. Quem cobra o aluguel é você. Sala privada por convite, 2 a 8 jogadores, direto no navegador."
+      content="Construa sua fortuna, uma propriedade por vez. Compre propriedades, cobre aluguéis e dispute leilões com 2 a 8 jogadores."
     />
     <meta name="twitter:image" content="%SITE_URL%/og.jpg" />
     <link rel="stylesheet" href="/src/marketing/marketing.css" />
@@ -72,7 +72,7 @@
         "name": "Magnata Imobiliário",
         "url": "%SITE_URL%/",
         "inLanguage": "pt-BR",
-        "description": "Jogo de tabuleiro online de propriedades, negociação e estratégia para 2 a 8 jogadores humanos, em salas privadas por convite, jogado no navegador. Dois tabuleiros jogáveis: Cidade da Fuligem (40 casas, 8 bairros) e Cidades do Mundo (48 casas, 10 países).",
+        "description": "Jogo de tabuleiro online de propriedades, negociação e estratégia para 2 a 8 jogadores humanos. Dois tabuleiros jogáveis: Cidade da Fuligem (40 casas, 8 bairros) e Cidades do Mundo (48 casas, 10 países).",
         "playMode": "MultiPlayer",
         "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 2, "maxValue": 8 },
         "gamePlatform": "Navegador web",
@@ -98,27 +98,73 @@
     <main id="conteudo">
       <!-- ==================== Hero: a mesa acende ==================== -->
       <section class="fx-hero" aria-labelledby="titulo">
-        <!-- Camada 1: a carta. Rotas tracejadas entre hubs e a rosa dos ventos —
-             o mesmo cenário que o Atlas desenha atrás do tabuleiro no app. Decorativa:
-             o que ela carrega está escrito no texto ao lado. -->
+        <!-- Camada 1: o ESPAÇO AÉREO do Atlas — o mesmo cenário das telas de entrada do
+             app (net/ui/entryShell), trazido para cá: rotas tracejadas, hubs pulsando e
+             uma aeronave percorrendo a rota principal por CSS Motion Path.
+             O viewBox virou 1440×900, a proporção da própria dobra. Com o antigo
+             1200×420 sob `slice`, a escala de cobertura era 2× e o desenho aparecia
+             recortado no miolo: a rosa dos ventos em x=1010 caía FORA do enquadramento
+             e o que sobrava eram fiapos de rota soltos. A rosa saiu de vez — o tabuleiro
+             já tem a dele, no feltro.
+             A rota principal vive na METADE DIREITA de propósito: é ali que o letreiro
+             deixa o vazio, e a aeronave leva o mesmo tempo em cada trecho do caminho. -->
         <div class="fx-hero__sky" aria-hidden="true">
-          <svg class="fx-hero__sky-svg" viewBox="0 0 1200 420" preserveAspectRatio="xMidYMid slice" focusable="false">
-            <g class="fx-routes" fill="none" stroke="var(--color-brass)" stroke-opacity="0.22" stroke-width="1.3" stroke-dasharray="7 9">
-              <path d="M60 300Q260 150 470 232T900 150" />
-              <path d="M120 90Q380 210 620 96T1140 214" />
-              <path d="M-20 200Q300 320 560 300T1180 330" />
+          <svg class="fx-hero__sky-svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" fill="none" focusable="false">
+            <g class="fx-routes" stroke="var(--color-brass)" stroke-linecap="round">
+              <path d="M1580 104C1404 232 1214 122 1036 210S760 330 512 252" stroke-width="1.7" stroke-dasharray="3 10" opacity="0.24" />
+              <path d="M-160 372C186 286 430 388 706 302S1196 128 1600 196" stroke-width="1.2" stroke-dasharray="2 13" opacity="0.14" />
+              <path d="M-120 596Q300 700 620 640T1560 560" stroke-width="1.1" stroke-dasharray="2 14" opacity="0.1" />
             </g>
             <g class="fx-hubs" fill="var(--color-brass)">
-              <circle cx="60" cy="300" r="3.4" /><circle cx="470" cy="232" r="3.4" style="animation-delay: -2.4s" />
-              <circle cx="900" cy="150" r="3.4" style="animation-delay: -4.8s" /><circle cx="120" cy="90" r="3" style="animation-delay: -1.2s" />
-              <circle cx="620" cy="96" r="3" style="animation-delay: -3.6s" /><circle cx="1140" cy="214" r="3" style="animation-delay: -6s" />
-              <circle cx="560" cy="300" r="2.6" style="animation-delay: -5.2s" /><circle cx="1180" cy="330" r="2.6" style="animation-delay: -0.6s" />
+              <circle cx="1036" cy="210" r="3.2" /><circle cx="1404" cy="232" r="3.2" style="animation-delay: -2.4s" />
+              <circle cx="706" cy="302" r="2.8" style="animation-delay: -4.8s" /><circle cx="1214" cy="122" r="2.6" style="animation-delay: -1.2s" />
+              <circle cx="430" cy="388" r="2.4" style="animation-delay: -3.6s" /><circle cx="620" cy="640" r="2.4" style="animation-delay: -6s" />
             </g>
-            <g class="fx-compass" transform="translate(1010 300)" fill="none" stroke="var(--color-brass)" stroke-opacity="0.2">
-              <circle r="96" stroke-width="1.2" />
-              <circle r="70" stroke-width="1" stroke-dasharray="2 6" />
-              <path d="M0 -96V96M-96 0H96" stroke-width="1" />
-              <path d="M0 -78 14 0 0 78 -14 0Z" stroke-width="1.4" />
+            <!-- A aeronave: a mesma silhueta 3/4 do app (net/ui/entryShell → AirlinerMark),
+                 espelhada porque a rota corre da direita para a esquerda, e nivelada
+                 (`offset-rotate: 0deg`) para a vista lateral não virar de cabeça pra baixo
+                 na volta da curva. -->
+            <g class="fx-flyer fx-aircraft" opacity="0.5"
+               style="offset-path: path('M1580 104C1404 232 1214 122 1036 210S760 330 512 252'); offset-rotate: 0deg; offset-distance: 46%; animation-duration: 68s; animation-delay: -26s">
+              <g transform="scale(-0.82 0.82)" color="var(--color-brass)">
+                <g class="fx-aircraft__frame">
+                  <g class="fx-aircraft__wake" stroke="currentColor" stroke-linecap="round">
+                    <path d="M-154 1H-61" stroke-width="1.35" stroke-dasharray="22 12" />
+                    <path d="M-142 7H-56" stroke-width="1.1" stroke-dasharray="17 13" opacity="0.65" />
+                  </g>
+                  <g fill="var(--color-ink-700)" fill-opacity="0.78" stroke="currentColor" stroke-linejoin="round">
+                    <path d="M5-5-27-30-10-34 37-4 23-1Z" stroke-width="1.05" />
+                    <path d="M-39 1-58-14-47-17-25 3Z" stroke-width="1" />
+                  </g>
+                  <path d="M-49 4-62-25-49-28-27 5Z" fill="var(--color-ink-700)" fill-opacity="0.92" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round" />
+                  <g stroke="currentColor" stroke-linejoin="round">
+                    <path d="M-63 4C-48-4-22-8 17-9 39-9 56-5 67 0L74 4 66 8C45 13-36 15-58 10Z" fill="var(--color-ink-800)" fill-opacity="0.96" stroke-width="1.4" />
+                    <path d="M-51 1C-17-7 38-8 62-1" fill="none" stroke="var(--color-starlight)" stroke-opacity="0.34" stroke-width="1" />
+                    <path d="M-54 10C-17 14 40 11 65 7" fill="none" stroke="var(--color-ink-950)" stroke-opacity="0.75" stroke-width="2" />
+                  </g>
+                  <path d="M8 7-26 34-7 38 42 7 25 4Z" fill="var(--color-ink-900)" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" />
+                  <path d="M-37 7-58 20-45 23-23 10Z" fill="var(--color-ink-900)" stroke="currentColor" stroke-width="1.05" stroke-linejoin="round" />
+                  <g fill="var(--color-ink-950)" stroke="currentColor" stroke-width="1">
+                    <g transform="translate(4 23) rotate(-7)">
+                      <path d="M-9-3C-5-6 8-6 12-2V3C7 6-5 6-9 3Z" />
+                      <ellipse cx="10.5" cy="0.5" rx="2.8" ry="3.4" fill="var(--color-brass-soft)" fill-opacity="0.55" />
+                    </g>
+                    <g transform="translate(27 13) rotate(-5) scale(.82)">
+                      <path d="M-9-3C-5-6 8-6 12-2V3C7 6-5 6-9 3Z" />
+                      <ellipse cx="10.5" cy="0.5" rx="2.8" ry="3.4" fill="var(--color-brass-soft)" fill-opacity="0.5" />
+                    </g>
+                  </g>
+                  <g fill="var(--color-brass-glow)" opacity="0.72">
+                    <rect x="-32" y="-2.3" width="4.6" height="2.4" rx="1" /><rect x="-21" y="-2.3" width="4.6" height="2.4" rx="1" />
+                    <rect x="-10" y="-2.3" width="4.6" height="2.4" rx="1" /><rect x="1" y="-2.3" width="4.6" height="2.4" rx="1" />
+                    <rect x="12" y="-2.3" width="4.6" height="2.4" rx="1" /><rect x="23" y="-2.3" width="4.6" height="2.4" rx="1" />
+                    <rect x="34" y="-2.3" width="4.6" height="2.4" rx="1" />
+                    <path d="M48-4 58-2 62 0 49-0.5Z" />
+                  </g>
+                  <circle class="fx-aircraft__beacon" cx="-26" cy="35" r="2.5" fill="var(--color-signal)" />
+                  <circle class="fx-aircraft__beacon fx-aircraft__beacon--alt" cx="-27" cy="-30" r="2.2" fill="var(--color-starlight)" />
+                </g>
+              </g>
             </g>
           </svg>
           <div class="fx-hero__haze"></div>
@@ -129,12 +175,11 @@
             <p class="mk-hero__eyebrow" data-arrive="1">Tabuleiro online · 2 a 8 amigos</p>
           <h1 id="titulo" data-arrive="2">Magnata <b>Imobiliário</b></h1>
           <p class="fx-hero__tagline" data-arrive="3">
-            A cidade trabalha a noite inteira. Quem cobra o aluguel é <b>você</b>.
+            Construa sua fortuna, uma propriedade por vez.
           </p>
           <p class="fx-hero__lede" data-arrive="4">
-            Tabuleiro multiplayer em tempo real, direto no navegador: você abre uma sala
-            privada, manda o link no grupo e disputa com 2 a 8 pessoas. Sem instalar nada,
-            sem criar conta.
+            Reúna seus amigos em uma partida de 2 a 8 jogadores. Compre propriedades, cobre
+            aluguéis, dispute leilões e negocie cada vantagem até restar um magnata.
           </p>
           <p class="fx-hero__actions" data-arrive="5">
             <a class="mk-btn mk-btn--brass" href="/play">Jogar agora</a>
@@ -142,8 +187,8 @@
           </p>
           <ul class="mk-facts" data-arrive="6">
             <li><b>2</b> tabuleiros</li>
-            <li><b>40</b> ou <b>48</b> casas</li>
             <li>até <b>8</b> jogadores</li>
+            <li>Jogue no navegador</li>
           </ul>
         </div>
 
@@ -153,6 +198,28 @@
              disco de ícone do bairro na borda interna. O texto sobrevive à
              perspectiva porque cada casa é desenhada num espaço local e deitada na
              mesa por uma matriz afim; nada foi posicionado à mão. -->
+        <!-- Camada 3: O PALCO. O horizonte da cidade nasce ATRÁS da borda de trás da
+             mesa e sobe pelo vazio que o letreiro deixa à direita — é o mesmo skyline
+             que o app desenha nas telas de entrada (net/ui/home/AtlasCityscape),
+             gerado uma vez e colado estático, porque a landing não carrega JS.
+             Do plano distante só sobrou a silhueta, e do próximo só as janelas
+             ACESAS: as apagadas eram `ink-400` a 13% sobre corpo `ink-900` — 350
+             nós de DOM que não pintavam diferença nenhuma nos ~200px em que este
+             horizonte aparece. -->
+        <div class="fx-hero__stage">
+          <div class="fx-hero__city" aria-hidden="true">
+            <svg class="fx-hero__city-svg" viewBox="0 0 1440 210" preserveAspectRatio="xMidYMax slice" fill="none" focusable="false">
+            <!-- A aurora de latão do horizonte zera nas DUAS pontas. Terminando cheia em
+                             baixo (`y1=1`), ela desenhava uma costura horizontal de ponta a ponta da
+                             dobra exatamente na borda inferior desta camada — o clarão acabava de
+                             estalo onde o elemento acabava. -->
+                        <defs><linearGradient id="fx-city-haze" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="var(--color-brass)" stop-opacity="0"/><stop offset="16%" stop-color="var(--color-brass)" stop-opacity=".13"/><stop offset="58%" stop-color="var(--color-brass)" stop-opacity=".035"/><stop offset="100%" stop-color="var(--color-brass)" stop-opacity="0"/></linearGradient></defs>
+            <rect x="0" y="16" width="1440" height="194" fill="url(#fx-city-haze)"/>
+            <g class="fx-city-masts" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><g><path d="M190 210 210 50 230 210Z"/><path d="M210 50V210" opacity=".46"/><path d="M203 74h16M197 96h30"/><path d="M189 122h48"/><path d="M210 32V56"/><path d="M199 42h22M193 49h34"/><path d="M206.8 76H213.3"/><path d="M206.8 76 213.3 106" opacity=".5"/><path d="M213.3 76 206.8 106" opacity=".5"/><path d="M203 106H217"/><path d="M203 106 217 136" opacity=".5"/><path d="M217 106 203 136" opacity=".5"/><path d="M199.3 136H220.8"/><path d="M199.3 136 220.8 166" opacity=".5"/><path d="M220.8 136 199.3 166" opacity=".5"/><path d="M195.5 166H224.5"/><path d="M195.5 166 224.5 196" opacity=".5"/><path d="M224.5 166 195.5 196" opacity=".5"/><path d="M191.8 196H228.3"/><path d="M191.8 196 228.3 210" opacity=".5"/><path d="M228.3 196 191.8 210" opacity=".5"/><circle class="fx-city-beacon" cx="210" cy="29" r="2.6" fill="var(--color-signal)" stroke="none"/></g><g><path d="M660 210 683 24 706 210Z"/><path d="M683 24V210" opacity=".46"/><path d="M676 48h16M670 70h30"/><path d="M662 96h48"/><path d="M683 6V30"/><path d="M672 16h22M666 23h34"/><path d="M679.8 50H686.2"/><path d="M679.8 50 686.2 80" opacity=".5"/><path d="M686.2 50 679.8 80" opacity=".5"/><path d="M676.1 80H689.9"/><path d="M676.1 80 689.9 110" opacity=".5"/><path d="M689.9 80 676.1 110" opacity=".5"/><path d="M672.4 110H693.6"/><path d="M672.4 110 693.6 140" opacity=".5"/><path d="M693.6 110 672.4 140" opacity=".5"/><path d="M668.7 140H697.3"/><path d="M668.7 140 697.3 170" opacity=".5"/><path d="M697.3 140 668.7 170" opacity=".5"/><path d="M664.9 170H701.1"/><path d="M664.9 170 701.1 200" opacity=".5"/><path d="M701.1 170 664.9 200" opacity=".5"/><path d="M661.2 200H704.8"/><path d="M661.2 200 704.8 210" opacity=".5"/><path d="M704.8 200 661.2 210" opacity=".5"/><circle class="fx-city-beacon" cx="683" cy="3" r="2.6" fill="var(--color-signal)" stroke="none"/></g><g><path d="M1188 210 1209 40 1230 210Z"/><path d="M1209 40V210" opacity=".46"/><path d="M1202 64h16M1196 86h30"/><path d="M1188 112h48"/><path d="M1209 22V46"/><path d="M1198 32h22M1192 39h34"/><path d="M1205.8 66H1212.2"/><path d="M1205.8 66 1212.2 96" opacity=".5"/><path d="M1212.2 66 1205.8 96" opacity=".5"/><path d="M1202.1 96H1215.9"/><path d="M1202.1 96 1215.9 126" opacity=".5"/><path d="M1215.9 96 1202.1 126" opacity=".5"/><path d="M1198.4 126H1219.6"/><path d="M1198.4 126 1219.6 156" opacity=".5"/><path d="M1219.6 126 1198.4 156" opacity=".5"/><path d="M1194.7 156H1223.3"/><path d="M1194.7 156 1223.3 186" opacity=".5"/><path d="M1223.3 156 1194.7 186" opacity=".5"/><path d="M1191 186H1227"/><path d="M1191 186 1227 210" opacity=".5"/><path d="M1227 186 1191 210" opacity=".5"/><circle class="fx-city-beacon" cx="1209" cy="19" r="2.6" fill="var(--color-signal)" stroke="none"/></g></g>
+            <g class="fx-city-band fx-city-band--far" transform="translate(0 190)" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-30 -86)"><path class="fx-city-body" d="M0 14H16.8V8H30.2V2H53.8V8H67.2V14H84V86H0Z" fill="var(--color-ink-800)"/><path d="M65.5 16H84V86H74.8Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H84"/></g><g transform="translate(62 -59)"><path class="fx-city-body" d="M0 11H66V59H0Z" fill="var(--color-ink-800)"/><path d="M51.5 16H66V59H58.7Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H66"/></g><g transform="translate(136 -106)"><path class="fx-city-body" d="M0 16H17.6V7H31.4L49 0L66.6 7H80.4V16H98V106H0Z" fill="var(--color-ink-800)"/><path d="M76.4 16H98V106H87.2Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H98"/></g><g transform="translate(242 -72)"><path class="fx-city-body" d="M0 11H76V72H0Z" fill="var(--color-ink-800)"/><path d="M59.3 16H76V72H67.6Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H76"/><g class="fx-city-roof" transform="translate(28 -12)"><path d="M2 10 0 22M18 10l3 12M0 22h21"/><path d="M1.5 1h17v10h-17z" fill="var(--color-ink-800)"/><ellipse cx="10" cy="11" rx="9" ry="2.6"/></g></g><g transform="translate(326 -122)"><path class="fx-city-body" d="M0 17H26.5L53 0L79.5 17H106V122H0Z" fill="var(--color-ink-800)"/><path d="M82.7 16H106V122H94.3Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H106"/></g><g transform="translate(440 -65)"><path class="fx-city-body" d="M0 14H12.4V8H22.3V2H39.7V8H49.6V14H62V65H0Z" fill="var(--color-ink-800)"/><path d="M48.4 16H62V65H55.2Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H62"/></g><g transform="translate(510 -91)"><path class="fx-city-body" d="M0 11H96V91H0Z" fill="var(--color-ink-800)"/><path d="M74.9 16H96V91H85.4Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H96"/></g><g transform="translate(614 -115)"><path class="fx-city-body" d="M0 16H14.4V7H25.6L40 0L54.4 7H65.6V16H80V115H0Z" fill="var(--color-ink-800)"/><path d="M62.4 16H80V115H71.2Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H80"/></g><g transform="translate(702 -78)"><path class="fx-city-body" d="M0 14H22V8H39.6V2H70.4V8H88V14H110V78H0Z" fill="var(--color-ink-800)"/><path d="M85.8 16H110V78H97.9Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H110"/></g><g transform="translate(820 -100)"><path class="fx-city-body" d="M0 17H17L34 0L51 17H68V100H0Z" fill="var(--color-ink-800)"/><path d="M53 16H68V100H60.5Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H68"/></g><g transform="translate(896 -68)"><path class="fx-city-body" d="M0 11H104V68H0Z" fill="var(--color-ink-800)"/><path d="M81.1 16H104V68H92.6Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H104"/><g class="fx-city-roof" transform="translate(42 -12)"><path d="M2 10 0 22M18 10l3 12M0 22h21"/><path d="M1.5 1h17v10h-17z" fill="var(--color-ink-800)"/><ellipse cx="10" cy="11" rx="9" ry="2.6"/></g></g><g transform="translate(1008 -126)"><path class="fx-city-body" d="M0 14H16.4V8H29.5V2H52.5V8H65.6V14H82V126H0Z" fill="var(--color-ink-800)"/><path d="M64 16H82V126H73Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H82"/></g><g transform="translate(1098 -90)"><path class="fx-city-body" d="M0 16H20.9V7H37.1L58 0L78.9 7H95.1V16H116V90H0Z" fill="var(--color-ink-800)"/><path d="M90.5 16H116V90H103.2Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H116"/></g><g transform="translate(1222 -70)"><path class="fx-city-body" d="M0 11H66V70H0Z" fill="var(--color-ink-800)"/><path d="M51.5 16H66V70H58.7Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H66"/></g><g transform="translate(1296 -110)"><path class="fx-city-body" d="M0 17H25L50 0L75 17H100V110H0Z" fill="var(--color-ink-800)"/><path d="M78 16H100V110H89Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H100"/></g><g transform="translate(1404 -75)"><path class="fx-city-body" d="M0 14H14.8V8H26.6V2H47.4V8H59.2V14H74V75H0Z" fill="var(--color-ink-800)"/><path d="M57.7 16H74V75H65.9Z" fill="var(--color-ink-950)" opacity="0.28"/><path class="fx-city-cornice" d="M0 17H74"/></g></g>
+            <g class="fx-city-band fx-city-band--near" transform="translate(0 210)" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-46 -138)"><path class="fx-city-body" d="M0 11H112V138H0Z" fill="var(--color-ink-900)"/><path d="M87.4 16H112V138H99.7Z" fill="var(--color-ink-950)" opacity="0.46"/><path class="fx-city-cornice" d="M0 17H112"/><path class="fx-city-rib" d="M37.3 18V138"/><path class="fx-city-rib" d="M74.7 18V138"/><rect class="fx-city-win fx-city-win--pulse" x="13.8" y="25" width="6" height="5" rx=".6" style="animation-delay:-2235ms;animation-duration:17s"/><rect class="fx-city-win" x="53" y="25" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="72.6" y="25" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="33.4" y="43" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="53" y="43" width="6" height="5" rx=".6" style="animation-delay:-2626ms;animation-duration:18s"/><rect class="fx-city-win" x="13.8" y="61" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="33.4" y="61" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="92.2" y="61" width="6" height="5" rx=".6" style="animation-delay:-3017ms;animation-duration:19s"/><rect class="fx-city-win" x="13.8" y="79" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="72.6" y="79" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="92.2" y="79" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="53" y="97" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="72.6" y="97" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="33.4" y="115" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="53" y="115" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="92.2" y="115" width="6" height="5" rx=".6"/></g><g transform="translate(78 -102)"><path class="fx-city-body" d="M0 14H17.2V8H31V2H55V8H68.8V14H86V102H0Z" fill="var(--color-ink-900)"/><path d="M67.1 16H86V102H76.5Z" fill="var(--color-ink-950)" opacity="0.46"/><path class="fx-city-cornice" d="M0 17H86"/><path class="fx-city-rib" d="M43 18V102"/><rect class="fx-city-win" x="31" y="29.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="49" y="29.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="13" y="46.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="31" y="46.1" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="13" y="62.9" width="6" height="5" rx=".6" style="animation-delay:-14356ms;animation-duration:18s"/><rect class="fx-city-win" x="67" y="62.9" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="49" y="79.6" width="6" height="5" rx=".6" style="animation-delay:-14747ms;animation-duration:19s"/><rect class="fx-city-win" x="67" y="79.6" width="6" height="5" rx=".6"/></g><g transform="translate(172 -123)"><path class="fx-city-body" d="M0 16H19.1V7H33.9L53 0L72.1 7H86.9V16H106V123H0Z" fill="var(--color-ink-900)"/><path d="M82.7 16H106V123H94.3Z" fill="var(--color-ink-950)" opacity="0.46"/><path class="fx-city-cornice" d="M0 17H106"/><path class="fx-city-rib" d="M35.3 18V123"/><path class="fx-city-rib" d="M70.7 18V123"/><rect class="fx-city-win" x="13.2" y="32" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="31.6" y="32" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="86.8" y="32" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="13.2" y="54" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="68.4" y="54" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="86.8" y="54" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="50" y="76" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="68.4" y="76" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="31.6" y="98" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="50" y="98" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="86.8" y="98" width="6" height="5" rx=".6"/></g><g transform="translate(288 -157)"><path class="fx-city-body" d="M0 17H19.5L39 0L58.5 17H78V157H0Z" fill="var(--color-ink-900)"/><path d="M60.8 16H78V157H69.4Z" fill="var(--color-ink-950)" opacity="0.46"/><path class="fx-city-cornice" d="M0 17H78"/><path class="fx-city-rib" d="M39 18V157"/><rect class="fx-city-win" x="12" y="29.7" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="60" y="29.7" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="44" y="47.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="60" y="47.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="28" y="64.6" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="44" y="64.6" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="12" y="82" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="28" y="82" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="60" y="82" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="12" y="99.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="44" y="99.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="60" y="99.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="28" y="116.9" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="44" y="116.9" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="12" y="134.3" width="6" height="5" rx=".6" style="animation-delay:-4598ms;animation-duration:20s"/><rect class="fx-city-win" x="28" y="134.3" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="60" y="134.3" width="6" height="5" rx=".6"/></g><g transform="translate(374 -107)"><path class="fx-city-body" d="M0 11H122V107H0Z" fill="var(--color-ink-900)"/><path d="M95.2 16H122V107H108.6Z" fill="var(--color-ink-950)" opacity="0.46"/><path class="fx-city-cornice" d="M0 17H122"/><path class="fx-city-rib" d="M30.5 18V107"/><path class="fx-city-rib" d="M61 18V107"/><path class="fx-city-rib" d="M91.5 18V107"/><g class="fx-city-roof" transform="translate(51 -12)"><path d="M2 10 0 22M18 10l3 12M0 22h21"/><path d="M1.5 1h17v10h-17z" fill="var(--color-ink-800)"/><ellipse cx="10" cy="11" rx="9" ry="2.6"/></g><rect class="fx-city-win" x="49" y="25.6" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="67" y="25.6" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="103" y="25.6" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="31" y="44.9" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="49" y="44.9" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="85" y="44.9" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="103" y="44.9" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="13" y="64.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="31" y="64.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="67" y="64.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="85" y="64.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="13" y="83.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="49" y="83.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="67" y="83.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="103" y="83.4" width="6" height="5" rx=".6"/></g><g transform="translate(506 -142)"><path class="fx-city-body" d="M0 14H18V8H32.4V2H57.6V8H72V14H90V142H0Z" fill="var(--color-ink-900)"/><path d="M70.2 16H90V142H80.1Z" fill="var(--color-ink-950)" opacity="0.46"/><path class="fx-city-cornice" d="M0 17H90"/><path class="fx-city-rib" d="M30 18V142"/><path class="fx-city-rib" d="M60 18V142"/><rect class="fx-city-win" x="32.5" y="29.9" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="51.5" y="29.9" width="6" height="5" rx=".6" style="animation-delay:-2524ms;animation-duration:16s"/><rect class="fx-city-win" x="13.5" y="47.7" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="32.5" y="47.7" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="70.5" y="47.7" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="13.5" y="65.6" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="51.5" y="65.6" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="70.5" y="65.6" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="32.5" y="83.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="51.5" y="83.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="13.5" y="101.3" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="32.5" y="101.3" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="70.5" y="101.3" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="13.5" y="119.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="51.5" y="119.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="70.5" y="119.1" width="6" height="5" rx=".6"/></g><g transform="translate(604 -97)"><path class="fx-city-body" d="M0 16H20.5V7H36.5L57 0L77.5 7H93.5V16H114V97H0Z" fill="var(--color-ink-900)"/><path d="M88.9 16H114V97H101.5Z" fill="var(--color-ink-950)" opacity="0.46"/><path class="fx-city-cornice" d="M0 17H114"/><path class="fx-city-rib" d="M38 18V97"/><path class="fx-city-rib" d="M76 18V97"/><rect class="fx-city-win" x="14" y="28.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="34" y="28.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="74" y="28.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="94" y="28.8" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="14" y="44.3" width="6" height="5" rx=".6" style="animation-delay:-14254ms;animation-duration:16s"/><rect class="fx-city-win" x="54" y="44.3" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="74" y="44.3" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="34" y="59.8" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="54" y="59.8" width="6" height="5" rx=".6" style="animation-delay:-14645ms;animation-duration:17s"/><rect class="fx-city-win" x="94" y="59.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="14" y="75.3" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="34" y="75.3" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="74" y="75.3" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="94" y="75.3" width="6" height="5" rx=".6" style="animation-delay:-15036ms;animation-duration:18s"/></g><g transform="translate(726 -128)"><path class="fx-city-body" d="M0 11H76V128H0Z" fill="var(--color-ink-900)"/><path d="M59.3 16H76V128H67.6Z" fill="var(--color-ink-950)" opacity="0.46"/><path class="fx-city-cornice" d="M0 17H76"/><path class="fx-city-rib" d="M38 18V128"/><rect class="fx-city-win" x="14.3" y="24.2" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="55.7" y="24.2" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="35" y="40.5" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="55.7" y="40.5" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="14.3" y="56.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="35" y="56.8" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="14.3" y="73.2" width="6" height="5" rx=".6" style="animation-delay:-9375ms;animation-duration:17s"/><rect class="fx-city-win" x="55.7" y="73.2" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="35" y="89.5" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="55.7" y="89.5" width="6" height="5" rx=".6" style="animation-delay:-9766ms;animation-duration:18s"/><rect class="fx-city-win" x="14.3" y="105.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="35" y="105.8" width="6" height="5" rx=".6"/></g><g transform="translate(810 -152)"><path class="fx-city-body" d="M0 14H25.2V8H45.4V2H80.6V8H100.8V14H126V152H0Z" fill="var(--color-ink-900)"/><path d="M98.3 16H126V152H112.1Z" fill="var(--color-ink-950)" opacity="0.46"/><path class="fx-city-cornice" d="M0 17H126"/><path class="fx-city-rib" d="M31.5 18V152"/><path class="fx-city-rib" d="M63 18V152"/><path class="fx-city-rib" d="M94.5 18V152"/><rect class="fx-city-win fx-city-win--pulse" x="32" y="29.4" width="6" height="5" rx=".6" style="animation-delay:-8338ms;animation-duration:20s"/><rect class="fx-city-win" x="50.7" y="29.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="88" y="29.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="106.7" y="29.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="13.3" y="46.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="32" y="46.1" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="69.3" y="46.1" width="6" height="5" rx=".6" style="animation-delay:-8729ms;animation-duration:21s"/><rect class="fx-city-win" x="88" y="46.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="13.3" y="62.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="50.7" y="62.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="69.3" y="62.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="32" y="79.5" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="50.7" y="79.5" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="106.7" y="79.5" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="13.3" y="96.2" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="32" y="96.2" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="88" y="96.2" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="106.7" y="96.2" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="13.3" y="112.9" width="6" height="5" rx=".6" style="animation-delay:-4496ms;animation-duration:18s"/><rect class="fx-city-win" x="69.3" y="112.9" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="88" y="112.9" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="50.7" y="129.6" width="6" height="5" rx=".6" style="animation-delay:-4887ms;animation-duration:19s"/><rect class="fx-city-win" x="69.3" y="129.6" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="106.7" y="129.6" width="6" height="5" rx=".6"/></g><g transform="translate(946 -113)"><path class="fx-city-body" d="M0 16H17.3V7H30.7L48 0L65.3 7H78.7V16H96V113H0Z" fill="var(--color-ink-900)"/><path d="M74.9 16H96V113H85.4Z" fill="var(--color-ink-950)" opacity="0.46"/><path class="fx-city-cornice" d="M0 17H96"/><path class="fx-city-rib" d="M32 18V113"/><path class="fx-city-rib" d="M64 18V113"/><rect class="fx-city-win" x="14.3" y="30.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="34.8" y="30.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="75.8" y="30.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="14.3" y="50.3" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="55.3" y="50.3" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="75.8" y="50.3" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="34.8" y="69.8" width="6" height="5" rx=".6" style="animation-delay:-3459ms;animation-duration:21s"/><rect class="fx-city-win" x="55.3" y="69.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="14.3" y="89.3" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="34.8" y="89.3" width="6" height="5" rx=".6"/></g><g transform="translate(1050 -164)"><path class="fx-city-body" d="M0 17H20.5L41 0L61.5 17H82V164H0Z" fill="var(--color-ink-900)"/><path d="M64 16H82V164H73Z" fill="var(--color-ink-950)" opacity="0.46"/><path class="fx-city-cornice" d="M0 17H82"/><path class="fx-city-rib" d="M41 18V164"/><rect class="fx-city-win" x="12.5" y="30.2" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="46.5" y="30.2" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="63.5" y="30.2" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="29.5" y="48.6" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="46.5" y="48.6" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="12.5" y="67.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="29.5" y="67.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="12.5" y="85.5" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="63.5" y="85.5" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="46.5" y="103.9" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="63.5" y="103.9" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="29.5" y="122.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="46.5" y="122.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="12.5" y="140.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="29.5" y="140.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="63.5" y="140.8" width="6" height="5" rx=".6"/></g><g transform="translate(1140 -119)"><path class="fx-city-body" d="M0 11H120V119H0Z" fill="var(--color-ink-900)"/><path d="M93.6 16H120V119H106.8Z" fill="var(--color-ink-950)" opacity="0.46"/><path class="fx-city-cornice" d="M0 17H120"/><path class="fx-city-rib" d="M30 18V119"/><path class="fx-city-rib" d="M60 18V119"/><path class="fx-city-rib" d="M90 18V119"/><g class="fx-city-roof" transform="translate(50 -12)"><path d="M2 10 0 22M18 10l3 12M0 22h21"/><path d="M1.5 1h17v10h-17z" fill="var(--color-ink-800)"/><ellipse cx="10" cy="11" rx="9" ry="2.6"/></g><rect class="fx-city-win" x="30.5" y="27.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="48.2" y="27.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="101.2" y="27.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="12.8" y="49.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="30.5" y="49.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="83.5" y="49.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="101.2" y="49.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="12.8" y="71.6" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="65.8" y="71.6" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="83.5" y="71.6" width="6" height="5" rx=".6" style="animation-delay:-14934ms;animation-duration:16s"/><rect class="fx-city-win" x="48.2" y="93.9" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="65.8" y="93.9" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="101.2" y="93.9" width="6" height="5" rx=".6"/></g><g transform="translate(1268 -145)"><path class="fx-city-body" d="M0 14H20.4V8H36.7V2H65.3V8H81.6V14H102V145H0Z" fill="var(--color-ink-900)"/><path d="M79.6 16H102V145H90.8Z" fill="var(--color-ink-950)" opacity="0.46"/><path class="fx-city-cornice" d="M0 17H102"/><path class="fx-city-rib" d="M34 18V145"/><path class="fx-city-rib" d="M68 18V145"/><rect class="fx-city-win" x="12.8" y="30.2" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="30.4" y="30.2" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="83.2" y="30.2" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="12.8" y="48.5" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="65.6" y="48.5" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="83.2" y="48.5" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="48" y="66.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="65.6" y="66.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="30.4" y="85.2" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="48" y="85.2" width="6" height="5" rx=".6" style="animation-delay:-9664ms;animation-duration:16s"/><rect class="fx-city-win" x="83.2" y="85.2" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="12.8" y="103.5" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="30.4" y="103.5" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="65.6" y="103.5" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="83.2" y="103.5" width="6" height="5" rx=".6" style="animation-delay:-10055ms;animation-duration:17s"/><rect class="fx-city-win" x="12.8" y="121.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="48" y="121.8" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="65.6" y="121.8" width="6" height="5" rx=".6"/></g><g transform="translate(1378 -104)"><path class="fx-city-body" d="M0 16H15.8V7H28.2L44 0L59.8 7H72.2V16H88V104H0Z" fill="var(--color-ink-900)"/><path d="M68.6 16H88V104H78.3Z" fill="var(--color-ink-950)" opacity="0.46"/><path class="fx-city-cornice" d="M0 17H88"/><path class="fx-city-rib" d="M44 18V104"/><rect class="fx-city-win" x="13.3" y="29.6" width="6" height="5" rx=".6"/><rect class="fx-city-win fx-city-win--pulse" x="68.8" y="29.6" width="6" height="5" rx=".6" style="animation-delay:-8627ms;animation-duration:19s"/><rect class="fx-city-win" x="50.3" y="46.9" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="68.8" y="46.9" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="31.8" y="64.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="50.3" y="64.1" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="13.3" y="81.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="31.8" y="81.4" width="6" height="5" rx=".6"/><rect class="fx-city-win" x="68.8" y="81.4" width="6" height="5" rx=".6"/></g></g>
+            </svg>
+          </div>
         <div class="fx-hero__table" aria-hidden="true">
           <svg class="fx-hero__table-svg" viewBox="0 88 1200 396" preserveAspectRatio="xMidYMin meet" focusable="false">
             <defs>
@@ -257,6 +324,7 @@
 <g transform="matrix(0.5134 0.6621 -1.1254 0 1080.2325 351.6516)"><rect width="60" height="99" fill="var(--fx-plate)" stroke="var(--fx-plate-edge)" stroke-width="1"/><path d="M4 4h7M4 4v7" stroke="var(--fx-rivet)" stroke-width="1"/><path d="M56 4h-7M56 4v7" stroke="var(--fx-rivet)" stroke-width="1"/><path d="M4 95h7M4 95v-7" stroke="var(--fx-rivet)" stroke-width="1"/><path d="M56 95h-7M56 95v-7" stroke="var(--fx-rivet)" stroke-width="1"/><g transform="translate(18.5 68.5) scale(23.00)" clip-path="url(#fx-flag)"><rect width="1" height="1" fill="#00732f"/><rect y="0.333" width="1" height="0.334" fill="#fff"/><rect y="0.667" width="1" height="0.333" fill="#000"/><rect width="0.28" height="1" fill="#ff0000"/></g><circle cx="30" cy="80" r="11.5" fill="none" stroke="var(--color-ink-abyss)" stroke-width="1.2"/><circle cx="30" cy="80" r="10.3" fill="none" stroke="var(--color-starlight)" stroke-opacity="0.18" stroke-width="0.8"/><rect x="11" y="6" width="38" height="12" rx="2.5" fill="var(--fx-chip)" stroke="var(--fx-chip-edge)" stroke-width="0.9"/><text x="30" y="15" text-anchor="middle" font-family="var(--font-slab)" font-size="8" font-weight="600" fill="var(--color-brass-glow)">R$ 650</text><text x="30" y="45.5" text-anchor="middle" font-family="var(--font-display)" font-size="12" letter-spacing="0.03em" fill="var(--fx-label)">DUBAI</text></g>
             </g>
           </svg>
+          </div>
         </div>
       </section>
 
@@ -264,26 +332,26 @@
       <section class="mk-section" aria-labelledby="como-funciona">
         <div class="mk-container">
           <hr class="mk-rule" aria-hidden="true" />
-          <h2 id="como-funciona">Três casas até alguém dever aluguel</h2>
+          <h2 id="como-funciona">Jogue com seus amigos. Domine o tabuleiro.</h2>
           <p class="mk-section__intro">
-            Não existe fila, matchmaking nem estranho na sua mesa: a partida acontece entre
-            quem recebe o link.
+            Mande o link no grupo e comece a partida: compre propriedades, cobre aluguel e
+            negocie cada vantagem até o fim.
           </p>
           <ol class="fx-steps">
             <li>
               <span class="fx-steps__num" aria-hidden="true">01</span>
               <h3>Crie a sala</h3>
               <p>
-                Escolha nome, cor, avatar e o <b>tabuleiro</b>. Você é o host: define o
-                Ritual de Largada e dá a largada quando a turma chegar.
+                Escolha nome, cor, avatar e o <b>tabuleiro</b>. A sala é sua: você decide
+                como a partida começa e dá a largada quando a turma chegar.
               </p>
             </li>
             <li>
               <span class="fx-steps__num" aria-hidden="true">02</span>
               <h3>Mande o link</h3>
               <p>
-                A sala é <b>privada</b>: só entra quem tem o endereço. Cole no grupo e veja
-                os assentos acenderem, de 2 a 8 jogadores.
+                Cole no grupo e veja os assentos acenderem à medida que seus amigos chegam.
+                Com 2 a 8 jogadores na mesa, é só começar.
               </p>
             </li>
             <li>
@@ -304,8 +372,8 @@
           <hr class="mk-rule" aria-hidden="true" />
           <h2 id="episodios">O que acontece na mesa</h2>
           <p class="mk-section__intro">
-            Oito coisas que o jogo já faz, contadas como elas aparecem no seu diário de
-            bordo. Os nomes são de uma mesa de exemplo.
+            Oito páginas do diário de bordo de uma partida qualquer. É mais ou menos assim
+            que a sua vai acabar.
           </p>
           <ol class="fx-log">
             <li class="fx-log__row">
@@ -379,7 +447,7 @@
               </div>
             </li>
             <li class="fx-log__row">
-              <p class="fx-log__line">O wi-fi do Téo caiu no meio da compra. A partida pausou e esperou. Téo voltou pelo mesmo link.</p>
+              <p class="fx-log__line">A conexão do Téo caiu no meio da compra. A partida pausou e esperou. Téo voltou pelo mesmo link.</p>
               <div class="fx-log__fact">
                 <h3>Queda não pune</h3>
                 <p>
@@ -398,43 +466,18 @@
           <hr class="mk-rule" aria-hidden="true" />
           <h2 id="temas">Dois tabuleiros, as mesmas regras</h2>
           <p class="mk-section__intro">
-            O host escolhe o mapa ao criar a sala, e ainda pode trocar no lobby, enquanto
-            ninguém entrou no Ritual de Largada.
+            Você escolhe o cenário na hora de abrir a sala. Ainda dá para mudar de ideia
+            enquanto a turma não começou.
           </p>
           <div class="fx-boards__grid">
-            <article class="fx-deed fx-deed--fuligem" data-world="fuligem" aria-labelledby="deed-fuligem">
-              <p class="fx-deed__kicker">Mapa 02 · a novidade</p>
-              <h3 id="deed-fuligem">Cidade da Fuligem</h3>
-              <p class="fx-deed__lede">
-                Uma cidade da Revolução Industrial em <b>40 casas</b> e <b>8 bairros</b>:
-                olarias, tecelagem, fundição, colônia operária, oficinas, pátio ferroviário,
-                a usina e o alto onde os donos moram longe da fumaça.
-              </p>
-              <ul class="fx-deed__tags">
-                <li style="--tag-hue: var(--color-group-brown)">Olaria</li>
-                <li style="--tag-hue: var(--color-group-skyblue)">Vila Bonfim</li>
-                <li style="--tag-hue: var(--color-group-pink)">Fundição</li>
-                <li style="--tag-hue: var(--color-group-orange)">Colônia Nova</li>
-                <li style="--tag-hue: var(--color-group-red)">Guilhermina</li>
-                <li style="--tag-hue: var(--color-group-yellow)">Alto do Desvio</li>
-                <li style="--tag-hue: var(--color-group-green)">Salto</li>
-                <li style="--tag-hue: var(--color-group-platinum)">Serrano</li>
-              </ul>
-              <dl class="fx-deed__specs">
-                <div><dt>Ferrovias</dt><dd>4 estações, com Estação de Carga no lugar do hangar</dd></div>
-                <div><dt>Minas</dt><dd>Ferro, carvão, estanho e cobre, no lugar das utilidades</dd></div>
-                <div><dt>Desvio pela Ferrovia</dt><dd>Caiu numa estação sua? Embarque até outra que também seja</dd></div>
-                <div><dt>Sorte Grande</dt><dd>O pote do centro, que só sai para quem parar nele</dd></div>
-              </dl>
-            </article>
             <article class="fx-deed fx-deed--atlas" aria-labelledby="deed-atlas">
               <span class="fx-deed__lights" aria-hidden="true"><i style="background: var(--color-group-brown)"></i><i style="background: var(--color-group-skyblue)"></i><i style="background: var(--color-group-pink)"></i><i style="background: var(--color-group-purple)"></i><i style="background: var(--color-group-orange)"></i><i style="background: var(--color-group-red)"></i><i style="background: var(--color-group-yellow)"></i><i style="background: var(--color-group-green)"></i><i style="background: var(--color-group-navy)"></i><i style="background: var(--color-group-platinum)"></i></span>
-              <p class="fx-deed__kicker">Mapa 01 · o incumbente</p>
+              <p class="fx-deed__kicker">Mapa 01 · o clássico</p>
               <h3 id="deed-atlas">Cidades do Mundo</h3>
               <p class="fx-deed__lede">
-                O tabuleiro maior: <b>48 casas</b> e <b>10 países</b>, com 28 cidades da Roma
-                de entrada ao super-luxo de Dubai, mais aeroportos, utilidades e a casa de
-                Bus&nbsp;Ticket.
+                A volta ao mundo cobrando aluguel: <b>28 cidades</b> em <b>10 países</b>, de
+                Roma ao luxo de Dubai. Feche um país inteiro e cada
+                aterrissagem na sua rua vira pedágio.
               </p>
               <ul class="fx-deed__tags">
                 <li style="--tag-hue: var(--color-group-brown)">Roma</li>
@@ -455,17 +498,41 @@
                 <div><dt>Loteria</dt><dd>O pote do centro, que só sai para quem parar nele</dd></div>
               </dl>
             </article>
+            <article class="fx-deed fx-deed--fuligem" data-world="fuligem" aria-labelledby="deed-fuligem">
+              <p class="fx-deed__kicker">Mapa 02 · a novidade</p>
+              <h3 id="deed-fuligem">Cidade da Fuligem</h3>
+              <p class="fx-deed__lede">
+                A cidade que a Revolução Industrial construiu e nunca limpou: <b>8 bairros</b>
+                de olaria, tecelagem, fundição e colônia operária. Lá em cima fica o alto,
+                onde os donos moram longe da fumaça.
+              </p>
+              <ul class="fx-deed__tags">
+                <li style="--tag-hue: var(--color-group-brown)">Olaria</li>
+                <li style="--tag-hue: var(--color-group-skyblue)">Vila Bonfim</li>
+                <li style="--tag-hue: var(--color-group-pink)">Fundição</li>
+                <li style="--tag-hue: var(--color-group-orange)">Colônia Nova</li>
+                <li style="--tag-hue: var(--color-group-red)">Guilhermina</li>
+                <li style="--tag-hue: var(--color-group-yellow)">Alto do Desvio</li>
+                <li style="--tag-hue: var(--color-group-green)">Salto</li>
+                <li style="--tag-hue: var(--color-group-platinum)">Serrano</li>
+              </ul>
+              <dl class="fx-deed__specs">
+                <div><dt>Ferrovias</dt><dd>4 estações, com Estação de Carga no lugar do hangar</dd></div>
+                <div><dt>Minas</dt><dd>Ferro, carvão, estanho e cobre, no lugar das utilidades</dd></div>
+                <div><dt>Desvio pela Ferrovia</dt><dd>Caiu numa estação sua? Embarque até outra que também seja</dd></div>
+                <div><dt>Sorte Grande</dt><dd>O pote do centro, que só sai para quem parar nele</dd></div>
+              </dl>
+            </article>
             <article class="fx-deed fx-deed--next" aria-labelledby="deed-next">
               <p class="fx-deed__kicker">Mapa 03</p>
               <h3 id="deed-next">Em breve</h3>
               <p class="fx-deed__lede">
-                A base foi construída para receber mais mapas: o motor lê o tabuleiro do
-                mapa ativo, e cada um traz topologia, nomes e regras próprias sobre as
-                mesmas mecânicas.
+                Outra cidade, outros nomes e outras manias, com as mesmas regras que você
+                já vai conhecer de cor.
               </p>
               <p class="fx-deed__lede">
-                O terceiro tabuleiro ainda não existe. Quando existir, ele aparece aqui e
-                no seletor de mapas da sala.
+                O terceiro tabuleiro ainda está na prancheta. No dia em que ficar pronto,
+                ele aparece aqui e na sua sala.
               </p>
             </article>
           </div>
@@ -478,10 +545,11 @@
           <hr class="mk-rule" aria-hidden="true" />
           <h2 id="produto">A mesa de verdade</h2>
           <p class="mk-section__intro">
-            Sem mockup e sem render: estas são telas do jogo rodando, numa mesa de exemplo.
+            Quatro momentos de uma partida: o bairro que fechou, o pregão que virou o jogo,
+            a proposta em cima da mesa e o outro mapa girando ao lado.
           </p>
           <div class="fx-proof__stack">
-            <figure class="fx-shot fx-shot--main">
+            <figure class="fx-shot">
               <img
                 src="/src/marketing/assets/fuligem-mesa.webp"
                 alt="Partida na Cidade da Fuligem: bairro fechado com oficinas, fábrica e Torre de Ferro, uma propriedade hipotecada e a Sorte Grande acumulada em R$ 1.850"
@@ -492,7 +560,7 @@
               />
               <figcaption>Bairro fechado, escada de construção inteira e uma hipoteca à vista</figcaption>
             </figure>
-            <figure class="fx-shot fx-shot--inset">
+            <figure class="fx-shot">
               <img
                 src="/src/marketing/assets/fuligem-leilao.webp"
                 alt="Leilão ao vivo do Magnata Imobiliário: título Represa em disputa, maior lance de R$ 420 e a progressão de aluguel ao lado"
@@ -536,9 +604,9 @@
           <p class="fx-finale__kicker">Fim de partida</p>
           <h2 id="convite">No fim, sobra <b>um</b>.</h2>
           <p class="fx-finale__lede">
-            A falência é pública, a classificação fica registrada e a revanche começa na
-            mesma sala. Crie a sua em segundos, mande o link no grupo e descubra quem
-            aguenta ser cobrado.
+            A falência é pública, o pódio fica registrado e a revanche começa na mesma
+            sala. Crie a sua em segundos, mande o link no grupo e descubra quem aguenta
+            ser cobrado.
           </p>
           <p class="fx-finale__actions">
             <a class="mk-btn mk-btn--brass mk-btn--lg" href="/play">Criar minha sala</a>
@@ -548,16 +616,57 @@
       </section>
     </main>
 
+    <!-- RODAPÉ. Ele fecha a página, e o gesto que mais importa aqui — bancar um café —
+         precisa competir com a escuridão em volta, não sussurrar. Daí a régua graduada
+         no topo (a mesma do cabeçalho, espelhada), o painel de tinta que separa a zona
+         do resto, e a coluna de apoio com botão de verdade em vez de link de texto. -->
     <footer class="mk-footer">
       <div class="mk-container">
-        <a class="mk-brand" href="/">Magnata <b>Imobiliário</b></a>
-        <nav aria-label="Rodapé">
-          <a href="/play">Jogar</a>
-          <a href="/how-to-play">Como jogar</a>
-          <a href="/faq">Perguntas frequentes</a>
-        </nav>
+        <div class="mk-footer__grid">
+          <div class="mk-footer__about">
+            <a class="mk-brand" href="/" aria-label="Magnata Imobiliário, início"><img class="mk-brand__mark" src="/magnata-logo.svg" alt="" width="36" height="36" loading="lazy" decoding="async" /><span class="mk-brand__word">Magnata <b>Imobiliário</b></span></a>
+            <p class="mk-footer__pitch">
+              Jogo de tabuleiro online <b>gratuito</b>, de 2 a 8 amigos, jogado direto no
+              navegador. Sem assinatura, sem anúncio, sem item pago e sem criar conta.
+            </p>
+          </div>
+
+          <nav class="mk-footer__col" aria-label="Rodapé">
+            <h2 class="mk-footer__title">Navegar</h2>
+            <a href="/play">Jogar agora</a>
+            <a href="/how-to-play">Como jogar</a>
+            <a href="/faq">Perguntas frequentes</a>
+          </nav>
+
+          <div class="mk-footer__col mk-footer__col--support">
+            <h2 class="mk-footer__title">Apoiar</h2>
+            <p class="mk-footer__pitch">
+              O jogo é <b>grátis e sempre será</b>. Se você curtiu e quiser bancar um
+              café, fique à vontade.
+            </p>
+            <p class="mk-footer__actions">
+              <a class="mk-btn mk-btn--brass" href="%SUPPORT_URL%" target="_blank" rel="noopener noreferrer">
+                <svg class="mk-footer__cup" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M3 9h14v6a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5Z" />
+                  <path d="M17 11h1.5a2.5 2.5 0 0 1 0 5H17" />
+                  <path d="M6.5 5.5c0-1 1-1.4 1-2.5M10 5.5c0-1 1-1.4 1-2.5M13.5 5.5c0-1 1-1.4 1-2.5" />
+                </svg>
+                Bancar um café
+              </a>
+              <a class="mk-btn mk-btn--ghost" href="%AUTHOR_GITHUB_URL%" target="_blank" rel="noopener noreferrer">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true" focusable="false">
+                  <path d="M12 1.5a10.5 10.5 0 0 0-3.32 20.47c.53.1.72-.23.72-.5v-1.9c-2.92.64-3.54-1.25-3.54-1.25-.48-1.22-1.17-1.54-1.17-1.54-.95-.65.08-.64.08-.64 1.06.07 1.61 1.09 1.61 1.09.94 1.6 2.46 1.14 3.06.87.1-.68.37-1.14.67-1.4-2.33-.27-4.78-1.17-4.78-5.19 0-1.15.41-2.09 1.08-2.82-.1-.27-.47-1.34.1-2.79 0 0 .88-.28 2.89 1.08a9.9 9.9 0 0 1 5.26 0c2-1.36 2.88-1.08 2.88-1.08.58 1.45.21 2.52.11 2.79.67.73 1.08 1.67 1.08 2.82 0 4.03-2.46 4.92-4.8 5.18.38.33.72.97.72 1.96v2.9c0 .28.19.61.72.5A10.5 10.5 0 0 0 12 1.5Z" />
+                </svg>
+                GitHub
+              </a>
+            </p>
+          </div>
+        </div>
+
         <p class="mk-footer__note">
-          Magnata Imobiliário é um jogo de tabuleiro online independente, jogado no navegador.
+          Magnata Imobiliário é um jogo de tabuleiro online independente. Desenvolvido com
+          <span class="mk-footer__heart">❤️</span> pelo
+          <a href="%AUTHOR_GITHUB_URL%" target="_blank" rel="noopener noreferrer">Nikaum</a>.
         </p>
       </div>
     </footer>

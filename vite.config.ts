@@ -47,6 +47,29 @@ function requireEnv(): Plugin {
  */
 const SITE_URL = (process.env.VITE_SITE_URL ?? 'https://magnata-imobiliario.vercel.app').replace(/\/+$/, '')
 
+/**
+ * Página de apoio voluntário, linkada no rodapé das três páginas públicas. Mora aqui
+ * pelo mesmo motivo do SITE_URL: repetida em três HTML ela existiria só para divergir.
+ *
+ * Livepix, e a escolha é por AVULSO: o gesto que o rodapé oferece é alguém dar R$ 10 uma
+ * vez e seguir a vida, não assinar nada. Apoia.se e Catarse são recorrentes por desenho
+ * (modelo Patreon) e resolveriam outro problema. Entre os de doação avulsa, Livepix aceita
+ * Pix e cobra em real — num público brasileiro que doa valor pequeno, pedir cartão é o que
+ * mais derruba conversão. Nenhuma delas cobra mensalidade de quem recebe: a conta é
+ * percentual sobre o que entra, então mês sem doação custa zero.
+ *
+ * Pix direto sairia de graça e foi descartado por custo TÉCNICO, não financeiro: "copiar
+ * chave" exige JavaScript, e estas páginas têm zero JS por contrato (scripts/audit-marketing-bundle.ts
+ * quebra o CI se vazar um). Página hospedada é um `href` e não pesa no bundle.
+ *
+ * `VITE_SUPPORT_URL` sobrescreve sem tocar no código — é por onde a página muda se a
+ * plataforma mudar.
+ */
+const SUPPORT_URL = process.env.VITE_SUPPORT_URL ?? 'https://livepix.gg/nikaum'
+
+/** Perfil do autor. Mesma razão de morar aqui: repetido em três páginas. */
+const AUTHOR_GITHUB_URL = process.env.VITE_AUTHOR_GITHUB_URL ?? 'https://github.com/Nikaum-js'
+
 // Params que sempre significaram "estou indo pro jogo" quando apareciam na raiz.
 // `/` agora é a landing: quem chega com um deles é redirecionado pra `/play` com a
 // query intacta — é o mesmo contrato dos redirects do vercel.json, valendo em dev e
@@ -118,7 +141,10 @@ function siteMeta(): Plugin {
     transformIndexHtml(html) {
       const gsc = process.env.VITE_GSC_VERIFICATION
       return {
-        html: html.replaceAll('%SITE_URL%', SITE_URL),
+        html: html
+          .replaceAll('%SITE_URL%', SITE_URL)
+          .replaceAll('%SUPPORT_URL%', SUPPORT_URL)
+          .replaceAll('%AUTHOR_GITHUB_URL%', AUTHOR_GITHUB_URL),
         tags: gsc
           ? [{ tag: 'meta', attrs: { name: 'google-site-verification', content: gsc }, injectTo: 'head' as const }]
           : [],

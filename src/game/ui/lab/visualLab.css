@@ -307,7 +307,16 @@
   flex-wrap: wrap;
 }
 
-@media (max-width: 900px) {
+/* `min-height: 561px` é o que separa "estreito de pé" de "baixo deitado". Este
+   bloco empilha porque, em RETRATO, sobra altura e falta largura. Em paisagem
+   curta (740×360, o mínimo oficial) é o contrário: empilhar punha o catálogo
+   (34svh) e o cabeçalho na frente do palco, e o COMPONENTE EM TESTE — a razão
+   de o laboratório existir — nascia inteiramente abaixo da dobra, com um
+   `min-height: 620px` de palco numa tela de 360px.
+   É a mesma lição que `.board-stage` já tinha aprendido (index.css): o
+   breakpoint de largura não pode decidir sozinho quando a altura é o recurso
+   escasso. */
+@media (max-width: 900px) and (min-height: 561px) {
   .visual-lab {
     height: auto;
     min-height: 100svh;
@@ -331,6 +340,58 @@
 
   .visual-lab__stage {
     min-height: 620px;
+  }
+}
+
+/* Paisagem curta: duas colunas preservadas, cromo do laboratório reduzido ao
+   mínimo para que o palco receba a altura que sobra. O catálogo vira uma faixa
+   estreita com rolagem própria — alcançável, sem competir com o palco. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .visual-lab {
+    height: 100svh;
+    overflow: hidden;
+  }
+
+  .visual-lab__header {
+    min-height: 0;
+    padding: 6px 10px;
+  }
+
+  .visual-lab__title h1 {
+    font-size: 17px;
+  }
+
+  .visual-lab__seal {
+    display: none;
+  }
+
+  .visual-lab__body {
+    grid-template-columns: minmax(120px, 168px) minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .visual-lab__catalog {
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .visual-lab__workspace {
+    padding: 8px 10px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* O palco deixa de exigir 620px de altura: nesta faixa ele ocupa o que
+     sobrou, e cada caso rola por dentro do próprio palco quando precisa. */
+  .visual-lab__stage {
+    min-height: 0;
+    height: auto;
+  }
+
+  .visual-lab__case-head p:last-child,
+  .visual-lab__real-badge {
+    display: none;
   }
 }
 

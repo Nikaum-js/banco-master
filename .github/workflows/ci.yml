@@ -145,6 +145,38 @@ jobs:
           path: test-results/
           retention-days: 7
 
+  responsivo:
+    name: responsivo (celular, tablet e desktop, sobre o build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Instalar dependências
+        run: bun install --frozen-lockfile
+
+      - name: Instalar chromium do Playwright
+        run: bunx playwright install --with-deps chromium
+
+      # `e2e/responsive.spec.ts` roda no projeto `built` (playwright.config.ts) por dois
+      # motivos: é o bundle que se promove, e a rota 404 de verdade só existe no preview.
+      # Cobre retrato de 320 a 768, paisagem de 667 a 1024 (com 740×360, o mínimo oficial),
+      # desktop como regressão, Atlas e Fuligem, e o contrato do OrientationGate — girar o
+      # aparelho não pode desmontar a partida.
+      - name: Gate responsivo
+        run: bunx playwright test e2e/responsive.spec.ts
+
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-responsivo
+          path: test-results/
+          retention-days: 7
+
   a11y:
     name: acessibilidade (axe, sobre o build)
     runs-on: ubuntu-latest

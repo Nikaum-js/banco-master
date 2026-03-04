@@ -817,13 +817,17 @@ function PlayerRow({ player: p }: { player: Player }) {
       <div className="player-row__identity">
         {p.active && <span className="sr-only">Turno atual</span>}
         <div className="player-row__headline">
-          <p className="display display--tight">{p.name}</p>
+          {/* Na gaveta estreita de paisagem o nome corta com reticências (a gaveta
+              mede ~136px num 667×375). O `title` devolve o nome inteiro a quem tem
+              ponteiro; no toque, quem carrega o nome completo é o miolo do
+              tabuleiro, que anuncia o jogador da vez em corpo grande. */}
+          <p className="display display--tight" title={p.name}>{p.name}</p>
           {quit && (
             // §9.6/D-057 — só na PRÓPRIA linha, e discreto: some no fundo da linha até o
             // hover/foco. Sair da partida não pode competir visualmente com jogar.
             <button
               type="button"
-              className="player-row__quit"
+              className="player-row__quit hit-44"
               onClick={quit.open}
               disabled={!quit.enabled}
               aria-label="Desistir da partida"

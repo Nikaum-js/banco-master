@@ -39,14 +39,28 @@ export default defineConfig({
       // Smoke E2E (036) + multiplayer (038/042) — dev server, como sempre foi.
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: ['**/fullMatch.spec.ts', '**/a11y.spec.ts', '**/avatarSkins.spec.ts'],
+      testIgnore: [
+        '**/fullMatch.spec.ts',
+        '**/a11y.spec.ts',
+        '**/avatarSkins.spec.ts',
+        '**/responsive.spec.ts',
+      ],
     },
     {
       // FR-051 (044/T052): partida completa e acessibilidade rodam sobre a versão
       // CONSTRUÍDA — o que o CI promoveria —, nunca o dev server.
       name: 'built',
       use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:4173' },
-      testMatch: ['**/fullMatch.spec.ts', '**/a11y.spec.ts', '**/avatarSkins.spec.ts'],
+      // `responsive.spec.ts` entra aqui pelo mesmo motivo dos outros três, e por
+      // um a mais: a rota 404 de verdade só existe no preview (o fallback está em
+      // `configurePreviewServer`), então em dev o gate de 404 mediria uma página
+      // que o Vite nunca serviu.
+      testMatch: [
+        '**/fullMatch.spec.ts',
+        '**/a11y.spec.ts',
+        '**/avatarSkins.spec.ts',
+        '**/responsive.spec.ts',
+      ],
     },
   ],
   webServer: [
