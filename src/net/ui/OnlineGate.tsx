@@ -22,7 +22,15 @@ import {
   isSupabaseConfigured,
 } from '@/net/supabaseClient'
 import { resolveTelemetry } from '@/telemetry'
-import { IdentityForm, LobbyMessage, OpeningAuction, ReentryForm, RoomLobby, TurnOrderReveal } from './LobbyScreen'
+import {
+  IdentityForm,
+  LobbyMessage,
+  OpeningAuction,
+  OpeningRolls,
+  ReentryForm,
+  RoomLobby,
+  TurnOrderReveal,
+} from './LobbyScreen'
 import { HomeScreen } from './HomeScreen'
 import { SessionBadge } from './SessionBadge'
 import { Button } from '@/game/ui/primitives'
@@ -150,6 +158,16 @@ function OnlineRoom({
         myUid={state.uid ?? ''}
         myBid={state.openingBid}
         onBid={session.submitOpeningBid}
+      />
+    )
+  }
+
+  if (phase === 'rolling' && room) {
+    return (
+      <OpeningRolls
+        room={room}
+        myUid={state.uid ?? ''}
+        onRoll={session.submitOpeningRoll}
       />
     )
   }

@@ -31,6 +31,7 @@ export interface Client {
   leave(): void
   send(action: PlayerAction): void
   submitOpeningBid(amount: number): void
+  submitOpeningRoll(): void
   openingBid(): number | null
   game(): GameState | null
   room(): Room | null
@@ -307,6 +308,11 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
       openingBid = amount
       transport.submitOpeningBid(amount)
       notify()
+    },
+
+    submitOpeningRoll(): void {
+      if (!playerId || room?.status !== 'rolling') return
+      transport.submitOpeningRoll()
     },
 
     openingBid: () => openingBid,

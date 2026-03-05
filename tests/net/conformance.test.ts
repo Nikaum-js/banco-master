@@ -153,6 +153,42 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     expect(atOther).toEqual([])
   })
 
+  it('opening-roll chega à autoridade sem payload e com uid do tópico privado', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    const guest = f.make('t-guest')
+    await asHost(host, ['t-guest'])
+    await host.connect()
+    await guest.connect()
+    host.watchSeat('t-guest')
+
+    const seen: string[] = []
+    host.onOpeningRoll((fromUid) => seen.push(fromUid))
+    guest.submitOpeningRoll()
+
+    expect(seen).toEqual(['t-guest'])
+  })
+
+  it('opening-roll não chega sem watchSeat e não é difundido a outro convidado', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    const guest = f.make('t-guest')
+    const other = f.make('t-other')
+    await asHost(host, ['t-guest', 't-other'])
+    await host.connect()
+    await guest.connect()
+    await other.connect()
+
+    const atHost: string[] = []
+    const atOther: string[] = []
+    host.onOpeningRoll((fromUid) => atHost.push(fromUid))
+    other.onOpeningRoll((fromUid) => atOther.push(fromUid))
+    guest.submitOpeningRoll()
+
+    expect(atHost).toEqual([])
+    expect(atOther).toEqual([])
+  })
+
   it('broadcast alcança TODOS, inclusive o próprio host (modelo uniforme)', async () => {
     const f = fixture()
     const host = f.make('t-host')
@@ -466,14 +502,25 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     await host.connect()
     const room: Room = {
       ...ROOM,
+      status: 'rolling',
       openingMode: 'dice-roll',
-      seats: [{ ...seat('t-host', true), openingRoll: [6, 4] }],
+      seats: [{
+        ...seat('t-host', true),
+        openingRoll: null,
+        openingRollStartedAt: 1_000,
+        openingRollResolvesAt: 2_400,
+      }],
     }
     await host.saveRoom(room)
 
     expect(await host.loadRoom()).toMatchObject({
       openingMode: 'dice-roll',
-      seats: [{ openingRoll: [6, 4] }],
+      status: 'rolling',
+      seats: [{
+        openingRoll: null,
+        openingRollStartedAt: 1_000,
+        openingRollResolvesAt: 2_400,
+      }],
     })
   })
 

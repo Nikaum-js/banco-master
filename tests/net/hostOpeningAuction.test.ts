@@ -25,7 +25,7 @@ async function settleHost(host: ReturnType<typeof createHost>): Promise<void> {
 }
 
 describe('Leilão da Largada — autoridade', () => {
-  it('Maior dado cria a partida imediatamente sem cobrar caixa nem abastecer a Loteria', async () => {
+  it('Maior dado aceita um dono por vez e só cria a partida depois do último resultado', async () => {
     const hub = new LocalHub()
     const hostTransport = localTransport(hub, 'u-host')
     const guestTransport = localTransport(hub, 'u-guest')
@@ -34,13 +34,37 @@ describe('Leilão da Largada — autoridade', () => {
     const selected = selectOpeningMode(table(), 'dice-roll')
     if (!selected.ok) throw new Error(selected.reason)
     const values = [0, 0, 0.99, 0.99]
+    let now = 1_000
     const host = createHost(hostTransport, selected.room, {
       rng: () => values.shift() ?? 0,
-      now: () => 1_000,
+      now: () => now,
+      openingRollMs: 1_400,
     })
 
     await host.open()
     expect(await host.startMatch()).toEqual({ ok: true })
+    expect(host.room().status).toBe('rolling')
+    expect(host.seq()).toBe(-1)
+
+    guestTransport.submitOpeningRoll()
+    expect(host.room().seats.every((seat) => seat.openingRollResolvesAt == null)).toBe(true)
+
+    hostTransport.submitOpeningRoll()
+    expect(host.room().seats[0]).toMatchObject({
+      name: 'Ana',
+      openingRoll: null,
+      openingRollResolvesAt: 2_400,
+    })
+    now = 2_400
+    host.tick()
+    expect(host.room().status).toBe('rolling')
+    expect(host.room().seats[0]).toMatchObject({ name: 'Ana', openingRoll: [1, 1] })
+    expect(host.room().seats[1]).toMatchObject({ name: 'Bruno', openingRoll: null })
+
+    guestTransport.submitOpeningRoll()
+    now = 3_800
+    host.tick()
+    await settleHost(host)
 
     expect(host.room().status).toBe('playing')
     expect(host.room().openingMode).toBe('dice-roll')
@@ -51,6 +75,46 @@ describe('Leilão da Largada — autoridade', () => {
     expect(host.game().players.map((player) => player.cash)).toEqual([2_000, 2_000])
     expect(host.game().centerPot).toBe(500)
     expect(host.seq()).toBe(0)
+  })
+
+  it('reanexa a autoridade durante um arremesso e resolve a janela persistida uma vez', async () => {
+    const hub = new LocalHub()
+    const firstTransport = localTransport(hub, 'u-host')
+    const guestTransport = localTransport(hub, 'u-guest')
+    await firstTransport.connect()
+    await guestTransport.connect()
+    const selected = selectOpeningMode(table(), 'dice-roll')
+    if (!selected.ok) throw new Error(selected.reason)
+    let now = 1_000
+    const first = createHost(firstTransport, selected.room, {
+      rng: () => 0,
+      now: () => now,
+      openingRollMs: 1_400,
+    })
+    await first.open()
+    await first.startMatch()
+    firstTransport.submitOpeningRoll()
+    first.stop()
+
+    const revivedTransport = localTransport(hub, 'u-host')
+    await revivedTransport.connect()
+    const revived = createHost(revivedTransport, {
+      id: 'mesa-leilao',
+      status: 'lobby',
+      seats: [],
+    }, {
+      rng: () => 0,
+      now: () => now,
+      openingRollMs: 1_400,
+    })
+    await revived.open()
+    expect(revived.room().status).toBe('rolling')
+    expect(revived.room().seats[0].openingRollResolvesAt).toBe(2_400)
+
+    now = 2_400
+    revived.tick()
+    expect(revived.room().seats[0].openingRoll).toEqual([1, 1])
+    expect(revived.room().seats[1].openingRoll).toBeNull()
   })
 
   it('coleta em sigilo, fecha cedo e inicia com ordem/saldos/pote liquidados', async () => {

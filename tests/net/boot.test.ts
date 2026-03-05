@@ -21,7 +21,12 @@ const BRUNO: SessionIdentity = { name: 'Bruno', color: SEAT_COLORS[1] }
 function makeSession(
   hub: LocalHub,
   uid: string,
-  timing: { openingAuctionMs?: number; revealMs?: number } = {},
+  timing: {
+    openingAuctionMs?: number
+    openingRollMs?: number
+    revealMs?: number
+    now?: () => number
+  } = {},
 ): { session: RoomSession; connected: () => number; client: () => Client | null } {
   let connects = 0
   let client: Client | null = null
@@ -35,8 +40,9 @@ function makeSession(
     newRoomId: () => 'sala-fixa',
     hostOptions: {
       rng: mulberry32(7),
-      now: () => 1_000,
+      now: timing.now ?? (() => 1_000),
       openingAuctionMs: timing.openingAuctionMs ?? 0,
+      openingRollMs: timing.openingRollMs ?? 0,
     },
     revealMs: timing.revealMs ?? 0,
   })
@@ -193,6 +199,24 @@ describe('createRoomSession — início da partida', () => {
     expect(anfitriao.session.getState().room?.openingMode).toBe('dice-roll')
 
     await anfitriao.session.startMatch()
+    expect(anfitriao.session.getState().phase).toBe('rolling')
+    expect(convidado.session.getState().phase).toBe('rolling')
+    expect(anfitriao.session.getState().room?.seats.every((seat) => seat.openingRoll === null)).toBe(true)
+
+    convidado.session.submitOpeningRoll()
+    expect(anfitriao.session.getState().room?.seats.every((seat) => seat.openingRollResolvesAt == null)).toBe(true)
+
+    anfitriao.session.submitOpeningRoll()
+    expect(convidado.session.getState().room?.seats[0].openingRollResolvesAt).toBe(1_000)
+    anfitriao.session.tick()
+    expect(anfitriao.session.getState().phase).toBe('rolling')
+    expect(anfitriao.session.getState().room?.seats[0].openingRoll).not.toBeNull()
+
+    convidado.session.submitOpeningRoll()
+    anfitriao.session.tick()
+    for (let i = 0; i < 20 && anfitriao.session.getState().phase !== 'reveal'; i++) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0))
+    }
     expect(anfitriao.session.getState().phase).toBe('reveal')
     expect(convidado.session.getState().phase).toBe('reveal')
     expect(anfitriao.session.getState().room?.seats.every((seat) => seat.openingRoll !== null)).toBe(true)
@@ -216,10 +240,14 @@ describe('createRoomSession — início da partida', () => {
     // A ausência no instante do start gera `pause` logo depois do snapshot inicial e pode
     // elevar `seq` acima de zero antes de a sessão consumir o jogo. Isso é arranque, não
     // reconexão: quem já estava no lobby ainda precisa ver o Ritual de Largada.
-    hub.dropChannel('tok-guest')
     await anfitriao.session.startMatch()
+    anfitriao.session.submitOpeningRoll()
+    anfitriao.session.tick()
+    convidado.session.submitOpeningRoll()
+    hub.dropChannel('tok-guest')
+    anfitriao.session.tick()
 
-    for (let i = 0; i < 20 && anfitriao.client()?.seq() === 0; i++) {
+    for (let i = 0; i < 20 && (anfitriao.client()?.seq() ?? -1) <= 0; i++) {
       await new Promise<void>((resolve) => setTimeout(resolve, 0))
     }
     expect(anfitriao.client()?.seq()).toBeGreaterThan(0)

@@ -4597,22 +4597,174 @@
     50% { opacity: 1; transform: translateY(-2px); }
   }
 
+  /* Maior dado — o foco passa por um único assento de cada vez. A tensão vem do
+     movimento dos dados e da espera coletiva, sem transformar a largada em cassino. */
+  .opening-rolls-frame {
+    max-width: 30rem;
+  }
+  .opening-rolls-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+  .opening-rolls-focus {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 6.4rem;
+    padding: 1rem;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-brass) 46%, var(--color-ink-500));
+    border-radius: var(--radius-card);
+    background:
+      radial-gradient(circle at 100% 50%, color-mix(in srgb, var(--color-brass) 12%, transparent), transparent 52%),
+      color-mix(in srgb, var(--color-ink-800) 88%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-starlight) 5%, transparent);
+  }
+  .opening-rolls-focus--moving {
+    border-color: color-mix(in srgb, var(--color-brass-glow) 70%, var(--color-ink-500));
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--color-brass) 12%, transparent),
+      0 0 24px -16px var(--color-brass-glow);
+  }
+  .opening-rolls-focus__player {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .opening-rolls-focus__player p {
+    margin-top: 0.15rem;
+  }
+  .opening-rolls-dice {
+    gap: 0.4rem;
+  }
+  .opening-rolls-dice .opening-die {
+    width: 2.5rem;
+    border-color: color-mix(in srgb, var(--color-brass) 72%, var(--color-starlight));
+    box-shadow:
+      0 7px 12px -8px var(--color-ink-abyss),
+      0 0 14px -10px var(--color-brass-glow);
+  }
+  .opening-rolls-dice--moving .opening-die:first-child {
+    animation: opening-die-tension-a 440ms var(--ease-snap) infinite alternate;
+  }
+  .opening-rolls-dice--moving .opening-die:last-child {
+    animation: opening-die-tension-b 520ms var(--ease-snap) infinite alternate;
+  }
+  @keyframes opening-die-tension-a {
+    from { transform: translate(-2px, 3px) rotate(-10deg); }
+    to { transform: translate(2px, -4px) rotate(12deg); }
+  }
+  @keyframes opening-die-tension-b {
+    from { transform: translate(2px, -3px) rotate(9deg); }
+    to { transform: translate(-2px, 4px) rotate(-13deg); }
+  }
+  .opening-rolls-leader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2rem;
+    color: var(--color-brass-glow);
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .opening-rolls-roster {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .opening-rolls-player {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 3.2rem;
+    padding: 0.4rem 0.65rem;
+    border: 1px solid var(--color-ink-500);
+    border-radius: var(--radius-card);
+    background-color: color-mix(in srgb, var(--color-ink-800) 76%, transparent);
+  }
+  .opening-rolls-player--current {
+    border-color: color-mix(in srgb, var(--color-brass) 50%, var(--color-ink-500));
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--color-brass) 8%, transparent), transparent 58%),
+      color-mix(in srgb, var(--color-ink-800) 82%, transparent);
+  }
+  .opening-rolls-player__number {
+    width: 1.4rem;
+    flex: none;
+    color: var(--color-ink-300);
+    font-family: var(--font-display);
+    font-size: 0.64rem;
+    letter-spacing: 0.08em;
+  }
+  .opening-rolls-player__identity {
+    min-width: 0;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+  .opening-rolls-player__identity strong {
+    overflow: hidden;
+    color: var(--color-starlight);
+    font-size: 0.84rem;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .opening-rolls-player__identity small,
+  .opening-rolls-player__state {
+    color: var(--color-starlight-muted);
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .opening-rolls-player__dice .opening-die {
+    width: 1.45rem;
+  }
+  .opening-rolls-player__state {
+    flex: none;
+  }
+  .opening-rolls-action.ui-button {
+    min-height: 3.2rem;
+  }
+  .opening-rolls-wait {
+    min-height: 3.2rem;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--color-ink-500);
+    border-radius: var(--radius-card);
+    color: var(--color-starlight-muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-align: center;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .lottery-chip,
     .auction-bid-card::after,
     .auction-seal--locked,
     .lottery-stack--reveal .lottery-chip,
     .auction-result-row,
-    .auction-route-dots i { animation: none; }
+    .auction-route-dots i,
+    .opening-rolls-dice--moving .opening-die { animation: none; }
     .auction-result-row { opacity: 1; transform: none; }
   }
   @media (max-height: 640px) {
     .auction-ledger,
     .auction-bid-card { padding-block: 0.55rem; }
     .auction-player { min-height: 2.4rem; padding-block: 0.25rem; }
+    .opening-rolls-focus { min-height: 5rem; padding-block: 0.65rem; }
+    .opening-rolls-player { min-height: 2.65rem; padding-block: 0.25rem; }
   }
   @media (max-height: 640px) and (min-width: 700px) {
-    .auction-frame {
+    .auction-frame,
+    .opening-rolls-frame {
       max-width: min(760px, calc(100vw - 2rem));
     }
     .auction-frame header {
@@ -4642,6 +4794,18 @@
     .auction-layout--reveal > .auction-pot-reveal { grid-column: 1; grid-row: 1; }
     .auction-layout--reveal > .auction-auto-route { grid-column: 1; grid-row: 2; }
     .auction-layout--reveal > .auction-roster { grid-column: 2; grid-row: 1 / span 2; }
+    .opening-rolls-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: auto auto 1fr;
+      gap: 0.55rem 0.8rem;
+      padding: 0.7rem 0.9rem 0.85rem;
+    }
+    .opening-rolls-focus { grid-column: 1; grid-row: 1; }
+    .opening-rolls-leader { grid-column: 1; grid-row: 2; }
+    .opening-rolls-roster { grid-column: 2; grid-row: 1 / span 3; }
+    .opening-rolls-action,
+    .opening-rolls-wait { grid-column: 1; grid-row: 3; }
     .auction-ledger {
       grid-template-columns: auto 1fr;
     }

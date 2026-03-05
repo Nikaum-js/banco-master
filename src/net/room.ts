@@ -29,8 +29,9 @@ export const OPENING_BID_MIN = 0
 export const OPENING_BID_MAX = 500
 export const OPENING_BID_STEP = 50
 export const OPENING_AUCTION_MS = 15_000
+export const OPENING_ROLL_MS = 1_400
 
-export type RoomStatus = 'lobby' | 'bidding' | 'playing' | 'paused' | 'ended'
+export type RoomStatus = 'lobby' | 'bidding' | 'rolling' | 'playing' | 'paused' | 'ended'
 export type OpeningMode = 'sealed-bid' | 'dice-roll'
 
 export interface OpeningAuction {
@@ -56,6 +57,10 @@ export interface Seat {
   bidLocked?: boolean
   /** D-046: dois dados brancos atestados pela autoridade no modo Maior dado. */
   openingRoll?: [number, number] | null
+  /** D-051: janela pública do único arremesso em curso. O resultado continua sendo
+   * produzido exclusivamente pela autoridade quando `openingRollResolvesAt` vence. */
+  openingRollStartedAt?: number | null
+  openingRollResolvesAt?: number | null
   /** Código de reentrada (041, D-033) — estável pela vida do assento; sobrevive à perda do
    * uid (celular sem bateria, dados do navegador limpos). `kickSeat`/`shuffleSeatOrder`
    * preservam por construção (nunca reescrevem o campo). */
@@ -133,6 +138,8 @@ export function normalizeRoom(room: Room): Room {
       openingBid: seat.openingBid ?? null,
       bidLocked: seat.bidLocked ?? false,
       openingRoll: seat.openingRoll ?? null,
+      openingRollStartedAt: seat.openingRollStartedAt ?? null,
+      openingRollResolvesAt: seat.openingRollResolvesAt ?? null,
     })),
   }
 }
@@ -179,6 +186,7 @@ export function createRoom(id: string, host: Identity): Room {
       avatar: normalizeAvatar(host.avatar),
       skin: normalizeSkin(host.skin),
       isHost: true, connected: true, openingBid: null, bidLocked: false, openingRoll: null,
+      openingRollStartedAt: null, openingRollResolvesAt: null,
       reentryCode: host.reentryCode ?? '',
     }],
   }
@@ -219,6 +227,8 @@ export function joinRoom(room: Room, who: Identity): JoinResult {
     openingBid: null,
     bidLocked: false,
     openingRoll: null,
+    openingRollStartedAt: null,
+    openingRollResolvesAt: null,
     reentryCode: who.reentryCode ?? '',
   }
   return { ok: true, room: { ...current, seats: [...current.seats, seat] }, seat }
@@ -290,6 +300,8 @@ export function selectOpeningMode(
         openingBid: null,
         bidLocked: false,
         openingRoll: null,
+        openingRollStartedAt: null,
+        openingRollResolvesAt: null,
       })),
     },
   }
@@ -315,6 +327,8 @@ export function openOpeningAuction(room: Room, closesAt: number): OpenOpeningAuc
         openingBid: null,
         bidLocked: false,
         openingRoll: null,
+        openingRollStartedAt: null,
+        openingRollResolvesAt: null,
       })),
     },
   }
@@ -393,6 +407,8 @@ export function finalizeOpeningAuction(
         ...seat,
         playerId: seatIdFor(index),
         openingRoll: null,
+        openingRollStartedAt: null,
+        openingRollResolvesAt: null,
       })),
     },
   }
@@ -402,25 +418,107 @@ function openingDie(rng: () => number): number {
   return Math.floor(rng() * 6) + 1
 }
 
-/** Maior dado: dois d6 por assento, maior soma primeiro, RNG somente dentro dos empates. */
-export function rollOpeningOrder(
-  room: Room,
-  rng: () => number,
-): { ok: true; room: Room } | {
+export type OpenOpeningRollsResult =
+  | { ok: true; room: Room }
+  | {
   ok: false
   reason: 'too-few' | 'already-started' | 'wrong-mode'
-} {
+}
+
+/** D-051: lobby → disputa pública, preservando a ordem de assentos como ordem de rolagem. */
+export function openOpeningRolls(room: Room): OpenOpeningRollsResult {
   if (room.status !== 'lobby') return { ok: false, reason: 'already-started' }
   if (room.seats.length < MIN_SEATS) return { ok: false, reason: 'too-few' }
   const normalized = normalizeRoom(room)
   if (normalized.openingMode !== 'dice-roll') return { ok: false, reason: 'wrong-mode' }
+  return {
+    ok: true,
+    room: {
+      ...normalized,
+      status: 'rolling',
+      openingAuction: null,
+      seats: normalized.seats.map((seat) => ({
+        ...seat,
+        openingBid: null,
+        bidLocked: false,
+        openingRoll: null,
+        openingRollStartedAt: null,
+        openingRollResolvesAt: null,
+      })),
+    },
+  }
+}
 
-  const rolled = normalized.seats.map((seat) => ({
-    ...seat,
-    openingBid: null,
-    bidLocked: false,
-    openingRoll: [openingDie(rng), openingDie(rng)] as [number, number],
-  }))
+export type RequestOpeningRollResult =
+  | { ok: true; room: Room }
+  | {
+    ok: false
+    reason: 'not-rolling' | 'unknown-uid' | 'not-your-turn' | 'already-rolling'
+  }
+
+/** O clique só abre a janela pública; identidade vem do tópico e nenhum RNG é consumido. */
+export function requestOpeningRoll(
+  room: Room,
+  uid: string,
+  now: number,
+  durationMs: number,
+): RequestOpeningRollResult {
+  if (room.status !== 'rolling') return { ok: false, reason: 'not-rolling' }
+  const normalized = normalizeRoom(room)
+  if (!normalized.seats.some((seat) => seat.uid === uid)) return { ok: false, reason: 'unknown-uid' }
+  const current = normalized.seats.find((seat) => seat.openingRoll === null)
+  if (!current || current.uid !== uid) return { ok: false, reason: 'not-your-turn' }
+  if (current.openingRollResolvesAt != null) return { ok: false, reason: 'already-rolling' }
+  return {
+    ok: true,
+    room: {
+      ...normalized,
+      seats: normalized.seats.map((seat) => (
+        seat.uid === uid
+          ? {
+              ...seat,
+              openingRollStartedAt: now,
+              openingRollResolvesAt: now + Math.max(0, durationMs),
+            }
+          : seat
+      )),
+    },
+  }
+}
+
+export type ResolveOpeningRollResult =
+  | { ok: true; room: Room }
+  | { ok: false; reason: 'not-rolling' | 'not-ready' }
+
+/** Resolve somente a janela vencida; o último resultado também fecha e ordena a disputa. */
+export function resolveOpeningRoll(
+  room: Room,
+  rng: () => number,
+  now: number,
+): ResolveOpeningRollResult {
+  if (room.status !== 'rolling') return { ok: false, reason: 'not-rolling' }
+  const normalized = normalizeRoom(room)
+  const current = normalized.seats.find((seat) => seat.openingRoll === null)
+  if (
+    !current
+    || current.openingRollResolvesAt == null
+    || now < current.openingRollResolvesAt
+  ) {
+    return { ok: false, reason: 'not-ready' }
+  }
+  const rolled = normalized.seats.map((seat) => (
+    seat.uid === current.uid
+      ? {
+          ...seat,
+          openingRoll: [openingDie(rng), openingDie(rng)] as [number, number],
+          openingRollStartedAt: null,
+          openingRollResolvesAt: null,
+        }
+      : seat
+  ))
+  if (rolled.some((seat) => seat.openingRoll === null)) {
+    return { ok: true, room: { ...normalized, seats: rolled } }
+  }
   const bySum = new Map<number, Seat[]>()
   for (const seat of rolled) {
     const sum = (seat.openingRoll?.[0] ?? 0) + (seat.openingRoll?.[1] ?? 0)
@@ -443,7 +541,12 @@ export function rollOpeningOrder(
       ...normalized,
       status: 'playing',
       openingAuction: null,
-      seats: order.map((seat, index) => ({ ...seat, playerId: seatIdFor(index) })),
+      seats: order.map((seat, index) => ({
+        ...seat,
+        playerId: seatIdFor(index),
+        openingRollStartedAt: null,
+        openingRollResolvesAt: null,
+      })),
     },
   }
 }

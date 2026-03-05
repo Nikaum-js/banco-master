@@ -22,7 +22,7 @@ import type { SkinId } from '@/boards/playerSkinCatalog'
 /** Ritual de início (`reveal`) é de ENTRADA, nunca de reconexão — ver `isReentry`.
  * `'reentry'` (041, D-033): partida em curso, sem assento — perder o aparelho não é mais
  * beco (era `fail('already-started')`); o formulário pede o código do próprio assento. */
-export type SessionPhase = 'identity' | 'lobby' | 'auction' | 'reveal' | 'playing' | 'error' | 'reentry'
+export type SessionPhase = 'identity' | 'lobby' | 'auction' | 'rolling' | 'reveal' | 'playing' | 'error' | 'reentry'
 
 export interface SessionIdentity {
   name: string
@@ -66,6 +66,7 @@ export interface RoomSession {
   setOpeningMode(mode: OpeningMode): void
   startMatch(): Promise<void>
   submitOpeningBid(amount: number): void
+  submitOpeningRoll(): void
   kick(target: string): void
 
   /** Fecha prazos vencidos. O browser agenda; os testes chamam. */
@@ -186,7 +187,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
       // Um comando sistêmico pode avançar `seq` durante o próprio start (por exemplo,
       // ausência detectada logo após o snapshot). Quem já estava no lobby/leilão continua
       // no ritual de abertura; `seq > 0` só caracteriza reentrada fora desse fluxo.
-      const fromOpeningFlow = state.phase === 'lobby' || state.phase === 'auction'
+      const fromOpeningFlow = state.phase === 'lobby' || state.phase === 'auction' || state.phase === 'rolling'
       disconnectStore ??= connectStore(c)
       emit({ room, error: joinError, busy: false, myReentryCode, openingBid })
       if (state.phase !== 'reveal' && state.phase !== 'playing') revealThenPlay(fromOpeningFlow)
@@ -203,7 +204,13 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
       room: room ?? state.room,
       error: joinError,
       busy: answered ? false : state.busy,
-      phase: c.playerId() ? (room?.status === 'bidding' ? 'auction' : 'lobby') : state.phase,
+      phase: c.playerId()
+        ? room?.status === 'bidding'
+          ? 'auction'
+          : room?.status === 'rolling'
+            ? 'rolling'
+            : 'lobby'
+        : state.phase,
       myReentryCode,
       openingBid,
     })
@@ -325,6 +332,10 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
 
     submitOpeningBid(amount: number): void {
       client?.submitOpeningBid(amount)
+    },
+
+    submitOpeningRoll(): void {
+      client?.submitOpeningRoll()
     },
 
     kick(target: string): void {

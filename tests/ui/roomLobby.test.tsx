@@ -92,7 +92,7 @@ describe('sala aberta', () => {
     )
 
     expect(screen.getByText('Lances definem a ordem e abastecem a Loteria.')).toBeTruthy()
-    expect(screen.getByText('Dois dados definem a ordem, sem custo.')).toBeTruthy()
+    expect(screen.getByText('Cada jogador rola dois dados, um por vez e sem custo.')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: /Maior dado/ }))
     expect(onOpeningModeChange).toHaveBeenCalledWith('dice-roll')

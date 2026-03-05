@@ -119,6 +119,10 @@ export interface Transport {
   // leilão acontece antes de existir um `GameState`.
   submitOpeningBid(amount: number): void
   onOpeningBid(cb: (message: OpeningBidMessage, fromUid: string) => void): Unsubscribe
+  // D-051: pedido sem payload no tópico privado. O host deriva autoria do endereço e gera
+  // os valores; o cliente não tem como declarar uid, playerId ou faces.
+  submitOpeningRoll(): void
+  onOpeningRoll(cb: (fromUid: string) => void): Unsubscribe
 
   // host → remetente: recusa por FALHA ao aplicar um comando (042, contracts/transport-delta.md)
   rejectCommand(toToken: string, info: CommandFailure): void

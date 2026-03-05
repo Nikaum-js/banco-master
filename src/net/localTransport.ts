@@ -9,6 +9,7 @@ import { normalizeRoom, reattachByCode, toPublicRoom, type JoinError, type Publi
 
 type SubmitCb = (cmd: CommandEnvelope, fromUid: string) => void
 type OpeningBidCb = (message: OpeningBidMessage, fromUid: string) => void
+type OpeningRollCb = (fromUid: string) => void
 type BroadcastCb = (cmd: AcceptedCommand, origin: 'public' | 'private') => void
 type RoomCb = (room: PublicRoom) => void
 type PresenceCb = (change: PresenceChange) => void
@@ -49,6 +50,7 @@ export class LocalHub {
   private conns = new Map<number, Connection>()
   private submitCbs: SubmitCb[] = []
   private openingBidCbs: OpeningBidCb[] = []
+  private openingRollCbs: OpeningRollCb[] = []
   private presenceCbs: PresenceCb[] = []
   private joinReqCbs: JoinReqCb[] = []
   private reattachCbs: ReattachCb[] = []
@@ -191,6 +193,15 @@ export class LocalHub {
 
   openingBid(message: OpeningBidMessage, fromUid: string): void {
     for (const cb of this.openingBidCbs) cb(message, fromUid)
+  }
+
+  addOpeningRoll(cb: OpeningRollCb): Unsubscribe {
+    this.openingRollCbs.push(cb)
+    return () => { this.openingRollCbs = this.openingRollCbs.filter((candidate) => candidate !== cb) }
+  }
+
+  openingRoll(fromUid: string): void {
+    for (const cb of this.openingRollCbs) cb(fromUid)
   }
 
   addJoinRequest(cb: JoinReqCb): Unsubscribe {
@@ -370,6 +381,16 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
     onOpeningBid(cb): Unsubscribe {
       return hub.addOpeningBid((message, fromUid) => {
         if (watched.has(fromUid)) cb(message, fromUid)
+      })
+    },
+
+    submitOpeningRoll(): void {
+      hub.openingRoll(uid)
+    },
+
+    onOpeningRoll(cb): Unsubscribe {
+      return hub.addOpeningRoll((fromUid) => {
+        if (watched.has(fromUid)) cb(fromUid)
       })
     },
 

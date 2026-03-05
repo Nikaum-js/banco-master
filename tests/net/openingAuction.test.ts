@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   OPENING_AUCTION_MS,
+  OPENING_ROLL_MS,
   allOpeningBidsLocked,
   createRoom,
   finalizeOpeningAuction,
@@ -8,7 +9,9 @@ import {
   lockOpeningBid,
   normalizeRoom,
   openOpeningAuction,
-  rollOpeningOrder,
+  openOpeningRolls,
+  requestOpeningRoll,
+  resolveOpeningRoll,
   selectOpeningMode,
   SEAT_COLORS,
   toPublicRoom,
@@ -42,7 +45,13 @@ describe('Leilão da Largada — reducers da sala', () => {
     expect(normalizeRoom(legacy)).toMatchObject({
       openingMode: 'sealed-bid',
       openingAuction: null,
-      seats: [{ openingBid: null, bidLocked: false, openingRoll: null }],
+      seats: [{
+        openingBid: null,
+        bidLocked: false,
+        openingRoll: null,
+        openingRollStartedAt: null,
+        openingRollResolvesAt: null,
+      }],
     })
   })
 
@@ -53,7 +62,7 @@ describe('Leilão da Largada — reducers da sala', () => {
     expect(selected.room.openingMode).toBe('dice-roll')
     expect(toPublicRoom(selected.room).openingMode).toBe('dice-roll')
 
-    const started = rollOpeningOrder(selected.room, () => 0)
+    const started = openOpeningRolls(selected.room)
     if (!started.ok) throw new Error(started.reason)
     expect(selectOpeningMode(started.room, 'sealed-bid')).toEqual({
       ok: false,
@@ -61,54 +70,108 @@ describe('Leilão da Largada — reducers da sala', () => {
     })
   })
 
-  it('Maior dado rola dois d6 por assento e ordena pela soma', () => {
+  it('Maior dado abre uma disputa e aceita somente o dono do assento da vez', () => {
     const selected = selectOpeningMode(roomWith(['Ana', 'Bruno', 'Caio']), 'dice-roll')
     if (!selected.ok) throw new Error(selected.reason)
-    const values = [0, 0, 0.99, 0.5, 0.5, 0.5]
-    const done = rollOpeningOrder(selected.room, () => values.shift() ?? 0)
-    if (!done.ok) throw new Error(done.reason)
+    const opened = openOpeningRolls(selected.room)
+    if (!opened.ok) throw new Error(opened.reason)
 
-    expect(done.room.status).toBe('playing')
-    expect(done.room.seats.map((seat) => [seat.name, seat.openingRoll, seat.playerId])).toEqual([
+    expect(opened.room.status).toBe('rolling')
+    expect(requestOpeningRoll(opened.room, 'u2', 1_000, OPENING_ROLL_MS)).toEqual({
+      ok: false,
+      reason: 'not-your-turn',
+    })
+
+    const requested = requestOpeningRoll(opened.room, 'u1', 1_000, OPENING_ROLL_MS)
+    if (!requested.ok) throw new Error(requested.reason)
+    expect(requested.room.seats[0]).toMatchObject({
+      openingRoll: null,
+      openingRollStartedAt: 1_000,
+      openingRollResolvesAt: 2_400,
+    })
+    expect(requestOpeningRoll(requested.room, 'u1', 1_001, OPENING_ROLL_MS)).toEqual({
+      ok: false,
+      reason: 'already-rolling',
+    })
+    expect(resolveOpeningRoll(requested.room, () => 0, 2_399)).toEqual({
+      ok: false,
+      reason: 'not-ready',
+    })
+  })
+
+  it('Maior dado publica um resultado por vez e ordena somente depois do último', () => {
+    const selected = selectOpeningMode(roomWith(['Ana', 'Bruno', 'Caio']), 'dice-roll')
+    if (!selected.ok) throw new Error(selected.reason)
+    const opened = openOpeningRolls(selected.room)
+    if (!opened.ok) throw new Error(opened.reason)
+
+    const faces = [0, 0, 0.99, 0.5, 0.5, 0.5]
+    let room = opened.room
+    for (const uid of ['u1', 'u2', 'u3']) {
+      const requested = requestOpeningRoll(room, uid, 1_000, OPENING_ROLL_MS)
+      if (!requested.ok) throw new Error(requested.reason)
+      const resolved = resolveOpeningRoll(requested.room, () => faces.shift() ?? 0, 2_400)
+      if (!resolved.ok) throw new Error(resolved.reason)
+      room = resolved.room
+    }
+
+    expect(room.status).toBe('playing')
+    expect(room.seats.map((seat) => [seat.name, seat.openingRoll, seat.playerId])).toEqual([
       ['Bruno', [6, 4], 'p1'],
       ['Caio', [4, 4], 'p2'],
       ['Ana', [1, 1], 'p3'],
     ])
-    expect(done.room.seats.every((seat) => seat.openingBid === null && !seat.bidLocked)).toBe(true)
+    expect(room.seats.every((seat) => seat.openingBid === null && !seat.bidLocked)).toBe(true)
   })
 
   it('Maior dado desempata apenas o grupo com a mesma soma pelo RNG da autoridade', () => {
     const selected = selectOpeningMode(roomWith(['Ana', 'Bruno', 'Caio']), 'dice-roll')
     if (!selected.ok) throw new Error(selected.reason)
+    const opened = openOpeningRolls(selected.room)
+    if (!opened.ok) throw new Error(opened.reason)
     const values = [0.4, 0.4, 0.4, 0.4, 0, 0, 0]
-    const done = rollOpeningOrder(selected.room, () => values.shift() ?? 0)
-    if (!done.ok) throw new Error(done.reason)
+    let room = opened.room
+    for (const uid of ['u1', 'u2', 'u3']) {
+      const requested = requestOpeningRoll(room, uid, 1_000, OPENING_ROLL_MS)
+      if (!requested.ok) throw new Error(requested.reason)
+      const resolved = resolveOpeningRoll(requested.room, () => values.shift() ?? 0, 2_400)
+      if (!resolved.ok) throw new Error(resolved.reason)
+      room = resolved.room
+    }
 
-    expect(done.room.seats.map((seat) => seat.name)).toEqual(['Bruno', 'Ana', 'Caio'])
-    expect(done.room.seats.map((seat) => seat.openingRoll)).toEqual([[3, 3], [3, 3], [1, 1]])
+    expect(room.seats.map((seat) => seat.name)).toEqual(['Bruno', 'Ana', 'Caio'])
+    expect(room.seats.map((seat) => seat.openingRoll)).toEqual([[3, 3], [3, 3], [1, 1]])
   })
 
   it('Maior dado exige o modo correto e ao menos dois assentos', () => {
-    expect(rollOpeningOrder(roomWith(['Ana', 'Bruno']), () => 0)).toEqual({
+    expect(openOpeningRolls(roomWith(['Ana', 'Bruno']))).toEqual({
       ok: false,
       reason: 'wrong-mode',
     })
     const selected = selectOpeningMode(roomWith(['Ana']), 'dice-roll')
     if (!selected.ok) throw new Error(selected.reason)
-    expect(rollOpeningOrder(selected.room, () => 0)).toEqual({ ok: false, reason: 'too-few' })
+    expect(openOpeningRolls(selected.room)).toEqual({ ok: false, reason: 'too-few' })
   })
 
   it.each([2, 3, 4, 5, 6, 7, 8])('Maior dado produz uma ordem total para %i jogadores', (count) => {
     const names = Array.from({ length: count }, (_, index) => `Jogador ${index + 1}`)
     const selected = selectOpeningMode(roomWith(names), 'dice-roll')
     if (!selected.ok) throw new Error(selected.reason)
+    const opened = openOpeningRolls(selected.room)
+    if (!opened.ok) throw new Error(opened.reason)
     let draw = 0
-    const done = rollOpeningOrder(selected.room, () => ((draw++ * 0.17) % 1))
-    if (!done.ok) throw new Error(done.reason)
+    let room = opened.room
+    for (let i = 0; i < count; i++) {
+      const requested = requestOpeningRoll(room, `u${i + 1}`, 1_000, OPENING_ROLL_MS)
+      if (!requested.ok) throw new Error(requested.reason)
+      const resolved = resolveOpeningRoll(requested.room, () => ((draw++ * 0.17) % 1), 2_400)
+      if (!resolved.ok) throw new Error(resolved.reason)
+      room = resolved.room
+    }
 
-    const sums = done.room.seats.map((seat) => (seat.openingRoll?.[0] ?? 0) + (seat.openingRoll?.[1] ?? 0))
-    expect(done.room.seats).toHaveLength(count)
-    expect(new Set(done.room.seats.map((seat) => seat.playerId)).size).toBe(count)
+    const sums = room.seats.map((seat) => (seat.openingRoll?.[0] ?? 0) + (seat.openingRoll?.[1] ?? 0))
+    expect(room.seats).toHaveLength(count)
+    expect(new Set(room.seats.map((seat) => seat.playerId)).size).toBe(count)
     expect(sums).toEqual([...sums].sort((a, b) => b - a))
   })
 

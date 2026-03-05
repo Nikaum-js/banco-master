@@ -27,8 +27,11 @@ import {
   normalizeRoom,
   openOpeningAuction,
   OPENING_AUCTION_MS,
+  OPENING_ROLL_MS,
+  openOpeningRolls,
   playerIdsInOrder,
-  rollOpeningOrder,
+  requestOpeningRoll,
+  resolveOpeningRoll,
   seatByUid,
   selectOpeningMode,
   toPublicRoom,
@@ -50,6 +53,7 @@ export interface HostOptions {
   now?: () => number // padrão Date.now; relógio lógico nos testes
   telemetry?: Telemetry // padrão `nullTelemetry` (044, D-040) — emissão é do host, nunca da tela
   openingAuctionMs?: number // padrão 15s; `0` é o seam determinístico de testes legados
+  openingRollMs?: number // D-051: janela pública de um arremesso; padrão 1,4s
 }
 
 export interface Host {
@@ -71,6 +75,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   const now = opts.now ?? (() => Date.now())
   const telemetry = opts.telemetry ?? nullTelemetry
   const openingAuctionMs = opts.openingAuctionMs ?? OPENING_AUCTION_MS
+  const openingRollMs = opts.openingRollMs ?? OPENING_ROLL_MS
 
   let room = normalizeRoom(initialRoom)
   let game: GameState | null = null
@@ -228,6 +233,13 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     if (allOpeningBidsLocked(room)) void closeOpeningAuction()
   }
 
+  function handleOpeningRoll(fromUid: string): void {
+    const requested = requestOpeningRoll(room, fromUid, now(), openingRollMs)
+    if (!requested.ok) return
+    room = requested.room
+    publishAndPersistRoom()
+  }
+
   // Pedido de assento no lobby (FR-002/005). A identidade do assento é o uid da CONEXÃO —
   // o pedinte só escolhe nome, cor, avatar e skin. Recusa (cheia/cor tomada/já iniciada) volta ao pedinte.
   //
@@ -348,6 +360,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     syncWatchedSeats()
     subs.push(transport.onSubmit(handleSubmit))
     subs.push(transport.onOpeningBid(handleOpeningBid))
+    subs.push(transport.onOpeningRoll(handleOpeningRoll))
     subs.push(transport.onPresence(handlePresence))
     subs.push(transport.onJoinRequest(handleJoinRequest))
     subs.push(transport.onReattachNotice(() => void handleSeatReattached()))
@@ -398,9 +411,9 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
         // vazios, e a sala em memória divergiria da linha persistida.
         const stored = await transport.loadRoom()
         if (stored) {
-          // Durante a coleta, a linha persistida é a única fonte íntegra dos lances lacrados;
-          // a sala pública em `initialRoom` mascara todos eles por contrato.
-          room = stored.status === 'bidding'
+          // Durante qualquer ritual pré-snapshot, a linha persistida é a fonte íntegra:
+          // em `bidding` guarda lances; em `rolling`, resultados e a janela do arremesso.
+          room = stored.status === 'bidding' || stored.status === 'rolling'
             ? withKnownCodes(stored, room)
             : withKnownCodes(room, stored)
         }
@@ -417,16 +430,16 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     start: startInternal,
 
     // O host inicia o modo já persistido no lobby. Leilão coleta em paralelo; Maior dado
-    // resolve as rolagens imediatamente. Nos dois casos, a ordem vive no primeiro snapshot.
+    // abre a sequência pública da D-051. Nos dois casos, a ordem vive no primeiro snapshot.
     async startMatch() {
       if (room.openingMode === 'dice-roll') {
-        const rolled = rollOpeningOrder(room, rng)
-        if (!rolled.ok) {
-          return { ok: false as const, reason: rolled.reason === 'wrong-mode' ? 'already-started' as const : rolled.reason }
+        const openedRolls = openOpeningRolls(room)
+        if (!openedRolls.ok) {
+          return { ok: false as const, reason: openedRolls.reason === 'wrong-mode' ? 'already-started' as const : openedRolls.reason }
         }
-        room = rolled.room
-        await startInternal()
-        syncPause()
+        room = openedRolls.room
+        await ensureOpen()
+        publishAndPersistRoom()
         return { ok: true as const }
       }
       const openedAuction = openOpeningAuction(room, now() + openingAuctionMs)
@@ -471,6 +484,17 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
       const t = now()
       if (room.status === 'bidding' && t >= (room.openingAuction?.closesAt ?? Number.POSITIVE_INFINITY)) {
         void closeOpeningAuction()
+        return
+      }
+      if (room.status === 'rolling') {
+        const resolved = resolveOpeningRoll(room, rng, t)
+        if (!resolved.ok) return
+        room = resolved.room
+        if (room.status === 'playing') {
+          void startInternal().then(syncPause)
+        } else {
+          publishAndPersistRoom()
+        }
         return
       }
       if (!game) return

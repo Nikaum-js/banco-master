@@ -122,12 +122,13 @@ interface RoomRow {
   game: PersistedSnapshot['game'] | null
 }
 
-const EVENT = { submit: 'submit', openingBid: 'opening-bid', accepted: 'accepted', room: 'room', join: 'join', rejected: 'rejected', reattached: 'reattached', commandRejected: 'command-rejected' } as const
+const EVENT = { submit: 'submit', openingBid: 'opening-bid', openingRoll: 'opening-roll', accepted: 'accepted', room: 'room', join: 'join', rejected: 'rejected', reattached: 'reattached', commandRejected: 'command-rejected' } as const
 const seatTopic = (roomId: string, uid: string): string => `room:${roomId}:s:${uid}`
 
 export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: string): Transport {
   const submitCbs: ((cmd: CommandEnvelope, fromUid: string) => void)[] = []
   const openingBidCbs: ((message: OpeningBidMessage, fromUid: string) => void)[] = []
+  const openingRollCbs: ((fromUid: string) => void)[] = []
   const broadcastCbs: ((cmd: AcceptedCommand, origin: 'public' | 'private') => void)[] = []
   const roomCbs: ((room: PublicRoom) => void)[] = []
   const presenceCbs: ((change: PresenceChange) => void)[] = []
@@ -393,6 +394,9 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     .on('broadcast', { event: EVENT.openingBid }, ({ payload }) => {
       for (const cb of openingBidCbs) cb(payload as OpeningBidMessage, uid)
     })
+    .on('broadcast', { event: EVENT.openingRoll }, () => {
+      for (const cb of openingRollCbs) cb(uid)
+    })
     .on('broadcast', { event: EVENT.accepted }, ({ payload }) => {
       // Parte PRIVADA do aceito (D9) — SEMPRE a cópia completa, mesmo quando chega depois da
       // pública (043, T043: `:play` e `:s:<uid>` são canais diferentes, sem ordem garantida
@@ -466,6 +470,14 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       return off(openingBidCbs, cb)
     },
 
+    submitOpeningRoll(): void {
+      void own.send({ type: 'broadcast', event: EVENT.openingRoll, payload: {} })
+    },
+    onOpeningRoll(cb): Unsubscribe {
+      openingRollCbs.push(cb)
+      return off(openingRollCbs, cb)
+    },
+
     broadcast(cmd: AcceptedCommand): void {
       void play.send({ type: 'broadcast', event: EVENT.accepted, payload: cmd })
     },
@@ -492,6 +504,9 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         })
         .on('broadcast', { event: EVENT.openingBid }, ({ payload }) => {
           for (const cb of openingBidCbs) cb(payload as OpeningBidMessage, seatUid)
+        })
+        .on('broadcast', { event: EVENT.openingRoll }, () => {
+          for (const cb of openingRollCbs) cb(seatUid)
         })
         .on('presence', { event: 'join' }, ({ key, newPresences }) => onSeatPresenceJoin(key, newPresences))
         .on('presence', { event: 'leave' }, ({ key, leftPresences }) => onSeatPresenceLeave(key, leftPresences))

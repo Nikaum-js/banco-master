@@ -21,6 +21,8 @@ function stubTransport() {
     onSubmit: () => () => {},
     submitOpeningBid: () => {},
     onOpeningBid: () => () => {},
+    submitOpeningRoll: () => {},
+    onOpeningRoll: () => () => {},
     broadcast: () => {},
     onBroadcast: () => () => {},
     broadcastPrivate: () => {},

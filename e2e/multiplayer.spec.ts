@@ -114,7 +114,7 @@ async function completeOpeningAuction(host: Page, guest: Page, audit = false): P
   ])
 }
 
-test('host escolhe Maior dado e todos veem a mesma largada sem custo', async ({ browser }) => {
+test('cada jogador rola o Maior dado na própria vez e toda a mesa acompanha', async ({ browser }) => {
   const hostCtx = await browser.newContext({ reducedMotion: 'reduce' })
   const guestCtx = await browser.newContext({ reducedMotion: 'reduce' })
   const host = await hostCtx.newPage()
@@ -144,11 +144,57 @@ test('host escolhe Maior dado e todos veem a mesma largada sem custo', async ({ 
     expectNoBlockingA11y(guest, 'seletor de modo do convidado'),
   ])
 
-  await host.getByRole('button', { name: 'Rolar e iniciar' }).click()
-  await Promise.all([host, guest].flatMap((page) => [
-    expect(page.getByText('Maior soma primeiro')).toBeVisible({ timeout: 20_000 }),
-    expect(page.locator('.opening-roll').last()).toBeVisible({ timeout: 20_000 }),
-  ]))
+  await host.getByRole('button', { name: 'Abrir disputa' }).click()
+  for (const page of [host, guest]) {
+    await expect(page.getByText('Disputa de dados')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText(`${HOST_NAME} joga agora`)).toBeVisible()
+  }
+  await expect(host.getByRole('button', { name: 'Rolar meus dados' })).toBeVisible()
+  await expect(guest.getByRole('button', { name: 'Rolar meus dados' })).toHaveCount(0)
+  await Promise.all([
+    expectNoBlockingA11y(host, 'disputa de dados do host'),
+    expectNoBlockingA11y(guest, 'disputa de dados do convidado'),
+  ])
+
+  await host.getByRole('button', { name: 'Rolar meus dados' }).click()
+  for (const page of [host, guest]) {
+    await expect(page.getByRole('img', {
+      name: `Dados de ${HOST_NAME} em movimento`,
+    })).toBeVisible({ timeout: 20_000 })
+  }
+
+  await expect(guest.getByText(`${GUEST_NAME} joga agora`)).toBeVisible({ timeout: 20_000 })
+  await expect(guest.getByRole('button', { name: 'Rolar meus dados' })).toBeVisible()
+  await expect(host.getByText(`Aguardando ${GUEST_NAME} rolar`)).toBeVisible()
+  const hostResult = host.getByRole('img', {
+    name: new RegExp(`^Dados de ${HOST_NAME}: [1-6] e [1-6], soma \\d+$`),
+  })
+  const guestResult = guest.getByRole('img', {
+    name: new RegExp(`^Dados de ${HOST_NAME}: [1-6] e [1-6], soma \\d+$`),
+  })
+  await expect(hostResult).toBeVisible()
+  await expect(guestResult).toHaveAttribute('aria-label', await hostResult.getAttribute('aria-label') ?? '')
+
+  await guest.getByRole('button', { name: 'Rolar meus dados' }).click()
+  for (const page of [host, guest]) {
+    await expect(page.getByText('Rota definida')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText('Maior soma primeiro · embarque automático')).toBeVisible()
+  }
+  const hostOrder = await host.locator('.auction-result-row').evaluateAll((rows) =>
+    rows.map((row) => ({
+      name: row.querySelector('.text-starlight')?.textContent?.trim() ?? '',
+      sum: Number(row.querySelector('.opening-roll strong')?.textContent ?? 0),
+    })),
+  )
+  const guestOrder = await guest.locator('.auction-result-row').evaluateAll((rows) =>
+    rows.map((row) => ({
+      name: row.querySelector('.text-starlight')?.textContent?.trim() ?? '',
+      sum: Number(row.querySelector('.opening-roll strong')?.textContent ?? 0),
+    })),
+  )
+  expect(hostOrder).toHaveLength(2)
+  expect(guestOrder).toEqual(hostOrder)
+  expect(hostOrder[0].sum).toBeGreaterThanOrEqual(hostOrder[1].sum)
   await Promise.all([
     expectNoBlockingA11y(host, 'revelação Maior dado do host'),
     expectNoBlockingA11y(guest, 'revelação Maior dado do convidado'),

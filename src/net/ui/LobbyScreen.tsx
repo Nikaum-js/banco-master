@@ -357,7 +357,7 @@ export function RoomLobby({
             {
               mode: 'dice-roll',
               label: 'Maior dado',
-              detail: 'Dois dados definem a ordem, sem custo.',
+              detail: 'Cada jogador rola dois dados, um por vez e sem custo.',
             },
           ] as const).map((option) => {
             const selected = openingMode === option.mode
@@ -400,7 +400,7 @@ export function RoomLobby({
               ? waitingCopy
               : openingMode === 'sealed-bid'
                 ? 'Abrir leilão'
-                : 'Rolar e iniciar'}
+                : 'Abrir disputa'}
         </Button>
       ) : (
         <p className="label text-starlight-muted text-center">Aguardando o host iniciar a partida…</p>
@@ -435,6 +435,122 @@ function OpeningDie({ value }: { value: number }) {
     <span className="opening-die" aria-hidden>
       {(DIE_PIPS[value] ?? DIE_PIPS[1]).map((cell) => <i key={cell} style={{ gridArea: `${Math.ceil(cell / 3)} / ${((cell - 1) % 3) + 1}` }} />)}
     </span>
+  )
+}
+
+export function OpeningRolls({
+  room,
+  myUid,
+  onRoll,
+}: {
+  room: Room
+  myUid: string
+  onRoll: () => void
+}) {
+  const rolled = room.seats.filter((seat) => seat.openingRoll !== null)
+  const current = room.seats.find((seat) => seat.openingRoll === null)
+  const inFlight = current?.openingRollResolvesAt != null
+  const leader = rolled.reduce<Room['seats'][number] | null>((best, seat) => {
+    if (!best) return seat
+    const bestTotal = (best.openingRoll?.[0] ?? 0) + (best.openingRoll?.[1] ?? 0)
+    const seatTotal = (seat.openingRoll?.[0] ?? 0) + (seat.openingRoll?.[1] ?? 0)
+    return seatTotal > bestTotal ? seat : best
+  }, null)
+  const leaderTotal = (leader?.openingRoll?.[0] ?? 0) + (leader?.openingRoll?.[1] ?? 0)
+
+  return (
+    <Frame
+      title="Disputa de dados"
+      subtitle="Um arremesso por vez · maior soma começa"
+      className="opening-rolls-frame"
+      bodyClassName="opening-rolls-layout"
+    >
+      {current && (
+        <section
+          className={`opening-rolls-focus ${inFlight ? 'opening-rolls-focus--moving' : ''}`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="opening-rolls-focus__player">
+            <PlayerFace color={current.color} avatar={current.avatar} skin={current.skin} size={48} />
+            <div>
+              <span className="label text-brass">Vez de jogar</span>
+              <p className="display text-xl text-starlight">
+                {inFlight ? `${current.name} está rolando` : `${current.name} joga agora`}
+              </p>
+            </div>
+          </div>
+
+          <span
+            className={`opening-roll opening-rolls-dice ${inFlight ? 'opening-rolls-dice--moving' : ''}`}
+            role="img"
+            aria-label={inFlight
+              ? `Dados de ${current.name} em movimento`
+              : `Dados de ${current.name} aguardando arremesso`}
+          >
+            <OpeningDie value={3} />
+            <OpeningDie value={5} />
+          </span>
+        </section>
+      )}
+
+      {leader && (
+        <p className="opening-rolls-leader">
+          <span aria-hidden>◆</span>
+          {leader.name} lidera com {leaderTotal}
+        </p>
+      )}
+
+      <ol className="opening-rolls-roster">
+        {room.seats.map((seat, index) => {
+          const isCurrent = seat.uid === current?.uid
+          const roll = seat.openingRoll
+          const sum = (roll?.[0] ?? 0) + (roll?.[1] ?? 0)
+          return (
+            <li
+              key={seat.uid}
+              className={`opening-rolls-player ${isCurrent ? 'opening-rolls-player--current' : ''}`}
+            >
+              <span className="opening-rolls-player__number" aria-hidden>
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <PlayerFace color={seat.color} avatar={seat.avatar} skin={seat.skin} size={30} />
+              <span className="opening-rolls-player__identity">
+                <strong>{seat.name}</strong>
+                <small>
+                  {roll ? `Soma ${sum}` : isCurrent ? 'na mesa' : 'aguardando'}
+                </small>
+              </span>
+              {roll ? (
+                <span
+                  className="opening-roll opening-rolls-player__dice"
+                  role="img"
+                  aria-label={`Dados de ${seat.name}: ${roll[0]} e ${roll[1]}, soma ${sum}`}
+                >
+                  <OpeningDie value={roll[0]} />
+                  <OpeningDie value={roll[1]} />
+                  <strong>{sum}</strong>
+                </span>
+              ) : (
+                <span className="opening-rolls-player__state">
+                  {isCurrent ? (inFlight ? 'rolando' : 'sua vez') : 'em espera'}
+                </span>
+              )}
+            </li>
+          )
+        })}
+      </ol>
+
+      {current?.uid === myUid && !inFlight ? (
+        <Button className="opening-rolls-action" onClick={onRoll}>
+          Rolar meus dados
+        </Button>
+      ) : current ? (
+        <p className="opening-rolls-wait">
+          {inFlight ? `A mesa acompanha ${current.name}` : `Aguardando ${current.name} rolar`}
+        </p>
+      ) : null}
+    </Frame>
   )
 }
 
