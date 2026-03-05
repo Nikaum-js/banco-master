@@ -4,33 +4,32 @@ import { describe, expect, it } from 'vitest'
 import { runGame } from '../engine/runGame'
 import { buildReport, formatReport } from '../engine/report'
 import { writeReport } from '../engine/reportIO'
+import { reportPath, resolveBatch } from '../engine/batch'
 
 const PLAYER_COUNT = 2
-// Tamanho do lote. 100 é o lote COMPLETO e continua sendo o default — é ele que dá confiança
-// antes de release. `SIM_GAMES` reduz para o CI de cada push, onde 17 minutos de espera custa mais
-// que a cauda de seeds que o lote grande cobre.
+const BASE_SEED = 2026070502 // seed-base fixa: reprodutível partida a partida (FR-003)
+
+// Tamanho do lote e fatia deste processo. 100 é o lote COMPLETO e continua sendo o default —
+// é ele que dá confiança antes de release. `SIM_GAMES` reduz para o CI de cada push, onde a
+// espera custa mais que a cauda de seeds que o lote grande cobre; `SIM_SHARD` divide o lote
+// entre runners sem mexer em quais seeds o conjunto cobre (ver `../engine/batch.ts`).
 //
-// O custo dessa redução é MEDIDO, não suposto: o falso positivo do invariante de não-truncagem
+// O custo da REDUÇÃO é MEDIDO, não suposto: o falso positivo do invariante de não-truncagem
 // (corrigido em `card-collect.due`) apareceu na seed **76 de 100**. Um lote de 30 não o teria
 // pegado na primeira tentativa — teria pegado na terceira, num push seguinte. É esse o trade.
-const GAMES = Number(process.env.SIM_GAMES) || 100
-const BASE_SEED = 2026070502 // seed-base fixa: reprodutível partida a partida (FR-003)
+// O SHARD não tem esse custo: as seeds continuam todas cobertas, em três runners.
+const batch = resolveBatch(BASE_SEED)
 
 describe('simulação headless — 2 jogadores', () => {
   it(
-    `roda ${GAMES} partidas sem falha`,
+    `roda ${batch.label} sem falha`,
     () => {
       const t0 = Date.now()
-      const results = Array.from({ length: GAMES }, (_, i) => runGame(BASE_SEED + i, PLAYER_COUNT))
+      const results = batch.seeds.map((seed) => runGame(seed, PLAYER_COUNT))
       const report = buildReport(results, Date.now() - t0)
-      writeReport(report, 'reports/headless-2p') // inspecionável depois de `bun run test`, sem rodar sim:batch à parte
+      writeReport(report, reportPath('reports/headless-2p')) // inspecionável depois de `bun run test`, sem rodar sim:batch à parte
       expect(report.failed, formatReport(report)).toBe(0)
     },
-    // Teto PROPORCIONAL ao lote, não fixo. É guarda contra trava, nunca medida de desempenho
-    // (SC-002 pede <2min em condições normais; 180s reprovava um lote SADIO em runner
-    // compartilhado). Os 600_000 fixos vinham de quando o CI só rodava `SIM_GAMES=30`: o lote
-    // COMPLETO de 6 jogadores mede ~1.182.000ms num runner, então o caminho `full_simulation`
-    // e o schedule noturno reprovavam por relógio, sempre, sem nada de errado com o motor.
-    Math.max(600_000, GAMES * 15_000),
+    batch.timeoutMs,
   )
 })

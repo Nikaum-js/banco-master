@@ -201,14 +201,20 @@ jobs:
         run: psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f tests/db/rpc.sql
 
   simulation:
-    name: simulação seedada
+    name: simulação seedada (${{ matrix.shard }}/3)
     needs: changes
     if: needs.changes.outputs.simulation == 'true'
     runs-on: ubuntu-latest
-    # 50, não 25: a amostra de cada push fecha em ~5min e não paga nada por um teto alto
-    # (o runner cobra o tempo usado), mas o lote COMPLETO do schedule/`full_simulation` mede
-    # ~20min só na contagem de 6 jogadores. Com 25 o caminho completo reprovava por relógio.
-    timeout-minutes: 50
+    # 20, não 50: o teto acompanha a FATIA, não o lote inteiro. O lote completo de 6
+    # jogadores media ~20min num runner só (é de onde vinham os 50); dividido em três, a
+    # fatia mais cara fecha em ~7min. Continua sendo guarda contra trava, não meta.
+    timeout-minutes: 20
+    strategy:
+      # Uma fatia vermelha não cancela as outras: lote seedado que falha é relatório de bug,
+      # e saber QUAIS seeds quebraram vale mais que economizar os minutos das fatias sadias.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
 
@@ -219,25 +225,27 @@ jobs:
       - name: Instalar dependências
         run: bun install --frozen-lockfile
 
-      # Os lotes headless moram aqui, e não no `vitest run` do gate
-      # principal, porque são CPU-bound e sequenciais: no job generalista disputavam os 2
-      # vCPUs com ~100 outros arquivos e o de 6 jogadores estourou o timeout (run
-      # 30233981454). Sozinhos no runner, cabem com folga.
-      # `SIM_GAMES=30` em vez do lote completo de 100 por conta: o lote inteiro levava ~17min de
-      # relógio (limitado pelo de 6 jogadores) e atrasava o feedback de todo push. 30 partidas por
-      # contagem = 90 partidas, ~4min, e mantém o invariante rodando sobre partidas COMPLETAS, que
-      # é onde ele acha o que teste unitário não acha (deadlock de dívida fora da vez, cobrança
-      # muda, falso positivo de truncagem — todos os três achados por este job).
+      # Os lotes headless moram aqui, e não no `vitest run` do gate principal, porque são
+      # CPU-bound e sequenciais: no job generalista disputavam os vCPUs com ~100 outros
+      # arquivos e o de 6 jogadores estourou o timeout (run 30233981454).
       #
-      # O que se perde é a CAUDA de seeds: o falso positivo mais recente estava na seed 76 de 100,
-      # então um lote de 30 o encontraria num push seguinte, não no primeiro. O schedule noturno
-      # e workflow_dispatch(full_simulation=true) pagam a cauda inteira (100 por contagem).
-      - name: Lotes headless (amostra)
-        if: needs.changes.outputs.full_simulation != 'true'
-        run: SIM_GAMES=30 bun run test:sim
-
-      - name: Lotes headless (completos)
-        if: needs.changes.outputs.full_simulation == 'true'
+      # Duas alavancas independentes, e vale não confundi-las:
+      #
+      # `SIM_GAMES` encolhe a COBERTURA. 30 por contagem em vez de 100 mantém o invariante
+      # rodando sobre partidas COMPLETAS — onde ele acha o que teste unitário não acha
+      # (deadlock de dívida fora da vez, cobrança muda, falso positivo de truncagem, os três
+      # achados aqui) —, mas perde a CAUDA de seeds: o falso positivo mais recente estava na
+      # seed 76 de 100. O schedule noturno e workflow_dispatch(full_simulation=true) pagam a
+      # cauda inteira.
+      #
+      # `SIM_SHARD` NÃO encolhe nada — só reparte as mesmas seeds entre runners. O lote roda
+      # dentro de um `it()` síncrono por contagem, então o vitest só paraleliza por arquivo e
+      # o de 6 jogadores segurava o relógio sozinho (231s dos 244s do job) enquanto 2p e 3p
+      # já tinham terminado. Em três fatias, o caminho crítico vira um terço dele.
+      - name: Lotes headless
+        env:
+          SIM_SHARD: ${{ matrix.shard }}/3
+          SIM_GAMES: ${{ needs.changes.outputs.full_simulation == 'true' && '100' || '30' }}
         run: bun run test:sim
 
   e2e:
