@@ -91,7 +91,11 @@ describe('EndGameScreen (T014)', () => {
     expect(screen.queryByRole('button', { name: 'Voltar ao início' })).toBeNull()
   })
 
-  it('eliminado mostra a rodada em que caiu', () => {
+  // A coluna "Queda" saiu da tabela na v1.27: ela só repetia a ordem da própria classificação,
+  // e o pedido foi trocar as colunas por contas que expliquem o resultado (caixa, países,
+  // construções, maior aluguel). A rodada da queda continua no `matchSummary` e continua sendo o
+  // que DEFINE a ordem — então o que este teste afirma agora é a ordem, que é o fato real.
+  it('a ordem de queda define a classificação: quem caiu primeiro fica por último', () => {
     const g = seed(3)
     g.players[0].eliminated = true
     g.players[2].eliminated = true
@@ -104,10 +108,11 @@ describe('EndGameScreen (T014)', () => {
     render(<EndGameScreen game={g} online={false} onExit={() => {}} />)
 
     const rows = tbodyRows()
+    // p2 sobrou (1º); p1 caiu na rodada 7 (2º); p3 caiu na rodada 2 (3º e último).
+    const ordem = rows.map((r) => (['p1', 'p2', 'p3'] as const).find((id) => within(r).queryByText(playerLabel(id))))
+    expect(ordem).toEqual(['p2', 'p1', 'p3'])
     const p1Row = rows.find((r) => within(r).queryByText(playerLabel('p1')))!
-    const p3Row = rows.find((r) => within(r).queryByText(playerLabel('p3')))!
-    expect(within(p1Row).getByText('7')).toBeTruthy()
-    expect(within(p3Row).getByText('2')).toBeTruthy()
+    expect(within(p1Row).getByText('2º')).toBeTruthy()
   })
 
   it('partial: mostra o aviso e agrupa quem não tem registro, sem inventar posição', () => {
@@ -128,9 +133,9 @@ describe('EndGameScreen (T014)', () => {
     const rows = tbodyRows()
     expect(rows.find((r) => within(r).queryByText(playerLabel('p1')))).toBeUndefined()
 
-    // p3 (com registro) segue confirmado na tabela, com a rodada da queda.
+    // p3 (com registro) segue confirmado na tabela, com posição afirmada.
     const p3Row = rows.find((r) => within(r).queryByText(playerLabel('p3')))!
-    expect(within(p3Row).getByText('2')).toBeTruthy()
+    expect(within(p3Row).queryByText(/^\d+º$/)).toBeTruthy()
 
     // p1 aparece agrupado, mas nenhum número de posição (Nº) é atribuído a ele.
     const unconfirmedItem = screen.getByText(playerLabel('p1')).closest('li')!

@@ -103,8 +103,12 @@ export function EndGameScreen({
                   <dd className="currency">{money(winner.netWorth)}</dd>
                 </div>
                 <div>
-                  <dt>Propriedades</dt>
-                  <dd>{winner.properties}</dd>
+                  <dt>Em caixa</dt>
+                  <dd className="currency">{money(winner.cash)}</dd>
+                </div>
+                <div>
+                  <dt>Países fechados</dt>
+                  <dd>{winner.countries}</dd>
                 </div>
               </dl>
             )}
@@ -140,8 +144,10 @@ export function EndGameScreen({
                 <th scope="col" className="py-1.5 pr-2 font-normal">Pos.</th>
                 <th scope="col" className="py-1.5 pr-2 font-normal">Jogador</th>
                 <th scope="col" className="py-1.5 pr-2 font-normal text-right">Patrimônio</th>
-                <th scope="col" className="py-1.5 pr-2 font-normal text-right">Propriedades</th>
-                <th scope="col" className="py-1.5 font-normal text-right">Queda</th>
+                <th scope="col" className="py-1.5 pr-2 font-normal text-right">Em caixa</th>
+                <th scope="col" className="py-1.5 pr-2 font-normal text-right" title="Países com todas as cidades — é o que destrava construção">Países</th>
+                <th scope="col" className="py-1.5 pr-2 font-normal text-right" title="Casas, hotéis, arranha-céus e Hangares somados">Construções</th>
+                <th scope="col" className="py-1.5 font-normal text-right" title="O maior aluguel que uma propriedade dele cobraria no fim">Maior aluguel</th>
               </tr>
             </thead>
             <tbody>
@@ -154,11 +160,17 @@ export function EndGameScreen({
                   <td data-label="Patrimônio" className="endgame-wealth py-2 pr-2 text-right currency text-cream">
                     {money(row.netWorth)}
                   </td>
-                  <td data-label="Propriedades" className="endgame-properties py-2 pr-2 text-right text-cream-muted tabular-nums">
-                    {row.properties}
+                  <td data-label="Em caixa" className="endgame-cash py-2 pr-2 text-right currency text-cream-muted">
+                    {money(row.cash)}
                   </td>
-                  <td data-label="Queda" className="endgame-fall py-2 pr-2 text-right text-cream-muted tabular-nums">
-                    {row.eliminatedAtRound ?? '—'}
+                  <td data-label="Países" className="endgame-countries py-2 pr-2 text-right text-cream-muted tabular-nums">
+                    {row.countries || '—'}
+                  </td>
+                  <td data-label="Construções" className="endgame-buildings py-2 pr-2 text-right text-cream-muted tabular-nums">
+                    {row.buildings || '—'}
+                  </td>
+                  <td data-label="Maior aluguel" className="endgame-toprent py-2 pr-2 text-right currency text-cream-muted">
+                    {row.topRent > 0 ? money(row.topRent) : '—'}
                   </td>
                 </tr>
               ))}
