@@ -413,7 +413,7 @@ export function BuildingMark({ pos }: { pos: number }) {
 
   const side = sideOf(pos)
   const isSkyscraper = n === 7
-  const isHotel = n === 5 || n === 6 // hotel ou 2º hotel
+  const hotelCount = n === 6 ? 2 : n === 5 ? 1 : 0
   const houseCount = n >= 1 && n <= 4 ? n : 0
   const isFourHouseGrid = houseCount === 4
 
@@ -421,6 +421,7 @@ export function BuildingMark({ pos }: { pos: number }) {
     <div
       className="absolute z-20 pointer-events-none items-center justify-center"
       data-building-layout={isFourHouseGrid ? 'grid-2x2' : 'line'}
+      data-building-kind={isSkyscraper ? 'skyscraper' : hotelCount > 0 ? 'hotel' : 'house'}
       style={{
         ...markLayout(side),
         display: isFourHouseGrid ? 'grid' : 'flex',
@@ -434,8 +435,8 @@ export function BuildingMark({ pos }: { pos: number }) {
       }}
     >
       {isSkyscraper && <SkyscraperBadgeIcon />}
-      {isHotel && <HotelBadgeIcon />}
-      {/* 1–4 casinhas em fila (conta de relance, sem contador) */}
+      {hotelCount > 0 && Array.from({ length: hotelCount }, (_, i) => <HotelBadgeIcon key={i} />)}
+      {/* 1–3 casas em linha; quatro usam grade 2×2 para caber na faixa lateral. */}
       {houseCount > 0 && Array.from({ length: houseCount }, (_, i) => <HouseBadgeIcon key={i} />)}
     </div>
   )
@@ -449,7 +450,12 @@ export function HangarMark({ pos }: { pos: number }) {
   return (
     <div
       className="absolute z-20 pointer-events-none flex items-center justify-center"
-      style={{ ...markLayout(sideOf(pos)), filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))' }}
+      data-building-kind="hangar"
+      style={{
+        ...markLayout(sideOf(pos)),
+        color: 'var(--color-brass-glow)',
+        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))',
+      }}
     >
       <HangarBadgeIcon />
     </div>
@@ -1780,6 +1786,13 @@ function DeedActions({ pos }: { pos: number }) {
   if (!dv || !dv.ownedByActive) return null
   const { flags } = dv
   const blockMsg = dv.buildBlock ? BUILD_BLOCK_MSG[dv.buildBlock] : undefined
+  const mortgageTitle = !flags.podeHipotecar && !dv.mortgaged
+    ? dv.kind === 'airport' && dv.hangar
+      ? 'Venda o Hangar antes de hipotecar.'
+      : dv.kind === 'property'
+        ? 'Venda todas as construções do grupo antes de hipotecar.'
+        : `Hipotecar por $${dv.mortgageValue}`
+    : `Hipotecar por $${dv.mortgageValue}`
 
   return (
     <div className="deed-actions">
@@ -1810,7 +1823,7 @@ function DeedActions({ pos }: { pos: number }) {
             className={cn(dv.kind !== 'property' && 'col-span-2')}
             icon={<CoinIcon size={13} />}
             disabled={!flags.podeHipotecar}
-            title={`Hipotecar por $${dv.mortgageValue}`}
+            title={mortgageTitle}
             onClick={() => mortgageProperty(pos)}
           >
             Hipotecar
@@ -1978,7 +1991,7 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
                   color={ownerIdentity.color}
                   avatar={ownerIdentity.avatar}
                   skin={ownerIdentity.skin}
-                  size={26}
+                  size={30}
                   className="property-deed__owner-avatar"
                 />
                 <span className="property-deed__owner-copy">

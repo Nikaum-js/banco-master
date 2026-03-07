@@ -2,7 +2,7 @@
 import { act } from 'react'
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { BuildingMark, PropertyPopover } from '@/boards/shared'
+import { BuildingMark, HangarMark, PropertyPopover } from '@/boards/shared'
 import { createSeedState } from '@/game/setup'
 import { useGameStore } from '@/game/store'
 import { BOARD, type PropertySquare } from '@/lib/boardData'
@@ -65,6 +65,23 @@ describe('popover de propriedade', () => {
     expect(mark?.querySelectorAll('svg')).toHaveLength(4)
     expect(mark?.querySelector('svg')?.getAttribute('width')).toBe('13')
     expect(container.querySelector('svg animate')).toBeNull()
+  })
+
+  it('mostra os dois hotéis e o hangar correto também nos marcadores do tabuleiro', () => {
+    const game = createSeedState(['p1', 'p2'])
+    game.titles[1].ownerId = 'p1'
+    game.titles[1].hotel = true
+    game.titles[1].hotel2 = true
+    game.titles[6].ownerId = 'p1'
+    game.titles[6].hangar = true
+    act(() => useGameStore.setState({ game }))
+
+    const hotel = render(<BuildingMark pos={1} />)
+    expect(hotel.container.querySelector('[data-building-kind="hotel"]')?.querySelectorAll('svg')).toHaveLength(2)
+    hotel.unmount()
+
+    const hangar = render(<HangarMark pos={6} />)
+    expect(hangar.container.querySelector('[data-building-kind="hangar"] [data-glyph="hangar"]')).toBeTruthy()
   })
 
   it('bloqueia o arranha-céu no botão e no dispatch quando o grupo está incompleto', () => {

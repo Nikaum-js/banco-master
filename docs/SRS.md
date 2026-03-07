@@ -1,6 +1,6 @@
 # Banco Master — Software Requirements Specification (SRS)
 
-**Versão:** 1.14
+**Versão:** 1.15
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -331,7 +331,7 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 - Jogador recebe do banco **metade** do preço de compra original.
 - Propriedade hipotecada é marcada visualmente.
 - **NÃO** cobra aluguel.
-- Não é possível hipotecar com construções — vender casas/hotéis do grupo antes.
+- Não é possível hipotecar com qualquer construção — vender casas, hotéis e arranha-céus do grupo ou o Hangar do aeroporto antes.
 - Não é possível construir em qualquer propriedade de grupo que contenha propriedade hipotecada.
 
 ### 6.2 Deshipotecar uma Propriedade
@@ -951,7 +951,7 @@ Cada aeroporto pode receber **um Hangar**, melhoria individual que **dobra o alu
 
 - Custo: **$100** (configurável no tema).
 - Não exige possuir múltiplos aeroportos.
-- Pode ser hipotecado junto com o aeroporto.
+- Não pode ser hipotecado junto com o aeroporto — o Hangar deve ser vendido antes da hipoteca.
 - Em falência, segue o destino do aeroporto.
 - Pode ser vendido ao banco por metade do custo.
 
@@ -1080,4 +1080,4 @@ sendo a fonte de verdade da **regra**, o `CONTEXT.md` é a fonte dos **nomes**.
 
 ---
 
-**Banco Master — SRS v1.12 | Julho 2026 | Documento de fonte de verdade absoluta**
+**Banco Master — SRS v1.15 | Julho 2026 | Documento de fonte de verdade absoluta**

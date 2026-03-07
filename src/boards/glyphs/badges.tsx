@@ -83,14 +83,30 @@ export function SkyscraperBadgeIcon({ size = 19 }: BuildingBadgeProps) {
   )
 }
 
-// Hangar (flat) — galpão quonset (arco) cream com trilho dourado e portão escuro.
-// Marca de hangar construído no aeroporto (§13.6).
-export function HangarBadgeIcon() {
+// Hangar frontal com portão aberto e silhueta de avião. A leitura continua
+// inequívoca na faixa estreita do aeroporto, sem parecer um ímã ou guarda-chuva.
+export function HangarBadgeIcon({ size = 20 }: BuildingBadgeProps) {
   return (
-    <svg viewBox="0 0 20 14" width="22" height="15" aria-hidden="true">
-      <path d="M1 13 V8 Q1 2.5 10 2.5 Q19 2.5 19 8 V13 Z" fill="var(--color-starlight)" stroke="var(--color-ink-950)" strokeWidth="1" strokeLinejoin="round" />
-      <path d="M1.6 8 Q1.6 3.5 10 3.5 Q18.4 3.5 18.4 8" fill="none" stroke="var(--color-brass)" strokeWidth="0.9" />
-      <path d="M6 13 V9.6 Q10 6.4 14 9.6 V13 Z" fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
+    <svg
+      viewBox="0 0 28 22"
+      width={Math.round(size * 1.27)}
+      height={size}
+      fill="none"
+      data-glyph="hangar"
+      aria-hidden="true"
+    >
+      <path
+        d="M2.5 20V8.5L7.5 3h13l5 5.5V20h-23Z"
+        fill="var(--color-ink-950)"
+        fillOpacity="0.84"
+        stroke="currentColor"
+        strokeWidth="1.55"
+        strokeLinejoin="round"
+      />
+      <path d="M1.5 20h25M7.5 3 14 8.2 20.5 3" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7.5 20V9.5h13V20" stroke="var(--color-starlight)" strokeWidth="1.2" strokeLinejoin="round" opacity="0.76" />
+      <path d="M14 10.8v6.6m-5-3.2 5-1.2 5 1.2-5 .9-5-.9Zm3.2 3.2L14 16l1.8 1.4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 7.8h18" stroke="var(--color-starlight)" strokeWidth="1" strokeLinecap="round" opacity="0.62" />
     </svg>
   )
 }

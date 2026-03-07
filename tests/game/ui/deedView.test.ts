@@ -89,6 +89,7 @@ describe('deedView — hangar (US3)', () => {
     const v2 = deedView(s, 6)!
     expect(v2.flags.podeConstruirHangar).toBe(false)
     expect(v2.flags.podeVenderHangar).toBe(true)
+    expect(v2.flags.podeHipotecar).toBe(false)
   })
 })
 

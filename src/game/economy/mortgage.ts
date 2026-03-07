@@ -34,12 +34,17 @@ export function groupHasConstruction(state: GameState, group: GroupKey, ownerId:
       s.kind === 'property' &&
       s.group === group &&
       state.titles[s.pos]?.ownerId === ownerId &&
-      ((state.titles[s.pos]?.houses ?? 0) > 0 || !!state.titles[s.pos]?.hotel),
+      (
+        (state.titles[s.pos]?.houses ?? 0) > 0 ||
+        !!state.titles[s.pos]?.hotel ||
+        !!state.titles[s.pos]?.hotel2 ||
+        !!state.titles[s.pos]?.skyscraper
+      ),
   )
 }
 
 // Hipoteca a propriedade do jogador ativo. No-op se inválido.
-// Pode hipotecar? (própria, não-hipotecada, e — cidade — sem construção no grupo §6.1) — 023.
+// Pode hipotecar? Própria, não-hipotecada e sem construção vinculada (§6.1, D-049).
 export function canMortgage(state: GameState, pos: number): boolean {
   const sq = BOARD[pos]
   if (sq.kind !== 'property' && sq.kind !== 'airport' && sq.kind !== 'utility') return false
@@ -47,6 +52,7 @@ export function canMortgage(state: GameState, pos: number): boolean {
   const title = state.titles[pos]
   if (!title || title.ownerId !== player.id || title.mortgaged) return false
   if (sq.kind === 'property' && groupHasConstruction(state, sq.group, player.id)) return false // §6.1
+  if (sq.kind === 'airport' && title.hangar) return false // D-049: vende o Hangar primeiro
   return true
 }
 

@@ -33,6 +33,26 @@ describe('Hipotecar (US1)', () => {
     expect(mortgageProperty(g, 3)).toBe(g) // grupo tem construção → no-op
   })
 
+  it.each([
+    ['casas', { houses: 1 }],
+    ['hotel', { hotel: true }],
+    ['segundo hotel', { hotel2: true }],
+    ['arranha-céu', { skyscraper: true }],
+  ])('SC-001: bloqueia a hipoteca com %s no grupo', (_level, building) => {
+    const g = owned()
+    g.titles[3].ownerId = 'p1'
+    Object.assign(g.titles[1], building)
+    expect(mortgageProperty(g, 3)).toBe(g)
+  })
+
+  it('SC-001: bloqueia a hipoteca de aeroporto com Hangar (D-049)', () => {
+    const g = owned()
+    g.titles[6].ownerId = 'p1'
+    g.titles[6].hangar = true
+    expect(mortgageProperty(g, 6)).toBe(g)
+    expect(g.titles[6].mortgaged).toBe(false)
+  })
+
   it('SC-001: já hipotecada / não-dono → no-op', () => {
     const g = owned()
     g.titles[1].mortgaged = true
