@@ -5,6 +5,7 @@ import type { Square, PropertySquare } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
 import { buildCost } from '../economy/construction'
 import { activePlayer, completeResolution, advanceSeat, type TurnCtx } from '../turn/turnMachine'
+import { activeLoanFor } from '../emprestimos/emprestimos'
 
 function clone(state: GameState): GameState {
   return structuredClone(state)
@@ -55,12 +56,18 @@ export function payDebt(state: GameState): GameState {
   return s
 }
 
-// Falência (§9.2, sem empréstimo): destina ativos, elimina, checa fim de jogo, passa a vez.
+// Falência: destina ativos, elimina, checa fim de jogo, passa a vez.
+// §9.2 (sem empréstimo ativo) ou §9.3/§15.5 (com empréstimo: o CREDOR do empréstimo herda
+// tudo — ativos e passivos —, precedendo a dívida-gatilho).
 export function declareBankruptcy(state: GameState, ctx: TurnCtx): GameState {
   if (state.resolution?.kind !== 'debt') return state
-  const creditorId = state.resolution.creditorId
+  const debtCreditorId = state.resolution.creditorId
   const s = clone(state)
   const debtor = activePlayer(s)
+
+  // §9.3/§15.5: havendo empréstimo ativo, o credor do empréstimo herda (precede o §9.2).
+  const loan = activeLoanFor(s, debtor.id)
+  const heirId = loan ? loan.creditorId : debtCreditorId
 
   for (const sq of BOARD) {
     if (!('price' in sq)) continue
@@ -71,17 +78,20 @@ export function declareBankruptcy(state: GameState, ctx: TurnCtx): GameState {
         s.bank.hotels += 1
         t.hotel = false
       }
-      s.bank.houses += t.houses // construções voltam ao banco (§9.2)
+      s.bank.houses += t.houses // construções voltam ao banco (§9.2/§15.5)
       t.houses = 0
     }
-    t.ownerId = creditorId // credor (jogador) ou banco (null → livre; leilão é refinamento)
+    t.ownerId = heirId // credor do empréstimo (§9.3) ou da dívida (§9.2); banco se null. Hipoteca preservada.
   }
-  if (creditorId) {
-    const creditor = s.players.find((p) => p.id === creditorId)
-    if (creditor) creditor.cash += debtor.cash // caixa restante ao credor
+  if (heirId) {
+    const heir = s.players.find((p) => p.id === heirId)
+    if (heir) heir.cash += debtor.cash // caixa restante ao herdeiro
   }
   debtor.cash = 0
   debtor.eliminated = true // token sai do tabuleiro (LiveTokens pula eliminados)
+
+  // Empréstimos liquidados: o do devedor (herdado via §9.3) e os em que ele era CREDOR (R8).
+  s.loans = s.loans.filter((l) => l.debtorId !== debtor.id && l.creditorId !== debtor.id)
 
   s.resolution = null
   s.turn.pendingResolve = false
