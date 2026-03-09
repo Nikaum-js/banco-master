@@ -335,6 +335,7 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 
 - Jogador para em propriedade livre e recusa a compra.
 - Banco leiloa propriedades de jogador falido (quando devia ao banco).
+- **Escassez de terrenos:** quando restam poucos terrenos sem dono no tabuleiro (Seção 7.3).
 
 ### 7.2 Regras do Leilão
 
@@ -344,6 +345,19 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 - Encerra quando nenhum novo lance é dado em tempo razoável (comportamento Richup.io).
 - Vencedor paga seu lance ao banco e recebe o título.
 - Se ninguém der lance, a propriedade permanece com o banco.
+
+### 7.3 Leilão de Escassez de Terrenos (pregão simultâneo)
+
+Mecanismo de fim de jogo que evita a partida se arrastar esperando alguém *cair* nos últimos terrenos livres. **Não confundir** com o antigo leilão de *casas* (removido — [D-022](DECISIONS.md)); aqui leiloam-se **terrenos** (cidades/aeroportos/utilidades sem dono).
+
+- **Gatilho:** quando o número de terrenos compráveis **sem dono** cai a **≤ 3** (mas ≥ 1) **e** há **≥ 2 jogadores não-eliminados**, abre-se automaticamente um pregão por esses terrenos. É um **evento próprio**, fora do turno em andamento (abrir/encerrar não altera a vez).
+- **Pregão simultâneo:** todos os terrenos restantes vão a leilão **ao mesmo tempo**; cada um é um leilão inglês próprio (lance atual + maior licitante).
+- **Cronômetro por terreno:** cada terreno tem seu **próprio prazo** (padrão 8s). Um lance **reinicia só o prazo daquele terreno** — dar lance no terreno B **não** mexe no relógio do terreno A. Quando o prazo de um terreno zera sem novo lance, **aquele terreno fecha sozinho** (independente dos demais); o pregão acaba quando o último fecha.
+- **Lances:** valem as regras gerais (Seção 7.2 — lance mínimo do tema, maior que o atual daquele terreno). Um jogador pode liderar/arrematar **vários** terrenos, limitado pelo caixa: a soma dos seus lances líderes nunca pode exceder seu caixa (trava de solvência).
+- **Resultado de cada terreno:** ao fechar, o terreno com licitante vai ao maior lance (paga ao banco, recebe a escritura); terreno **sem lance permanece livre** (com o banco).
+- **Uma vez por episódio:** dispara uma única vez por "descida a ≤3"; sobras sem lance voltam ao fluxo normal (cair-e-comprar) e não reabrem o pregão. Só re-arma se a contagem subir acima do limiar (ex.: falência devolve terreno ao banco) e voltar a cair.
+
+> 📌 Fecha o tabuleiro com donos → mais aluguel circulando → fim de jogo mais rápido, com um clímax de pregão. Limiar (3) e duração do cronômetro por terreno (8s) são tunáveis no tema.
 
 ---
 
