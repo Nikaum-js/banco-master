@@ -32,6 +32,7 @@
 - [D-020](#d-020--modelo-de-autoridade--sincronização-host-autoritativo--realtime--snapshot) — Modelo de autoridade & sync: host-autoritativo + Realtime + snapshot
 - [D-021](#d-021--espaço-bus-ticket-uso-imediato-ao-parar-revisa-27107) — Espaço Bus Ticket: uso imediato ao parar (revisa §2.7/§10.7)
 - [D-022](#d-022--escassez-de-construção-removida-construção-ilimitada) — Escassez de construção removida (construção ilimitada; remove leilão de casas)
+- [D-023](#d-023--leilão-de-escassez-de-terrenos-pregão-simultâneo) — Leilão de escassez de terrenos (pregão simultâneo, fim de jogo)
 
 ### Rejeitadas
 - [D-R01](#d-r01--sistema-de-draft-rejeitada) — Sistema de draft de propriedades no início
@@ -165,6 +166,12 @@
 **Decisão:** Remover o **estoque limitado** de construção do banco. Casas, hotéis e arranha-céus são **ilimitados** — construir nunca é travado por falta de peças. Em consequência: (a) o **leilão de casas em escassez** (antigo SRS §5.4 + spec 026) é removido; (b) o **desmonte forçado** ao vender hotel sem casas (antigo §5.5) deixa de existir; (c) o **2º hotel** ganha valor próprio cobrando mais aluguel ([D-008](#d-008--segundo-hotel-por-propriedade) revista).
 **Por quê:** a escassez de casas no Monopoly físico é artefato da caixa (32 peças) que a Hasbro codificou em regra; a tática que dela emerge ("house starvation") é um **amplificador de runaway-leader** — quem está à frente tranca o estoque e sufoca os demais. Isso contraria o **Princípio IV** (catch-up discreto) e o objetivo da [D-017](#d-017--tabuleiro-de-48-casas) de segurar o líder. O Richup (referência) também não limita. Ganha-se fluidez e elimina-se uma classe de edge cases.
 **Como aplicar:** motor — remover o campo `bank`/`BankStock` e os gates de estoque em `construction.ts`; `rent.ts` ganha `HOTEL2_RENT_MULT` (2º hotel > 1º hotel). SRS §5.2/§5.3 reescritos, §5.4/§5.5 deletados, §7.1/§13.7/§14 atualizados. Spec 026 (leilão de casas) descontinuada. **Leilão por escassez de _terrenos_** (últimos lotes livres do tabuleiro) fica em aberto para desenho futuro — não confundir com este.
+
+### D-023 — Leilão de escassez de terrenos (pregão simultâneo)
+**Data:** 2026-05-25 · **Status:** aceita
+**Decisão:** Quando restam **≤3 terrenos compráveis sem dono** (cidades/aeroportos/utilidades) **e** há **≥2 jogadores vivos**, abre-se automaticamente um **pregão simultâneo** por esses terrenos — evento autônomo, fora do turno. Cada terreno é um leilão inglês próprio com seu **cronômetro PRÓPRIO** (padrão 8s): um lance reinicia só o prazo **daquele** terreno, e cada terreno **fecha sozinho** quando o seu tempo zera (independente dos demais). Um jogador pode arrematar **vários**, limitado pelo caixa (**trava de solvência**: soma dos lances líderes ≤ caixa). Terreno **sem lance fica livre**. Dispara **1×/episódio** (re-arma se a contagem subir e voltar a cair). Spec 031.
+**Por quê:** terrenos são finitos por natureza (≠ casas, que viraram ilimitadas na [D-022]) — a escassez é real. Combate o problema "partida arrastada" (não esperar alguém *cair* nos últimos lotes); fecha o tabuleiro com donos → mais aluguel → fim mais rápido, com clímax. Reusa o motor de leilão (003, §7.2). Princípio IV: o pregão é **neutro**, não se rotula como catch-up; Princípio V: sem lance = sem compra forçada.
+**Como aplicar:** SRS §7 ganha o gatilho (7.1) + subseção 7.3 (já atualizado). Motor — novo evento autônomo `GameState.landAuction` (NÃO `resolution`), módulo `economy/landAuction.ts` (`maybeOpenLandAuction`/`placeLandBid`/`closeLandAuction`/`committedCash`), flag `landAuctionArmed`, timer no store reusando o padrão/`deadline` do 003. UI: `LandAuctionLayer` autônoma. **Não** reintroduzir `bank`/`houseAuction` ([D-022]).
 
 ---
 
