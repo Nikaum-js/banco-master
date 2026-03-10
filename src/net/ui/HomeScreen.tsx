@@ -15,8 +15,8 @@
 // movimento próprios. A lógica (nome lembrado, extração do id da sala, colar do clipboard)
 // mora em `home/homeShared.ts`, uma vez só: as duas desenham o mesmo formulário de jeitos
 // diferentes.
-import { AnimatePresence, motion } from 'motion/react'
-import { useState } from 'react'
+import { motion } from 'motion/react'
+import { useEffect, useState } from 'react'
 import { Map } from 'lucide-react'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import type { BoardTheme } from '@/game/ui/theme/boardTheme'
@@ -34,7 +34,7 @@ export function HomeScreen(actions: HomeActions) {
   // A prévia de mapa pertence somente à home. O tema do jogo não muda junto:
   // Metrópole Neon ainda não existe como tabuleiro jogável.
   const [theme, setTheme] = useState<BoardTheme>('atlas')
-  const Screen = SCREEN[theme]
+  const [mountedThemes, setMountedThemes] = useState<BoardTheme[]>(['atlas'])
   const [themeTransition, setThemeTransition] = useState<{
     target: BoardTheme
     phase: 'cover' | 'reveal'
@@ -43,8 +43,30 @@ export function HomeScreen(actions: HomeActions) {
   // o seletor de mapa alterna Atlas ⇄ Neon.
   const f = useHomeForm(actions)
 
+  // Cada palco tem mais de mil nós decorativos. Depois da primeira montagem, mantê-lo no
+  // DOM e tirá-lo apenas da renderização evita reconstruir todo o SVG a cada comparação.
+  // O segundo mapa é preparado quando o browser estiver ocioso, fora da interação.
+  useEffect(() => {
+    const mountAllThemes = () => {
+      setMountedThemes((current) => (
+        current.length === Object.keys(SCREEN).length ? current : ['atlas', 'neon']
+      ))
+    }
+
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(mountAllThemes, { timeout: 1_500 })
+      return () => window.cancelIdleCallback(id)
+    }
+
+    const id = window.setTimeout(mountAllThemes, 800)
+    return () => window.clearTimeout(id)
+  }, [])
+
   function changeMap(target: BoardTheme): void {
     if (target === theme || themeTransition) return
+    setMountedThemes((current) => (
+      current.includes(target) ? current : [...current, target]
+    ))
     if (reduced) {
       setTheme(target)
       return
@@ -65,40 +87,39 @@ export function HomeScreen(actions: HomeActions) {
   }
 
   return (
-    <>
-      {/* Sem `mode="wait"`: os dois palcos são `fixed inset-0`, então deixá-los coexistir
-          por um instante é o que dá a dissolvência de um para o outro — esperar o primeiro
-          sair deixaria um frame de tela vazia no meio da comparação. */}
-      <AnimatePresence initial={false}>
-        <motion.div
-          key={theme}
-          data-home-screen
-          initial={reduced ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={reduced ? { opacity: 0 } : { opacity: 0 }}
-          transition={reduced ? { duration: 0 } : { duration: MOTION.slow, ease: EASE.standard }}
-        >
-          <Screen
-            f={f}
-            onChangeMap={changeMap}
-            mapChanging={themeTransition !== null}
-          />
-        </motion.div>
-      </AnimatePresence>
+    <div className="contents" data-home-switching={themeTransition ? '' : undefined}>
+      {mountedThemes.map((mountedTheme) => {
+        const Screen = SCREEN[mountedTheme]
+        const active = mountedTheme === theme
+        return (
+          <motion.div
+            key={mountedTheme}
+            data-home-screen
+            data-home-theme={mountedTheme}
+            hidden={!active}
+            aria-hidden={!active}
+            initial={reduced ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={reduced ? { duration: 0 } : { duration: MOTION.slow, ease: EASE.standard }}
+          >
+            <Screen
+              f={f}
+              onChangeMap={changeMap}
+              mapChanging={active && themeTransition !== null}
+            />
+          </motion.div>
+        )
+      })}
 
       {themeTransition && (
         <motion.div
           className={`home-theme-transition home-theme-transition--${themeTransition.target}`}
           data-theme-transition={themeTransition.phase}
-          initial={{ clipPath: 'polygon(0 0, 0 0, -12% 100%, -12% 100%)' }}
-          animate={{
-            clipPath: themeTransition.phase === 'cover'
-              ? 'polygon(0 0, 112% 0, 100% 100%, 0 100%)'
-              : 'polygon(100% 0, 112% 0, 100% 100%, 100% 100%)',
-          }}
+          initial={{ x: '-100%' }}
+          animate={{ x: themeTransition.phase === 'cover' ? 0 : '100%' }}
           transition={{
-            duration: themeTransition.phase === 'cover' ? 0.42 : 0.62,
-            delay: themeTransition.phase === 'reveal' ? 0.16 : 0,
+            duration: themeTransition.phase === 'cover' ? 0.28 : 0.38,
+            delay: themeTransition.phase === 'reveal' ? 0.04 : 0,
             ease: EASE.emphasis,
           }}
           onAnimationComplete={advanceThemeTransition}
@@ -107,7 +128,7 @@ export function HomeScreen(actions: HomeActions) {
           <motion.div
             className="home-theme-transition__content"
             animate={{ opacity: themeTransition.phase === 'cover' ? 1 : 0 }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: 0.14 }}
           >
             <div className="home-theme-transition__map">
               <Map size={30} />
@@ -122,6 +143,6 @@ export function HomeScreen(actions: HomeActions) {
           </motion.div>
         </motion.div>
       )}
-    </>
+    </div>
   )
 }

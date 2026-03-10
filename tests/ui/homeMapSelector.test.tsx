@@ -57,5 +57,6 @@ describe('seletor visual do mapa na home', () => {
       expect(screen.getByRole('button', { name: /^Criar sala$/ })).toBeTruthy()
     })
     expect((screen.getByLabelText('Seu nome') as HTMLInputElement).value).toBe('Nikaum')
+    expect(document.querySelector('[data-entry-backdrop="neon"]')).toBeTruthy()
   })
 })

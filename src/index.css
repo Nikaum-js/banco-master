@@ -2331,12 +2331,16 @@
     place-items: center;
     pointer-events: all;
     overflow: hidden;
+    will-change: transform;
     color: var(--transition-hot);
     background:
       linear-gradient(rgb(217 166 80 / 0.07) 1px, transparent 1px) 0 0 / 42px 42px,
       linear-gradient(90deg, rgb(217 166 80 / 0.07) 1px, transparent 1px) 0 0 / 42px 42px,
       radial-gradient(circle at 50% 50%, rgb(217 166 80 / 0.13), transparent 42%),
       var(--transition-ink);
+  }
+  [data-home-switching] [data-home-screen] * {
+    animation-play-state: paused !important;
   }
   .home-theme-transition--neon {
     --transition-ink: #08021a;
@@ -3374,10 +3378,11 @@
   }
 
   /* Piso em grade: um plano alto deitado por perspectiva, com a grade correndo
-     PARA a câmera. Anima `background-position` (composita) e desbota antes do
-     horizonte por máscara — grade que chega até a linha do céu mata a
-     profundidade. Menos inclinação = mais chão: a 73° sobrava uma faixa de 10%
-     da tela e a grade não se lia. */
+     PARA a câmera. `background-position` repinta esta camada maior que a viewport;
+     passos discretos preservam o ritmo de arcade sem manter a rasterização ocupada
+     a 60 fps. A máscara desbota antes do horizonte — grade que chega até a linha do
+     céu mata a profundidade. Menos inclinação = mais chão: a 73° sobrava uma faixa
+     de 10% da tela e a grade não se lia. */
   .neon-floor {
     position: absolute;
     left: -30%;
@@ -3391,7 +3396,7 @@
       repeating-linear-gradient(to bottom, rgb(255 122 184 / 0.8) 0 1.5px, transparent 1.5px 40px);
     -webkit-mask-image: linear-gradient(to top, #000 0 42%, transparent 88%);
     mask-image: linear-gradient(to top, #000 0 42%, transparent 88%);
-    animation: neon-floor-run 2.6s linear infinite;
+    animation: neon-floor-run 6s steps(8, end) infinite;
   }
   @keyframes neon-floor-run {
     to { background-position: 0 0, 0 40px; }
