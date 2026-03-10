@@ -5,6 +5,8 @@ import { trackRuntimeErrors, driveTurns } from './script'
 const PLAYER_COUNT = 3
 const MIN_ROUNDS = 10
 
+test.use({ contextOptions: { reducedMotion: 'reduce' } })
+
 test('partida de 3 jogadores roda 10+ rodadas sem erro de runtime', async ({ page }) => {
   const errors = trackRuntimeErrors(page)
   await page.goto(`/play?players=${PLAYER_COUNT}`)

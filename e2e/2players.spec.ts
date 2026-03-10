@@ -7,6 +7,11 @@ import { trackRuntimeErrors, driveTurns } from './script'
 const PLAYER_COUNT = 2
 const MIN_ROUNDS = 10
 
+// O smoke prova integração motor↔UI, não a duração do espetáculo. Movimento reduzido
+// preserva os mesmos comandos/estados e elimina ~1s de espera por rolagem; a coreografia
+// normal tem um gate curto e dedicado em diceAnimation.spec.ts.
+test.use({ contextOptions: { reducedMotion: 'reduce' } })
+
 test('partida de 2 jogadores roda 10+ rodadas sem erro de runtime', async ({ page }) => {
   const errors = trackRuntimeErrors(page)
   await page.goto(`/play?players=${PLAYER_COUNT}`)

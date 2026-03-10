@@ -132,7 +132,7 @@ export async function driveTurns(page: Page, minTurns: number): Promise<void> {
 // de produção; o mecanismo vive em `src/game/ui/e2eScenario.ts` (lido por `?scenario=endgame`
 // no boot), mesmo tipo de andaime que `?players=N` já é desde a 036. Usado por
 // `fullMatch.spec.ts` e `a11y.spec.ts` (tela de fim de jogo) — nenhum dos dois joga uma
-// partida do zero; isso é o que o `sim:batch` prova, em lote, no motor.
+// partida do zero; os lotes headless provam isso no motor.
 export async function gotoEndgameScenario(page: Page): Promise<void> {
   await page.goto('/play?players=2&scenario=endgame')
 }

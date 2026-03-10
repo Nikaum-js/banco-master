@@ -7,8 +7,8 @@
 // (`?scenario=endgame`, `e2e/script.ts`/`src/game/ui/e2eScenario.ts`) — mesa de 2, um
 // jogador perto da falência, estado que passa pelos MESMOS reducers de produção. O que este
 // gate prova é o CAMINHO (falência → fim de jogo → classificação na tela), não que partidas
-// inteiras jogadas do zero não quebram — isso é o `sim:batch`, que já roda 30 partidas por PR
-// no motor. Um gate que prometesse mais do que isso seria pior que gate nenhum.
+// inteiras jogadas do zero não quebram — isso é responsabilidade dos lotes headless do job
+// `simulation`. Um gate que prometesse mais do que isso seria pior que gate nenhum.
 import { test, expect } from '@playwright/test'
 import { trackRuntimeErrors, gotoEndgameScenario } from './script'
 
@@ -16,7 +16,7 @@ test('partida semeada roda até a última falência e mostra a classificação f
   console.log(
     '[fullMatch] ATENÇÃO: partida SEMEADA via ?scenario=endgame (D10) — prova o caminho ' +
       'falência → fim de jogo → classificação pela UI real, não uma partida jogada do zero ' +
-      '(o sim:batch cobre partidas inteiras no motor, em lote).',
+      '(os lotes headless cobrem partidas inteiras no motor).',
   )
 
   const errors = trackRuntimeErrors(page)
