@@ -116,11 +116,15 @@ O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o 
 
 ## M4 — Polimento & Lançamento
 
-- [ ] Animações (dados rolando, movimento de token)
-- [ ] Acessibilidade (foco, leitor de tela, contraste) e responsivo (tablet/celular landscape)
-- [ ] Tela de fim de jogo com resumo
-- [ ] Sons (opcional v1) · Telemetria mínima (partidas iniciadas/finalizadas/erros)
-- [ ] Deploy + CI · Smoke test E2E (uma partida completa)
+> **Discovery fechada (2026-07-26)** — o milestone inteiro é a spec [044](../specs/044-polimento-lancamento/spec.md), apoiada em quatro decisões novas: [D-038](adr/D-038-fim-de-jogo-tem-classificacao-e-resumo.md) (classificação e resumo no fim de jogo), [D-039](adr/D-039-acessibilidade-aa-no-caminho-de-jogo.md) (WCAG 2.2 AA no caminho de jogo, com gate no CI; paisagem é a orientação de jogo), [D-040](adr/D-040-telemetria-minima-anonima.md) (telemetria mínima anônima: contagem no Supabase, exceção no Sentry) e [D-041](adr/D-041-publicacao-em-vercel-com-gate-verde.md) (publicação na Vercel, produção só com gate verde). SRS em v1.9 (§9.5, §12.2, §12.6, §12.7, §12.8). **Implementação não iniciada.**
+
+- [ ] Animações — vocabulário único de duração/curva e freio de `prefers-reduced-motion` valendo em toda superfície (hoje: 7 pontos que lembraram)
+- [ ] Acessibilidade AA no caminho de jogo (foco, teclado, trap de modal, leitor de tela, contraste, alvos) + responsivo tablet/celular **landscape**, com aviso de girar em retrato
+- [ ] Tela de fim de jogo com classificação completa por ordem inversa de eliminação, patrimônio, propriedades e duração
+- [x] Sons — entregue na spec 035 · [ ] Telemetria mínima (partidas iniciadas/finalizadas/pausadas/erros), anônima
+- [ ] Deploy na Vercel + CI de produção (gate verde promove) · **aplicar as migrations pendentes desde a 037** · smoke E2E de partida completa + auditoria de acessibilidade no CI
+
+> **Fora do M4, registrado:** celular em **retrato** (é redesenho do tabuleiro, não polimento) e **estatísticas narrativas** de fim de jogo (custaria instrumentar os 40 pontos onde o caixa muda — D-038).
 
 ---
 

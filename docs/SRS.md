@@ -1,6 +1,6 @@
 # Banco Master — Software Requirements Specification (SRS)
 
-**Versão:** 1.8
+**Versão:** 1.9
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -80,6 +80,9 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Bus Tickets | Item de mão separado das cartas, obtido via carta "Passagem de Ônibus" |
 | Cartas ofensivas (Aquisição Hostil, Despejo, Auditoria, Boicote) | Presentes no v1 — não podem ser recusadas pelo alvo, exceto via reação (Diplomacia) |
 | Tesouro precisa ser impactante | Princípio de design: Tesouro não pode virar "casa de troquinho" como no Richup |
+| Fim de jogo | Classificação completa por ordem inversa de eliminação, com patrimônio e duração (D-038) |
+| Acessibilidade | WCAG 2.2 AA no caminho de jogo, verificada automaticamente; paisagem é a orientação de jogo (D-039) |
+| Telemetria | Mínima e anônima — contagem de partidas no próprio Supabase, exceção em monitoramento de erro (D-040) |
 
 ---
 
@@ -449,6 +452,8 @@ Se o jogador falido possui empréstimo ativo com outro jogador:
 
 A partida termina quando restar apenas **1 jogador** com saldo positivo. Ele é declarado vencedor.
 
+> 📌 **O fim tem classificação e resumo** (v1.9, [D-038](adr/D-038-fim-de-jogo-tem-classificacao-e-resumo.md)): ao terminar, **todas** as telas — inclusive as de quem já foi eliminado — mostram a classificação completa, do 1º ao último. A ordem é a **inversa da ordem de eliminação**: vence quem sobrou, é 2º o último a falir, e é último o primeiro a falir. Cada linha traz o **patrimônio final** (o mesmo cálculo de patrimônio líquido usado por Auditoria Fiscal e Aquisição Hostil: caixa + preço das propriedades, hipotecada pela metade, + custo das construções), **quantas propriedades** o jogador tinha e — para quem caiu — **em que rodada** caiu. O resumo fecha com a **duração da partida** em rodadas e em tempo decorrido. A classificação é derivada do estado da partida, não da tela: por isso o estado registra a ordem de eliminação, o número da rodada e os instantes de início e de fim, e todos veem exatamente a mesma classificação, inclusive depois de recarregar. Não há revanche: a sala encerra e o link não reabre a mesa (§11.1, spec 037); em partida local, começar de novo continua disponível.
+
 ---
 
 ## 10. Sistema de Cartas (Acaso e Tesouro)
@@ -752,7 +757,7 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor d
 | Aquisição Hostil sofrida (notificação) | Jogador perdeu propriedade — visualizar transferência |
 | Usar Bus Ticket | Jogador ativa antes de rolar — escolhe casa do mesmo lado |
 | Falência | Jogador não consegue pagar |
-| Fim de jogo | Último jogador restante |
+| Fim de jogo | Último jogador restante — classificação completa e resumo (§9.5, [D-038](adr/D-038-fim-de-jogo-tem-classificacao-e-resumo.md)) |
 | Empréstimo (solicitação) | Devedor solicita empréstimo durante seu turno |
 | Empréstimo (recebido) | Credor recebe solicitação |
 | Free Parking coletado | Jogador para em Férias com prêmio acumulado |
@@ -790,6 +795,51 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor d
 - Cada jogador escolhe token visual único no lobby.
 - Tokens exibidos nas casas do tabuleiro.
 - Múltiplos jogadores na mesma casa: exibidos agrupados.
+
+### 12.6 Acessibilidade e Responsividade
+
+> Seção nova em v1.9, apoiada em [D-039](adr/D-039-acessibilidade-aa-no-caminho-de-jogo.md).
+
+**Alvo:** WCAG 2.2 nível **AA** no **caminho de jogo** — home, lobby, tabuleiro e HUD, modais de decisão (§12.2), superfícies de pausa/reconexão (§11.3/§11.4) e fim de jogo (§9.5). O alvo é verificado automaticamente e bloqueia a publicação (§12.8). Fora do caminho de jogo (popovers informativos, superfícies de diagnóstico) o alvo é o mesmo, sem verificação automatizada.
+
+| Compromisso | Regra |
+|---|---|
+| Teclado | Todo controle é alcançável e operável por teclado, na ordem visual, sem armadilha de foco |
+| Foco | Sempre visível, com contraste próprio; modal recebe o foco ao abrir e o devolve a quem o abriu ao fechar |
+| Esc | Fecha modal **informativo**. **Não** fecha modal que decide a partida (compra, leilão, reação, dívida, descarte) — Esc não pode virar comando |
+| Nome acessível | Todo ícone ou imagem com significado tem nome; ícone decorativo é ocultado do leitor de tela |
+| Anúncio | O log de eventos é região viva educada; "sua vez" e prazo vencendo são anunciados com urgência |
+| Cor | Nunca é o único canal: posse, jogador da vez, raridade de carta e status de conexão têm segundo sinal |
+| Contraste | ≥ 4,5:1 para texto e ≥ 3:1 para elemento de interface e indicador de foco |
+| Alvo de toque | ≥ 24 × 24 px no caminho de jogo |
+| Movimento | `prefers-reduced-motion` respeitado em toda animação; com movimento reduzido o fato continua legível — nenhuma informação existe só na animação |
+| Zoom | Até 200% sem perda de função |
+
+**Orientação e tamanho:** o tabuleiro é servido em **paisagem**, a partir de 740 × 360 px (celular em paisagem) e 1024 × 768 px (tablet). Em **retrato**, o produto exibe um aviso para girar o aparelho em vez de servir a mesa ilegível — a sessão não é perdida na rotação, e a tela de aviso segue as mesmas regras acima. Nenhuma superfície do caminho de jogo exige rolagem horizontal; modal que não cabe rola por dentro.
+
+### 12.7 Telemetria Mínima
+
+> Seção nova em v1.9, apoiada em [D-040](adr/D-040-telemetria-minima-anonima.md).
+
+O produto registra o mínimo necessário para saber se as partidas **começam e terminam**, e para diagnosticar falha relatada por jogador:
+
+| O quê | Onde | Conteúdo |
+|---|---|---|
+| Sala criada, partida iniciada, partida finalizada, partida pausada por causa | Tabela própria no Supabase do projeto, só inserção | Contagem de jogadores, rodadas, duração, causa da pausa |
+| Exceção contida (§11.4, [D-035](adr/D-035-falha-de-interface-nao-derruba-a-partida.md)) | Serviço de monitoramento de erro | Identificador da ocorrência, mensagem, pilha |
+
+Invariantes:
+
+- **Anônimo.** Nenhum nome de jogador, mão de cartas, token de sessão ou código de reentrada (princípio VI, §11.4). O **id da sala nunca trafega em claro** — ele é credencial de acesso (§11.1); só um identificador derivado e irreversível correlaciona eventos da mesma partida.
+- **Sem efeito na partida.** Falha de envio não pausa, não bloqueia comando e não vira causa de pausa (§11.3).
+- **Desligável.** Sem configuração de ambiente, o produto funciona inteiro e não envia nada; desenvolvimento não emite.
+- **Contagem, não comportamento.** Mede partidas, não pessoas: sem perfil, sem funil por jogador, sem rastreio entre salas.
+
+### 12.8 Publicação
+
+> Seção nova em v1.9, apoiada em [D-041](adr/D-041-publicacao-em-vercel-com-gate-verde.md). Decisão técnica — nenhuma regra de jogo depende dela.
+
+A versão em produção só é promovida a partir da linha principal e **depois** de todos os gates automatizados verdes, incluindo a auditoria de acessibilidade (§12.6) e uma partida completa exercitada de ponta a ponta. Toda proposta de mudança ganha um ambiente navegável próprio. Voltar à versão anterior é um passo, sem reconstrução. As migrations do banco fazem parte do lançamento, não do deploy.
 
 ---
 
