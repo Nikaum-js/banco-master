@@ -4,6 +4,7 @@ import { BOARD } from '@/lib/boardData'
 import type { Square, GroupKey } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
 import { activePlayer } from '../turn/turnMachine'
+import { debtorOf } from '../falencia/falencia'
 import { THEME } from '../theme'
 import { logEvent } from '../log'
 
@@ -87,5 +88,61 @@ export function unmortgageProperty(state: GameState, pos: number): GameState {
   p.cash -= cost
   s.titles[pos].mortgaged = false
   logEvent(s, { kind: 'unmortgage', who: p.id, pos, cost })
+  return s
+}
+
+/**
+ * Pode devolver a HIPOTECADA ao banco? (§6.4, D-062)
+ *
+ * Só a hipotecada, e a razão é que a livre já tem essa saída: hipotecar (§6.1) **é** a venda
+ * ao banco, por metade do preço, com recompra. O que faltava era sair do estado SEGUINTE —
+ * onde o único caminho de volta era pagar metade + 10% por um título que o dono talvez não
+ * queira mais, e onde uma cidade hipotecada congela a construção do país inteiro.
+ *
+ * A trava de dívida pendente não é incidental: sem ela isto vira a porta dos fundos da
+ * falência. O devedor derrubaria o próprio `liquidationValue` devolvendo títulos ao banco até
+ * ficar "insolvente" e declararia falência com o credor recebendo menos do que os ativos
+ * valiam — a mesma proteção de credor que a §8.5 aplica à troca, pelo mesmo motivo.
+ */
+export function canSellMortgagedToBank(state: GameState, pos: number): boolean {
+  if (state.paused) return false
+  if (state.phase !== 'playing') return false
+  // Proteção de credor (§9.1/§6.4): com dívida pendente NA MESA, quem deve não pode derrubar o
+  // próprio valor de liquidação devolvendo títulos. Só o DEVEDOR fica travado — travar todos
+  // puniria quem não tem nada a ver com a cobrança.
+  if (debtorOf(state) === activePlayer(state).id) return false
+  const sq = BOARD[pos]
+  if (sq.kind !== 'property' && sq.kind !== 'airport' && sq.kind !== 'utility') return false
+  const title = state.titles[pos]
+  if (!title || !title.mortgaged) return false // só a hipotecada
+  return title.ownerId === activePlayer(state).id // própria, na própria vez
+}
+
+/**
+ * Devolve a hipotecada ao banco por ZERO (§6.4, D-062). O título volta a TERRENO LIVRE.
+ *
+ * Zero é o único número que conserva: a metade do preço já foi paga ao dono no ato da hipoteca
+ * (§6.1), e devolver o título liquida esse financiamento. Pagar algo a mais criaria dinheiro
+ * para quem já recebeu adiantado pelo mesmo ativo; cobrar algo a mais puniria duas vezes.
+ *
+ * A limpeza é a MESMA da desistência (§9.6, `handOverTitles` com `freeToBank`): hipoteca,
+ * Hangar e construção saem, porque o terreno tem de voltar ao estado de nunca-comprado — é
+ * isso que o faz voltar a contar para a escassez (§7.5) e ao fluxo de cair-e-comprar.
+ */
+export function sellMortgagedToBank(state: GameState, pos: number): GameState {
+  if (!canSellMortgagedToBank(state, pos)) return state
+  const s = clone(state)
+  const p = activePlayer(s)
+  const t = s.titles[pos]
+  t.ownerId = null
+  t.mortgaged = false
+  t.hangar = false
+  t.houses = 0
+  t.hotel = false
+  t.hotel2 = false
+  t.skyscraper = false
+  // `amount: 0` EXPLÍCITO (D-063): um valor zero registrado é um fato; um fato não registrado
+  // é o que produziu três relatos de "perdi dinheiro sem motivo".
+  logEvent(s, { kind: 'sell-to-bank', who: p.id, pos, amount: 0 })
   return s
 }
