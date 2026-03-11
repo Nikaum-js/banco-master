@@ -380,6 +380,19 @@ export function selectOpeningMode(
   }
 }
 
+// Troca de mapa da sala (D-077). Só no LOBBY — o inicial e o da revanche: do Ritual de
+// Largada em diante existe estado amarrado à topologia e à economia do mapa, e não há troca
+// que o preserve. Mesma recusa de `selectOpeningMode`, e pelo mesmo motivo. Nada além do
+// mapa muda: assentos, identidade, códigos e histórico atravessam intactos — trocar de mapa
+// não é reabrir a sala.
+export function selectBoardId(
+  room: Room,
+  boardId: BoardId,
+): { ok: true; room: Room } | { ok: false; reason: 'not-in-lobby' } {
+  if (room.status !== 'lobby') return { ok: false, reason: 'not-in-lobby' }
+  return { ok: true, room: { ...normalizeRoom(room), boardId: coerceBoardId(boardId) } }
+}
+
 export type OpenOpeningAuctionResult =
   | { ok: true; room: Room }
   | { ok: false; reason: 'too-few' | 'already-started' | 'wrong-mode' }

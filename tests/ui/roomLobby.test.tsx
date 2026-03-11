@@ -106,6 +106,58 @@ describe('sala aberta', () => {
     expect(onStart).toHaveBeenCalledOnce()
   })
 
+  // D-077 — o mapa é decisão do host, no lobby.
+  it('host troca o mapa da sala; o selecionado é o da sala, não o da home', () => {
+    const onBoardChange = vi.fn()
+
+    render(
+      <RoomLobby
+        room={{ ...roomWith(hostSeat), boardId: 'fuligem' }}
+        myUid="host"
+        myReentryCode={null}
+        isHost
+        link="http://localhost:5173/play?room=fc532036e9"
+        onBoardChange={onBoardChange}
+        onStart={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: /Cidade da Fuligem/ }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: /Cidades do Mundo/ }).getAttribute('aria-pressed')).toBe('false')
+
+    fireEvent.click(screen.getByRole('button', { name: /Cidades do Mundo/ }))
+    expect(onBoardChange).toHaveBeenCalledWith('atlas')
+  })
+
+  it('convidado vê o mapa da sala sem poder trocá-lo; encerrada, nem o host troca', () => {
+    const { rerender } = render(
+      <RoomLobby
+        room={{ ...roomWith(hostSeat), boardId: 'atlas' }}
+        myUid="guest"
+        myReentryCode={null}
+        isHost={false}
+        link="http://localhost:5173/play?room=fc532036e9"
+        onBoardChange={vi.fn()}
+        onStart={vi.fn()}
+      />,
+    )
+    expect((screen.getByRole('button', { name: /Cidade da Fuligem/ }) as HTMLButtonElement).disabled).toBe(true)
+
+    // Revanche ainda por reabrir: a autoridade recusaria (`not-in-lobby`), a tela não oferece.
+    rerender(
+      <RoomLobby
+        room={{ ...roomWith(hostSeat), status: 'ended', boardId: 'atlas' }}
+        myUid="host"
+        myReentryCode={null}
+        isHost
+        link="http://localhost:5173/play?room=fc532036e9"
+        onBoardChange={vi.fn()}
+        onStart={vi.fn()}
+      />,
+    )
+    expect((screen.getByRole('button', { name: /Cidade da Fuligem/ }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
   it('mostra o histórico somente no lobby de revanche', () => {
     const { rerender } = render(
       <RoomLobby

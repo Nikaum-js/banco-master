@@ -12,24 +12,27 @@ import {
   availableColors,
   MAX_SEATS,
   MIN_SEATS,
+  OPENING_BID_MAX,
   type JoinError,
   type OpeningMode,
   type Room,
 } from '@/net/room'
+import { THEME } from '@/game/theme'
 import { NAME_MAX, recallPlayerName, rememberPlayerName } from '@/net/session'
 import { EntryPanel, EntryStage, EntryHeader } from './entryShell'
 import { AvatarPickers, AvatarPreview } from './AvatarConceptLab'
 import { RoomInviteDialog } from './RoomInviteDialog'
 import { ROOM_PRESETS } from '@/net/roomPresets'
 import { RoomHistoryPanel } from './RoomHistoryPanel'
+import { BOARD_IDS, catalogOf, coerceBoardId, type BoardId } from '@/lib/mapCatalog'
 
 const JOIN_ERROR_TEXT: Record<JoinError, string> = {
-  'room-full': `Sala cheia — o limite é ${MAX_SEATS} jogadores.`,
+  'room-full': `Sala cheia. O limite é ${MAX_SEATS} jogadores.`,
   'color-taken': 'Essa cor já foi escolhida por outro jogador.',
   // Cor fora da paleta não vem do lobby (a grade só oferece as oito): o texto fala de
   // recomeçar a escolha, não de trocar de cor, porque quem cai aqui está com a tela velha.
   'invalid-color': 'Essa cor não existe mais nesta mesa. Recarregue e escolha de novo.',
-  'already-started': 'A partida já começou — não é possível entrar agora.',
+  'already-started': 'A partida já começou. Não é possível entrar agora.',
   'unknown-uid': 'Sessão não reconhecida nesta sala.',
   kicked: 'O host removeu você desta sala.',
   'bad-code': 'Código de reentrada inválido.',
@@ -59,9 +62,41 @@ function Frame({
   )
 }
 
+// Mapa da sala no lobby (D-077). O que distingue um mapa do outro para quem está decidindo
+// é o tamanho do tabuleiro e o mundo — o número vem do catálogo (fonte única), a linha de
+// mundo é escrita por mapa porque é fantasia, não dado derivável.
+const BOARD_TAGLINE: Record<BoardId, string> = {
+  atlas: 'países e cidades do mundo',
+  fuligem: 'bairros, fábricas e ferrovias',
+}
+
+const BOARD_OPTIONS = BOARD_IDS.map((id) => ({
+  id,
+  name: catalogOf(id).name,
+  detail: `${catalogOf(id).board.length} casas · ${BOARD_TAGLINE[id]}`,
+}))
+
+function BoardMark({ id }: { id: BoardId }) {
+  return (
+    <span className="lobby-choice__mark" aria-hidden>
+      {id === 'atlas' ? (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18" />
+        </svg>
+      ) : (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M3 20V10l5 3V10l5 3V10l5 3V4h3v16z" />
+          <path d="M3 20h18" />
+        </svg>
+      )}
+    </span>
+  )
+}
+
 function OpeningModeMark({ mode }: { mode: OpeningMode }) {
   return (
-    <span className="opening-mode-option__mark" aria-hidden>
+    <span className="lobby-choice__mark" aria-hidden>
       {mode === 'sealed-bid' ? (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
           <path d="m4 8 8-4 8 4v9l-8 3-8-3z" />
@@ -212,6 +247,7 @@ export function RoomLobby({
   link,
   starting,
   onOpeningModeChange,
+  onBoardChange,
   onStart,
   onKick,
 }: {
@@ -224,6 +260,8 @@ export function RoomLobby({
   link: string
   starting?: boolean
   onOpeningModeChange?: (mode: OpeningMode) => void
+  /** D-077: só o host troca, e só enquanto a sala está em lobby. */
+  onBoardChange?: (boardId: BoardId) => void
   onStart: () => void
   onKick?: (uid: string) => void
 }) {
@@ -240,6 +278,10 @@ export function RoomLobby({
   const faltam = MIN_SEATS - room.seats.length
   const awaitingRematch = room.status === 'ended'
   const openingMode = room.openingMode ?? 'sealed-bid'
+  const boardId = coerceBoardId(room.boardId)
+  // Enquanto a sala não voltou ao lobby (revanche ainda por reabrir), a autoridade recusaria
+  // a troca — a tela não oferece o que seria negado.
+  const mayChangeBoard = isHost && !starting && room.status === 'lobby'
   const compactLink = link.replace(/^https?:\/\//, '')
   const waitingCopy = faltam === 1
     ? 'Falta 1 jogador para liberar a largada'
@@ -369,10 +411,45 @@ export function RoomLobby({
       </section>
 
       <section className="lobby-column lobby-column--launch">
+      {/* Mapa da sala (D-077). Fica ACIMA do Ritual porque é a decisão mais larga das duas:
+          o Ritual escolhe como a ordem nasce; o mapa escolhe o mundo inteiro da partida. */}
+      <fieldset className="lobby-launch-fieldset">
+        <legend className="label text-brass">Mapa da sala</legend>
+        <p className="lobby-launch-intro">
+          {isHost
+            ? 'Escolha onde esta mesa vai jogar. Vale até a largada.'
+            : 'O host escolhe onde esta mesa vai jogar.'}
+        </p>
+        <div className="lobby-choice-picker">
+          {BOARD_OPTIONS.map((option) => {
+            const selected = boardId === option.id
+            return (
+              <button
+                key={option.id}
+                type="button"
+                className={`lobby-choice ${selected ? 'lobby-choice--selected' : ''}`}
+                aria-pressed={selected}
+                disabled={!mayChangeBoard}
+                onClick={() => onBoardChange?.(option.id)}
+              >
+                <BoardMark id={option.id} />
+                <span className="min-w-0 text-left">
+                  <strong>{option.name}</strong>
+                  <small>{option.detail}</small>
+                </span>
+                <span className="lobby-choice__radio" aria-hidden>
+                  <i />
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </fieldset>
+
       <fieldset className="lobby-launch-fieldset">
         <legend className="label text-brass">Preset da sala</legend>
         <p className="lobby-launch-intro">Escolha o Ritual de Largada desta partida.</p>
-        <div className="opening-mode-picker">
+        <div className="lobby-choice-picker">
           {ROOM_PRESETS.map((option) => {
             const mode = option.settings.openingMode
             const selected = openingMode === mode
@@ -380,7 +457,7 @@ export function RoomLobby({
               <button
                 key={option.id}
                 type="button"
-                className={`opening-mode-option ${selected ? 'opening-mode-option--selected' : ''}`}
+                className={`lobby-choice ${selected ? 'lobby-choice--selected' : ''}`}
                 aria-pressed={selected}
                 disabled={!isHost || starting}
                 onClick={() => onOpeningModeChange?.(mode)}
@@ -390,7 +467,7 @@ export function RoomLobby({
                   <strong>{option.label}</strong>
                   <small>{option.detail}</small>
                 </span>
-                <span className="opening-mode-option__radio" aria-hidden>
+                <span className="lobby-choice__radio" aria-hidden>
                   <i />
                 </span>
               </button>
@@ -707,7 +784,7 @@ export function OpeningAuction({
         </div>
         <div className="min-w-0">
           <span className="label text-brass">Caixa de largada</span>
-          <p className="display text-2xl text-starlight mt-0.5">{money(2_000)}</p>
+          <p className="display text-2xl text-starlight mt-0.5">{money(THEME.INITIAL_CASH)}</p>
           <p className="text-xs text-starlight-muted leading-snug mt-1">
             Todos pagam o próprio lance. O total abastece a Loteria.
           </p>
@@ -733,7 +810,7 @@ export function OpeningAuction({
         <input
           type="range"
           min={0}
-          max={500}
+          max={OPENING_BID_MAX}
           step={50}
           value={myBid ?? amount}
           disabled={locked || remaining === 0}
@@ -743,7 +820,7 @@ export function OpeningAuction({
         />
         <div className="auction-bounds justify-between label text-starlight-muted/80">
           <span>$0</span>
-          <span>$500</span>
+          <span>{money(OPENING_BID_MAX)}</span>
         </div>
 
         <Button
@@ -863,7 +940,7 @@ export function ReentryForm({
   const message = error && (error in JOIN_ERROR_TEXT ? JOIN_ERROR_TEXT[error as JoinError] : String(error))
 
   return (
-    <Frame title="Reentrar na sala" subtitle="A partida já começou — informe o código do seu assento">
+    <Frame title="Reentrar na sala" subtitle="A partida já começou. Informe o código do seu assento">
       <div className="flex flex-col gap-1.5">
         <label htmlFor="reentry-code" className="label text-brass">
           Código de reentrada
@@ -879,7 +956,7 @@ export function ReentryForm({
         />
       </div>
       <p className="label text-starlight-muted/85 leading-snug">
-        O código fica ao lado do link da sala, no seu próprio assento — visível durante toda a partida.
+        O código fica ao lado do link da sala, no seu próprio assento, visível durante toda a partida.
       </p>
       {message && <p className="text-signal-glow text-sm leading-snug">{message}</p>}
       <Button disabled={code.trim().length === 0 || busy} onClick={() => onSubmit(code.trim())}>

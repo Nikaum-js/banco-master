@@ -287,6 +287,7 @@ function OnlineRoom({
       link={roomLink(room.id, window.location.origin)}
       starting={busy}
       onOpeningModeChange={session.setOpeningMode}
+      onBoardChange={session.setBoardId}
       onStart={() => void session.startMatch()}
       onKick={session.kick}
     />

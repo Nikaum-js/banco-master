@@ -368,7 +368,7 @@ begin
   assert r.board_id = 'fuligem', 'mapa gravado na criação: ' || r.board_id;
 end $$;
 
--- Upsert posterior tentando trocar o mapa: o valor gravado permanece.
+-- Upsert POSTERIOR em lobby troca o mapa (0010/D-077) — e a troca aparece nas leituras.
 select public.write_room(
   'TEST02',
   'lobby',
@@ -384,11 +384,32 @@ do $$
 declare r public.rooms%rowtype;
 begin
   select * into r from public.rooms where id = 'TEST02';
-  assert r.board_id = 'fuligem', 'mapa deveria ser imutável: ' || r.board_id;
-  assert (public.room_preview('TEST02')->>'boardId') = 'fuligem',
+  assert r.board_id = 'atlas', 'lobby deveria poder trocar o mapa: ' || r.board_id;
+  assert (public.room_preview('TEST02')->>'boardId') = 'atlas',
     'room_preview sem boardId: ' || public.room_preview('TEST02')::text;
-  assert (public.read_snapshot('TEST02')->>'boardId') = 'fuligem',
+  assert (public.read_snapshot('TEST02')->>'boardId') = 'atlas',
     'read_snapshot sem boardId';
+end $$;
+
+-- FORA do lobby o mapa não se move: a mesma escrita, com a sala em partida, é ignorada
+-- na coluna do mapa (D-077 mantém a imutabilidade do Ritual de Largada em diante).
+select public.write_room(
+  'TEST02',
+  'playing',
+  format('[{"playerId":"p1","uid":"%s","name":"Anfitria","color":"#e11d48","isHost":true,"connected":true,"reentryCode":"HOST02"}]', :'host_uid')::jsonb,
+  0,
+  'sealed-bid',
+  null,
+  '[]'::jsonb,
+  'fuligem'
+);
+
+do $$
+declare r public.rooms%rowtype;
+begin
+  select * into r from public.rooms where id = 'TEST02';
+  assert r.board_id = 'atlas', 'mapa mudou fora do lobby: ' || r.board_id;
+  assert r.status = 'playing', 'status deveria ter sido escrito: ' || r.status;
 end $$;
 
 -- Assinatura ANTIGA (0007, sem board_id) continua válida e cai no default 'atlas'.

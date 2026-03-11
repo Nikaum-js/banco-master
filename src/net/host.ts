@@ -14,6 +14,7 @@ import { recordFinishedMatch } from './roomHistory'
 import { nullTelemetry, type Telemetry, type TelemetryEvent } from '@/telemetry/port'
 import { matchKey } from '@/telemetry/matchKey'
 import { recordingCtx } from './recorder'
+import type { BoardId } from '@/lib/mapCatalog'
 import { redactAccepted, splitSnapshot } from './perspective'
 import {
   anyDisconnected,
@@ -38,6 +39,7 @@ import {
   requestOpeningRoll,
   resolveOpeningRoll,
   seatByUid,
+  selectBoardId,
   selectOpeningMode,
   toPublicRoom,
   type OpeningMode,
@@ -68,6 +70,7 @@ export interface Host {
   startMatch(): Promise<{ ok: true } | { ok: false; reason: 'too-few' | 'already-started' | 'not-host' }> // lobby → partida (FR-006)
   reopenRoom(): Promise<{ ok: true } | { ok: false; reason: 'not-ended' | 'persistence' }> // 049: fim → mesmo lobby
   setOpeningMode(mode: OpeningMode): { ok: true } | { ok: false; reason: 'not-in-lobby' }
+  setBoardId(boardId: BoardId): { ok: true } | { ok: false; reason: 'not-in-lobby' } // D-077: mapa trocável no lobby
   kick(uid: string): { ok: true } | { ok: false; reason: 'not-in-lobby' | 'is-host' | 'unknown-uid' } // remoção no lobby (FR-024)
   stop(): void
   tick(): void // fecha leilões/lotes vencidos pelo prazo (emite comandos de sistema) — browser agenda; testes chamam
@@ -500,6 +503,18 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
 
     setOpeningMode(mode: OpeningMode) {
       const selected = selectOpeningMode(room, mode)
+      if (!selected.ok) return selected
+      room = selected.room
+      publishAndPersistRoom()
+      return { ok: true as const }
+    },
+
+    // Mapa da sala (D-077). Mesmo caminho do Ritual de Largada: a autoridade decide, publica
+    // e persiste — cada cliente aplica o mapa que RECEBE (`roomStore.setRoom`), nunca o que
+    // escolheu na home. No lobby não há partida, então `publishAndPersistRoom` cai no
+    // `saveRoom`, que é onde a coluna `board_id` é gravável (migration 0010).
+    setBoardId(boardId: BoardId) {
+      const selected = selectBoardId(room, boardId)
       if (!selected.ok) return selected
       room = selected.room
       publishAndPersistRoom()

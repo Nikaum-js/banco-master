@@ -410,9 +410,12 @@ export function fakeSupabase(): FakeSupabase {
               openingMode: args.opening_mode,
               openingAuction: args.opening_auction,
               matchHistory: mergeMatchHistory(existing?.matchHistory, args.match_history),
-              // Espelho da 0009: a coluna tem default 'atlas' e o valor gravado nunca muda
-              // depois de existir (o CHECK real valida; aqui basta preservar/defaultar).
-              boardId: existing?.boardId ?? args.board_id ?? 'atlas',
+              // Espelho da 0009 + 0010: a coluna tem default 'atlas'; a escrita só a move
+              // quando a sala escrita está em LOBBY (D-077). Fora do lobby, preserva o
+              // gravado (o CHECK real valida o valor; aqui basta a regra de movimento).
+              boardId: args.status === 'lobby'
+                ? (args.board_id ?? existing?.boardId ?? 'atlas')
+                : (existing?.boardId ?? args.board_id ?? 'atlas'),
             })
             return Promise.resolve({ data: null, error: null })
           }

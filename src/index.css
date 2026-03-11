@@ -5625,11 +5625,11 @@
     }
   }
 
-  .opening-mode-picker {
+  .lobby-choice-picker {
     margin-top: 0.8rem;
     border-block: 1px solid color-mix(in srgb, var(--color-ink-500) 72%, transparent);
   }
-  .opening-mode-option {
+  .lobby-choice {
     position: relative;
     width: 100%;
     display: flex;
@@ -5646,10 +5646,10 @@
       background-color var(--motion-base) var(--ease-standard),
       color var(--motion-base) var(--ease-standard);
   }
-  .opening-mode-option + .opening-mode-option {
+  .lobby-choice + .lobby-choice {
     border-top: 1px solid color-mix(in srgb, var(--color-ink-500) 58%, transparent);
   }
-  .opening-mode-option::before {
+  .lobby-choice::before {
     content: '';
     position: absolute;
     inset: 0 auto 0 -1px;
@@ -5657,21 +5657,21 @@
     background: transparent;
     transition: background-color var(--motion-base) var(--ease-standard);
   }
-  .opening-mode-option:not(:disabled) {
+  .lobby-choice:not(:disabled) {
     cursor: pointer;
   }
-  .opening-mode-option:not(:disabled):hover {
+  .lobby-choice:not(:disabled):hover {
     color: var(--color-starlight);
     background: color-mix(in srgb, var(--color-brass) 7%, transparent);
   }
-  .opening-mode-option--selected {
+  .lobby-choice--selected {
     color: var(--color-starlight);
     background: color-mix(in srgb, var(--color-brass) 9%, var(--color-ink-950));
   }
-  .opening-mode-option--selected::before {
+  .lobby-choice--selected::before {
     background: var(--color-brass);
   }
-  .opening-mode-option__mark {
+  .lobby-choice__mark {
     width: 2.2rem;
     height: 2.2rem;
     flex: none;
@@ -5682,28 +5682,28 @@
     color: var(--color-brass);
     background: color-mix(in srgb, var(--color-ink-950) 42%, transparent);
   }
-  .opening-mode-option--selected .opening-mode-option__mark {
+  .lobby-choice--selected .lobby-choice__mark {
     border-color: color-mix(in srgb, var(--color-brass) 70%, var(--color-ink-400));
     color: var(--color-brass-glow);
     background: color-mix(in srgb, var(--color-brass) 11%, var(--color-ink-900));
   }
-  .opening-mode-option strong,
-  .opening-mode-option small {
+  .lobby-choice strong,
+  .lobby-choice small {
     display: block;
   }
-  .opening-mode-option strong {
+  .lobby-choice strong {
     color: inherit;
     font-size: 0.86rem;
     font-weight: 680;
     line-height: 1.15;
   }
-  .opening-mode-option small {
+  .lobby-choice small {
     margin-top: 0.25rem;
     font-size: 0.66rem;
     line-height: 1.3;
     color: var(--color-starlight-muted);
   }
-  .opening-mode-option__radio {
+  .lobby-choice__radio {
     width: 1rem;
     height: 1rem;
     margin-left: auto;
@@ -5713,16 +5713,16 @@
     border: 1px solid color-mix(in srgb, var(--color-starlight-muted) 58%, transparent);
     border-radius: 50%;
   }
-  .opening-mode-option__radio i {
+  .lobby-choice__radio i {
     width: 0.4rem;
     height: 0.4rem;
     border-radius: 50%;
     background: transparent;
   }
-  .opening-mode-option--selected .opening-mode-option__radio {
+  .lobby-choice--selected .lobby-choice__radio {
     border-color: var(--color-brass);
   }
-  .opening-mode-option--selected .opening-mode-option__radio i {
+  .lobby-choice--selected .lobby-choice__radio i {
     background: var(--color-brass-glow);
   }
 

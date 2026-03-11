@@ -70,6 +70,8 @@ export interface RoomSession {
   /** Reanexa ao próprio assento por CÓDIGO (041, D-033) — quando o link + uid não bastam. */
   requestReentry(code: string): void
   setOpeningMode(mode: OpeningMode): void
+  /** D-077: host troca o mapa da sala, no lobby. Convidado não chama (a UI nem oferece). */
+  setBoardId(boardId: BoardId): void
   startMatch(): Promise<void>
   /** 049/D-052: fecha o resumo neste cliente; o host também reabre a sala de forma durável. */
   returnToLobby(): Promise<void>
@@ -289,7 +291,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
       try {
         const c = await openSession(roomId)
         const current = c.room()
-        if (!current) return fail('Sala não encontrada — confira o link.')
+        if (!current) return fail('Sala não encontrada. Confira o link.')
 
         const myUid = transport!.uid
         const mine = seatByUid(current, myUid)
@@ -373,6 +375,11 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
       const result = host?.setOpeningMode(mode)
       if (result?.ok) opts.onRoomPresetSelected?.(mode)
       else if (result) emit({ error: result.reason })
+    },
+
+    setBoardId(boardId: BoardId): void {
+      const result = host?.setBoardId(boardId)
+      if (result && !result.ok) emit({ error: result.reason })
     },
 
     async startMatch(): Promise<void> {
