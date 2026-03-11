@@ -147,7 +147,7 @@ select public.reopen_room(
     {"playerId":"p2","uid":"%s","name":"Convidado","color":"#2563eb","isHost":false,"connected":true}
   ]', :'host_uid', :'guest_uid')::jsonb,
   1,
-  'classic'
+  'dice-roll'
 );
 
 do $$
@@ -166,7 +166,7 @@ begin
 
   -- Prova que o UPDATE usou o PARÂMETRO, e não a coluna homônima. Se alguém "resolver" a
   -- ambiguidade com `use_column` em vez de variável local, isto continua 'sealed-bid' e falha.
-  assert r.opening_mode = 'classic', 'opening_mode ignorou o parâmetro: ' || r.opening_mode;
+  assert r.opening_mode = 'dice-roll', 'opening_mode ignorou o parâmetro: ' || r.opening_mode;
 
   -- D-043: o código é imutável, e quem reabre não o conhecia.
   assert exists (
@@ -189,7 +189,7 @@ select public.reopen_room(
     {"playerId":"p2","uid":"%s","name":"Convidado","color":"#2563eb","isHost":false,"connected":true}
   ]', :'host_uid', :'guest_uid')::jsonb,
   1,
-  'classic'
+  'dice-roll'
 );
 
 do $$
@@ -206,7 +206,7 @@ do $$
 declare recusou boolean := false;
 begin
   begin
-    perform public.reopen_room('TEST01', '[]'::jsonb, 3, 'classic');
+    perform public.reopen_room('TEST01', '[]'::jsonb, 3, 'dice-roll');
   exception when others then
     recusou := true;
     assert sqlerrm like '%not ready for rematch%', 'recusou pelo motivo errado: ' || sqlerrm;
@@ -223,7 +223,7 @@ do $$
 declare recusou boolean := false;
 begin
   begin
-    perform public.reopen_room('TEST01', '[]'::jsonb, 2, 'classic');
+    perform public.reopen_room('TEST01', '[]'::jsonb, 2, 'dice-roll');
   exception when others then
     recusou := true;
     assert sqlerrm like '%not the current host%', 'recusou pelo motivo errado: ' || sqlerrm;
