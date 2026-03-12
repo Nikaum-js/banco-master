@@ -106,8 +106,7 @@ export function land(turn: Turn, player: Player, roll: Roll | null): void {
   turn.mayRollAgain = roll ? countsAsDouble(roll) : false // sair da prisão (roll=null) não dá re-roll (FR-019)
 }
 
-export function advanceSeat(s: GameState, ctx: TurnCtx): void {
-  ctx.ports.taxMan?.(s, ctx.rng) // Fiscal move 1×/turno ao passar a vez (012, §13.8)
+export function advanceSeat(s: GameState): void {
   const n = s.turnOrder.length
   const prev = s.activeSeat
   let next = s.activeSeat
@@ -127,10 +126,13 @@ export function advanceSeat(s: GameState, ctx: TurnCtx): void {
 // Turnos forçados a encerrar (3ª dupla, prisão, tentativa falha) passam a vez na hora.
 // Exceção: dívida em voo (juros do GO a caminho do "Vá para a Prisão") — o devedor
 // quita/fali ANTES de a vez passar; payDebt conclui via completeResolution → finalizar.
-export function finishIfEnded(s: GameState, ctx: TurnCtx): GameState {
+// `_ctx` fica na assinatura mesmo sem uso: era a porta do Fiscal (D-065) que o consumia, e
+// TODO reducer de comando deste módulo recebe `ctx` — uniformidade da API vale mais que o
+// parâmetro a menos, e um chamador novo que precise de RNG/relógio já o tem em mãos.
+export function finishIfEnded(s: GameState, _ctx: TurnCtx): GameState {
   if (s.turn.state === 'encerrado') {
     if (s.resolution?.kind === 'debt') return s
-    advanceSeat(s, ctx)
+    advanceSeat(s)
   }
   return s
 }
@@ -290,7 +292,7 @@ export function completeResolution(s: GameState): void {
   s.turn.state = 'aguardando-finalizacao'
 }
 
-export function finalizeTurn(state: GameState, ctx: TurnCtx): GameState {
+export function finalizeTurn(state: GameState, _ctx: TurnCtx): GameState { // `_ctx`: ver `finishIfEnded`
   if (state.paused) return state // FR-028
   if (state.turn.state !== 'aguardando-finalizacao' || state.turn.pendingResolve) return state // FR-022
   const s = clone(state)
@@ -305,7 +307,7 @@ export function finalizeTurn(state: GameState, ctx: TurnCtx): GameState {
     return s
   }
 
-  advanceSeat(s, ctx) // próximo jogador (FR-002)
+  advanceSeat(s) // próximo jogador (FR-002)
   return s
 }
 

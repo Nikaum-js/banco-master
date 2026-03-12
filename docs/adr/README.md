@@ -74,6 +74,8 @@
 - [D-061](D-061-obrigacao-a-outro-jogador-nao-e-truncada.md) — Obrigação a outro jogador não é truncada: pagamento parcial deixa o restante devido e abre dívida pendente, inclusive fora da vez (§9.1)
 - [D-062](D-062-hipotecada-pode-voltar-ao-banco.md) — Propriedade hipotecada pode voltar ao banco por zero e vira terreno livre; bloqueada com dívida pendente (novo §6.4)
 - [D-063](D-063-toda-mutacao-de-caixa-tem-causa-registrada.md) — Toda mutação de caixa passa por uma função e registra motivo; o Fiscal e mais cinco regras deixam de mover dinheiro em silêncio (refina D-032)
+- [D-065](D-065-fiscal-sai-do-jogo.md) — O Fiscal sai do jogo: token invisível que cobrava fora da vez, causa raiz de quatro relatos de bug financeiro (revoga §13.8; revoga parcialmente D-063)
+- [D-064](D-064-rebalanceamento-do-catalogo-de-cartas.md) — Rebalanceamento do catálogo de cartas: Acaso 21 / Tesouro 18, lendárias reforçadas (Confisco Geral, Aquisição a ½ preço, Imposto Federal 25%), Greve unificada, Imunidade total de 1 volta, 8 cartas novas e Refinanciamento removido (SRS §10, v1.26)
 
 > ℹ️ **Renumeração na integração da 043** (a colisão que este arquivo avisava): a worktree da 043
 > tinha escrito a identidade de transporte como `D-035` e o código de reentrada como `D-038`, e

@@ -19,13 +19,13 @@ import { activePlayer } from '@/game/turn/turnMachine'
 import { rentCity, rentAirport, rentUtility, diceValue } from '@/game/economy/rent'
 import { ownerOf, isMortgaged, groupOwnedCount, groupSize, countOwned, groupHasSkyscraper } from '@/game/economy/titles'
 import { hasImmunity } from '@/game/economy/imunidade'
-import { apagaoActive, greveActive, isBoycotted } from '@/game/economy/tempEffects'
+import { apagaoActive, greveActive, isBoycotted, isPlayerImmune, isValorizada, estatizacaoActive } from '@/game/economy/tempEffects'
 import { mortgageValue, unmortgageCost, transferKeepFee } from '@/game/economy/mortgage'
 import { buildCost, cityLevel, HANGAR_COST } from '@/game/economy/construction'
 import { netWorth } from '@/game/cards/effects'
 import { cardById } from '@/game/cards/catalog'
 import { activeLoanFor } from '@/game/emprestimos/emprestimos'
-import { isBankrupt } from '@/game/falencia/falencia'
+import { isBankrupt, liquidatorOf } from '@/game/falencia/falencia'
 import { validateTrade } from '@/game/economy/trade'
 import { reactorFor, findReactionCard } from '@/game/cards/reacao'
 import { THEME } from '@/game/theme'
@@ -36,8 +36,10 @@ import type { Violation } from './invariants'
 // para apontar cobertura ZERO num lote (gap real, não suposição), não para validar nada aqui.
 const IMMEDIATE_CARD_EFFECTS = [
   'boomEconomico', 'erroBanco', 'aniversario', 'honorarios', 'criseImobiliaria', 'consertoImoveis',
-  'voltaGo', 'refinanciamento', 'vaPrisao', 'avance3', 'volte3', 'investidorAnjo', 'passagemOnibus',
-  'apagao', 'greveUtilidades',
+  'voltaGo', 'vaPrisao', 'avance3', 'volte3', 'investidorAnjo', 'passagemOnibus',
+  // D-064 — greve funde apagao+greveUtilidades; refinanciamento saiu; 6 imediatas novas.
+  'greve', 'estatizacao', 'desvalorizacaoCambial', 'obrasNaPista', 'multaAmbiental',
+  'resgateDoPote', 'obraRelampago', 'incentivoFiscal',
 ] as const
 
 export const KNOWN_MECHANISMS: readonly string[] = [
@@ -46,10 +48,9 @@ export const KNOWN_MECHANISMS: readonly string[] = [
   'tax', 'tax-debt', 'tax-bunker-open',
   'free-parking-collect',
   'go-bonus', 'loan-interest-on-go',
-  'taxman-sink', 'taxman-sink-utility-unverified', 'taxman-no-charge',
   'jail-fine-pay', 'jail-fine-3rd-attempt',
   'mortgage', 'unmortgage', 'build-house', 'sell-building', 'build-hangar', 'sell-hangar',
-  'acquire', 'evict', 'audit',
+  'acquire', 'evict', 'audit', 'swap', 'tax-immune',
   'diplomacia-use', 'bunker-use', 'bunker-refuse-pay', 'bunker-refuse-debt',
   'declare-bankruptcy', 'declare-bankruptcy-sink',
   'accept-trade', 'pay-off-loan', 'grant-loan', 'pay-debt',
@@ -218,59 +219,11 @@ function applyGoCrossing(prev: GameState, next: GameState, actorId: string, ledg
   mark(ledger, 'loan-interest-on-go')
 }
 
-// TaxMan (012): move 1×/turno via advanceSeat (finalize OU qualquer ação que force fim de
-// turno — finishIfEnded). Detectado por diff de posição do Fiscal, não por action.kind.
-// `skipAmount`: declare-bankruptcy reatribui propriedades ao herdeiro e SÓ DEPOIS roda o
-// TaxMan (via advanceSeat, no mesmo dispatch) — o dono que o TaxMan vê já é o pós-falência,
-// não o `prev` (pré-falência) que este checker usa como referência. Recomputar a posse
-// intermediária exigiria replicar a lógica inteira de declareBankruptcy; mais simples e
-// honesto aceitar o valor observado neste caso raro (mesmo padrão do dado de utilidade).
-// `bankruptcyCtx`: declare-bankruptcy reatribui propriedades ao herdeiro e SÓ DEPOIS roda o
-// TaxMan (via advanceSeat, no mesmo dispatch — advanceSeat SEMPRE roda o Fiscal). O dono/caixa
-// que o TaxMan vê já é o PÓS-falência, não o `prev` (pré-falência) puro. `ownerState=next`
-// reflete a posse correta (nada mais muda títulos depois do TaxMan neste dispatch); a base de
-// caixa do herdeiro precisa somar a herança ANTES de subtrair a cobrança do Fiscal.
-function applyTaxMan(
-  prev: GameState,
-  next: GameState,
-  ledger: Ledger,
-  bankruptcyCtx?: { heirId: string | null; debtorCashBefore: number },
-): void {
-  if (next.taxManPos === prev.taxManPos) return
-  const ownerState = bankruptcyCtx ? next : prev
-  const cashBaseline = (id: string): number => {
-    const base = cashOf(prev, id)
-    return bankruptcyCtx && id === bankruptcyCtx.heirId ? base + bankruptcyCtx.debtorCashBefore : base
-  }
-  const sq = BOARD[next.taxManPos]
-  if (sq.kind !== 'property' && sq.kind !== 'airport' && sq.kind !== 'utility') {
-    mark(ledger, 'taxman-no-charge')
-    return
-  }
-  const owner = ownerOf(ownerState, next.taxManPos)
-  if (owner === null || isMortgaged(ownerState, next.taxManPos) || isBoycotted(ownerState, next.taxManPos)) {
-    mark(ledger, 'taxman-no-charge')
-    return
-  }
-  if (sq.kind === 'utility') {
-    // taxMan.ts rola SEU PRÓPRIO dado (não o `turn.lastRoll` do jogador ativo) pra achar o
-    // multiplicador de utilidade — esse valor não fica em lugar nenhum do GameState, então não
-    // dá pra recomputar de forma independente. Greve zera incondicionalmente (verificável);
-    // fora isso, aceitamos o delta observado (só confirmamos que foi um sink do dono certo).
-    if (greveActive(ownerState)) {
-      mark(ledger, 'taxman-sink') // amount=0 esperado
-      return
-    }
-    const actualDelta = cashOf(next, owner) - cashBaseline(owner)
-    addCash(ledger, owner, actualDelta)
-    mark(ledger, 'taxman-sink-utility-unverified')
-    return
-  }
-  const due = rentDue(ownerState, next.taxManPos, owner)!
-  const charged = Math.min(cashBaseline(owner), due.amount)
-  addCash(ledger, owner, -charged) // SINK — banco remove, não credita ninguém (taxMan.ts:4)
-  mark(ledger, 'taxman-sink')
-}
+// O checker do Fiscal (`applyTaxMan`) saiu com a D-065: o Fiscal foi removido do jogo, então
+// não há mais cobrança automática na passagem de turno para conferir. A AUSÊNCIA dela é travada
+// por `tests/game/balancing/fiscalRemovido.test.ts`, e o invariante de narração cobriria
+// qualquer débito novo que aparecesse sem fato.
+
 
 // Efeitos das 14 cartas imediatas (cards/effects.ts) + avance3/volte3 (podem cruzar o GO).
 // `deckPeek` é o id no TOPO do baralho ANTES do saque — determinístico (sem RNG neste ponto),
@@ -299,6 +252,7 @@ function applyImmediateCard(prev: GameState, _next: GameState, actorId: string, 
       let total = 0
       for (const p of prev.players) {
         if (p.id === actorId || p.eliminated) continue
+        if (isPlayerImmune(prev, p.id)) continue // Imunidade Total (D-064)
         const cobrado = Math.min(50, Math.max(0, p.cash)) // o que SAIU do caixa
         addCash(ledger, p.id, -cobrado)
         total += cobrado
@@ -307,16 +261,19 @@ function applyImmediateCard(prev: GameState, _next: GameState, actorId: string, 
       return
     }
     case 'honorarios': {
+      if (isPlayerImmune(prev, actorId)) return // Imunidade Total (D-064)
       const paid = Math.min(50, cashOf(prev, actorId))
       addCash(ledger, actorId, -paid)
       addPot(ledger, paid)
       return
     }
     case 'criseImobiliaria': {
+      // D-064: quem sacou não paga, alíquota 10%; Imunidade Total isenta.
       let total = 0
       for (const p of prev.players) {
-        if (p.eliminated) continue
-        const owed = Math.round(netWorth(prev, p.id) * 0.05)
+        if (p.id === actorId || p.eliminated) continue
+        if (isPlayerImmune(prev, p.id)) continue
+        const owed = Math.round(netWorth(prev, p.id) * 0.1)
         const paid = Math.min(owed, p.cash)
         addCash(ledger, p.id, -paid)
         total += paid
@@ -325,6 +282,7 @@ function applyImmediateCard(prev: GameState, _next: GameState, actorId: string, 
       return
     }
     case 'consertoImoveis': {
+      if (isPlayerImmune(prev, actorId)) return // Imunidade Total (D-064)
       let cost = 0
       for (const sq of BOARD) {
         const t = prev.titles[sq.pos]
@@ -351,16 +309,57 @@ function applyImmediateCard(prev: GameState, _next: GameState, actorId: string, 
       }
       return
     }
-    case 'refinanciamento': {
-      const sq = BOARD.find((b) => 'price' in b && prev.titles[b.pos]?.ownerId === actorId && prev.titles[b.pos]?.mortgaged)
-      if (!sq) return // sem hipoteca própria → no-op (mesma guarda de effects.ts)
-      const cost = Math.round(Math.round(('price' in sq ? sq.price : 0) / 2) * 1.05) // 5% (não os 10% da deshipoteca normal)
-      if (cashOf(prev, actorId) < cost) return
-      addCash(ledger, actorId, -cost)
+    // D-064 — Desvalorização Cambial: 10% do caixa → Loteria.
+    case 'desvalorizacaoCambial': {
+      if (isPlayerImmune(prev, actorId)) return
+      const paid = Math.round(cashOf(prev, actorId) * 0.1)
+      addCash(ledger, actorId, -paid)
+      addPot(ledger, paid)
+      return
+    }
+    // D-064 — Multa Ambiental: $50 + $50 por hotel/2º hotel/arranha-céu → Loteria.
+    case 'multaAmbiental': {
+      if (isPlayerImmune(prev, actorId)) return
+      let units = 0
+      for (const sq of BOARD) {
+        const t = prev.titles[sq.pos]
+        if (sq.kind !== 'property' || t?.ownerId !== actorId) continue
+        units += (t.hotel ? 1 : 0) + (t.hotel2 ? 1 : 0) + (t.skyscraper ? 1 : 0)
+      }
+      const paid = Math.min(50 + units * 50, cashOf(prev, actorId))
+      addCash(ledger, actorId, -paid)
+      addPot(ledger, paid)
+      return
+    }
+    // D-064 — Resgate do Pote: metade da Loteria (piso) sai do pote e entra no caixa.
+    case 'resgateDoPote': {
+      const half = Math.floor(prev.centerPot / 2)
+      addCash(ledger, actorId, half)
+      addPot(ledger, -half)
+      return
+    }
+    // D-064 — Incentivo Fiscal: $50 por propriedade hipotecada (banco → jogador).
+    case 'incentivoFiscal': {
+      const n = BOARD.filter((sq) => 'price' in sq && prev.titles[sq.pos]?.ownerId === actorId && prev.titles[sq.pos]?.mortgaged).length
+      addCash(ledger, actorId, n * 50)
+      return
+    }
+    // D-064 — Obras na Pista: move ao aeroporto mais próximo à frente; pode cruzar o GO
+    // (o aluguel dobrado do pouso é resolvido no PRÓXIMO dispatch, pelo oráculo de aluguel).
+    case 'obrasNaPista': {
+      const pos = prev.players.find((p) => p.id === actorId)!.pos
+      const steps = BOARD.filter((sq) => sq.kind === 'airport')
+        .map((sq) => (sq.pos - pos + BOARD.length) % BOARD.length)
+        .filter((d) => d > 0)
+        .reduce((a, b) => Math.min(a, b))
+      if (pos + steps >= BOARD.length) {
+        addCash(ledger, actorId, THEME.GO_PASS)
+        applyLoanInterestUnconditional(prev, actorId, THEME.GO_PASS, ledger)
+      }
       return
     }
     // Sem movimentação de caixa: vaPrisao, volte3, saiaPrisao, investidorAnjo, passagemOnibus,
-    // apagao, greveUtilidades — o ledger fica como está (delta esperado = 0 para todos).
+    // greve, estatizacao, obraRelampago — o ledger fica como está (delta esperado = 0 para todos).
     default:
       return
   }
@@ -392,8 +391,8 @@ function checkResolvePending(prev: GameState, next: GameState, ledger: Ledger): 
   if (sq.kind === 'property' || sq.kind === 'airport' || sq.kind === 'utility') {
     const owner = ownerOf(prev, actor.pos)
     if (owner === null || owner === actor.id) return // compra pendente ou própria — sem aluguel
-    if (hasImmunity(prev, actor.id, actor.pos)) {
-      mark(ledger, 'rent-immune')
+    if (hasImmunity(prev, actor.id, actor.pos) || isPlayerImmune(prev, actor.id)) {
+      mark(ledger, 'rent-immune') // pessoal (014) ou Imunidade Total (D-064)
       return
     }
     const due = rentDue(prev, actor.pos, owner)
@@ -401,17 +400,25 @@ function checkResolvePending(prev: GameState, next: GameState, ledger: Ledger): 
       mark(ledger, 'rent-zero')
       return
     }
-    if (actor.cash < due.amount) {
+    let amount = due.amount
+    if (isValorizada(prev, actor.pos)) amount *= 2 // Valorização (D-064)
+    if (actor.doubleRentOnce) amount *= 2 // Obras na Pista (D-064)
+    if (actor.cash < amount) {
       mark(ledger, 'rent-debt') // insolvente → dívida pendente, sem pagamento agora
       return
     }
-    addCash(ledger, actor.id, -due.amount)
-    addCash(ledger, owner, due.amount)
+    addCash(ledger, actor.id, -amount)
+    if (estatizacaoActive(prev)) addPot(ledger, amount) // Estatização (D-064): aluguel → Loteria
+    else addCash(ledger, owner, amount)
     mark(ledger, 'rent')
     return
   }
 
   if (sq.kind === 'tax') {
+    if (isPlayerImmune(prev, actor.id)) {
+      mark(ledger, 'tax-immune') // Imunidade Total (D-064): nem cobra, nem abre Bunker
+      return
+    }
     // Bunker Fiscal na mão → abre reação em vez de cobrar (taxBunkerResolve tem prioridade).
     const hasBunker = actor.hand.some((id) => id !== null && cardById(id).effect === 'bunkerFiscal')
     if (hasBunker) {
@@ -457,41 +464,57 @@ function checkResolvePending(prev: GameState, next: GameState, ledger: Ledger): 
 
 // Ofensivas com alvo (aquisição hostil/despejo/auditoria) — mesma fórmula esteja a jogada
 // vindo direto da mão (play-hand-card) ou de uma recusa de Diplomacia (respond-reaction).
-function applyOffensiveMoney(prev: GameState, attackerId: string, effect: string, targetPos: number | null, targetPlayer: string | null, ledger: Ledger): void {
+function applyOffensiveMoney(prev: GameState, attackerId: string, effect: string, targetPos: number | null, targetPlayer: string | null, ledger: Ledger, targetPos2?: number | null): void {
   if (effect === 'aquisicaoHostil' && targetPos != null) {
     const sq = BOARD[targetPos]
     const owner = ownerOf(prev, targetPos)
     if (owner === null) return
     const mult = sq.kind === 'airport' || sq.kind === 'utility' ? 1.5 : 1
-    const price = Math.round(('price' in sq ? sq.price : 0) * mult)
+    const price = Math.round(('price' in sq ? sq.price : 0) * 0.5 * mult) // metade da tabela (D-064)
     const fee = prev.titles[targetPos]?.mortgaged ? transferKeepFee(sq) : 0
     addCash(ledger, attackerId, -(price + fee))
     addCash(ledger, owner, price) // taxa fica com o banco — não é P2P puro
     mark(ledger, 'acquire')
     return
   }
-  if (effect === 'despejo') {
-    mark(ledger, 'evict') // demolição — sem dinheiro (dono não recebe nada)
+  if (effect === 'confiscoGeral') {
+    mark(ledger, 'evict') // demolição total (D-064) — sem dinheiro (dono não recebe nada)
     return
   }
-  if (effect === 'auditoriaFiscal' && targetPlayer != null) {
-    const owed = Math.round(netWorth(prev, targetPlayer) * 0.1)
+  if (effect === 'impostoFederal' && targetPlayer != null) {
+    const owed = Math.round(netWorth(prev, targetPlayer) * 0.25) // 25% (D-064)
     const paid = Math.min(cashOf(prev, targetPlayer), owed)
     addCash(ledger, targetPlayer, -paid)
     addPot(ledger, paid)
     mark(ledger, 'audit')
     return
   }
-  mark(ledger, 'card-effect-no-cash') // boicote/imunidade/saiaPrisao/etc.
+  // Permuta Forçada (D-064): sem preço; só as taxas de hipoteca movem caixa (§6.3) —
+  // cada lado paga a taxa da hipotecada que RECEBE, a do alvo truncada ao caixa dele.
+  if (effect === 'permutaForcada' && targetPos != null && targetPos2 != null) {
+    const victim = ownerOf(prev, targetPos)
+    if (victim === null) return
+    const feeIn = prev.titles[targetPos]?.mortgaged ? transferKeepFee(BOARD[targetPos]) : 0
+    const feeOut = prev.titles[targetPos2]?.mortgaged ? transferKeepFee(BOARD[targetPos2]) : 0
+    addCash(ledger, attackerId, -feeIn)
+    addCash(ledger, victim, -Math.min(feeOut, cashOf(prev, victim)))
+    mark(ledger, 'swap')
+    return
+  }
+  mark(ledger, 'card-effect-no-cash') // boicote/embargoDeObras/etc.
 }
 
 // Grupo A — ação identificável diretamente por `action.kind`.
 function checkDirectAction(prev: GameState, next: GameState, action: SimAction, ledger: Ledger): void {
   switch (action.kind) {
+    // LEVANTAR caixa credita o LIQUIDANTE (§9.1/D-061): com dívida pendente é o devedor nomeado,
+    // que pode não ser o jogador da vez. O oráculo assumia `activePlayer` e passou a acusar
+    // "Δcash esperado 0, obtido 20" no primeiro `sell-building` de um devedor fora da vez.
     case 'mortgage': {
       const sq = BOARD[action.pos]
-      if (!('price' in sq) || prev.titles[action.pos]?.ownerId !== activePlayer(prev).id || prev.titles[action.pos]?.mortgaged) return
-      addCash(ledger, activePlayer(prev).id, mortgageValue(sq))
+      const who = liquidatorOf(prev)
+      if (!('price' in sq) || prev.titles[action.pos]?.ownerId !== who || prev.titles[action.pos]?.mortgaged) return
+      addCash(ledger, who, mortgageValue(sq))
       mark(ledger, 'mortgage')
       return
     }
@@ -507,27 +530,30 @@ function checkDirectAction(prev: GameState, next: GameState, action: SimAction, 
     case 'build-house': {
       const sq = BOARD[action.pos]
       if (sq.kind !== 'property' || prev.titles[action.pos]?.ownerId !== activePlayer(prev).id) return
-      addCash(ledger, activePlayer(prev).id, -buildCost(sq))
+      addCash(ledger, activePlayer(prev).id, activePlayer(prev).nextBuildFree ? 0 : -buildCost(sq)) // Obra Relâmpago (D-064)
       mark(ledger, 'build-house')
       return
     }
     case 'sell-building': {
       const sq = BOARD[action.pos]
-      if (sq.kind !== 'property' || prev.titles[action.pos]?.ownerId !== activePlayer(prev).id) return
+      const who = liquidatorOf(prev)
+      if (sq.kind !== 'property' || prev.titles[action.pos]?.ownerId !== who) return
       if (cityLevel(prev.titles[action.pos]) === 0) return
-      addCash(ledger, activePlayer(prev).id, Math.round(buildCost(sq) / 2))
+      addCash(ledger, who, Math.round(buildCost(sq) / 2))
       mark(ledger, 'sell-building')
       return
     }
     case 'build-hangar': {
       if (BOARD[action.pos].kind !== 'airport' || prev.titles[action.pos]?.ownerId !== activePlayer(prev).id) return
-      addCash(ledger, activePlayer(prev).id, -HANGAR_COST)
+      addCash(ledger, activePlayer(prev).id, activePlayer(prev).nextBuildFree ? 0 : -HANGAR_COST) // Obra Relâmpago (D-064)
       mark(ledger, 'build-hangar')
       return
     }
     case 'sell-hangar': {
+      const who = liquidatorOf(prev)
       if (BOARD[action.pos].kind !== 'airport' || !prev.titles[action.pos]?.hangar) return
-      addCash(ledger, activePlayer(prev).id, Math.round(HANGAR_COST / 2))
+      if (prev.titles[action.pos]?.ownerId !== who) return
+      addCash(ledger, who, Math.round(HANGAR_COST / 2))
       mark(ledger, 'sell-hangar')
       return
     }
@@ -557,20 +583,21 @@ function checkDirectAction(prev: GameState, next: GameState, action: SimAction, 
       const player = activePlayer(prev)
       const card = cardById(action.cardId)
       if (card.mode !== 'mao' || !player.hand.includes(action.cardId)) return
-      if (card.effect === 'imunidade' || card.effect === 'saiaPrisao') {
+      if (card.effect === 'imunidade' || card.effect === 'saiaPrisao' || card.effect === 'valorizacao') {
         mark(ledger, 'card-effect-no-cash')
         return
       }
-      if (card.effect === 'boicote' || card.effect === 'aquisicaoHostil' || card.effect === 'despejo' || card.effect === 'auditoriaFiscal') {
+      if (['boicote', 'aquisicaoHostil', 'confiscoGeral', 'impostoFederal', 'permutaForcada', 'embargoDeObras'].includes(card.effect)) {
         const target = action.target ?? null
         const targetPlayer = action.targetPlayer ?? null
-        const reactor = reactorFor(prev, card.effect, player.id, target, targetPlayer)
+        const target2 = action.target2 ?? null
+        const reactor = reactorFor(prev, card.effect, player.id, target, targetPlayer, target2)
         if (!reactor) return // jogada inválida — no-op
         if (findReactionCard(prev, reactor, 'diplomacia')) {
           mark(ledger, 'card-effect-no-cash') // abre reaction-diplomacia — ofensiva "em voo", sem dinheiro ainda
           return
         }
-        applyOffensiveMoney(prev, player.id, card.effect, target, targetPlayer, ledger)
+        applyOffensiveMoney(prev, player.id, card.effect, target, targetPlayer, ledger, target2)
         return
       }
       return
@@ -579,7 +606,7 @@ function checkDirectAction(prev: GameState, next: GameState, action: SimAction, 
       const res = prev.resolution
       if (res?.kind === 'reaction-diplomacia') {
         if (action.use) mark(ledger, 'diplomacia-use') // cancela — sem dinheiro
-        else applyOffensiveMoney(prev, res.attackerId, res.effect, res.targetPos, res.targetPlayer, ledger)
+        else applyOffensiveMoney(prev, res.attackerId, res.effect, res.targetPos, res.targetPlayer, ledger, res.targetPos2)
         return
       }
       if (res?.kind === 'reaction-bunker') {
@@ -601,7 +628,7 @@ function checkDirectAction(prev: GameState, next: GameState, action: SimAction, 
     }
     case 'declare-bankruptcy': {
       if (prev.resolution?.kind !== 'debt') return
-      const debtor = activePlayer(prev)
+      const debtor = prev.players.find((p) => p.id === (prev.resolution?.kind === 'debt' ? prev.resolution.debtorId : undefined)) ?? activePlayer(prev) // D-061/D-066
       if (!isBankrupt(prev, debtor.id, prev.resolution.amount)) return // solvente via liquidação → no-op
       const loan = activeLoanFor(prev, debtor.id)
       const heirId = loan ? loan.creditorId : prev.resolution.creditorId
@@ -668,8 +695,9 @@ function checkDirectAction(prev: GameState, next: GameState, action: SimAction, 
     case 'pay-debt': {
       if (prev.resolution?.kind !== 'debt') return
       const { amount, creditorId } = prev.resolution
-      if (activePlayer(prev).cash < amount) return
-      addCash(ledger, activePlayer(prev).id, -amount)
+      const debtorId = prev.resolution.debtorId ?? activePlayer(prev).id // D-061/D-066: devedor nomeado
+      if (cashOf(prev, debtorId) < amount) return
+      addCash(ledger, debtorId, -amount)
       if (creditorId) addCash(ledger, creditorId, amount)
       else addPot(ledger, amount) // dívida ao banco (imposto) → pote (falencia.ts:55)
       mark(ledger, 'pay-debt')
@@ -729,16 +757,10 @@ export function checkAuctionClose(prev: GameState, next: GameState): { violation
   return { violations: finalize(prev, next, ledger), mechanisms: ledger.mechanisms }
 }
 
-// Mesma condição de disparo de `declareBankruptcy` (falencia.ts) — recomputada aqui só para
-// saber se ESTE dispatch reatribui propriedades antes do TaxMan rodar (ver applyTaxMan).
-function bankruptcyContext(prev: GameState, action: SimAction): { heirId: string | null; debtorCashBefore: number } | undefined {
-  if (action.kind !== 'declare-bankruptcy' || prev.resolution?.kind !== 'debt') return undefined
-  const debtor = activePlayer(prev)
-  if (!isBankrupt(prev, debtor.id, prev.resolution.amount)) return undefined
-  const loan = activeLoanFor(prev, debtor.id)
-  const heirId = loan ? loan.creditorId : prev.resolution.creditorId
-  return { heirId, debtorCashBefore: debtor.cash }
-}
+// `bankruptcyContext` saiu com a D-065: existia só para o checker do Fiscal saber que ESTE
+// dispatch reatribuía propriedades antes de o Fiscal rodar (herança do espólio). Sem Fiscal,
+// não há segundo ator no mesmo dispatch para desempatar.
+
 
 /**
  * A fila de obrigações (§9.1/D-061) é um PASSIVO, e passivo também se conserva.
@@ -776,7 +798,6 @@ export function checkConservation(prev: GameState, next: GameState, action: SimA
   const ledger = newLedger()
   checkDirectAction(prev, next, action, ledger)
   if (action.kind === 'resolve-pending') checkResolvePending(prev, next, ledger)
-  applyTaxMan(prev, next, ledger, bankruptcyContext(prev, action))
   return {
     violations: [...finalize(prev, next, ledger), ...checkObligationLedger(prev, next)],
     mechanisms: ledger.mechanisms,

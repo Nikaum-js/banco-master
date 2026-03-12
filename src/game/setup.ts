@@ -3,7 +3,7 @@
 // Antes desta fábrica a fiação existia em QUATRO lugares — `store.ts` (Zustand),
 // `ctx.ts` (host/cliente), `tests/sim/engine/driver.ts` (simulação) e
 // `tests/game/turn/_helpers.ts` (unitários) — e as cópias divergiam em duas portas:
-// o Fiscal (`taxMan`) e o Speed Die. A suíte rodava com Speed Die LIGADO e Fiscal
+// o Fiscal (`taxMan`, removido do jogo na D-065) e o Speed Die. A suíte rodava com Speed Die LIGADO e Fiscal
 // DESLIGADO, exatamente o inverso da produção.
 //
 // A regra desta fábrica: **o default é a configuração de produção**. Quem quiser
@@ -26,7 +26,6 @@ import { goBonus, payToCenter, collectCenter } from './balancing/balancing'
 import { chargeLoanInterest } from './emprestimos/emprestimos'
 import { tickImmunities } from './economy/imunidade'
 import { tickTempEffects } from './economy/tempEffects'
-import { rollTaxMan } from './balancing/taxMan'
 import { deckCardIds } from './cards/catalog'
 import { weightedShuffle } from './cards/decks'
 import { cardRevealResolve } from './cards/draw'
@@ -81,7 +80,6 @@ export function createSeedState(playerIds: string[], startedAt = 0): GameState {
     centerPot: THEME.PARKING_SEED, // 007 — Free Parking (tema)
     loans: [], // 010 — empréstimos ativos
     pendingLoan: null, // 010 — solicitação aguardando resposta do credor (§15.2)
-    taxManPos: 0, // 012 — Fiscal começa em GO
     immunities: [], // 014 — imunidades de aluguel ativas
     tempEffects: [], // 015 — efeitos temporários de carta
     log: [], // 021 — event log do jogo
@@ -131,7 +129,6 @@ export function buildPorts(overrides: Partial<TurnPorts> = {}): TurnPorts {
       tickImmunities(state, id) // expira imunidades por volta do beneficiário (014)
       tickTempEffects(state, id) // expira efeitos temporários por volta do originador (015)
     },
-    taxMan: (s, rng) => rollTaxMan(s, rng), // Fiscal (012)
     // 043, D8 — implementação PADRÃO: shift local. No host (decks sempre reais) devolve o
     // id de verdade; num cliente (decks nulos na perspectiva alheia) devolve `null` — o
     // `recordingCtx`/`replayCtx` em `recorder.ts` decide se esse valor é gravado ou substituído

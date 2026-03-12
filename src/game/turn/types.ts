@@ -40,6 +40,9 @@ export interface Player {
   hand: CardSlot[]
   busTickets: number // contador separado (uso = spec Bus Tickets) — 006
   nextPurchaseDiscount: number // 0 normal; 0,2 após Investidor Anjo — 006
+  // D-064 — flags de carta consumíveis. Opcionais: snapshot/fixture antigo lê ausente como false.
+  nextBuildFree?: boolean // Obra Relâmpago: próxima construção (casa/hotel/arranha-céu/Hangar) grátis
+  doubleRentOnce?: boolean // Obras na Pista: o próximo aluguel que este jogador pagar é dobrado
 }
 
 export type AwaitingChoice = 'onibus' | 'triple' | null
@@ -92,7 +95,8 @@ export interface GameState {
   centerPot: number // pote do Free Parking (007); semente/reabastecimento $500
   loans: Loan[] // empréstimos ativos entre jogadores (010, §15)
   pendingLoan: LoanRequest | null // solicitação de empréstimo aguardando resposta do credor (§15.2); uma por vez
-  taxManPos: number // posição do Fiscal/Tax Man (012, §13.8); inicia em GO=0
+  // `taxManPos` saiu na D-065 (o Fiscal saiu do jogo). Snapshot anterior ainda traz o campo, e
+  // campo a mais não quebra desserialização.
   immunities: Immunity[] // imunidades de aluguel ativas (014, §8.4)
   tempEffects: TempEffect[] // efeitos temporários de carta (015, §10.6): apagão/greve/boicote/imunidade-temp
   log: LogEntry[] // eventos do jogo (021); bounded em 50, mais recentes ao fim

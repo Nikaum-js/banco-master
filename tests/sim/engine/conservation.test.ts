@@ -12,7 +12,7 @@ import { mortgageProperty, unmortgageProperty } from '@/game/economy/mortgage'
 import { buildHouse, sellBuilding, buildHangar, sellHangar } from '@/game/economy/construction'
 import { buyProperty } from '@/game/economy/purchase'
 import { closeAuction } from '@/game/economy/auction'
-import { acquire, evict, audit } from '@/game/cards/ofensivas'
+import { acquire, confiscate, audit } from '@/game/cards/ofensivas'
 import { applyEffect } from '@/game/cards/effects'
 import { payOffLoan, respondLoan } from '@/game/emprestimos/emprestimos'
 import { declareBankruptcy } from '@/game/falencia/falencia'
@@ -200,30 +200,30 @@ describe('checkConservation — mecanismos de dinheiro (036 extensão)', () => {
     expect(codesOf(prev, bad, { kind: 'play-hand-card', cardId: 'aquisicao-hostil-1', target: 1 })).toContain('h')
   })
 
-  it('Despejo: demole 1 casa sem mover dinheiro; corrompido é detectado', () => {
+  it('Confisco Geral: demole as construções sem mover dinheiro; corrompido é detectado', () => {
     const prev = baseState()
     prev.titles[1].ownerId = 'p2'
     prev.titles[1].houses = 1
-    prev.players[0].hand = ['despejo-1']
+    prev.players[0].hand = ['confisco-geral-1']
     const next = structuredClone(prev)
-    expect(evict(next, 'p1', 1)).toBe(true)
-    expect(codesOf(prev, next, { kind: 'play-hand-card', cardId: 'despejo-1', target: 1 })).toEqual([])
+    expect(confiscate(next, 'p1', 1)).toBe(true)
+    expect(codesOf(prev, next, { kind: 'play-hand-card', cardId: 'confisco-geral-1', target: 1 })).toEqual([])
 
     const bad = structuredClone(next)
     bad.players[1].cash += 10
-    expect(codesOf(prev, bad, { kind: 'play-hand-card', cardId: 'despejo-1', target: 1 })).toContain('h')
+    expect(codesOf(prev, bad, { kind: 'play-hand-card', cardId: 'confisco-geral-1', target: 1 })).toContain('h')
   })
 
-  it('Auditoria Fiscal: alvo paga 10% do patrimônio ao pote; corrompido é detectado', () => {
+  it('Imposto Federal: alvo paga 25% do patrimônio ao pote; corrompido é detectado', () => {
     const prev = baseState()
-    prev.players[0].hand = ['auditoria-fiscal-1']
+    prev.players[0].hand = ['imposto-federal-1']
     const next = structuredClone(prev)
     expect(audit(next, 'p1', 'p2', ports())).toBe(true)
-    expect(codesOf(prev, next, { kind: 'play-hand-card', cardId: 'auditoria-fiscal-1', targetPlayer: 'p2' })).toEqual([])
+    expect(codesOf(prev, next, { kind: 'play-hand-card', cardId: 'imposto-federal-1', targetPlayer: 'p2' })).toEqual([])
 
     const bad = structuredClone(next)
     bad.centerPot += 1000
-    expect(codesOf(prev, bad, { kind: 'play-hand-card', cardId: 'auditoria-fiscal-1', targetPlayer: 'p2' })).toContain('h')
+    expect(codesOf(prev, bad, { kind: 'play-hand-card', cardId: 'imposto-federal-1', targetPlayer: 'p2' })).toContain('h')
   })
 
   it('Troca com propriedade hipotecada: taxa de 10% vai pro banco (não é P2P puro)', () => {

@@ -11,7 +11,6 @@ import { createSeedState, buildPorts, buildGameCtx } from '@/game/setup'
 import { checkNarration, checkNoTruncation, namesIn } from './narration'
 import { stepWithConvergence } from './convergence'
 import { checkInvariants } from './invariants'
-import { rollTaxMan } from '@/game/balancing/taxMan'
 import { applyEffect } from '@/game/cards/effects'
 import { ALL_LOG_KINDS, type LogEntry, type LogKind } from '@/game/economy/types'
 import type { GameState } from '@/game/turn/types'
@@ -158,14 +157,10 @@ describe('(t) não-truncagem — obrigação a jogador não pode desaparecer', (
     expect(next.obligations).toHaveLength(1)
   })
 
-  it('roda de verdade sobre o Fiscal: o débito fora da vez passa na narração', () => {
-    const prev = createSeedState(['p1', 'p2'])
-    for (const sq of Object.keys(prev.titles)) prev.titles[Number(sq)].ownerId = 'p2'
-    const next = structuredClone(prev)
-    rollTaxMan(next, () => 0.5)
-
-    expect(checkNarration(prev, next)).toEqual([])
-  })
+  // O caso "roda de verdade sobre o Fiscal" saiu com a D-065 (o Fiscal foi removido do jogo).
+  // O invariante que ele exercitava continua provado pelos casos sintéticos acima — e a ausência
+  // de qualquer cobrança na passagem de turno é travada por
+  // `tests/game/balancing/fiscalRemovido.test.ts`.
 })
 
 describe('(h) fila de obrigações bem-formada', () => {

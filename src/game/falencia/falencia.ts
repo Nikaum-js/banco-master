@@ -72,6 +72,25 @@ export function debtorOf(state: GameState): string | null {
   return state.resolution.debtorId ?? activePlayer(state).id
 }
 
+/**
+ * Quem pode LIQUIDAR agora — hipotecar e vender construção para levantar caixa (§9.1).
+ *
+ * Normalmente é o jogador da vez. Com dívida pendente, é o **devedor nomeado** (D-061), que pode
+ * não ser o da vez. Sem isto, dívida fora da vez é um DEADLOCK: `payDebt` é no-op por falta de
+ * caixa, `declareBankruptcy` é no-op porque o jogador é solvente (§9.1 exige insolvência), e todo
+ * reducer de liquidação está travado em `activePlayer` — não sobra ação legal para ninguém e a
+ * mesa para para sempre.
+ *
+ * Encontrado pelo harness de simulação (`round-cap-exceeded`, seed 20560705, rodada 35), não por
+ * leitura: é o tipo de trava que só aparece jogando milhares de partidas.
+ *
+ * Só LEVANTAR caixa muda de ator. Gastar — construir, desipotecar, comprar — segue sendo do
+ * jogador da vez: um devedor fora da vez não ganha um turno, ganha o direito de se salvar.
+ */
+export function liquidatorOf(state: GameState): string {
+  return debtorOf(state) ?? activePlayer(state).id
+}
+
 function playerOf(state: GameState, id: string) {
   return state.players.find((p) => p.id === id)
 }
@@ -180,7 +199,7 @@ function leaveTable(s: GameState, playerId: string, heirId: string | null, ctx: 
   const wasActive = activePlayer(s).id === playerId
   if (wasActive) s.turn.pendingResolve = false
   checkEndGame(s, ctx.now)
-  if (s.phase !== 'ended' && wasActive) advanceSeat(s, ctx)
+  if (s.phase !== 'ended' && wasActive) advanceSeat(s)
 }
 
 // Falência: destina ativos, elimina, checa fim de jogo, passa a vez.

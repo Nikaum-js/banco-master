@@ -9,7 +9,6 @@
 // Até a spec dona existir, o handler é um STUB no-op ({ done: true }).
 import type { Square } from '@/lib/boardData'
 import type { Roll, GameState } from './types'
-import type { RNG } from './dice'
 import type { CardSlot, DeckId } from '../cards/types'
 import { logEvent } from '../log'
 
@@ -18,7 +17,6 @@ export interface TurnPorts {
   onPayToCenter(state: GameState, amount: number): void // imposto/multa/$50 prisão → pote (007)
   onCollectCenter(state: GameState, playerId: string): void // Free Parking: coleta o pote (007)
   afterPassGo?(state: GameState, playerId: string): void // → juros de empréstimo no GO (010)
-  taxMan?(state: GameState, rng: RNG): void // → Fiscal move 1×/turno e cobra o dono (012)
   // Porta de saque (043, D8) — não-determinismo gravado, mesmo mecanismo de `rng`/`now` desde
   // a 037: o host consome pelo `recordingCtx` (shift real → grava o valor); o cliente consome
   // pelo `replayCtx` (shift local, que já é `null` na perspectiva alheia → devolve o valor
@@ -81,6 +79,9 @@ export const resolutionRegistry: Record<Square['kind'], ResolutionHandler> = {
   // Roteados pelo turno:
   tax: ({ square, ports, state, playerId }) => {
     if (square.kind !== 'tax') return { done: true }
+    // Imunidade Total (D-064): 1 volta sem pagar imposto algum. Import inline para manter
+    // este módulo sem dependência estática de economy/ (fronteira de spec, ver cabeçalho).
+    if (state.tempEffects.some((e) => e.kind === 'imunidade-total' && e.ownerId === playerId)) return { done: true }
     const p = state.players.find((x) => x.id === playerId)
     if (p && p.cash < square.amount) {
       // dívida ao banco (008). O imposto de CASA abre dívida (diferente das cobranças pequenas e

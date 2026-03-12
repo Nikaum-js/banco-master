@@ -8,7 +8,9 @@ import { BOARD } from '@/lib/boardData'
 import type { PropertySquare, GroupKey } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
 import { activePlayer } from '../turn/turnMachine'
+import { liquidatorOf } from '../falencia/falencia'
 import { groupSize } from './titles'
+import { isEmbargoed } from './tempEffects'
 import { THEME } from '../theme'
 import { logEvent } from '../log'
 
@@ -51,6 +53,7 @@ export function canBuild(state: GameState, pos: number): boolean {
   const sq = BOARD[pos]
   if (sq.kind !== 'property') return false
   const player = activePlayer(state)
+  if (isEmbargoed(state, player.id)) return false // Embargo de Obras (D-064): 2 voltas sem construir
   const title = state.titles[pos]
   if (!title || title.ownerId !== player.id) return false
   const cities = ownedGroupCities(state, sq.group, player.id)
@@ -74,7 +77,7 @@ export function canBuildHouse(state: GameState, pos: number): boolean {
   const size = groupSize(sq.group)
   if (cur === 6 && cities.length !== size) return false // → Skyscraper exige grupo completo (§13.7)
   if (cur >= buildLevelLimit(cities.length, size)) return false // D-050: teto enquanto país incompleto
-  if (player.cash < buildCost(sq)) return false
+  if (!player.nextBuildFree && player.cash < buildCost(sq)) return false // Obra Relâmpago (D-064): grátis dispensa caixa
   return true // casas/hotéis/arranha-céus são ilimitados (sem estoque do banco)
 }
 
@@ -88,7 +91,8 @@ export function buildHouse(state: GameState, pos: number): GameState {
   const s = clone(state)
   const p = activePlayer(s)
   const t = s.titles[pos]
-  const cost = buildCost(sq)
+  const cost = p.nextBuildFree ? 0 : buildCost(sq) // Obra Relâmpago (D-064)
+  if (p.nextBuildFree) delete p.nextBuildFree
   p.cash -= cost
   if (cur === 4) {
     t.houses = 0
@@ -109,18 +113,19 @@ export function canBuildHangar(state: GameState, pos: number): boolean {
   const sq = BOARD[pos]
   if (sq.kind !== 'airport') return false
   const player = activePlayer(state)
+  if (isEmbargoed(state, player.id)) return false // Embargo de Obras (D-064)
   const t = state.titles[pos]
   if (!t || t.ownerId !== player.id || t.mortgaged || t.hangar) return false
-  return player.cash >= HANGAR_COST
+  return player.nextBuildFree === true || player.cash >= HANGAR_COST // Obra Relâmpago (D-064)
 }
 
 // Pode vender Hangar? (aeroporto próprio com Hangar) — 023.
 export function canSellHangar(state: GameState, pos: number): boolean {
   const sq = BOARD[pos]
   if (sq.kind !== 'airport') return false
-  const player = activePlayer(state)
+  const ownerId = liquidatorOf(state) // levantar caixa: o devedor, se houver dívida (§9.1/D-061)
   const t = state.titles[pos]
-  return !!t && t.ownerId === player.id && t.hangar
+  return !!t && t.ownerId === ownerId && t.hangar
 }
 
 // Hangar (§13.6): melhoria de aeroporto que dobra o aluguel daquele aeroporto. No-op se inválido.
@@ -129,9 +134,11 @@ export function buildHangar(state: GameState, pos: number): GameState {
   if (!canBuildHangar(state, pos)) return state
   const s = clone(state)
   const p = activePlayer(s)
-  p.cash -= HANGAR_COST
+  const cost = p.nextBuildFree ? 0 : HANGAR_COST // Obra Relâmpago (D-064)
+  if (p.nextBuildFree) delete p.nextBuildFree
+  p.cash -= cost
   s.titles[pos].hangar = true
-  logEvent(s, { kind: 'build-hangar', who: p.id, pos, cost: HANGAR_COST })
+  logEvent(s, { kind: 'build-hangar', who: p.id, pos, cost })
   return s
 }
 
@@ -139,7 +146,7 @@ export function sellHangar(state: GameState, pos: number): GameState {
   if (state.paused) return state
   if (!canSellHangar(state, pos)) return state
   const s = clone(state)
-  const p = activePlayer(s)
+  const p = s.players.find((x) => x.id === liquidatorOf(s))! // o devedor, se houver dívida
   const amount = Math.round(HANGAR_COST / 2) // metade ($50)
   p.cash += amount
   s.titles[pos].hangar = false
@@ -151,12 +158,14 @@ export function sellHangar(state: GameState, pos: number): GameState {
 export function canSellBuilding(state: GameState, pos: number): boolean {
   const sq = BOARD[pos]
   if (sq.kind !== 'property') return false
-  const player = activePlayer(state)
+  // Vender construção é LEVANTAR caixa: com dívida pendente, quem vende é o DEVEDOR nomeado
+  // (§9.1/D-061), que pode não ser o jogador da vez. Ver `liquidatorOf`.
+  const ownerId = liquidatorOf(state)
   const title = state.titles[pos]
-  if (!title || title.ownerId !== player.id) return false
+  if (!title || title.ownerId !== ownerId) return false
   const cur = cityLevel(title)
   if (cur === 0) return false // nada para vender
-  const cities = ownedGroupCities(state, sq.group, player.id)
+  const cities = ownedGroupCities(state, sq.group, ownerId)
   const max = Math.max(...cities.map((c) => cityLevel(state.titles[c.pos])))
   return cur === max // só vende da de maior nível do grupo
 }
@@ -170,7 +179,7 @@ export function sellBuilding(state: GameState, pos: number): GameState {
   const cur = cityLevel(state.titles[pos])
 
   const s = clone(state)
-  const p = activePlayer(s)
+  const p = s.players.find((x) => x.id === liquidatorOf(s))! // o devedor, se houver dívida
   const t = s.titles[pos]
   const amount = Math.round(buildCost(sq as PropertySquare) / 2)
   p.cash += amount

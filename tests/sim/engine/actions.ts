@@ -39,27 +39,45 @@ function handCardActions(game: GameState, active: Player): SimAction[] {
     if (card.mode !== 'mao') continue
     if (card.timing === 'reacao') continue // só via respond-reaction, nunca jogada proativamente
     if (card.timing === 'preso' && !active.jail.inJail) continue
-    if (card.effect === 'imunidade') {
+    // Valorização (D-064): alvo é propriedade PRÓPRIA (a Imunidade Total perdeu o alvo — cai
+    // no ramo sem alvo, no fim).
+    if (card.effect === 'valorizacao') {
       for (const sq of BOARD) {
         if ('price' in sq && ownerOf(game, sq.pos) === active.id) out.push({ kind: 'play-hand-card', cardId, target: sq.pos })
       }
       continue
     }
-    if (card.effect === 'boicote' || card.effect === 'aquisicaoHostil' || card.effect === 'despejo') {
+    if (card.effect === 'boicote' || card.effect === 'aquisicaoHostil' || card.effect === 'confiscoGeral') {
       for (const sq of BOARD) {
         if (!('price' in sq)) continue
         if (reactorFor(game, card.effect, active.id, sq.pos, null)) out.push({ kind: 'play-hand-card', cardId, target: sq.pos })
       }
       continue
     }
-    if (card.effect === 'auditoriaFiscal') {
+    if (card.effect === 'impostoFederal' || card.effect === 'embargoDeObras') {
       for (const p of game.players) {
         if (p.id === active.id || p.eliminated) continue
-        if (reactorFor(game, 'auditoriaFiscal', active.id, null, p.id)) out.push({ kind: 'play-hand-card', cardId, targetPlayer: p.id })
+        if (reactorFor(game, card.effect, active.id, null, p.id)) out.push({ kind: 'play-hand-card', cardId, targetPlayer: p.id })
       }
       continue
     }
-    out.push({ kind: 'play-hand-card', cardId }) // efeitos sem alvo (ex.: saia-prisao)
+    // Permuta Forçada (D-064): UM par (própria, adversária) validado pelo motor basta pro
+    // fuzzing — o produto cartesiano inteiro rodava a cada tick de enumeração e multiplicou
+    // por ~20 o tempo do roundtrip de determinismo.
+    if (card.effect === 'permutaForcada') {
+      outer: for (const mine of BOARD) {
+        if (!('price' in mine) || ownerOf(game, mine.pos) !== active.id) continue
+        for (const theirs of BOARD) {
+          if (!('price' in theirs)) continue
+          if (reactorFor(game, 'permutaForcada', active.id, theirs.pos, null, mine.pos)) {
+            out.push({ kind: 'play-hand-card', cardId, target: theirs.pos, target2: mine.pos })
+            break outer
+          }
+        }
+      }
+      continue
+    }
+    out.push({ kind: 'play-hand-card', cardId }) // efeitos sem alvo (ex.: saia-prisao, imunidade)
   }
   return out
 }
@@ -112,12 +130,13 @@ function candidateTrades(game: GameState): { fromId: string; trade: Trade }[] {
 // deles reescaneia o BOARD internamente (ownedGroupCities/groupHasConstruction); com 6
 // jogadores e centenas de milhares de ticks, repetir isso para as ~44 posições que o
 // jogador ativo NÃO possui era o maior custo do harness (perf, research.md D8).
-function propertyActions(game: GameState): SimAction[] {
-  const activeId = activePlayer(game).id
+// `ownerId` (D-061): na janela de dívida, quem liquida é o DEVEDOR nomeado — que pode não ser
+// o jogador da vez (`liquidatorOf` no motor). Fora dela, o jogador ativo.
+function propertyActions(game: GameState, ownerId: string = activePlayer(game).id): SimAction[] {
   const out: SimAction[] = []
   for (const sq of BOARD) {
     const title = game.titles[sq.pos]
-    if (!title || title.ownerId !== activeId) continue
+    if (!title || title.ownerId !== ownerId) continue
     if (sq.kind === 'property') {
       if (canBuildHouse(game, sq.pos)) out.push({ kind: 'build-house', pos: sq.pos })
       if (canSellBuilding(game, sq.pos)) out.push({ kind: 'sell-building', pos: sq.pos })
@@ -182,9 +201,11 @@ export function enumerateActions(session: SimSession): DecisionPoint[] {
   const points: DecisionPoint[] = []
 
   if (res?.kind === 'debt') {
-    const debtorId = activePlayer(game).id
+    // D-061: o devedor é o NOMEADO na dívida, não necessariamente o jogador da vez — e é ele
+    // quem liquida (`liquidatorOf` no motor).
+    const debtorId = res.debtorId ?? activePlayer(game).id
     const debtor = game.players.find((p) => p.id === debtorId)!
-    const actions: SimAction[] = [{ kind: 'declare-bankruptcy' }, ...propertyActions(game)] // §9.1: liquidar (004/005) antes de pagar/falir
+    const actions: SimAction[] = [{ kind: 'declare-bankruptcy' }, ...propertyActions(game, debtorId)] // §9.1: liquidar (004/005) antes de pagar/falir
     if (debtor.cash >= res.amount) actions.push({ kind: 'pay-debt' })
     if (!game.pendingLoan) {
       const principal = res.amount - debtor.cash

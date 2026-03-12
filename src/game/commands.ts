@@ -27,7 +27,7 @@ import { maybeOpenLandAuction, placeLandBid, closeLandAuction, closeExpiredLandL
 import { promoteObligation } from './economy/obligation'
 import { buildHouse, sellBuilding, buildHangar, sellHangar } from './economy/construction'
 import { mortgageProperty, unmortgageProperty, sellMortgagedToBank } from './economy/mortgage'
-import { payDebt, declareBankruptcy, concede } from './falencia/falencia'
+import { payDebt, declareBankruptcy, concede, liquidatorOf } from './falencia/falencia'
 import { grantLoan, proposeLoan, respondLoan, payOffLoan } from './emprestimos/emprestimos'
 import { executeTrade, proposeTrade, acceptTrade, rejectTrade, type Trade } from './economy/trade'
 import { confirmCardReveal, playHandCard, resolveCardDiscard, resolveCardShortcut } from './cards/draw'
@@ -60,7 +60,7 @@ export type PlayerAction =
   | { kind: 'mortgage'; pos: number }
   | { kind: 'unmortgage'; pos: number }
   // Cartas — ator = jogador ativo (mão) ou reator (resolução pendente).
-  | { kind: 'play-hand-card'; cardId: string; target?: number; targetPlayer?: string }
+  | { kind: 'play-hand-card'; cardId: string; target?: number; targetPlayer?: string; target2?: number }
   // 043, D-037/D10: `cardId` vira `CardSlot` — a difusão pública redige pra `null` quando
   // quem recebe não é o dono (descartar não revela nada no SRS). `deck` fica FORA da
   // redação de propósito: já é público desde o saque (`card-draw` loga `{who, deck}`), e sem
@@ -180,7 +180,7 @@ export function applyCommand(state: GameState, action: GameAction, ctx: TurnCtx)
     case 'mortgage': next = mortgageProperty(state, action.pos); break
     case 'unmortgage': next = unmortgageProperty(state, action.pos); break
     // — cartas —
-    case 'play-hand-card': next = playHandCard(state, activePlayer(state).id, action.cardId, ctx.ports, action.target, action.targetPlayer); break
+    case 'play-hand-card': next = playHandCard(state, activePlayer(state).id, action.cardId, ctx.ports, action.target, action.targetPlayer, action.target2); break
     case 'discard-card': next = resolveCardDiscard(state, action.cardId, action.deck); break
     case 'choose-card-shortcut': next = resolveCardShortcut(state, action.dir, ctx); break
     case 'confirm-card-reveal': next = confirmCardReveal(state, ctx.ports); break
@@ -287,17 +287,22 @@ const ACTOR_RULES: Record<PlayerAction['kind'], ActorRule> = {
   'buy-property': 'active',
   'decline-property': 'active',
   'build-house': 'active',
-  'sell-building': 'active',
   'build-hangar': 'active',
-  'sell-hangar': 'active',
-  mortgage: 'active',
   unmortgage: 'active',
+  // LEVANTAR caixa é do DEVEDOR nomeado quando há dívida pendente (§9.1/D-061), que pode não ser
+  // o jogador da vez. Sem isto, dívida fora da vez é deadlock: pagar é no-op por falta de caixa,
+  // falir é no-op por solvência, e liquidar não é oferecido a ninguém. Encontrado pelo harness.
+  // GASTAR (construir, desipotecar, comprar) fica com o jogador da vez — o devedor fora da vez
+  // ganha o direito de se salvar, não um turno.
+  'sell-building': liquidatorOf,
+  'sell-hangar': liquidatorOf,
+  mortgage: liquidatorOf,
   'play-hand-card': 'active',
   'discard-card': 'active',
   'choose-card-shortcut': 'active',
   'confirm-card-reveal': 'active',
-  'pay-debt': 'active',
-  'declare-bankruptcy': 'active',
+  'pay-debt': liquidatorOf,
+  'declare-bankruptcy': liquidatorOf,
   concede: 'active',
   'sell-to-bank': 'active',
   'grant-loan': 'active',

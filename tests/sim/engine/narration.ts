@@ -55,8 +55,11 @@ export function namesIn(e: LogEntry): string[] {
     case 'loan-due-short': return [e.who, e.creditorId]
     case 'debt-open':
     case 'debt-paid': return e.creditorId ? [e.who, e.creditorId] : [e.who]
+    // `swap` = Permuta Forçada (D-064): troca compulsória entre dois jogadores — os dois são
+    // nomeados, porque os dois trocam de patrimônio (mesmo sem caixa envolvido).
     case 'hostile-takeover':
-    case 'evict': return [e.who, e.victimId]
+    case 'evict':
+    case 'swap': return [e.who, e.victimId]
     case 'audit': return [e.who, e.targetId]
     case 'card-collect': return e.counterpartId === 'bank' ? [e.who] : [e.who, e.counterpartId]
     // Fatos de um só protagonista. `who === 'bank'` não nomeia jogador nenhum — e é por isso

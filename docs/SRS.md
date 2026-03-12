@@ -1,6 +1,6 @@
 # Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.25
+**Versão:** 1.27
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -71,6 +71,7 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Speed Die | Presente — ativado após primeira volta completa do jogador |
 | Construção com país parcial | Permitida com 1+ cidade; enquanto o país estiver incompleto, o nível máximo por cidade é igual ao número de cidades possuídas; aluguel construído escala pela posse (50%→100%, §13.3) |
 | Free Parking com prêmio acumulado | Presente — impostos/multas vão para o centro, prêmio inicial $500 |
+| Fiscal (Tax Man) | **Removido** — token invisível que cobrava fora da vez; causa raiz de quatro relatos de bug financeiro (D-065, §13.8) |
 | Bônus de GO | Fixo — $200 ao passar; $400 ao parar exatamente no GO (revisão D-007, 2026-05-24) |
 | Segundo hotel por propriedade | Presente — sequencial, cobra **mais** aluguel que o 1º; 2 hotéis viram arranha-céu |
 | Empréstimos entre jogadores | Presentes — juros 10%–50%, cobrados a cada passagem pelo GO; vencem em 3 voltas com cobrança automática do principal (D-054, §15.6) |
@@ -79,7 +80,7 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Sistema de raridade de cartas | 3 tiers (Lendária/Rara/Comum) com cores (laranja/azul/verde) |
 | Cartas em mão | Privadas (apenas contador visível), não-negociáveis, limite de 3 totais |
 | Bus Tickets | Item de mão separado das cartas, obtido via carta "Passagem de Ônibus" |
-| Cartas ofensivas (Aquisição Hostil, Despejo, Auditoria, Boicote) | Presentes no v1 — não podem ser recusadas pelo alvo, exceto via reação (Diplomacia) |
+| Cartas ofensivas (Aquisição Hostil, Confisco Geral, Imposto Federal, Boicote, Permuta Forçada, Embargo de Obras) | Presentes no v1 — não podem ser recusadas pelo alvo, exceto via reação (Diplomacia) |
 | Tesouro precisa ser impactante | Princípio de design: Tesouro não pode virar "casa de troquinho" como no Richup |
 | Obrigação entre jogadores | Nunca truncada — pagamento parcial deixa o restante devido e abre dívida pendente, inclusive fora da vez (D-061, §9.1) |
 | Rastreabilidade de caixa | Toda mudança de caixa tem motivo registrado; nenhuma regra move dinheiro em silêncio (D-063, §12.3) |
@@ -508,9 +509,9 @@ Um jogador está em falência quando não consegue pagar o que deve, mesmo após
 | Credor | Caixa insuficiente |
 |---|---|
 | Outro **jogador** (Aniversário §10.6, Aquisição Hostil §10.6, aluguel §4.2) | Paga o que tem; **o restante fica devido** e entra nesta seção |
-| **Banco** ou **pote**, valor pequeno e incondicional (multa de prisão §4.11, Fiscal §13.8, Honorários, Crise Imobiliária, Conserto de Imóveis, Auditoria Fiscal) | Paga o que houver; **o restante não é cobrado** |
+| **Banco** ou **pote**, valor pequeno e incondicional (multa de prisão §4.11, Honorários, Crise Imobiliária, Conserto de Imóveis, Imposto Federal, Desvalorização Cambial, Multa Ambiental) | Paga o que houver; **o restante não é cobrado** |
 
-> 📌 A linha é **quem é o credor**, não o tamanho do valor. Truncar um pagamento ao banco só faz sair menos dinheiro da economia; truncar um pagamento a um jogador tira dele uma receita à qual a regra lhe deu direito — só o segundo tem parte lesada. E o Fiscal é catch-up **discreto** (princípio IV): uma cobrança que pode falir quem está por cima deixa de ser discreta.
+> 📌 A linha é **quem é o credor**, não o tamanho do valor. Truncar um pagamento ao banco só faz sair menos dinheiro da economia; truncar um pagamento a um jogador tira dele uma receita à qual a regra lhe deu direito — só o segundo tem parte lesada. Cobrança incondicional que pode falir transforma azar em eliminação, e é por isso que ela trunca em vez de abrir dívida.
 
 **Proteção de credor** — com dívida pendente, o devedor não pode ficar insolvente de propósito: nem por troca (§8.5), nem devolvendo propriedade hipotecada ao banco (§6.4), que fica proibida enquanto a dívida existir.
 
@@ -545,7 +546,7 @@ Se o jogador falido possui empréstimo ativo com outro jogador:
 
 A partida termina quando restar apenas **1 jogador** com saldo positivo. Ele é declarado vencedor.
 
-> 📌 **O fim tem classificação e resumo** (v1.9, [D-038](adr/D-038-fim-de-jogo-tem-classificacao-e-resumo.md)): ao terminar, **todas** as telas — inclusive as de quem já foi eliminado — mostram a classificação completa, do 1º ao último. A ordem é a **inversa da ordem de eliminação**: vence quem sobrou, é 2º o último a falir, e é último o primeiro a falir. Cada linha traz o **patrimônio final** (o mesmo cálculo de patrimônio líquido usado por Auditoria Fiscal e Aquisição Hostil: caixa + preço das propriedades, hipotecada pela metade, + custo das construções), **quantas propriedades** o jogador tinha e — para quem caiu — **em que rodada** caiu. O resumo fecha com a **duração da partida** em rodadas e em tempo decorrido. A classificação é derivada do estado da partida, não da tela: por isso o estado registra a ordem de eliminação, o número da rodada e os instantes de início e de fim, e todos veem exatamente a mesma classificação, inclusive depois de recarregar.
+> 📌 **O fim tem classificação e resumo** (v1.9, [D-038](adr/D-038-fim-de-jogo-tem-classificacao-e-resumo.md)): ao terminar, **todas** as telas — inclusive as de quem já foi eliminado — mostram a classificação completa, do 1º ao último. A ordem é a **inversa da ordem de eliminação**: vence quem sobrou, é 2º o último a falir, e é último o primeiro a falir. Cada linha traz o **patrimônio final** (o mesmo cálculo de patrimônio líquido usado por Imposto Federal e Crise Imobiliária: caixa + preço das propriedades, hipotecada pela metade, + custo das construções), **quantas propriedades** o jogador tinha e — para quem caiu — **em que rodada** caiu. O resumo fecha com a **duração da partida** em rodadas e em tempo decorrido. A classificação é derivada do estado da partida, não da tela: por isso o estado registra a ordem de eliminação, o número da rodada e os instantes de início e de fim, e todos veem exatamente a mesma classificação, inclusive depois de recarregar.
 >
 > 📌 **Depois do resumo, o grupo continua na mesma sala** (v1.19, [D-052](adr/D-052-revanche-reabre-a-mesma-sala.md)): cada jogador pode deixar a classificação no próprio ritmo e voltar ao lobby da sala. O host reabre a sala e inicia outra partida pelo fluxo normal; assentos e identidades permanecem, mas todo estado específico da partida encerrada é descartado. Em partida local, começar de novo continua disponível.
 
@@ -571,7 +572,7 @@ A partida termina quando restar apenas **1 jogador** com saldo positivo. Ele é 
 
 ### 10.1 Visão Geral
 
-O Magnata Imobiliário tem **2 decks separados** de cartas, cada um com 16 cartas distribuídas em 3 níveis de **raridade**:
+O Magnata Imobiliário tem **2 decks separados** de cartas — **Acaso com 21** e **Tesouro com 18** (v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md)) — distribuídas em 3 níveis de **raridade**:
 
 - 🃏 **Acaso** (Chance) — efeitos ofensivos, caóticos, agressivos. "Cair em Acaso pode mudar o jogo."
 - 🎁 **Tesouro** (Community Chest) — efeitos defensivos, benignos, com pequenas surpresas. "Cair em Tesouro quase sempre tem peso."
@@ -617,70 +618,72 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 | ⚡ **Reação** | A qualquer momento, como resposta a uma ação contra você |
 | 🔒 **Preso** | Apenas quando você está preso |
 
-### 10.4 Distribuição do Deck ACASO (16 cartas)
+### 10.4 Distribuição do Deck ACASO (21 cartas)
 
-#### 🟧 Lendárias (4 cartas)
+**(v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))**
+
+#### 🟧 Lendárias (5 cartas)
 
 | Carta | Cópias | Modo | Timing |
 |---|---|---|---|
 | **Aquisição Hostil** | 2 | Mão | 🎯 Próprio turno |
-| **Despejo** | 1 | Mão | 🎯 Próprio turno |
-| **Auditoria Fiscal** | 1 | Mão | 🎯 Próprio turno |
+| **Confisco Geral** | 1 | Mão | 🎯 Próprio turno |
+| **Imposto Federal** | 1 | Mão | 🎯 Próprio turno |
+| **Permuta Forçada** | 1 | Mão | 🎯 Próprio turno |
 
-#### 🟦 Raras (3 cartas)
+#### 🟦 Raras (5 cartas)
 
 | Carta | Cópias | Modo | Timing |
 |---|---|---|---|
 | **Boicote** | 2 | Mão | 🎯 Próprio turno |
+| **Embargo de Obras** | 1 | Mão | 🎯 Próprio turno |
 | **Crise Imobiliária** | 1 | Imediato | — |
+| **Estatização** | 1 | Imediato | — |
 
-#### 🟩 Comuns novas (4 cartas)
+#### 🟩 Comuns (11 cartas)
 
 | Carta | Cópias | Modo |
 |---|---|---|
 | **Atalho** | 2 | Imediato |
-| **Apagão** | 1 | Imediato |
-| **Greve nas Utilidades** | 1 | Imediato |
-
-#### 🟩 Comuns clássicas (5 cartas)
-
-| Carta | Cópias | Modo |
-|---|---|---|
+| **Greve** | 1 | Imediato |
+| **Desvalorização Cambial** | 1 | Imediato |
+| **Obras na Pista** | 1 | Imediato |
+| **Multa Ambiental** | 1 | Imediato |
 | **Vá direto para a Prisão** | 1 | Imediato |
 | **Volta para o GO** | 1 | Imediato |
 | **Conserto de Imóveis** | 1 | Imediato |
 | **Avance 3 casas** | 1 | Imediato |
 | **Volte 3 casas** | 1 | Imediato |
 
-### 10.5 Distribuição do Deck TESOURO (16 cartas)
+### 10.5 Distribuição do Deck TESOURO (18 cartas)
+
+**(v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))**
 
 #### 🟧 Lendárias (2 cartas)
 
 | Carta | Cópias | Modo | Timing |
 |---|---|---|---|
 | **Diplomacia** | 1 | Mão | ⚡ Reação |
-| **Imunidade Temporária** | 1 | Mão | 🎯 Próprio turno |
+| **Imunidade Total** | 1 | Mão | 🎯 Próprio turno |
 
-#### 🟦 Raras (5 cartas)
+#### 🟦 Raras (6 cartas)
 
 | Carta | Cópias | Modo | Timing |
 |---|---|---|---|
 | **Saia da Prisão** | 1 | Mão | 🔒 Preso |
 | **Bunker Fiscal** | 2 | Mão | ⚡ Reação |
 | **Boom Econômico** | 2 | Imediato | — |
+| **Valorização** | 1 | Mão | 🎯 Próprio turno |
 
-#### 🟩 Comuns novas (6 cartas)
+#### 🟩 Comuns (10 cartas)
 
 | Carta | Cópias | Modo |
 |---|---|---|
 | **Investidor Anjo** | 2 | Imediato |
-| **Refinanciamento** | 2 | Imediato |
 | **Passagem de Ônibus** | 2 | Imediato (adiciona Bus Ticket) |
-
-#### 🟩 Comuns clássicas (3 cartas)
-
-| Carta | Cópias | Modo |
-|---|---|---|
+| **Resgate do Pote** | 1 | Imediato |
+| **Obra Relâmpago** | 1 | Imediato |
+| **Incentivo Fiscal** | 1 | Imediato |
 | **Erro do banco a seu favor** | 1 | Imediato |
 | **Aniversário** | 1 | Imediato |
 | **Honorários médicos** | 1 | Imediato |
@@ -690,39 +693,51 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 #### 🟧 Cartas Lendárias
 
 **Aquisição Hostil** (Acaso)
-> Escolha uma propriedade de outro jogador. Ele é obrigado a vendê-la para você pelo **preço original** que ele pagou. Restrições:
+> Escolha uma propriedade de outro jogador. Ele é obrigado a vendê-la para você pela **metade do preço de tabela** (v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md)). Restrições:
 > - A propriedade **não pode ter construções** (incluindo Hangar em aeroportos).
 > - O alvo deve possuir **pelo menos 2 propriedades não-hipotecadas** no momento.
 > - Propriedade hipotecada é transferível conforme Seção 6.3 (com regras de transferência de hipoteca).
-> - **Aeroportos e Utilidades:** o preço é multiplicado por **1,5×** (sobretaxa de 50% como compensação ao dono pela perda do escalonamento).
+> - **Aeroportos e Utilidades:** a sobretaxa de **1,5×** incide sobre a metade (compensação ao dono pela perda do escalonamento).
 > - Não pode ser usada em propriedade do próprio jogador.
 > - O alvo **NÃO pode recusar**.
 
-**Despejo** (Acaso)
-> Escolha 1 casa (não hotel) construída de outro jogador. Ela é demolida — retorna ao banco. O dono NÃO recebe nada. Não afeta a uniformidade obrigatória do grupo do alvo (ele pode reconstruir depois).
+**Confisco Geral** (Acaso) — ex-Despejo (v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
+> Escolha 1 propriedade de outro jogador que tenha construção. **Todas as construções dela** (casas, hotéis e arranha-céu) são demolidas — retornam ao banco. O dono **mantém o terreno** e NÃO recebe nada. Não afeta a uniformidade obrigatória do grupo do alvo (ele pode reconstruir depois).
 
-**Auditoria Fiscal** (Acaso)
-> Escolha um jogador. Ele paga **10% do patrimônio líquido** (dinheiro + propriedades + construções) ao banco. O valor vai para o **centro do tabuleiro** (Free Parking — Seção 13.4).
+**Imposto Federal** (Acaso) — ex-Auditoria Fiscal (v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
+> Escolha um jogador. Ele paga **25% do patrimônio líquido** (dinheiro + propriedades + construções) ao banco. O valor vai para o **centro do tabuleiro** (Free Parking — Seção 13.4).
+
+**Permuta Forçada** (Acaso — v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
+> Escolha **uma propriedade sua** e **uma propriedade de um adversário**: elas trocam de dono, sem dinheiro envolvido e **sem restrição de preço**. Nenhuma das duas pode ter construção (casa, hotel, arranha-céu ou Hangar). Propriedade hipotecada transfere conforme Seção 6.3. O alvo **NÃO pode recusar** (Diplomacia reage).
 
 **Diplomacia** (Tesouro)
-> **Reação.** Cancela uma carta ofensiva sendo usada contra você (Aquisição Hostil, Despejo, Auditoria Fiscal, Boicote). A carta cancelada é descartada como se tivesse sido usada (volta ao fundo do deck).
+> **Reação.** Cancela uma carta ofensiva sendo usada contra você (Aquisição Hostil, Confisco Geral, Imposto Federal, Boicote, Permuta Forçada, Embargo de Obras). A carta cancelada é descartada como se tivesse sido usada (volta ao fundo do deck).
 
-**Imunidade Temporária** (Tesouro)
-> Escolha uma propriedade sua. Por **2 voltas completas** do tabuleiro, ela não pode ser alvo de Aquisição Hostil, Despejo ou Boicote.
+**Imunidade Total** (Tesouro) — ex-Imunidade Temporária (v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
+> Por **1 volta completa** do tabuleiro, **você** não paga **aluguel** nem **imposto algum** (imposto de casa, Crise Imobiliária, Conserto, multas de carta) e não pode ser alvo de **efeito negativo** (Aquisição Hostil, Confisco Geral, Imposto Federal, Boicote, Permuta Forçada, Embargo de Obras, cobranças de carta alheia como Aniversário).
 
 #### 🟦 Cartas Raras
 
 **Boicote** (Acaso)
 > Escolha 1 propriedade de outro jogador. Por **2 voltas completas**, ela **não cobra aluguel** de nenhum jogador que parar nela.
 
+**Embargo de Obras** (Acaso — v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
+> Escolha um adversário. Por **2 voltas completas**, ele **não pode construir** (casas, hotéis, arranha-céus ou Hangares).
+
 **Crise Imobiliária** (Acaso, imediato)
-> Todos os jogadores pagam **5% do patrimônio líquido** ao banco. O valor total arrecadado vai para o **centro do tabuleiro** (Free Parking).
+> Todos os **adversários** de quem sacou pagam **10% do patrimônio líquido** ao banco (v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md) — quem sacou não paga). O valor total arrecadado vai para o **centro do tabuleiro** (Free Parking).
+
+**Estatização** (Acaso, imediato — v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
+> Por **2 voltas completas**, **todo aluguel** pago na mesa vai **direto para a Loteria** (centro do tabuleiro, Seção 13.4) em vez do dono da propriedade.
+
+**Valorização** (Tesouro — v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
+> Escolha uma propriedade sua. Por **1 volta completa**, ela cobra **aluguel em dobro**.
 
 **Saia da Prisão** (Tesouro)
 > Use a qualquer momento em que estiver preso para sair sem pagar a multa. Após uso, volta ao fundo do deck.
 
 **Bunker Fiscal** (Tesouro)
-> **Reação.** Cancela o próximo pagamento de imposto que você teria que fazer (Income Tax, Luxury Tax, Auditoria Fiscal recebida).
+> **Reação.** Cancela o próximo pagamento de imposto que você teria que fazer (Income Tax, Luxury Tax, Imposto Federal recebido).
 
 **Boom Econômico** (Tesouro, imediato)
 > Todos os jogadores recebem **$200** do banco.
@@ -732,20 +747,32 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 **Atalho** (Acaso, imediato)
 > Mova-se até 3 casas para frente ou para trás (jogador escolhe). Resolve a casa onde parar normalmente. Se passar pelo GO indo para trás, NÃO recebe bônus.
 
-**Apagão** (Acaso, imediato)
-> Por **1 volta completa**, todos os Hangares ficam inativos — aeroportos voltam ao aluguel base sem dobra do Hangar (ver Seção 13.6).
+**Greve** (Acaso, imediato) — funde Apagão + Greve nas Utilidades (v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
+> Por **1 volta completa**, todos os Hangares ficam inativos (aeroportos voltam ao aluguel base, Seção 13.6) **e** as 2 utilidades não cobram aluguel.
 
-**Greve nas Utilidades** (Acaso, imediato)
-> Por **1 volta completa**, as 2 utilidades não cobram aluguel.
+**Desvalorização Cambial** (Acaso, imediato — v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
+> Pague **10% do seu dinheiro em caixa** (arredondado) ao **centro do tabuleiro** (Free Parking). Patrimônio em propriedades não conta — a carta pune caixa parado.
+
+**Obras na Pista** (Acaso, imediato — v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
+> Vá ao **aeroporto mais próximo** no sentido do movimento (recebe bônus se cruzar o GO). Se ele tiver dono, pague **aluguel em dobro**; se estiver livre, pode comprá-lo normalmente.
+
+**Multa Ambiental** (Acaso, imediato — v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
+> Pague **$50 + $50 por hotel, 2º hotel ou arranha-céu** que possui, ao **centro do tabuleiro** (Free Parking). Sem construção pesada, paga só a base.
 
 **Investidor Anjo** (Tesouro, imediato)
 > Sua próxima compra de propriedade tem **20% de desconto**. Efeito ativo até a próxima compra ou até o fim da partida (o que vier primeiro).
 
-**Refinanciamento** (Tesouro, imediato)
-> Se você tem alguma propriedade hipotecada, escolha uma e desipoteca pagando apenas **5% de juros** (em vez dos 10% normais). Se não tem propriedade hipotecada no momento do saque, a carta não tem efeito.
-
 **Passagem de Ônibus** (Tesouro, imediato)
 > Você ganha **1 Bus Ticket** (ver Seção 10.7).
+
+**Resgate do Pote** (Tesouro, imediato — v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
+> Receba **metade da Loteria** acumulada no centro do tabuleiro (arredondada para baixo). A outra metade permanece no pote.
+
+**Obra Relâmpago** (Tesouro, imediato — v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
+> Sua **próxima construção sai de graça** (casa, hotel, arranha-céu ou Hangar). Efeito ativo até a próxima construção ou até o fim da partida.
+
+**Incentivo Fiscal** (Tesouro, imediato — v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
+> Receba **$50 por propriedade hipotecada** que possui. Sem hipoteca, a carta não tem efeito.
 
 #### 🟩 Cartas Comuns clássicas
 
@@ -775,7 +802,7 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 **Honorários médicos** (Tesouro)
 > Pague **$50** ao banco. Valor vai para o **centro do tabuleiro** (Free Parking).
 
-> 📌 Cartas clássicas que dependem de estado do jogador (ex: Conserto de Imóveis, Refinanciamento) não têm efeito se o estado não se aplica (ex: jogador sem construções não paga nada). A carta ainda volta ao fundo do deck após saque.
+> 📌 Cartas clássicas que dependem de estado do jogador (ex: Conserto de Imóveis, Incentivo Fiscal) não têm efeito se o estado não se aplica (ex: jogador sem construções não paga nada). A carta ainda volta ao fundo do deck após saque.
 
 ### 10.7 Bus Tickets
 
@@ -886,10 +913,10 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor d
 | Carta sacada (anúncio público) | Carta de efeito imediato — todos veem o resultado no log |
 | Descartar carta (excesso de mão) | Jogador saca a 4ª carta — escolhe qual descartar |
 | Usar Aquisição Hostil | Jogador ativa a carta — escolhe alvo e propriedade |
-| Usar Despejo | Jogador ativa a carta — escolhe casa do adversário |
-| Usar Auditoria Fiscal | Jogador ativa a carta — escolhe alvo |
+| Usar Confisco Geral | Jogador ativa a carta — escolhe propriedade construída do adversário |
+| Usar Imposto Federal | Jogador ativa a carta — escolhe alvo |
 | Usar Boicote | Jogador ativa a carta — escolhe propriedade alvo |
-| Usar Imunidade Temporária | Jogador ativa a carta — escolhe própria propriedade |
+| Usar Imunidade Total | Jogador ativa a carta — sem alvo (protege o próprio jogador) |
 | Diplomacia disponível (reação) | Jogador é alvo de carta ofensiva — pergunta se quer usar Diplomacia |
 | Bunker Fiscal disponível (reação) | Jogador deve pagar imposto — pergunta se quer usar Bunker |
 | Aquisição Hostil sofrida (notificação) | Jogador perdeu propriedade — visualizar transferência |
@@ -918,10 +945,10 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor d
 - Status de imunidades ativas.
 - **Contador de cartas em mão** de cada jogador (apenas quantidade, sem identificação) — ver Seção 10.3.
 - **Contador de Bus Tickets** de cada jogador.
-- **Efeitos ativos no tabuleiro** (Apagão, Greve nas Utilidades, Boicotes ativos, Imunidades Temporárias) — visíveis a todos.
+- **Efeitos ativos no tabuleiro** (Greve, Estatização, Boicotes, Valorizações, Embargos e Imunidades ativos) — visíveis a todos.
 - **Caixa líquido durante dívida** (v1.25, [D-061](adr/D-061-obrigacao-a-outro-jogador-nao-e-truncada.md)): quando um jogador deve mais do que tem, o HUD mostra o **líquido real** (caixa − obrigação pendente). Líquido negativo aparece em **vermelho** e acompanhado de texto — nunca só por cor (§12.6) —, com **quanto ainda falta pagar**. Vale para o devedor **e** para os adversários: a mesa precisa saber que há dívida em resolução e de quem, inclusive quando o devedor não é o jogador da vez. O modelo econômico não muda: o caixa continua nunca ficando negativo no estado, o negativo é uma **leitura** de caixa menos obrigação.
 - **Terrenos livres até o pregão** (v1.25, [D-060](adr/D-060-leilao-de-escassez-restaurado-com-janela-legivel.md)): quantos terrenos sem dono ainda faltam para o gatilho da §7.5, derivado do motor, nunca negativo, preservado após reconexão. Com o pregão aberto, o contador dá lugar ao estado do leilão.
-- **Log de eventos completo** (v1.25, [D-063](adr/D-063-toda-mutacao-de-caixa-tem-causa-registrada.md)): **nenhuma** regra move caixa sem fato correspondente no log. Toda mudança de caixa tem motivo registrado — saldo anterior, valor, motivo e saldo final —, inclusive as que acontecem fora da vez do jogador afetado (Fiscal §13.8, cartas que cobram de todos §10.6, Aquisição Hostil e Auditoria §10.6) e as que movem caixa de mais de um jogador de uma vez (troca §8.3).
+- **Log de eventos completo** (v1.25, [D-063](adr/D-063-toda-mutacao-de-caixa-tem-causa-registrada.md)): **nenhuma** regra move caixa sem fato correspondente no log. Toda mudança de caixa tem motivo registrado — saldo anterior, valor, motivo e saldo final —, inclusive as que acontecem fora da vez do jogador afetado (cartas que cobram de todos §10.6, Aquisição Hostil e Imposto Federal §10.6) e as que movem caixa de mais de um jogador de uma vez (troca §8.3).
 
 ### 12.4 Painel de Cartas (do próprio jogador)
 
@@ -1065,7 +1092,7 @@ Valor **fixo**, definido no tema (`THEME.GO_PASS`):
 - Cartas/efeitos que movem **para trás** cruzando o GO **não** pagam bônus (Seção 3.3).
 - O Bus Ticket é pulo direto no mesmo lado — nunca cruza o GO (Seção 10.7).
 
-> 📌 **Histórico (D-007, revisão 2026-05-24):** o GO Progressivo original ($100–$400 inversamente ao ranking de patrimônio) foi substituído pela regra fixa após playtest — o valor variável confundia e parecia "pouco". O catch-up fica por conta do Free Parking (Seção 13.4), do Fiscal (Seção 13.8) e de tuning futuro.
+> 📌 **Histórico (D-007, revisão 2026-05-24):** o GO Progressivo original ($100–$400 inversamente ao ranking de patrimônio) foi substituído pela regra fixa após playtest — o valor variável confundia e parecia "pouco". O catch-up fica por conta do Free Parking (Seção 13.4) e de tuning futuro — o Fiscal, que também era alavanca, saiu na v1.27 ([D-065](adr/D-065-fiscal-sai-do-jogo.md)).
 
 ### 13.6 Hangar (Melhoria de Aeroporto)
 
@@ -1094,7 +1121,7 @@ Características:
 - Substitui visualmente o 2º hotel (não é construção adicional sobreposta).
 - Venda: metade do custo, respeitando uniformidade.
 
-### 13.8 Tax Man (Fiscal)
+### 13.8 Tax Man (Fiscal) — REMOVIDO (v1.27)
 
 Token especial controlado pelo banco. A cada turno:
 
@@ -1104,10 +1131,11 @@ Token especial controlado pelo banco. A cada turno:
 - Se cair em outras casas: nenhum efeito.
 - Se o Fiscal cair em propriedade do próprio jogador que rolou por ele: **o jogador paga ao banco mesmo assim**.
 
-- **A cobrança é narrada** (v1.25, [D-063](adr/D-063-toda-mutacao-de-caixa-tem-causa-registrada.md)): o débito entra no log de eventos nomeando o dono, a propriedade e o valor. O Fiscal é a **única** regra do jogo que debita um jogador **fora da vez dele** e roda automaticamente na passagem de turno — sem fato registrado, o jogador vê o caixa cair sem causa, e o que era catch-up discreto vira suspeita de bug.
-- Sem caixa suficiente, paga o que houver (§9.1): o Fiscal **não** abre dívida nem falência — é cobrança do banco, incondicional, e catch-up que elimina deixa de ser discreto.
-
-> 📌 Pune quem domina o tabuleiro, beneficia indiretamente quem está atrás. Catch-up discreto que cria tensão sobre os ricos. **Discreto na UI, não invisível no log** — a diferença é o que separa a mecânica de um bug financeiro.
+> ⛔ **O Fiscal saiu do jogo em v1.27** ([D-065](adr/D-065-fiscal-sai-do-jogo.md)). A regra acima **não vale mais** e fica registrada só como histórico. A seção não é renumerada: os ids de §13 são citados em código e em outras decisões.
+>
+> Ele foi a causa raiz de **quatro** relatos de bug financeiro do playtest. A v1.25 tentou consertar narrando o débito ([D-063](adr/D-063-toda-mutacao-de-caixa-tem-causa-registrada.md)); narrar resolveu "não sei de onde saiu" e não resolveu "não entendo o que está acontecendo". Quatro propriedades somadas tornavam a mecânica opaca: o **token nunca foi desenhado** no tabuleiro (esta seção o define como token e nenhuma tela o mostrava), ele age **na passagem de turno**, cobra de quem **não agiu**, e o dinheiro é **destruído** — não há nem para onde rastrear.
+>
+> **Custo aceito:** o principal sumidouro de dinheiro depois dos impostos de casa e a única alavanca de catch-up sobre **patrimônio** saem juntos, e **nada entra no lugar** — a partida tende a alongar. Se o desequilíbrio aparecer, a ordem de teste é imposto de casa (§4.5), custo do GO (§13.5) e Loteria (§13.4), todas mecânicas que o jogador já vê funcionando.
 
 ---
 
@@ -1228,4 +1256,4 @@ sendo a fonte de verdade da **regra**, o `CONTEXT.md` é a fonte dos **nomes**.
 
 ---
 
-**Magnata Imobiliário — SRS v1.25 | Julho 2026 | Documento de fonte de verdade absoluta**
+**Magnata Imobiliário — SRS v1.27 | Julho 2026 | Documento de fonte de verdade absoluta**

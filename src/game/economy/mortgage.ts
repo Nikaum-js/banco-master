@@ -4,7 +4,7 @@ import { BOARD } from '@/lib/boardData'
 import type { Square, GroupKey } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
 import { activePlayer } from '../turn/turnMachine'
-import { debtorOf } from '../falencia/falencia'
+import { debtorOf, liquidatorOf } from '../falencia/falencia'
 import { THEME } from '../theme'
 import { logEvent } from '../log'
 
@@ -49,10 +49,12 @@ export function groupHasConstruction(state: GameState, group: GroupKey, ownerId:
 export function canMortgage(state: GameState, pos: number): boolean {
   const sq = BOARD[pos]
   if (sq.kind !== 'property' && sq.kind !== 'airport' && sq.kind !== 'utility') return false
-  const player = activePlayer(state)
+  // Hipotecar é LEVANTAR caixa: com dívida pendente quem hipoteca é o DEVEDOR (§9.1/D-061), que
+  // pode não ser o jogador da vez. Ver `liquidatorOf` — sem isso a dívida fora da vez travava.
+  const ownerId = liquidatorOf(state)
   const title = state.titles[pos]
-  if (!title || title.ownerId !== player.id || title.mortgaged) return false
-  if (sq.kind === 'property' && groupHasConstruction(state, sq.group, player.id)) return false // §6.1
+  if (!title || title.ownerId !== ownerId || title.mortgaged) return false
+  if (sq.kind === 'property' && groupHasConstruction(state, sq.group, ownerId)) return false // §6.1
   if (sq.kind === 'airport' && title.hangar) return false // D-049: vende o Hangar primeiro
   return true
 }
@@ -71,7 +73,7 @@ export function mortgageProperty(state: GameState, pos: number): GameState {
   const sq = BOARD[pos]
   const amount = mortgageValue(sq)
   const s = clone(state)
-  const p = activePlayer(s)
+  const p = s.players.find((x) => x.id === liquidatorOf(s))! // o devedor, se houver dívida
   p.cash += amount
   s.titles[pos].mortgaged = true
   logEvent(s, { kind: 'mortgage', who: p.id, pos, amount })

@@ -29,7 +29,7 @@ export type SimAction =
   | { kind: 'mortgage'; pos: number }
   | { kind: 'unmortgage'; pos: number }
   // Cartas (draw.ts/reacao.ts) — jogador ativo (mão) ou reator (resolução pendente).
-  | { kind: 'play-hand-card'; cardId: string; target?: number; targetPlayer?: string }
+  | { kind: 'play-hand-card'; cardId: string; target?: number; targetPlayer?: string; target2?: number }
   | { kind: 'discard-card'; cardId: string; deck: DeckId } // 043 — `deck` explícito, espelha `GameAction`
   | { kind: 'choose-card-shortcut'; dir: 'frente' | 'tras' }
   | { kind: 'confirm-card-reveal' }
