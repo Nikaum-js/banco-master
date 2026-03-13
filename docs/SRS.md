@@ -1,6 +1,6 @@
 # Banco Master — Software Requirements Specification (SRS)
 
-**Versão:** 1.17
+**Versão:** 1.18
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -83,7 +83,7 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Fim de jogo | Classificação completa por ordem inversa de eliminação, com patrimônio e duração (D-038) |
 | Acessibilidade | WCAG 2.2 AA no caminho de jogo, verificada automaticamente; paisagem é a orientação de jogo (D-039) |
 | Telemetria | Mínima e anônima — contagem de partidas no próprio Supabase, exceção em monitoramento de erro (D-040) |
-| Ordem inicial | Host escolhe no lobby entre Leilão secreto e Maior dado (D-046) |
+| Ordem inicial | Host escolhe no lobby entre Leilão secreto e Maior dado; neste, cada jogador rola à vista da mesa (D-046/D-051) |
 
 ---
 
@@ -190,7 +190,10 @@ Casa especial nova (1 no tabuleiro), inspirada no Mega Edition. Quem para nela *
   - cada jogador paga o próprio lance ao banco, e começa a partida com **$2.000 menos o lance**;
   - o banco deposita a soma integral dos lances na **Loteria** (§13.4), além dos $500 iniciais;
   - durante a coleta, valores permanecem secretos; a revelação publica os lances e a ordem para todos;
-  - **Maior dado**: a autoridade rola automaticamente dois dados brancos por jogador; a ordem é decrescente pela soma e empates são resolvidos pelo RNG da autoridade;
+  - **Maior dado**: cada jogador, na ordem dos assentos do lobby, aciona a própria rolagem em uma fase compartilhada e visível para toda a mesa (D-051);
+  - somente o dono do assento da vez pode pedir a rolagem; a autoridade gera e atesta os dois dados brancos, publica o arremesso e o resultado antes de liberar o próximo jogador;
+  - depois da última rolagem, a ordem é decrescente pela soma e empates são resolvidos pelo RNG da autoridade;
+  - se o jogador da vez desconectar antes de rolar, a mesa aguarda sua reconexão, sem timer ou rolagem automática;
   - em Maior dado, ninguém paga pela posição: todos começam com $2.000 e a Loteria com $500;
   - o modo escolhido e o resultado ficam visíveis para todos; somente o host pode mudar o modo, e apenas antes de iniciar;
   - terminada a revelação visual de qualquer modo, todas as telas entram automaticamente no tabuleiro, sem confirmação individual.
@@ -709,7 +712,7 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 ### 11.1 Criação de Sala
 
 - Host cria a sala e recebe um link único.
-- Host tem poderes especiais: **kickar jogadores**, **escolher o Ritual de Largada** e **iniciar a partida**, que entra no tabuleiro automaticamente depois da revelação.
+- Host tem poderes especiais: **kickar jogadores**, **escolher o Ritual de Largada** e **iniciar a partida**. Em Maior dado, iniciar abre a sequência compartilhada de rolagens; nos dois modos, a mesa entra no tabuleiro automaticamente depois da revelação.
 - Sala suporta de 2 a 8 jogadores humanos.
 - Host pode iniciar com pelo menos 2 jogadores.
 

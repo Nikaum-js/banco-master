@@ -61,6 +61,7 @@
 - [D-048](D-048-propostas-de-negociacao-simultaneas.md) — Propostas de negociação simultâneas, identificadas e apresentadas por rota
 - [D-049](D-049-construcao-deve-ser-vendida-antes-da-hipoteca.md) — Toda construção deve ser vendida antes da hipoteca, inclusive Hangar
 - [D-050](D-050-limite-de-construcao-por-posse.md) — País incompleto limita o nível de construção pela quantidade de cidades possuídas (refina D-026)
+- [D-051](D-051-maior-dado-e-rolado-por-cada-jogador.md) — Maior dado é rolado por cada jogador, em sequência e à vista da mesa (refina D-046)
 
 > ℹ️ **Renumeração na integração da 043** (a colisão que este arquivo avisava): a worktree da 043
 > tinha escrito a identidade de transporte como `D-035` e o código de reentrada como `D-038`, e

@@ -1,6 +1,7 @@
 # D-046 — Host escolhe o Ritual de Largada
 
 **Data:** 2026-07-28 · **Status:** aceita
+**Refinada por:** [D-051](D-051-maior-dado-e-rolado-por-cada-jogador.md), que substitui a resolução automática de Maior dado por rolagens individuais e públicas.
 **Refina:** [D-006](D-006-free-parking-com-premio-acumulado.md) — os lances passam a ser mais uma fonte do prêmio acumulado.
 **Refina:** a rolagem de ordem inicial descrita no SRS §3.1 e o sorteio da spec 038 (FR-030/FR-031).
 

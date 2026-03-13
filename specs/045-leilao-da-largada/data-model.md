@@ -31,6 +31,8 @@ Ausente/null fora de `Room.status === 'bidding'`.
 | `openingBid` | `number \| null` | `null` | $0–$500, múltiplo de $50; privado durante coleta |
 | `bidLocked` | boolean | `false` | `true` exatamente quando o lance foi aceito |
 | `openingRoll` | `[number, number] \| null` | `null` | dois d6 gerados pela autoridade no modo `dice-roll` |
+| `openingRollStartedAt` | `number \| null` | `null` | instante em que a autoridade aceitou o pedido do assento |
+| `openingRollResolvesAt` | `number \| null` | `null` | instante absoluto em que `tick()` pode gerar o resultado |
 
 Invariantes:
 
@@ -39,6 +41,10 @@ Invariantes:
 - no fechamento, todo assento termina com `bidLocked: true`; faltantes recebem `openingBid: 0`;
 - depois da revelação, os campos permanecem no snapshot da sala como registro público e imutável.
 - `openingRoll !== null` somente no resultado de `dice-roll`; nesse modo `openingBid === null` e `bidLocked === false`.
+- no máximo um assento tem `openingRollResolvesAt !== null`;
+- o assento em curso é o primeiro, na ordem do lobby, com `openingRoll === null`;
+- `openingRollResolvesAt !== null` implica `openingRoll === null` e identifica o mesmo assento em curso;
+- resolver limpa os dois instantes antes de liberar o próximo.
 
 ## 4. Room — transições
 
@@ -47,7 +53,10 @@ lobby
   ├─ sealed-bid + host abre ─> bidding
   │    ├─ todos lacraram ────> playing
   │    └─ closesAt venceu ───> playing
-  └─ dice-roll + host inicia ─> playing
+  └─ dice-roll + host inicia ─> rolling
+       ├─ assento da vez pede ─> rolling (arremesso em curso)
+       ├─ autoridade resolve ─> rolling (próximo assento)
+       └─ último resultado ───> playing
 ```
 
 `paused` e `ended` continuam transições exclusivamente pós-início.
@@ -58,6 +67,13 @@ Durante `bidding`:
 - kick não é permitido;
 - desconexão não pausa;
 - reload remonta prazo e lances da linha persistida.
+
+Durante `rolling`:
+
+- entrada nova e kick são recusados como partida já iniciada;
+- todos os resultados e o único arremesso em curso são públicos;
+- desconexão não pausa, mas um assento desconectado não é substituído nem rolado automaticamente;
+- reload remonta a vez, o placar e a janela do arremesso persistidos.
 
 ## 5. PublicSeat
 
@@ -71,7 +87,7 @@ Na difusão durante `bidding`:
 
 O próprio valor é mantido localmente e recuperável por `room_preview`, que devolve `openingBid` somente ao dono do assento; a autoridade recebe a sala íntegra. Em `playing`, `openingBid` passa a ser público para a revelação.
 
-`openingMode` é sempre público. `openingRoll` só deixa de ser `null` quando o resultado de Maior dado já está fechado e público.
+`openingMode` é sempre público. Em `rolling`, `openingRoll` deixa de ser `null` assento por assento; os instantes do arremesso em curso também são públicos para todas as telas representarem o mesmo estado.
 
 ## 6. Aplicação no GameState
 

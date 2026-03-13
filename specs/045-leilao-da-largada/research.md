@@ -79,9 +79,9 @@
 - Parâmetro apenas de `startMatch` — o clique poderia divergir da opção mostrada no lobby.
 - Comando de jogo — ainda não existe snapshot nem turno.
 
-## D8 — Maior dado é resolvido automaticamente pela autoridade
+## D8 — Maior dado é resolvido automaticamente pela autoridade (substituída pela D10)
 
-**Decisão:** no clique de início, a autoridade gera dois d6 por assento, ordena pela soma e usa o mesmo RNG para desempatar grupos iguais. As rolagens ficam no assento para a revelação.
+**Decisão histórica:** no clique de início, a autoridade gerava dois d6 por assento, ordenava pela soma e usava o mesmo RNG para desempatar grupos iguais. A D-051 substituiu a resolução em lote pela disputa sequencial da D10.
 
 **Rationale:** concretiza a regra histórica do SRS (“maior valor começa”) sem introduzir uma rodada de confirmações que poderia travar a mesa. Dois dados brancos reutilizam a linguagem do jogo; o Speed Die não participa.
 
@@ -101,3 +101,16 @@
 
 - Entrar direto no tabuleiro em Maior dado — esconderia o resultado que definiu a ordem.
 - Fases separadas — estado adicional sem diferença de domínio.
+
+## D10 — Pedido individual, arremesso público e RNG da autoridade
+
+**Decisão:** o host abre `Room.status === 'rolling'`. O primeiro assento sem resultado é o único apto a pedir a rolagem pelo próprio tópico privado. A autoridade publica no assento `openingRollStartedAt`/`openingRollResolvesAt`; todas as telas mostram o mesmo arremesso e `tick()` resolve os dois d6 depois de 1,4 s. O próximo assento só fica apto depois dessa resolução.
+
+**Rationale:** separa participação de autoridade. O jogador causa o momento social, mas não escolhe identidade, faces ou ordem. Persistir a janela no próprio JSONB de assentos permite reassunção do host no meio do arremesso sem migration, timer local como fonte de verdade ou dois resultados para o mesmo pedido.
+
+**Alternativas consideradas:**
+
+- Gerar o resultado no clique e animar só localmente — telas podem avançar em ritmos diferentes e o próximo resultado pode cobrir o anterior.
+- Cliente enviar as faces — permite forjar a rolagem e viola D-020/D-042.
+- Guardar a janela apenas num `setTimeout` do host — reload no meio do arremesso perde o fechamento.
+- Rolar automaticamente para desconectados — retira a autoria pedida e cria timer punitivo no ritual.

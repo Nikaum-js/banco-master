@@ -6,17 +6,22 @@
 
 **Status**: Aprovada
 
-**Input**: User description: "Ao host iniciar, convidados devem entrar automaticamente. No lobby, o host escolhe entre um leilão secreto, em que cada jogador lacra um valor e os maiores jogam primeiro, ou Maior dado, em que a maior rolagem define a ordem. No leilão, todos recebem $2.000 antes da disputa e o dinheiro pago alimenta a Loteria. A experiência deve ser criativa, bonita, animada e seguir o design system atual."
+**Input**: User description: "Ao host iniciar, convidados devem entrar automaticamente. No lobby, o host escolhe entre um leilão secreto, em que cada jogador lacra um valor e os maiores jogam primeiro, ou Maior dado, em que a maior rolagem define a ordem. No leilão, todos recebem $2.000 antes da disputa e o dinheiro pago alimenta a Loteria. Em Maior dado, cada pessoa deve jogar na sua vez e todos precisam ver um resultado de cada vez, criando tensão para saber quem tirou mais. A experiência deve ser criativa, bonita, animada e seguir o design system atual."
 
 **Depende de**: spec [007](../007-balanceamento-catchup/spec.md) (Loteria/Free Parking), spec [037](../037-sala-online-estado-sincronizado/spec.md) (autoridade, transporte e snapshot), spec [038](../038-partida-online-jogavel/spec.md) (lobby e ordem inicial), spec [041](../041-resiliencia-de-sessao/spec.md) (reconexão) e spec [044](../044-polimento-lancamento/spec.md) (acessibilidade e movimento).
 
-**Regra de origem**: SRS v1.12 §3.1, §11.1 e §13.4; [D-046](../../docs/adr/D-046-leilao-da-largada-financia-a-loteria.md). Esta spec substitui o `shuffle` gratuito e a confirmação individual da ordem implementados pela spec 038 (FR-030/FR-031) por dois modos explícitos.
+**Regra de origem**: SRS v1.18 §3.1, §11.1 e §13.4; [D-046](../../docs/adr/D-046-leilao-da-largada-financia-a-loteria.md) e [D-051](../../docs/adr/D-051-maior-dado-e-rolado-por-cada-jogador.md). Esta spec substitui o `shuffle` gratuito e a confirmação individual da ordem implementados pela spec 038 (FR-030/FR-031) por dois modos explícitos.
 
 ## Clarifications
 
 ### Session 2026-07-28
 
 - Q: Quem escolhe entre o leilão secreto e a ordem por dados, e quando? → A: O host escolhe no lobby antes de iniciar.
+
+### Session 2026-07-29
+
+- Q: Maior dado é resolvido de uma vez ou cada participante joga? → A: Cada dono de assento aciona a própria rolagem, em sequência, e toda a mesa acompanha um arremesso por vez.
+- Q: Quem determina os valores? → A: O clique só pede a rolagem; os dois dados continuam sendo gerados e atestados pela autoridade.
 
 ## User Scenarios & Testing
 
@@ -32,8 +37,27 @@ Como host no lobby, quero escolher entre Leilão secreto e Maior dado, para alin
 
 1. **Given** uma sala ainda no lobby, **When** o host escolhe Leilão secreto ou Maior dado, **Then** todos veem a mesma opção selecionada.
 2. **Given** sou convidado, **When** vejo o modo escolhido, **Then** não consigo alterá-lo.
-3. **Given** o host escolheu Maior dado, **When** inicia, **Then** a autoridade rola dois dados brancos por jogador, ordena pela maior soma e revela o resultado sem cobrar ninguém.
+3. **Given** o host escolheu Maior dado, **When** inicia, **Then** a mesa entra numa sequência compartilhada em que cada dono de assento aciona dois dados brancos gerados pela autoridade.
 4. **Given** a partida já começou, **When** qualquer cliente tenta mudar o modo, **Then** a escolha permanece imutável.
+
+---
+
+### User Story 5 - Disputar a primeira posição à vista da mesa (Priority: P1)
+
+Como participante do modo Maior dado, quero jogar meus dados na minha vez e acompanhar cada pessoa fazendo o mesmo, para comparar o placar parcial e sentir a tensão de tentar superar a maior soma.
+
+**Why this priority**: o ritual social é o valor central do modo gratuito; despejar todos os resultados automaticamente reduz a largada a uma tabela sem participação.
+
+**Independent Test**: iniciar uma mesa com três clientes, verificar que somente o assento indicado consegue rolar, observar o mesmo arremesso e resultado nas três telas, repetir por assento e confirmar a ordem final sem débito.
+
+**Acceptance Scenarios**:
+
+1. **Given** Maior dado foi iniciado, **When** nenhum assento rolou, **Then** todas as telas indicam o primeiro jogador e somente ele recebe a ação “Rolar meus dados”.
+2. **Given** o jogador da vez aciona a rolagem, **When** a autoridade aceita o pedido, **Then** todas as telas mostram esse jogador rolando antes de receber os dois valores.
+3. **Given** o resultado atual foi publicado, **When** ainda há assento sem rolagem, **Then** o placar parcial permanece visível e somente o próximo jogador é liberado.
+4. **Given** um cliente tenta rolar fora da vez, repetir a própria rolagem ou declarar valores, **When** a mensagem chega à autoridade, **Then** a sala permanece inalterada.
+5. **Given** o último resultado foi resolvido, **When** a autoridade fecha o ritual, **Then** todos veem a mesma ordem por soma, o snapshot é criado uma vez e a entrada no tabuleiro continua automática.
+6. **Given** preferência por movimento reduzido, **When** qualquer assento rola, **Then** vez, estado e resultado continuam textuais e completos sem movimento obrigatório.
 
 ---
 
@@ -97,6 +121,9 @@ Como convidado, quero que a partida prossiga automaticamente depois da revelaç�
 - A Loteria acrescida pelos lances é coletada no Free Parking e volta a $500 exatamente como antes.
 - Sala nova ou legado sem configuração explícita usa Leilão secreto.
 - Em Maior dado, uma soma empatada é desempatada pelo RNG da autoridade; a ordem final e as rolagens permanecem iguais em todos os clientes.
+- Em Maior dado, pedido antecipado, duplicado, de identidade sem assento ou fora da vez é ignorado sem consumir RNG.
+- Se o jogador da vez desconecta antes de pedir a rolagem, a mesa aguarda sua reconexão; resultados anteriores permanecem persistidos.
+- Se o host recarrega durante um arremesso, a autoridade reassumida conclui o resultado a partir do instante persistido, sem liberar duas rolagens.
 
 ## Requirements
 
@@ -106,9 +133,15 @@ Como convidado, quero que a partida prossiga automaticamente depois da revelaç�
 
 - **FR-026**: O host DEVE escolher no lobby entre `sealed-bid` (Leilão secreto) e `dice-roll` (Maior dado); o modo DEVE ser público, persistido e imutável depois do início.
 - **FR-027**: Salas novas e shapes sem modo explícito DEVEM usar Leilão secreto; convidados NÃO DEVEM poder alterar a seleção.
-- **FR-028**: Em Maior dado, a autoridade DEVE rolar automaticamente dois dados brancos por assento, ordenar por soma decrescente e resolver empates com seu RNG.
+- **FR-028**: Em Maior dado, iniciar DEVE abrir uma fase pública e persistida de rolagens sequenciais, na ordem dos assentos do lobby.
 - **FR-029**: Em Maior dado, todos DEVEM iniciar com $2.000, a Loteria com $500 e nenhum lance ou débito.
 - **FR-030**: A revelação de Maior dado DEVE mostrar a ordem e os dois dados de cada jogador antes da entrada automática no tabuleiro.
+- **FR-031**: Somente o dono do assento da vez DEVE poder pedir a própria rolagem; o pedido NÃO DEVE carregar identidade declarada nem valores.
+- **FR-032**: A autoridade DEVE publicar quem está rolando, gerar exatamente dois d6 e publicar o resultado antes de liberar o assento seguinte.
+- **FR-033**: Resultados anteriores, líder parcial, jogador da vez e arremesso em curso DEVEM convergir em todas as telas pela mesma `PublicRoom`.
+- **FR-034**: Pedidos fora da vez, duplicados, sem assento ou fora da fase DEVEM ser ignorados sem alterar a sala nem consumir RNG.
+- **FR-035**: Fase, resultados e arremesso em curso DEVEM sobreviver a reload; a partida DEVE ser criada exatamente uma vez depois da última rolagem.
+- **FR-036**: Desconexão antes da própria rolagem DEVE aguardar reconexão, sem timer punitivo nem rolagem automática.
 - **FR-001**: O host DEVE abrir o Leilão da Largada com uma única ação quando houver de 2 a 8 assentos.
 - **FR-002**: Todos os assentos, inclusive o host, DEVEM poder lacrar exatamente um lance de $0 a $500, em passos de $50.
 - **FR-003**: A coleta DEVE durar no máximo 15 segundos e DEVE fechar antes quando todos os assentos tiverem lacrado.
@@ -151,6 +184,7 @@ Como convidado, quero que a partida prossiga automaticamente depois da revelaç�
 - **Resultado da largada**: ordem final, lance e caixa preservado de cada jogador, além do total transferido à Loteria.
 - **Modo da largada**: escolha pública e persistida do host entre `sealed-bid` e `dice-roll`.
 - **Rolagem da largada**: par de dados brancos gerado pela autoridade para um assento no modo Maior dado.
+- **Disputa de dados**: fase compartilhada do modo Maior dado, com um assento da vez, resultados parciais e no máximo um arremesso em curso.
 - **Loteria**: `centerPot` já existente; recebe a semente de $500 e a soma dos lances antes do primeiro turno.
 
 ## Success Criteria
@@ -165,6 +199,7 @@ Como convidado, quero que a partida prossiga automaticamente depois da revelaç�
 - **SC-006**: Com movimento reduzido, toda a revelação permanece compreensível e a entrada automática continua funcionando.
 - **SC-007**: Testes existentes de Free Parking, reconexão, privacidade de transporte, partida local e conservação econômica continuam verdes.
 - **SC-008**: Em Maior dado com 2 a 8 jogadores, 100% dos clientes veem as mesmas rolagens e ordem, enquanto todos os caixas permanecem em $2.000 e a Loteria em $500.
+- **SC-009**: Em mesa de 2 a 8 jogadores, cada assento conclui exatamente uma rolagem por ação do próprio dono, nunca existem dois arremessos simultâneos e o próximo botão aparece somente depois do resultado atual.
 
 ## Assumptions
 
@@ -174,3 +209,4 @@ Como convidado, quero que a partida prossiga automaticamente depois da revelaç�
 - Desconexão no ritual pré-partida não aciona a pausa de partida; o assento sem lance recebe $0.
 - O design visual de referência é o design system atual: sala de mapas, tinta, latão, starlight, marcas de registro e movimento reduzido.
 - “Maior dado” usa a soma de dois dados brancos; o Speed Die não participa.
+- A sequência de quem rola usa a ordem pública dos assentos no lobby; apenas a ordem final da partida é recalculada pelas somas.

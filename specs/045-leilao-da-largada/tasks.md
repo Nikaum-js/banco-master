@@ -103,12 +103,31 @@
 
 ---
 
+## Phase 8: User Story 5 — Disputar a primeira posição à vista da mesa (P1)
+
+**Goal**: cada dono de assento aciona a própria rolagem; todas as telas acompanham um arremesso por vez e a autoridade continua gerando os dados.
+
+**Independent Test**: numa mesa headless com três sessões, somente o assento da vez consegue pedir, o arremesso e o resultado convergem antes de liberar o próximo, e o último cria uma única partida com a ordem por soma.
+
+- [x] T035 [US5] Registrar D-051, atualizar SRS v1.18, `CONTEXT.md` e os artefatos de `specs/045-leilao-da-largada/` para a disputa sequencial
+- [x] T036 [US5] Escrever testes falhos de abertura, autoria, arremesso único, resolução, desempate e reassunção em `tests/net/openingAuction.test.ts` e `tests/net/hostOpeningAuction.test.ts`
+- [x] T037 [US5] Implementar `rolling`, instantes persistidos e reducers puros em `src/net/room.ts`
+- [x] T038 [US5] Escrever conformance falha do pedido sem payload e integrar `submitOpeningRoll`/`onOpeningRoll` em `src/net/transport.ts`, `src/net/localTransport.ts` e `src/net/supabaseTransport.ts`
+- [x] T039 [US5] Integrar pedido, `tick`, fechamento e snapshot único em `src/net/client.ts`, `src/net/host.ts` e `src/net/roomSession.ts`
+- [x] T040 [US5] Escrever teste falho do lifecycle de duas sessões e da fase `rolling` em `tests/net/boot.test.ts`
+- [x] T041 [US5] Implementar `OpeningRolls`, roteamento e estados acessíveis em `src/net/ui/LobbyScreen.tsx`, `src/net/ui/OnlineGate.tsx` e `src/index.css`
+- [x] T042 [US5] Atualizar `e2e/multiplayer.spec.ts` para provar clique individual, observação compartilhada, ordem final e movimento reduzido
+- [ ] T043 [US5] Rodar análise de consistência, testes, lint, typecheck, build, screenshots desktop/compacta e axe
+
+---
+
 ## Dependencies & Execution Order
 
-- Phase 1 → Phase 2 → US1 → US2 → US3 → Polish → US4.
+- Phase 1 → Phase 2 → US1 → US2 → US3 → Polish → US4 → US5.
 - T003 precede T004; T005 precede T006; T008 precede T009; T010 precede T011; T013 precede T014; T018 precede T019.
 - T015 e T017 podem avançar em paralelo depois do contrato de sessão; T021/T022 são paralelizáveis após a implementação funcional.
 - A autoridade e o snapshot de US1 bloqueiam a revelação de US2; a revelação bloqueia a transição automática de US3.
+- US5 refina somente o caminho `dice-roll` de US4; o Leilão secreto permanece independente.
 
 ## Parallel Example
 
@@ -124,3 +143,4 @@ T017: preparar classes/tokens/animações em index.css
 3. Remover o aceite local somente quando o snapshot já for a fonte do início.
 4. Validar em dois navegadores, movimento reduzido e viewport compacta antes do handoff.
 5. Preservar `sealed-bid` como default e tratar `dice-roll` como caminho econômico neutro sobre o mesmo snapshot/reveal.
+6. No `dice-roll`, persistir pedido e resultado como duas publicações distintas para que todas as telas vejam um único arremesso antes de liberar o próximo.

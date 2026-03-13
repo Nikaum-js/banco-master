@@ -6,7 +6,7 @@
 
 ## Summary
 
-Dar ao host, no lobby, uma escolha persistida entre dois rituais host-autoritativos. `sealed-bid` abre a fase simultânea e secreta já implementada, liquida cada lance na Loteria e revela a ordem. `dice-roll` gera dois dados brancos por assento, ordena pela soma sem alterar caixa/Loteria e revela as rolagens. Ambos gravam o primeiro snapshot com a ordem definitiva e entram no tabuleiro automaticamente.
+Dar ao host, no lobby, uma escolha persistida entre dois rituais host-autoritativos. `sealed-bid` abre a fase simultânea e secreta já implementada, liquida cada lance na Loteria e revela a ordem. `dice-roll` abre uma disputa compartilhada: cada dono de assento pede a própria rolagem, a autoridade publica um arremesso por vez, gera os dois dados e só então libera o próximo. Ambos gravam o primeiro snapshot com a ordem definitiva e entram no tabuleiro automaticamente.
 
 ## Technical Context
 
@@ -14,7 +14,7 @@ Dar ao host, no lobby, uma escolha persistida entre dois rituais host-autoritati
 
 **Primary Dependencies**: Vite 8, Tailwind CSS 4, Zustand 5, Supabase Realtime/Postgres, Motion 12
 
-**Storage**: tabela PostgreSQL `rooms`; `opening_mode` para a preferência do host, `seats` JSONB para lances/rolagens por assento e `opening_auction` JSONB para fase/prazo; primeiro snapshot existente para o resultado
+**Storage**: tabela PostgreSQL `rooms`; `opening_mode` para a preferência do host, `seats` JSONB para lances, rolagens e instante do arremesso por assento, e `opening_auction` JSONB para prazo do leilão; primeiro snapshot existente para o resultado
 
 **Testing**: Vitest 4 (reducers, sessão, transporte e integração headless), Playwright 1.62 (dois contextos e revisão visual), axe-core
 
@@ -22,17 +22,17 @@ Dar ao host, no lobby, uma escolha persistida entre dois rituais host-autoritati
 
 **Project Type**: aplicação web multiplayer host-autoritativa
 
-**Performance Goals**: resposta visual ao lacre em até 250 ms na rede normal; fechamento único em até 1 s após o último lance/prazo; animações a 60 fps sem bloquear regra
+**Performance Goals**: resposta visual ao lacre ou pedido de rolagem em até 250 ms na rede normal; cada arremesso dura 1,4 s e fecha em um único `tick`; fechamento único em até 1 s após o último lance/prazo; animações a 60 fps
 
 **Constraints**: até 8 jogadores; somente o host muda o modo no lobby; lances alheios não trafegam antes da revelação; nenhuma cobrança antes do snapshot inicial; Maior dado não altera a economia; WCAG 2.2 AA; `prefers-reduced-motion`; compatibilidade com salas/snapshots antigos
 
-**Scale/Scope**: uma preferência e uma fase de sala, um evento privado de transporte, uma migration aditiva, uma seleção no lobby, duas revelações e cobertura dos adapters local/Supabase
+**Scale/Scope**: uma preferência, duas fases pré-partida, dois eventos privados de transporte, uma seleção no lobby, uma disputa sequencial, duas revelações e cobertura dos adapters local/Supabase; a disputa usa o JSONB de assentos já persistido e não exige migration nova
 
 ## Constitution Check
 
 *GATE inicial e pós-design: APROVADO.*
 
-- **I — SRS**: os dois modos e a escolha do host estão na D-046 e no SRS v1.12 antes do código.
+- **I — SRS**: os dois modos, a escolha do host e a rolagem individual estão na D-046/D-051 e no SRS v1.18 antes do código.
 - **II — Discovery**: spec 045 aprovada antes de código de produção; plan, contratos e tasks precedem implementação.
 - **III — Tesouro**: não altera cartas.
 - **IV — Catch-up discreto**: a UI chama o prêmio de Loteria e não rotula ninguém como desfavorecido.
@@ -52,6 +52,7 @@ Nenhuma violação exige Complexity Tracking.
 - `openingBid: number | null` — privado durante `bidding`, público em `playing`;
 - `bidLocked: boolean` — público durante a coleta;
 - `openingRoll: [number, number] | null` — resultado público do modo Maior dado;
+- `openingRollStartedAt: number | null` e `openingRollResolvesAt: number | null` — janela pública e persistida do único arremesso em curso;
 - `openingAuction: { closesAt: number } | null` — prazo persistido da rodada.
 
 Reducers puros:
@@ -61,15 +62,18 @@ Reducers puros:
 - `lockOpeningBid(room, uid, amount)` valida assento, fase, faixa, passo e unicidade;
 - `allOpeningBidsLocked(room)` fecha cedo;
 - `finalizeOpeningAuction(room, rng)` completa faltantes com $0, embaralha somente grupos empatados, reindexa `playerId` e muda para `playing`.
-- `rollOpeningOrder(room, rng)` gera dois d6 por assento, ordena pela soma, embaralha grupos empatados, reindexa `playerId` e muda para `playing`.
+- `openOpeningRolls(room)` valida mínimo, entra em `rolling` e limpa resíduos;
+- `requestOpeningRoll(room, uid, now, duration)` aceita somente o dono do primeiro assento ainda sem resultado e persiste a janela do arremesso;
+- `resolveOpeningRoll(room, rng)` gera dois d6 para o arremesso vencido; libera o próximo ou ordena por soma, embaralha empates, reindexa `playerId` e muda para `playing`.
 
 Shapes legados são normalizados com `openingMode: 'sealed-bid'`, `openingBid: null`, `bidLocked: false`, `openingRoll: null` e `openingAuction: null`.
 
 ### 2. Privacidade no transporte
 
-`Transport` ganha `submitOpeningBid(amount)` e `onOpeningBid(cb)`. O evento reutiliza `room:<id>:s:<uid>`:
+`Transport` ganha `submitOpeningBid(amount)`/`onOpeningBid(cb)` e `submitOpeningRoll()`/`onOpeningRoll(cb)`. Os eventos reutilizam `room:<id>:s:<uid>`:
 
 - o payload contém só `amount`;
+- o pedido de rolagem usa payload vazio, sem identidade nem resultado;
 - `fromUid` vem do tópico privado observado, nunca do payload;
 - somente a autoridade observa os tópicos de todos os assentos;
 - o adapter local aplica o mesmo recorte por `watchSeat`;
@@ -79,7 +83,7 @@ Shapes legados são normalizados com `openingMode: 'sealed-bid'`, `openingBid: n
 
 ### 3. Fechamento e economia
 
-`host.startMatch()` lê o modo persistido. Em `sealed-bid`, abre o leilão; `host.tick()` fecha no prazo e o último lance válido fecha antes. Em `dice-roll`, resolve as rolagens e cria o snapshot imediatamente. Um guard de fechamento impede duas criações concorrentes.
+`host.startMatch()` lê o modo persistido. Em `sealed-bid`, abre o leilão; `host.tick()` fecha no prazo e o último lance válido fecha antes. Em `dice-roll`, publica a sala `rolling`. Cada `opening-roll` válido abre uma janela persistida de 1,4 s; `host.tick()` resolve o resultado com seu RNG. Depois do último, cria o snapshot. Guards de fase e assento impedem rolagens simultâneas ou duplicadas.
 
 No fechamento:
 
@@ -94,7 +98,7 @@ Partida local continua usando `buildInitialGame` sem resultado de largada, prese
 
 ### 4. Sessão e entrada automática
 
-`RoomSession` ganha as fases `auction` e `reveal`, além da ação `submitOpeningBid`. `Client` não tenta ler snapshot ao ver `bidding`; apenas `playing|paused|ended` prometem snapshot.
+`RoomSession` ganha as fases `auction`, `rolling` e `reveal`, além das ações `submitOpeningBid` e `submitOpeningRoll`. `Client` não tenta ler snapshot ao ver `bidding|rolling`; apenas `playing|paused|ended` prometem snapshot.
 
 O resultado `seq = 0` entra em `reveal`. A sessão transiciona automaticamente para `playing` após 4,2 segundos, sem ação local; reload durante a revelação relê o snapshot e pode reexibir o resultado, mas nunca recria ou recobra. `seq > 0` continua entrando direto no tabuleiro.
 
@@ -104,9 +108,10 @@ O resultado `seq = 0` entra em `reveal`. A sessão transiciona automaticamente p
 
 - **OpeningModePicker** no lobby: duas opções compactas e públicas, editáveis só pelo host;
 - **OpeningAuction**: relógio de 15 s, seletor $0–$500, caixa preservado, destino para a Loteria e trilho dos assentos lacrados;
+- **OpeningRolls**: um lançador em foco, dois dados compartilhados, placar parcial persistente e CTA apenas para o dono do assento da vez;
 - **TurnOrderReveal**: em leilão, fileiras com lance/caixa e total da Loteria; em Maior dado, fileiras com os dois dados e a soma; sem botão.
 
-A direção usa `EntryStage`, `EntryPanel`, `EntryHeader`, `PlayerFace`, `Button`, tokens `ink/starlight/brass/signal`, `--gradient-brass`, sombras e curvas existentes. CSS ornamental congela sob `prefers-reduced-motion`; texto e ordem já existem no DOM antes da animação.
+A direção usa `EntryStage`, `EntryPanel`, `EntryHeader`, `PlayerFace`, `Button`, tokens `ink/starlight/brass/signal`, `--gradient-brass`, sombras e curvas existentes. Somente os dados do assento em curso se movem; o placar não reordena durante a coleta. CSS ornamental congela sob `prefers-reduced-motion`; vez, estado e resultados têm equivalentes textuais em `aria-live`.
 
 ## Project Structure
 
@@ -134,15 +139,15 @@ src/
 │   └── openingAuction.ts          # aplicação econômica pura no estado inicial
 └── net/
     ├── room.ts                    # fase, dados e reducers da largada
-    ├── transport.ts               # evento privado de lance
+    ├── transport.ts               # eventos privados de lance e pedido de rolagem
     ├── localTransport.ts          # adapter headless
     ├── supabaseTransport.ts       # adapter Realtime/Postgres
     ├── client.ts                  # envio e recuperação do próprio lance
     ├── host.ts                    # autoridade, prazo e fechamento
-    ├── roomSession.ts             # fases auction/reveal e ação da UI
+    ├── roomSession.ts             # fases auction/rolling/reveal e ações da UI
     └── ui/
         ├── OnlineGate.tsx         # roteamento das novas fases
-        └── LobbyScreen.tsx        # coleta e revelação animadas
+        └── LobbyScreen.tsx        # coleta, disputa de dados e revelação animadas
 
 supabase/migrations/
 └── 0005_opening_auction.sql

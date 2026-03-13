@@ -39,7 +39,7 @@ Modo do Ritual de Largada em que cada jogador lacra e paga o próprio lance, e o
 _Avoid_: leilão aberto, pregão da largada
 
 **Maior dado**:
-Modo do Ritual de Largada em que a autoridade rola dois dados brancos por jogador e ordena a mesa pela maior soma, sem custo ([D-046](./docs/adr/D-046-leilao-da-largada-financia-a-loteria.md)).
+Modo do Ritual de Largada em que cada jogador aciona, na sua vez, dois dados brancos gerados pela autoridade e vistos por toda a mesa; a maior soma define a ordem, sem custo ([D-046](./docs/adr/D-046-leilao-da-largada-financia-a-loteria.md), [D-051](./docs/adr/D-051-maior-dado-e-rolado-por-cada-jogador.md)).
 _Avoid_: shuffle, ordem aleatória
 
 **Dupla**:

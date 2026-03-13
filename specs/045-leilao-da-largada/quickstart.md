@@ -16,7 +16,7 @@ Provar:
 - nenhum valor alheio no estado público antes da revelação;
 - convidado muda para `playing` sem `orderSeen` manual.
 - seleção do host persiste e aparece igual ao convidado;
-- Maior dado revela dois d6 por assento, ordena pela soma e preserva $2.000/$500.
+- Maior dado aceita somente o dono do assento da vez, publica um arremesso por vez, revela dois d6 por assento, ordena pela soma e preserva $2.000/$500.
 
 ## Navegador
 
@@ -32,7 +32,9 @@ bun run dev
 6. Não clicar no convidado; confirmar entrada automática no tabuleiro.
 7. Conferir saldos e painel da Loteria.
 8. Criar outra sala, escolher **Maior dado** e iniciar.
-9. Conferir a revelação dos dois dados por jogador, a ordem por soma, caixas de $2.000 e Loteria de $500.
+9. No host, acionar **Rolar meus dados**; confirmar que host e convidado veem o mesmo jogador rolando e o mesmo resultado.
+10. Confirmar que o convidado só recebe a ação depois de o resultado do host aparecer; rolar no convidado.
+11. Conferir a revelação da ordem por soma, caixas de $2.000 e Loteria de $500.
 
 ## Visual e acessibilidade
 
