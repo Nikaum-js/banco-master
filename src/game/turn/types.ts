@@ -66,4 +66,5 @@ export interface GameState {
   decks: Record<DeckId, string[]> // ids de cartas por deck; topo = índice 0 (006)
   centerPot: number // pote do Free Parking (007); semente/reabastecimento $500
   loans: Loan[] // empréstimos ativos entre jogadores (010, §15)
+  taxManPos: number // posição do Fiscal/Tax Man (012, §13.8); inicia em GO=0
 }
