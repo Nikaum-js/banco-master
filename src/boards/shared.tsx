@@ -1,22 +1,22 @@
 import { cn } from '@/lib/utils'
 import { Crown } from 'lucide-react'
-import { motion, AnimatePresence, useAnimate } from 'motion/react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { AnimatePresence, motion, useAnimate } from 'motion/react'
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
-import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare } from '@/lib/boardData'
+import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare, GroupKey } from '@/lib/boardData'
 import { BOARD } from '@/lib/boardData'
+import { rentLadder } from '@/game/economy/rent'
 import { useGameStore } from '@/game/store'
-import { goBonus } from '@/game/balancing/balancing'
 import { cityLevel } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
 import { deedView } from '@/game/ui/deed/deedView'
 import { useTradeUI } from '@/game/ui/trade/TradeLayer'
 import { HandPanel } from '@/game/ui/cards/HandPanel'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
-import { ShopIcon, GavelIcon, DiceIcon } from '@/game/ui/icons'
+import { ShopIcon, GavelIcon, DiceIcon, CoinIcon, HouseIcon } from '@/game/ui/icons'
 import { tradesView } from '@/game/ui/trade/tradesView'
 import type { GameState } from '@/game/turn/types'
-import type { TempEffect, Trade, ImmunityGrant } from '@/game/economy/types'
+import type { TempEffect, Trade } from '@/game/economy/types'
 
 // ---------------------------------------------------------------------
 // Glifos SVG próprios para casas especiais — substituem ícones lucide
@@ -416,6 +416,7 @@ export const GROUP_COLOR: Record<string, string> = {
   green:   '#22c55e',
   navy:    '#3b82f6',
   purple:  '#a855f7',
+  platinum: '#26233a', // Emirados (super-luxo) — ônix (033)
 }
 
 // Custo de casa por grupo (mock, SRS §13.7) — grupos mais caros = casas
@@ -630,6 +631,7 @@ export function ClassicSquare({
       {/* Marcas mockadas: construções, hipoteca. Dono é comunicado pela cor
           da stripe externa; bandeira na interna carrega identidade do país. */}
       {isProperty && <BuildingMark pos={square.pos} />}
+      {isAirport && <HangarMark pos={square.pos} />}
       <MortgageMark pos={square.pos} />
       <EffectMark pos={square.pos} />
 
@@ -661,8 +663,10 @@ export function ClassicSquare({
                 // Leste/oeste: igual cima/baixo, porém girado 90°. Nome na
                 // VERTICAL, colado na bandeira (lado interno), indo pro externo.
                 // left=90° (base do texto pra esquerda), right=-90°.
-                case 'left':   return { left: '72%', top: '50%', transform: 'translate(-50%, -50%) rotate(90deg)' }
-                case 'right':  return { left: '28%', top: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)' }
+                // Centralizado entre a bandeira (borda interna) e o chip de preço (externa),
+                // com viés externo — evita a 1ª linha de nomes longos (2 linhas) ficar sob o flag.
+                case 'left':   return { left: '45%', top: '50%', transform: 'translate(-50%, -50%) rotate(90deg)' }
+                case 'right':  return { left: '55%', top: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)' }
                 default:       return { top: '50%',    left: '4%', right: '4%', transform: 'translateY(-50%)' }
               }
             })()
@@ -873,8 +877,10 @@ export function PlayerFace({
   asleep?: boolean
   className?: string
 }) {
+  // Fallback de cor: nunca pinta a cabeça de preto se a cor vier vazia/indefinida.
+  const head = color || '#5c4a36'
   // Delays únicos por player pra blink/bob não rodarem em sincronia.
-  const h = hashStr(color)
+  const h = hashStr(head)
   const bobDelay = `${(h % 2400) / 1000}s`
   const blinkDelayL = `${((h + 1300) % 5000) / 1000}s`
   const blinkDelayR = `${((h + 1430) % 5000) / 1000}s`  // levemente diferente
@@ -890,7 +896,7 @@ export function PlayerFace({
         className,
       )}
       style={{
-        filter: active ? 'drop-shadow(0 0 4px rgba(212,175,55,0.7))' : undefined,
+        filter: active ? `drop-shadow(0 0 4px color-mix(in srgb, ${head} 70%, transparent))` : undefined,
         animationDelay: !asleep ? bobDelay : undefined,
       }}
       aria-hidden="true"
@@ -899,7 +905,7 @@ export function PlayerFace({
       <ellipse cx="16" cy="30" rx="11" ry="1.6" fill="rgba(0,0,0,0.45)" />
 
       {/* Cabeça */}
-      <circle cx="16" cy="15" r="13" fill={color} stroke="#0f0c09" strokeWidth="1.5" />
+      <circle cx="16" cy="15" r="13" fill={head} stroke="#0f0c09" strokeWidth="1.5" />
 
       {/* Highlight 3D no topo */}
       <ellipse
@@ -946,14 +952,14 @@ export function PlayerFace({
         />
       )}
 
-      {/* Anel dourado pro jogador da vez */}
+      {/* Anel giratório do jogador da vez — na COR do player (não dourado fixo) */}
       {active && (
         <circle
           cx="16"
           cy="15"
           r="14.5"
           fill="none"
-          stroke="#ffd97a"
+          stroke={head}
           strokeWidth="1.5"
           strokeDasharray="2 2"
         >
@@ -1107,244 +1113,133 @@ export const MOCK_MORTGAGED = new Set<number>([])
 //  - casa no oeste (stripe à direita)         → buildings à esquerda
 //  - casa no leste (stripe à esquerda)        → buildings à direita
 // Cada construção é um glifo independente — pra 4 casas, dá pra contar.
+// Layout do marco de construção por lado — centro do ícone sobre a stripe externa.
+// Sul/norte empilham na horizontal (ao longo da stripe); laterais na vertical.
+function markLayout(side: Side): React.CSSProperties {
+  switch (side) {
+    case 'bottom': return { top: '89%', left: '50%', transform: 'translate(-50%, -50%)', flexDirection: 'row' }
+    case 'top':    return { top: '11%', left: '50%', transform: 'translate(-50%, -50%)', flexDirection: 'row' }
+    case 'left':   return { left: '9%',  top: '50%', transform: 'translate(-50%, -50%)', flexDirection: 'column' }
+    case 'right':  return { left: '91%', top: '50%', transform: 'translate(-50%, -50%)', flexDirection: 'column' }
+    default:       return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', flexDirection: 'row' }
+  }
+}
+
 export function BuildingMark({ pos }: { pos: number }) {
   const title = useGameStore((s) => s.game.titles[pos])
   const n = title ? cityLevel(title) : 0 // 0–7 real (023)
   if (!n) return null
 
-  const side = sideOf(pos)
   const isSkyscraper = n === 7
   const isHotel = n === 5 || n === 6 // hotel ou 2º hotel
   const houseCount = n >= 1 && n <= 4 ? n : 0
 
-  // Centro do ícone fica exatamente em cima da stripe (que tem 22% da
-  // dimensão menor da célula no lado externo). Em sul/norte os ícones
-  // empilham horizontalmente ao longo da stripe; em laterais empilham
-  // verticalmente.
-  const layoutStyle: React.CSSProperties = (() => {
-    switch (side) {
-      case 'bottom': return { top: '89%',  left: '50%', transform: 'translate(-50%, -50%)', flexDirection: 'row' }
-      case 'top':    return { top: '11%',  left: '50%', transform: 'translate(-50%, -50%)', flexDirection: 'row' }
-      // Leste/oeste: construções no extremo EXTERNO (onde ficaria o preço;
-      // casa comprada não tem chip). Empilhadas, fora do caminho do nome.
-      case 'left':   return { left: '9%',  top: '50%', transform: 'translate(-50%, -50%)', flexDirection: 'column' }
-      case 'right':  return { left: '91%', top: '50%', transform: 'translate(-50%, -50%)', flexDirection: 'column' }
-      default:       return { top: '50%',  left: '50%', transform: 'translate(-50%, -50%)', flexDirection: 'row' }
-    }
-  })()
-
   return (
     <div
-      className="absolute z-20 pointer-events-none flex items-center justify-center gap-1"
+      className="absolute z-20 pointer-events-none flex items-center justify-center"
       style={{
-        ...layoutStyle,
+        ...markLayout(sideOf(pos)),
+        gap: '1.5px',
+        flexWrap: 'nowrap', // 4 casas NUNCA quebram pra outra linha
+        width: 'max-content', // dimensiona pelo conteúdo (sem shrink-to-fit da célula)
         filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))',
       }}
     >
       {isSkyscraper && <SkyscraperBadgeIcon />}
       {isHotel && <HotelBadgeIcon />}
-      {houseCount > 0 && (
-        <>
-          <HouseBadgeIcon />
-          {houseCount > 1 && (
-            <span
-              className="display leading-none text-cream"
-              style={{
-                fontSize: '13px',
-                textShadow: '0 0 3px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.8)',
-              }}
-            >
-              ×{houseCount}
-            </span>
-          )}
-        </>
-      )}
+      {/* 1–4 casinhas em fila (conta de relance, sem contador) */}
+      {houseCount > 0 && Array.from({ length: houseCount }, (_, i) => <HouseBadgeIcon key={i} />)}
     </div>
   )
 }
 
-// Casa — chalé clássico: telhado vermelho de duas águas, paredes cream,
-// janelas azuis com cruzeta, porta marrom com maçaneta dourada.
+// Casa (flat) — silhueta limpa: corpo cream, telhado dourado, porta coffee.
+// Legível a ~13px; várias enfileiram pra contar de relance.
 function HouseBadgeIcon() {
   return (
-    <svg viewBox="0 0 16 14" width="22" height="20" aria-hidden="true">
-      {/* sombra projetada no chão */}
-      <ellipse cx="8" cy="13.5" rx="6" ry="0.55" fill="#0f0c09" opacity="0.5" />
-
-      {/* chaminé atrás do telhado */}
-      <rect x="10.6" y="2.5" width="1.3" height="2.4"
-        fill="#7c2d12" stroke="#0f0c09" strokeWidth="0.5" />
-      <rect x="10.3" y="2.3" width="1.9" height="0.5"
-        fill="#5c1e0c" stroke="#0f0c09" strokeWidth="0.4" />
-
-      {/* telhado triangular vermelho */}
-      <path d="M 1.2 6.8 L 8 1.6 L 14.8 6.8 Z"
-        fill="#dc2626" stroke="#0f0c09" strokeWidth="0.9" strokeLinejoin="round" />
-      {/* lado em sombra do telhado (3D) */}
-      <path d="M 8 1.6 L 14.8 6.8 L 8 4 Z"
-        fill="#991b1b" opacity="0.7" />
-
-      {/* faixa do beiral (sombra abaixo do telhado) */}
-      <rect x="1.4" y="6.6" width="13.2" height="0.7"
-        fill="#7c2d12" stroke="#0f0c09" strokeWidth="0.4" />
-
-      {/* corpo cream */}
-      <rect x="2" y="7.2" width="12" height="6"
-        fill="#f4e8d0" stroke="#0f0c09" strokeWidth="0.85" />
-
-      {/* janela esquerda — azul com cruzeta */}
-      <rect x="3.2" y="8.6" width="2.4" height="2.1"
-        fill="#67c3e0" stroke="#0f0c09" strokeWidth="0.5" />
-      <line x1="4.4" y1="8.6" x2="4.4" y2="10.7" stroke="#0f0c09" strokeWidth="0.3" />
-      <line x1="3.2" y1="9.65" x2="5.6" y2="9.65" stroke="#0f0c09" strokeWidth="0.3" />
-
-      {/* porta marrom + maçaneta dourada */}
-      <rect x="6.8" y="9.2" width="2.4" height="4"
-        fill="#5c4a36" stroke="#0f0c09" strokeWidth="0.5" />
-      <circle cx="8.8" cy="11.3" r="0.28" fill="#ffd97a" stroke="#0f0c09" strokeWidth="0.2" />
-
-      {/* janela direita */}
-      <rect x="10.4" y="8.6" width="2.4" height="2.1"
-        fill="#67c3e0" stroke="#0f0c09" strokeWidth="0.5" />
-      <line x1="11.6" y1="8.6" x2="11.6" y2="10.7" stroke="#0f0c09" strokeWidth="0.3" />
-      <line x1="10.4" y1="9.65" x2="12.8" y2="9.65" stroke="#0f0c09" strokeWidth="0.3" />
+    <svg viewBox="0 0 14 13" width="11" height="10" aria-hidden="true">
+      <rect x="2.3" y="6" width="9.4" height="6.2" fill="#f4e8d0" stroke="#0f0c09" strokeWidth="1" strokeLinejoin="round" />
+      <path d="M1 6.5 L7 1.4 L13 6.5 Z" fill="#d4af37" stroke="#0f0c09" strokeWidth="1" strokeLinejoin="round" />
+      <rect x="5.7" y="8.4" width="2.6" height="3.8" fill="#5c4a36" stroke="#0f0c09" strokeWidth="0.6" />
     </svg>
   )
 }
 
-// Hotel — prédio art-déco: coroa dourada no topo, faixa de telhado vermelha,
-// janelas em duas fileiras, marquise sobre entrada com arco.
+// Hotel (flat) — bloco largo dourado com marquise cream, janelas escuras e
+// porta em arco. Mais largo/baixo que o arranha-céu (distinção por silhueta).
 function HotelBadgeIcon() {
   return (
-    <svg viewBox="0 0 18 14" width="26" height="22" aria-hidden="true">
-      {/* sombra */}
-      <ellipse cx="9" cy="13.5" rx="7" ry="0.55" fill="#0f0c09" opacity="0.5" />
-
-      {/* coroa decorativa dourada (placa) */}
-      <rect x="5.5" y="0.3" width="7" height="1.2"
-        fill="#ffd97a" stroke="#0f0c09" strokeWidth="0.5" />
-      <line x1="5.5" y1="0.8" x2="12.5" y2="0.8" stroke="#b8941f" strokeWidth="0.3" />
-
-      {/* faixa de telhado vermelha com trapézio (art-déco) */}
-      <path d="M 0.5 4 L 17.5 4 L 17.5 2.4 L 16 1.5 L 2 1.5 L 0.5 2.4 Z"
-        fill="#dc2626" stroke="#0f0c09" strokeWidth="0.75" strokeLinejoin="round" />
-      <line x1="0.5" y1="3" x2="17.5" y2="3" stroke="#991b1b" strokeWidth="0.4" />
-
-      {/* corpo cream */}
-      <rect x="1" y="4" width="16" height="9.2"
-        fill="#f4e8d0" stroke="#0f0c09" strokeWidth="0.85" />
-
-      {/* coluna decorativa esquerda e direita */}
-      <line x1="1.7" y1="4" x2="1.7" y2="13.2" stroke="#5c4a36" strokeWidth="0.35" opacity="0.6" />
-      <line x1="16.3" y1="4" x2="16.3" y2="13.2" stroke="#5c4a36" strokeWidth="0.35" opacity="0.6" />
-
-      {/* fileira superior de janelas */}
-      <g fill="#67c3e0" stroke="#0f0c09" strokeWidth="0.45">
-        <rect x="2.5" y="5" width="2" height="1.9" />
-        <rect x="5.4" y="5" width="2" height="1.9" />
-        <rect x="10.6" y="5" width="2" height="1.9" />
-        <rect x="13.5" y="5" width="2" height="1.9" />
+    <svg viewBox="0 0 20 16" width="22" height="18" aria-hidden="true">
+      {/* marquise cream no topo */}
+      <rect x="0.8" y="1.4" width="18.4" height="2.4" fill="#f4e8d0" stroke="#0f0c09" strokeWidth="1" strokeLinejoin="round" />
+      {/* corpo dourado */}
+      <rect x="2.2" y="3.8" width="15.6" height="11.4" fill="#d4af37" stroke="#0f0c09" strokeWidth="1" strokeLinejoin="round" />
+      {/* janelas escuras */}
+      <g fill="#1a1410">
+        <rect x="4" y="5.6" width="2.4" height="2.4" />
+        <rect x="8.8" y="5.6" width="2.4" height="2.4" />
+        <rect x="13.6" y="5.6" width="2.4" height="2.4" />
+        <rect x="4" y="9.2" width="2.4" height="2.4" />
+        <rect x="13.6" y="9.2" width="2.4" height="2.4" />
       </g>
-      {/* divisão das janelas (cruzeta sutil) */}
-      <g stroke="#0f0c09" strokeWidth="0.28">
-        <line x1="3.5" y1="5" x2="3.5" y2="6.9" />
-        <line x1="6.4" y1="5" x2="6.4" y2="6.9" />
-        <line x1="11.6" y1="5" x2="11.6" y2="6.9" />
-        <line x1="14.5" y1="5" x2="14.5" y2="6.9" />
-      </g>
-
-      {/* fileira inferior */}
-      <g fill="#67c3e0" stroke="#0f0c09" strokeWidth="0.45">
-        <rect x="2.5" y="8.2" width="2" height="1.9" />
-        <rect x="13.5" y="8.2" width="2" height="1.9" />
-      </g>
-
-      {/* marquise vermelha sobre a entrada */}
-      <rect x="6.3" y="8.5" width="5.4" height="0.9"
-        fill="#dc2626" stroke="#0f0c09" strokeWidth="0.5" />
-      <path d="M 6.3 9.4 L 11.7 9.4 L 11.2 9.7 L 6.8 9.7 Z" fill="#991b1b" />
-
-      {/* entrada com arco */}
-      <path d="M 7.2 13.2 L 7.2 11.2 Q 9 9.5 10.8 11.2 L 10.8 13.2 Z"
-        fill="#1a1410" stroke="#0f0c09" strokeWidth="0.55" />
-      <line x1="9" y1="9.8" x2="9" y2="13.2" stroke="#3d3528" strokeWidth="0.35" />
-      <circle cx="8.45" cy="12" r="0.22" fill="#ffd97a" />
-      <circle cx="9.55" cy="12" r="0.22" fill="#ffd97a" />
+      {/* porta em arco */}
+      <path d="M8 15.2 V12.4 Q10 10.8 12 12.4 V15.2 Z" fill="#1a1410" stroke="#0f0c09" strokeWidth="0.6" />
     </svg>
   )
 }
 
-// Skyscraper — torre dourada art-déco: coroa escalonada, antena com luz
-// vermelha piscando, grid de janelas escuras, entrada com arco.
+// Skyscraper (flat) — torre dourada estreita e alta, coroa + antena com luz
+// dourada, brilho lateral e janelas escuras. Silhueta vertical = nível máximo.
 function SkyscraperBadgeIcon() {
   return (
-    <svg viewBox="0 0 10 18" width="16" height="28" aria-hidden="true">
-      {/* sombra */}
-      <ellipse cx="5" cy="17.6" rx="3.5" ry="0.4" fill="#0f0c09" opacity="0.55" />
-
-      {/* mastro/antena */}
-      <line x1="5" y1="0" x2="5" y2="2.2" stroke="#0f0c09" strokeWidth="0.55" />
-      {/* luz vermelha piscante no topo */}
-      <circle cx="5" cy="0.45" r="0.5" fill="#dc2626" stroke="#0f0c09" strokeWidth="0.3">
-        <animate attributeName="opacity" values="0.4;1;0.4" dur="1.6s" repeatCount="indefinite" />
+    <svg viewBox="0 0 10 18" width="15" height="27" aria-hidden="true">
+      {/* antena + luz */}
+      <line x1="5" y1="0.3" x2="5" y2="2.3" stroke="#0f0c09" strokeWidth="0.7" />
+      <circle cx="5" cy="0.6" r="0.75" fill="#ffd97a" stroke="#0f0c09" strokeWidth="0.3">
+        <animate attributeName="opacity" values="0.45;1;0.45" dur="1.8s" repeatCount="indefinite" />
       </circle>
-
-      {/* coroa art-déco escalonada */}
-      <polygon
-        points="2.8,2.3 3.4,2.3 3.4,2.9 4,2.9 4,2.4 5.5,2.4 5.5,2.9 6.1,2.9 6.1,2.3 6.7,2.3 6.7,3.3 2.8,3.3"
-        fill="#5c4a36" stroke="#0f0c09" strokeWidth="0.35" strokeLinejoin="round"
-      />
-
-      {/* topo recuado dourado */}
-      <rect x="2.8" y="3.3" width="4.4" height="1.2"
-        fill="#d4af37" stroke="#0f0c09" strokeWidth="0.45" />
-      <line x1="2.8" y1="4" x2="7.2" y2="4" stroke="#b8941f" strokeWidth="0.3" />
-
-      {/* corpo principal dourado */}
-      <rect x="1.4" y="4.5" width="7.2" height="12.6"
-        fill="#d4af37" stroke="#0f0c09" strokeWidth="0.7" />
-
-      {/* sombra lateral (3D, gradiente fake via overlay) */}
-      <rect x="6.8" y="4.5" width="1.8" height="12.6"
-        fill="#b8941f" opacity="0.7" />
-
-      {/* faixas decorativas horizontais (art-déco) */}
-      <line x1="1.4" y1="7" x2="8.6" y2="7" stroke="#0f0c09" strokeWidth="0.25" opacity="0.6" />
-      <line x1="1.4" y1="9.4" x2="8.6" y2="9.4" stroke="#0f0c09" strokeWidth="0.25" opacity="0.6" />
-      <line x1="1.4" y1="11.8" x2="8.6" y2="11.8" stroke="#0f0c09" strokeWidth="0.25" opacity="0.6" />
-      <line x1="1.4" y1="14.2" x2="8.6" y2="14.2" stroke="#0f0c09" strokeWidth="0.25" opacity="0.6" />
-
-      {/* janelas escuras em grid 3×5 */}
-      <g fill="#1a1410" stroke="#0f0c09" strokeWidth="0.2">
-        <rect x="2"   y="5.1" width="1.3" height="1.5" />
-        <rect x="3.7" y="5.1" width="1.3" height="1.5" />
-        <rect x="5.4" y="5.1" width="1.3" height="1.5" />
-
-        <rect x="2"   y="7.5" width="1.3" height="1.5" />
-        <rect x="3.7" y="7.5" width="1.3" height="1.5" />
-        <rect x="5.4" y="7.5" width="1.3" height="1.5" />
-
-        <rect x="2"   y="9.9" width="1.3" height="1.5" />
-        <rect x="3.7" y="9.9" width="1.3" height="1.5" />
-        <rect x="5.4" y="9.9" width="1.3" height="1.5" />
-
-        <rect x="2"   y="12.3" width="1.3" height="1.5" />
-        <rect x="3.7" y="12.3" width="1.3" height="1.5" />
-        <rect x="5.4" y="12.3" width="1.3" height="1.5" />
+      {/* coroa */}
+      <rect x="3.4" y="2.2" width="3.2" height="1.3" fill="#d4af37" stroke="#0f0c09" strokeWidth="0.6" strokeLinejoin="round" />
+      {/* corpo */}
+      <rect x="1.6" y="3.5" width="6.8" height="13.3" fill="#d4af37" stroke="#0f0c09" strokeWidth="0.8" strokeLinejoin="round" />
+      {/* brilho lateral */}
+      <rect x="1.6" y="3.5" width="1.5" height="13.3" fill="#ffd97a" opacity="0.45" />
+      {/* janelas escuras (2×5) */}
+      <g fill="#1a1410">
+        <rect x="2.9" y="4.7" width="1.4" height="1.5" /><rect x="5.5" y="4.7" width="1.4" height="1.5" />
+        <rect x="2.9" y="7" width="1.4" height="1.5" /><rect x="5.5" y="7" width="1.4" height="1.5" />
+        <rect x="2.9" y="9.3" width="1.4" height="1.5" /><rect x="5.5" y="9.3" width="1.4" height="1.5" />
+        <rect x="2.9" y="11.6" width="1.4" height="1.5" /><rect x="5.5" y="11.6" width="1.4" height="1.5" />
+        <rect x="2.9" y="13.9" width="1.4" height="1.5" /><rect x="5.5" y="13.9" width="1.4" height="1.5" />
       </g>
-
-      {/* alguns reflexos cream em janelas (iluminadas) */}
-      <g fill="#ffd97a" opacity="0.85">
-        <rect x="3.7" y="5.1" width="1.3" height="1.5" />
-        <rect x="2"   y="9.9" width="1.3" height="1.5" />
-        <rect x="5.4" y="12.3" width="1.3" height="1.5" />
-      </g>
-
-      {/* entrada com arco */}
-      <path d="M 3.5 17 L 3.5 15.5 Q 5 14.4 6.5 15.5 L 6.5 17 Z"
-        fill="#1a1410" stroke="#0f0c09" strokeWidth="0.5" />
-      <line x1="5" y1="14.7" x2="5" y2="17" stroke="#3d3528" strokeWidth="0.3" />
     </svg>
+  )
+}
+
+// Hangar (flat) — galpão quonset (arco) cream com trilho dourado e portão escuro.
+// Marca de hangar construído no aeroporto (§13.6).
+function HangarBadgeIcon() {
+  return (
+    <svg viewBox="0 0 20 14" width="22" height="15" aria-hidden="true">
+      <path d="M1 13 V8 Q1 2.5 10 2.5 Q19 2.5 19 8 V13 Z" fill="#f4e8d0" stroke="#0f0c09" strokeWidth="1" strokeLinejoin="round" />
+      <path d="M1.6 8 Q1.6 3.5 10 3.5 Q18.4 3.5 18.4 8" fill="none" stroke="#d4af37" strokeWidth="0.9" />
+      <path d="M6 13 V9.6 Q10 6.4 14 9.6 V13 Z" fill="#1a1410" stroke="#0f0c09" strokeWidth="0.6" />
+    </svg>
+  )
+}
+
+// Marca de hangar no aeroporto — mesmo posicionamento (stripe externa) das
+// construções de cidade. Só renderiza quando o aeroporto tem hangar (§13.6).
+export function HangarMark({ pos }: { pos: number }) {
+  const hangar = useGameStore((s) => s.game.titles[pos]?.hangar)
+  if (!hangar) return null
+  return (
+    <div
+      className="absolute z-20 pointer-events-none flex items-center justify-center"
+      style={{ ...markLayout(sideOf(pos)), filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))' }}
+    >
+      <HangarBadgeIcon />
+    </div>
   )
 }
 
@@ -1407,12 +1302,50 @@ function effectRow(e: TempEffect, i: number): { key: string; label: string; desc
 }
 
 // Trades em aberto + concluídas recentes — SRS §11. Dados reais via tradesView (027).
-function tradeSummary(props: number[], cash: number, imm?: ImmunityGrant[]): string {
-  const parts: string[] = []
-  if (props.length) parts.push(`${props.length} propriedade${props.length > 1 ? 's' : ''}`)
-  if (cash > 0) parts.push(`R$${cash}`)
-  if (imm?.length) parts.push(`${imm.length} imunidade${imm.length > 1 ? 's' : ''}`)
-  return parts.length ? parts.join(' + ') : '—'
+// Avatar pequeno do item: bandeira circular (propriedade) ou glifo (aeroporto/utilidade).
+function TradeItemAvatar({ sq, size = 16 }: { sq: Square; size?: number }) {
+  if (sq.kind === 'property') {
+    const uf = (sq as PropertySquare).uf
+    return (
+      <span className="rounded-full bg-coffee-950 overflow-hidden shrink-0" style={{ width: size, height: size, boxShadow: 'inset 0 0 0 1px rgba(212,175,55,0.5)' }}>
+        <img src={`https://flagcdn.com/${uf.toLowerCase()}.svg`} alt={uf} className="w-full h-full object-cover block" draggable={false} />
+      </span>
+    )
+  }
+  return <span className="text-gold shrink-0 flex items-center justify-center" style={{ width: size, height: size }}><SquareIcon square={sq} size={size} /></span>
+}
+
+// Chip de um item da troca — faixa da cor do grupo + bandeira-avatar + nome.
+function TradeItemChip({ pos }: { pos: number }) {
+  const sq = BOARD[pos]
+  const accent = sq.kind === 'property' ? GROUP_COLOR[(sq as PropertySquare).group] : '#d4af37'
+  return (
+    <span className="inline-flex items-center gap-1 pl-0.5 pr-1.5 py-0.5 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500/70 overflow-hidden" title={sq.name}>
+      <span className="self-stretch w-1 rounded-[1px] shrink-0" style={{ background: accent }} aria-hidden />
+      <TradeItemAvatar sq={sq} size={16} />
+      <span className="text-cream text-xs leading-none truncate max-w-[96px]">{sq.name}</span>
+    </span>
+  )
+}
+
+// Perna da troca (Oferece / Pede) — chips das propriedades + cédula do dinheiro.
+function TradeLeg({ label, props, cash }: { label: string; props: number[]; cash: number }) {
+  const empty = props.length === 0 && cash <= 0
+  return (
+    <div className="flex items-start gap-2">
+      <span className="label text-cream-muted w-11 shrink-0 pt-1" style={{ fontSize: '9px' }}>{label}</span>
+      <div className="flex-1 min-w-0 flex flex-wrap gap-1">
+        {empty && <span className="text-cream-muted text-xs italic">nada</span>}
+        {props.map((pos) => <TradeItemChip key={pos} pos={pos} />)}
+        {cash > 0 && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sharp)] bg-coffee-800 border border-coffee-500/70 border-l-2 border-l-gold">
+            <CoinIcon size={12} className="text-gold" />
+            <span className="currency text-gold-glow text-xs leading-none tabular-nums">R$ {cash.toLocaleString('pt-BR')}</span>
+          </span>
+        )}
+      </div>
+    </div>
+  )
 }
 
 // --- Ponte com o motor (020): estado reativo dos painéis ---------------------
@@ -1455,15 +1388,7 @@ export function PlayersPanel() {
         <div className="flex flex-col gap-2">
           {players.map((p) => <PlayerRow key={p.name} player={p} />)}
         </div>
-        {players.filter((p) => !p.bankrupt).length >= 2 && (
-          <button
-            type="button"
-            onClick={() => useTradeUI.getState().show()}
-            className="mt-3 w-full px-3 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-700 border border-coffee-500 text-cream text-sm font-bold hover:border-gold hover:bg-coffee-600 transition-colors"
-          >
-            Negociar
-          </button>
-        )}
+        {/* Negociar movido pra a seção única "Negociações" (painel direito). */}
       </div>
 
 
@@ -1792,12 +1717,55 @@ export function DiceArena() {
   )
 }
 
+// Empréstimo ativo do jogador da vez (010, §15) — visível e quitável a qualquer
+// momento do turno. Mostra credor, principal e o quanto sangra a cada GO.
+function LoanPanel() {
+  const game = useGameStore((s) => s.game)
+  const payOffLoan = useGameStore((s) => s.payOffLoan)
+  const active = game.players[game.turnOrder[game.activeSeat]]
+  const loan = game.loans.find((l) => l.debtorId === active.id)
+  if (!loan) return null
+  const ci = game.players.findIndex((p) => p.id === loan.creditorId)
+  const creditorColor = ci >= 0 ? PLAYER_COLORS[ci % PLAYER_COLORS.length] : '#d4af37'
+  const interest = Math.round((loan.principal * loan.ratePct) / 100)
+  const canPay = active.cash >= loan.principal
+  return (
+    <div className="side-panel-section">
+      <div className="flex items-baseline justify-between mb-3">
+        <p className="label text-gold">Empréstimo ativo</p>
+        <p className="label !text-logo">{loan.ratePct}% por volta</p>
+      </div>
+      <div className="flex items-center gap-2 mb-2.5">
+        <span className="label text-cream-muted">Você deve a</span>
+        <PlayerFace color={creditorColor} size={20} />
+        <span className="display text-cream text-sm leading-none">{loan.creditorId}</span>
+      </div>
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-cream-muted">Principal</span>
+        <span className="currency text-cream tabular-nums">R$ {loan.principal.toLocaleString('pt-BR')}</span>
+      </div>
+      <div className="flex items-center justify-between text-sm mt-1">
+        <span className="text-cream-muted">Juros ao passar pelo GO</span>
+        <span className="currency text-logo tabular-nums">− R$ {interest.toLocaleString('pt-BR')}</span>
+      </div>
+      <button
+        type="button"
+        disabled={!canPay}
+        onClick={payOffLoan}
+        title={canPay ? 'Pagar o principal e encerrar o empréstimo' : 'Caixa insuficiente para o principal'}
+        className={cn(
+          'w-full mt-3 px-3 py-2 rounded-[var(--radius-sharp)] font-bold text-sm transition-all active:translate-y-px',
+          canPay ? 'bg-gold text-coffee-900 hover:brightness-110' : 'bg-coffee-800 text-cream-muted border border-coffee-500 cursor-not-allowed',
+        )}
+      >
+        {canPay ? `Quitar · R$ ${loan.principal.toLocaleString('pt-BR')}` : `Falta R$ ${(loan.principal - active.cash).toLocaleString('pt-BR')} para quitar`}
+      </button>
+    </div>
+  )
+}
+
 export function ActionsPanel() {
   const game = useGameStore((s) => s.game)
-  const players = playersView(game)
-  const active = players.find((p) => p.active) ?? players[0]
-  const activeId = game.players[game.turnOrder[game.activeSeat]]?.id
-  const goNext = activeId ? goBonus(game, activeId) : 0
   const pot = game.centerPot
   const trades = tradesView(game) // 027 — painel ao vivo
   const colorById = Object.fromEntries(
@@ -1806,59 +1774,38 @@ export function ActionsPanel() {
 
   return (
     <aside className="side-panel">
+      {/* Pote da Loteria — destaque próprio (saiu do antigo card "Turno"). É o
+          pote de Férias; cresce com impostos/multas e quem parar em Férias leva. */}
       <div className="side-panel-section">
-        <p className="label text-gold mb-3">Turno</p>
-        <div className="bg-coffee-800 border border-coffee-500 rounded-[var(--radius-card)] p-5">
-          {/* Cabeçalho com nome + avatar + GO progressivo */}
-          <div className="flex items-center gap-3 mb-4">
-            <PlayerFace color={active.color} active size={44} />
-            <div className="flex-1">
-              <p className="label text-cream-muted">Vez de</p>
-              <p className="display text-gold text-xl leading-none">{active.name}</p>
-            </div>
-            <div className="text-right">
-              <p className="label text-cream-muted">Próx. GO</p>
-              <p className="currency text-gold-glow text-base leading-none mt-1">
-                <span className="text-gold-soft text-[10px] mr-0.5">R$</span>
-                {goNext}
-              </p>
-            </div>
-          </div>
-
-          {/* Pote da Loteria — substituiu o bloco de dados */}
-          <div className="flex items-baseline justify-between bg-coffee-900 border border-coffee-500 px-4 py-3 rounded-[var(--radius-card)] mb-4">
-            <div className="flex flex-col">
-              <span className="label">Pote da Loteria</span>
-              <span className="label text-cream-muted text-[9px] leading-snug mt-0.5">
-                Acumulado
-              </span>
-            </div>
-            <span className="currency text-gold-glow text-2xl leading-none">
-              <span className="text-gold-soft text-sm mr-0.5">R$</span>
-              {pot.toLocaleString('pt-BR')}
-            </span>
-          </div>
-
-          {/* Mão do jogador ativo (próprio HUD — SRS §12.4) */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-coffee-900 border border-coffee-500 rounded-[var(--radius-sharp)] px-3 py-2 text-center">
-              <p className="label text-cream-muted">Cartas</p>
-              <p className="display text-cream text-lg leading-none mt-1">{active.cardsInHand}/3</p>
-            </div>
-            <div className="bg-coffee-900 border border-coffee-500 rounded-[var(--radius-sharp)] px-3 py-2 text-center">
-              <p className="label text-cream-muted">Bus Tickets</p>
-              <p className="display text-cream text-lg leading-none mt-1">{active.busTickets}</p>
-            </div>
-          </div>
+        <div
+          className="relative overflow-hidden rounded-[var(--radius-card)] border-2 px-5 py-4 text-center"
+          style={{
+            borderColor: 'rgba(212,175,55,0.45)',
+            background: 'radial-gradient(125% 100% at 50% 0%, rgba(212,175,55,0.20) 0%, var(--color-coffee-900) 62%)',
+            boxShadow: 'inset 0 0 30px rgba(212,175,55,0.08)',
+          }}
+        >
+          <p className="label text-gold tracking-[0.22em] flex items-center justify-center gap-1.5">
+            <CoinIcon size={13} className="text-gold" /> Pote da Loteria
+          </p>
+          <p
+            className="currency text-gold-glow leading-none mt-2.5"
+            style={{ fontSize: 40, textShadow: '0 2px 16px rgba(212,175,55,0.55)' }}
+          >
+            <span className="text-gold-soft text-lg align-top mr-0.5">R$</span>
+            {pot.toLocaleString('pt-BR')}
+          </p>
         </div>
       </div>
 
       <HandPanel />
 
+      <LoanPanel />
+
       <div className="side-panel-section">
         <div className="flex items-baseline justify-between mb-3">
-          <p className="label text-gold">Trades</p>
-          <p className="label text-cream-muted">{trades.pending ? 1 : 0} ativos</p>
+          <p className="label text-gold">Negociações</p>
+          <p className="label text-cream-muted">{trades.pending ? '1 ativa' : 'nenhuma'}</p>
         </div>
         {!trades.pending && trades.history.length === 0 ? (
           <div className="flex items-center justify-center px-3 py-4 rounded-[var(--radius-card)] border border-dashed border-coffee-500 bg-coffee-800/40">
@@ -1881,7 +1828,7 @@ export function ActionsPanel() {
             label hover:bg-coffee-700 hover:text-cream transition-colors
           "
         >
-          + Nova proposta
+          + Nova negociação
         </button>
       </div>
     </aside>
@@ -1904,15 +1851,9 @@ function TradeRow({ trade, done, colorById }: { trade: Trade; done: boolean; col
         <span className="display text-cream text-sm leading-none truncate">{trade.toId}</span>
       </div>
 
-      <div className="flex flex-col gap-0.5 px-1">
-        <div className="flex items-baseline gap-2">
-          <span className="label text-cream-muted w-14 shrink-0">Oferece</span>
-          <span className="text-cream text-sm leading-tight">{tradeSummary(trade.fromProps, trade.fromCash, trade.fromImmunities)}</span>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="label text-cream-muted w-14 shrink-0">Pede</span>
-          <span className="text-cream text-sm leading-tight">{tradeSummary(trade.toProps, trade.toCash, trade.toImmunities)}</span>
-        </div>
+      <div className="flex flex-col gap-1.5 px-1">
+        <TradeLeg label="Oferece" props={trade.fromProps} cash={trade.fromCash} />
+        <TradeLeg label="Pede" props={trade.toProps} cash={trade.toCash} />
       </div>
 
       <p className={cn('label text-center pt-1.5 border-t border-coffee-500/60', done ? 'text-gold' : 'text-cream-muted')}>
@@ -2721,15 +2662,19 @@ export function CenterPlate({
 // aluguéis (base / 1-4 casas / hotel / skyscraper), preço, custo de
 // casa, hipoteca e dono se houver. Fecha clicando no backdrop ou Esc.
 // =====================================================================
-export function computeRents(rent: number) {
+// Adaptador de view sobre a FONTE ÚNICA (rentLadder, 032): mapeia para o formato dos deeds.
+// Não recalcula nada — só delega ao motor, garantindo que UI e cobrança batem.
+export function computeRents(group: GroupKey, base: number) {
+  const l = rentLadder(group, base)
   return {
-    base:       rent,
-    house1:     rent * 5,
-    house2:     rent * 15,
-    house3:     rent * 40,
-    house4:     rent * 70,
-    hotel:      rent * 100,
-    skyscraper: rent * 150,
+    base,
+    house1: l.house[0],
+    house2: l.house[1],
+    house3: l.house[2],
+    house4: l.house[3],
+    hotel: l.hotel,
+    hotel2: l.hotel2,
+    skyscraper: l.skyscraper,
   }
 }
 
@@ -2741,6 +2686,27 @@ function fmtMoney(n: number) {
 // Popover estilo "balão" — abre adjacente à casa clicada, apontando pra
 // dentro do tabuleiro (onde sobra espaço). Sem backdrop, sem cobrir tela
 // inteira. Fecha com Esc, clicando fora, ou abrindo outra casa.
+// Empurra o popover pra DENTRO da viewport quando transborda perto das bordas
+// (evita scroll na página inteira). Mede no mount e corrige via translate.
+function useViewportClamp() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [off, setOff] = useState({ x: 0, y: 0 })
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const m = 8
+    const r = el.getBoundingClientRect()
+    let x = 0
+    let y = 0
+    if (r.left < m) x = m - r.left
+    else if (r.right > window.innerWidth - m) x = window.innerWidth - m - r.right
+    if (r.top < m) y = m - r.top
+    else if (r.bottom > window.innerHeight - m) y = window.innerHeight - m - r.bottom
+    setOff({ x, y })
+  }, [])
+  return { ref, off }
+}
+
 export function PropertyPopover({
   square,
   side,
@@ -2750,6 +2716,7 @@ export function PropertyPopover({
   side: Side
   onClose: () => void
 }) {
+  const { ref: clampRef, off } = useViewportClamp()
   // Esc fecha
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -2795,10 +2762,11 @@ export function PropertyPopover({
 
   return (
     <div
+      ref={clampRef}
       style={{
         position: 'absolute',
-        zIndex: 50,
-        transform: centerTransform,
+        zIndex: 65, // acima do card de dívida (z-60) — popover usável pra desipotecar
+        transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`,
         ...positionStyle,
       }}
       onClick={(e) => e.stopPropagation()}
@@ -2817,7 +2785,7 @@ export function PropertyPopover({
             bg-coffee-800 border-2 border-coffee-500
             rounded-[var(--radius-card)]
             shadow-[var(--shadow-dropdown)]
-            overflow-hidden
+            overflow-x-hidden overflow-y-auto max-h-[calc(100vh-24px)]
           "
         >
           <PropertyDeedContent square={square} onClose={onClose} />
@@ -2830,25 +2798,45 @@ export function PropertyPopover({
 }
 
 // Botão de ação do deed (dourado; desabilita conforme as flags).
-function DeedBtn({ onClick, disabled, title, children }: { onClick: () => void; disabled?: boolean; title?: string; children: React.ReactNode }) {
+function DeedBtn({
+  onClick,
+  disabled,
+  title,
+  variant = 'secondary',
+  icon,
+  className,
+  children,
+}: {
+  onClick: () => void
+  disabled?: boolean
+  title?: string
+  variant?: 'primary' | 'secondary'
+  icon?: React.ReactNode
+  className?: string
+  children: React.ReactNode
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className="px-2 py-1 rounded-[var(--radius-sharp)] text-xs font-bold bg-gold text-coffee-900 hover:brightness-110 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:brightness-100"
+      className={cn(
+        'flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-[var(--radius-sharp)] text-xs font-bold transition-all active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed disabled:active:translate-y-0',
+        variant === 'primary'
+          ? 'bg-gold text-coffee-900 hover:brightness-110 disabled:hover:brightness-100'
+          : 'bg-coffee-700 text-cream border border-coffee-500 hover:border-gold/60 hover:bg-coffee-600',
+        className,
+      )}
     >
+      {icon}
       {children}
     </button>
   )
 }
 
 const BUILD_BLOCK_MSG: Record<string, string> = {
-  maioria: 'Precisa da maioria do grupo',
   'hipoteca-no-grupo': 'Há propriedade hipotecada no grupo',
-  topo: 'Já está no nível máximo',
-  uniformidade: 'Construa primeiro na cidade de menor nível',
   'grupo-incompleto': 'Arranha-céu exige o grupo completo',
   caixa: 'Caixa insuficiente',
 }
@@ -2871,25 +2859,29 @@ function DeedActions({ pos }: { pos: number }) {
   return (
     <div className="mt-3 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-1.5">
       <p className="label text-gold" style={{ fontSize: '9px' }}>Gerenciar</p>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="grid grid-cols-2 gap-1.5">
         {dv.kind === 'property' && (
           <>
-            <DeedBtn disabled={!flags.podeConstruir} onClick={() => buildHouse(pos)} title={blockMsg}>
-              Construir (${dv.buildCost})
+            <DeedBtn variant="primary" icon={<HouseIcon size={13} />} disabled={!flags.podeConstruir} onClick={() => buildHouse(pos)} title={blockMsg}>
+              Construir
             </DeedBtn>
             <DeedBtn disabled={!flags.podeVender} onClick={() => sellBuilding(pos)}>Vender</DeedBtn>
           </>
         )}
         {dv.kind === 'airport' && (
           <>
-            <DeedBtn disabled={!flags.podeConstruirHangar} onClick={() => buildHangar(pos)}>Hangar</DeedBtn>
+            <DeedBtn variant="primary" disabled={!flags.podeConstruirHangar} onClick={() => buildHangar(pos)}>Hangar</DeedBtn>
             <DeedBtn disabled={!flags.podeVenderHangar} onClick={() => sellHangar(pos)}>Vender Hangar</DeedBtn>
           </>
         )}
         {!dv.mortgaged ? (
-          <DeedBtn disabled={!flags.podeHipotecar} onClick={() => mortgageProperty(pos)}>Hipotecar (+${dv.mortgageValue})</DeedBtn>
+          <DeedBtn className="col-span-2" icon={<CoinIcon size={13} />} disabled={!flags.podeHipotecar} onClick={() => mortgageProperty(pos)}>
+            Hipotecar · +${dv.mortgageValue}
+          </DeedBtn>
         ) : (
-          <DeedBtn disabled={!flags.podeDeshipotecar} onClick={() => unmortgageProperty(pos)}>Deshipotecar (−${dv.unmortgageCost})</DeedBtn>
+          <DeedBtn className="col-span-2" icon={<CoinIcon size={13} />} disabled={!flags.podeDeshipotecar} onClick={() => unmortgageProperty(pos)}>
+            Desipotecar · −${dv.unmortgageCost}
+          </DeedBtn>
         )}
       </div>
       {dv.kind === 'property' && !flags.podeConstruir && blockMsg && (
@@ -2904,7 +2896,7 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
   const dv = deedView(game, square.pos)!
   const owner = dv.owner
   const buildings = dv.level // 0–7 real
-  const rents = computeRents(square.rent)
+  const rents = computeRents(square.group, square.rent)
   const houseCost = dv.buildCost
   const mortgage = dv.mortgageValue
   const stripeColor = GROUP_COLOR[square.group]
@@ -3027,6 +3019,7 @@ export function AirportPopover({
   side: Side
   onClose: () => void
 }) {
+  const { ref: clampRef, off } = useViewportClamp()
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
@@ -3057,7 +3050,7 @@ export function AirportPopover({
   })()
 
   return (
-    <div style={{ position: 'absolute', zIndex: 50, transform: centerTransform, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
+    <div ref={clampRef} style={{ position: 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ position: 'relative' }}>
         <div className="w-[270px] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden">
           {/* Header dourado */}
@@ -3113,6 +3106,7 @@ export function UtilityPopover({
   side: Side
   onClose: () => void
 }) {
+  const { ref: clampRef, off } = useViewportClamp()
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
@@ -3145,7 +3139,7 @@ export function UtilityPopover({
   const accentColor = square.icon === 'fuel' ? '#22c55e' : square.icon === 'bolt' ? '#ffd97a' : '#fb923c'
 
   return (
-    <div style={{ position: 'absolute', zIndex: 50, transform: centerTransform, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
+    <div ref={clampRef} style={{ position: 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ position: 'relative' }}>
         <div className="w-[270px] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden">
           {/* Header colorido por tipo */}
