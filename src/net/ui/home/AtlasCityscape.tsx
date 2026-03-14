@@ -17,40 +17,39 @@ interface Building {
   columns: number
   rows: number
   waterTank?: boolean
-  antenna?: boolean
   storefront?: boolean
 }
 
 const FAR_BUILDINGS: readonly Building[] = [
-  { x: -36, width: 92, height: 168, roof: 'steps', columns: 4, rows: 6, antenna: true },
+  { x: -36, width: 92, height: 168, roof: 'steps', columns: 4, rows: 6 },
   { x: 62, width: 72, height: 116, roof: 'flat', columns: 3, rows: 4 },
   { x: 140, width: 108, height: 204, roof: 'crown', columns: 5, rows: 8 },
   { x: 254, width: 82, height: 142, roof: 'flat', columns: 3, rows: 5, waterTank: true },
-  { x: 342, width: 116, height: 236, roof: 'spire', columns: 5, rows: 9, antenna: true },
+  { x: 342, width: 116, height: 236, roof: 'spire', columns: 5, rows: 9 },
   { x: 464, width: 68, height: 126, roof: 'steps', columns: 3, rows: 4 },
   { x: 538, width: 104, height: 178, roof: 'flat', columns: 5, rows: 6 },
   { x: 648, width: 86, height: 224, roof: 'crown', columns: 4, rows: 8 },
   { x: 740, width: 120, height: 152, roof: 'steps', columns: 5, rows: 5 },
-  { x: 866, width: 74, height: 194, roof: 'spire', columns: 3, rows: 7, antenna: true },
+  { x: 866, width: 74, height: 194, roof: 'spire', columns: 3, rows: 7 },
   { x: 946, width: 114, height: 132, roof: 'flat', columns: 5, rows: 4, waterTank: true },
   { x: 1066, width: 88, height: 244, roof: 'steps', columns: 4, rows: 9 },
   { x: 1160, width: 126, height: 176, roof: 'crown', columns: 6, rows: 6 },
   { x: 1292, width: 72, height: 138, roof: 'flat', columns: 3, rows: 5 },
-  { x: 1370, width: 106, height: 214, roof: 'spire', columns: 5, rows: 8, antenna: true },
+  { x: 1370, width: 106, height: 214, roof: 'spire', columns: 5, rows: 8 },
 ] as const
 
 const NEAR_BUILDINGS: readonly Building[] = [
   { x: -54, width: 126, height: 246, roof: 'flat', columns: 5, rows: 8, storefront: true },
   { x: 78, width: 94, height: 186, roof: 'steps', columns: 4, rows: 6, storefront: true },
   { x: 178, width: 118, height: 220, roof: 'crown', columns: 5, rows: 7, storefront: true },
-  { x: 302, width: 86, height: 278, roof: 'spire', columns: 4, rows: 10, antenna: true },
+  { x: 302, width: 86, height: 278, roof: 'spire', columns: 4, rows: 10 },
   { x: 394, width: 134, height: 194, roof: 'flat', columns: 6, rows: 6, waterTank: true, storefront: true },
   { x: 534, width: 98, height: 252, roof: 'steps', columns: 4, rows: 9 },
   { x: 638, width: 124, height: 176, roof: 'crown', columns: 5, rows: 5, storefront: true },
-  { x: 768, width: 82, height: 226, roof: 'flat', columns: 3, rows: 8, antenna: true },
+  { x: 768, width: 82, height: 226, roof: 'flat', columns: 3, rows: 8 },
   { x: 856, width: 138, height: 270, roof: 'steps', columns: 6, rows: 10 },
   { x: 1000, width: 104, height: 202, roof: 'crown', columns: 4, rows: 7, storefront: true },
-  { x: 1110, width: 88, height: 294, roof: 'spire', columns: 4, rows: 11, antenna: true },
+  { x: 1110, width: 88, height: 294, roof: 'spire', columns: 4, rows: 11 },
   { x: 1204, width: 132, height: 214, roof: 'flat', columns: 6, rows: 7, waterTank: true, storefront: true },
   { x: 1342, width: 112, height: 258, roof: 'steps', columns: 5, rows: 9 },
 ] as const
@@ -86,12 +85,6 @@ function RooftopDetails({ building }: { building: Building }) {
           <path d="M2 1h24v14H2z" fill="var(--color-ink-800)" />
           <ellipse cx="14" cy="1" rx="12" ry="3.5" fill="var(--color-ink-700)" />
           <ellipse cx="14" cy="15" rx="12" ry="3.5" />
-        </g>
-      )}
-      {building.antenna && (
-        <g transform={`translate(${center} ${building.roof === 'spire' ? -30 : -12})`}>
-          <path d="M0 16V-12M-7 16 0-5l7 21M-5 7H5M-3 0H3" />
-          <circle className="entry-city-beacon" cy="-15" r="2.4" fill="var(--color-signal-glow)" stroke="none" />
         </g>
       )}
       {building.roof === 'flat' && !building.waterTank && (
@@ -227,6 +220,62 @@ function BuildingGlyph({
   )
 }
 
+const NAVIGATION_MASTS = [
+  { x: 112, base: 840, height: 350, width: 66 },
+  { x: 424, base: 840, height: 430, width: 78 },
+  { x: 1018, base: 840, height: 398, width: 72 },
+  { x: 1324, base: 840, height: 326, width: 62 },
+] as const
+
+// Torres de navegação ficam ATRÁS do skyline e sobem muito além dos telhados.
+// A treliça, os estais e os braços horizontais dão escala sem virar um novo
+// símbolo flutuando no céu.
+function NavigationMasts() {
+  return (
+    <g className="entry-city-masts" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      {NAVIGATION_MASTS.map((mast) => {
+        const top = mast.base - mast.height
+        const center = mast.x + mast.width / 2
+        const sections = Math.floor(mast.height / 38)
+
+        return (
+          <g key={mast.x}>
+            <path d={`M${mast.x} ${mast.base} ${center} ${top} ${mast.x + mast.width} ${mast.base}Z`} />
+            <path d={`M${center} ${top}V${mast.base}`} opacity="0.46" />
+            <path d={`M${center - 8} ${top + 30}h16M${center - 15} ${top + 58}h30`} />
+            <path d={`M${center - 24} ${top + 92}h48M${center - 32} ${top + 130}h64`} />
+            <path d={`M${center} ${top - 28}V${top + 8}`} />
+            <path d={`M${center - 13} ${top - 12}h26M${center - 20} ${top - 2}h40`} />
+            <path d={`M${center} ${top + 55} ${mast.x - 78} ${mast.base}`} opacity="0.34" />
+            <path d={`M${center} ${top + 55} ${mast.x + mast.width + 78} ${mast.base}`} opacity="0.34" />
+            {Array.from({ length: sections }, (_, section) => {
+              const y = top + 32 + section * 38
+              const progress = (y - top) / mast.height
+              const left = center - (mast.width / 2) * progress
+              const right = center + (mast.width / 2) * progress
+              return (
+                <g key={section}>
+                  <path d={`M${left} ${y}H${right}`} />
+                  <path d={`M${left} ${y} ${right} ${Math.min(mast.base, y + 38)}`} opacity="0.52" />
+                  <path d={`M${right} ${y} ${left} ${Math.min(mast.base, y + 38)}`} opacity="0.52" />
+                </g>
+              )
+            })}
+            <circle
+              className="entry-city-beacon"
+              cx={center}
+              cy={top - 31}
+              r="3"
+              fill="var(--color-signal-glow)"
+              stroke="none"
+            />
+          </g>
+        )
+      })}
+    </g>
+  )
+}
+
 function CityBand({
   buildings,
   base,
@@ -295,6 +344,7 @@ export function AtlasCityscape({ className }: { className?: string }) {
       </defs>
 
       <rect x="0" y="500" width="1440" height="400" fill="url(#atlas-city-haze)" />
+      <NavigationMasts />
       <CityBand buildings={FAR_BUILDINGS} base={842} layer="far" />
       <CityBand buildings={NEAR_BUILDINGS} base={900} layer="near" />
       <StreetLife />

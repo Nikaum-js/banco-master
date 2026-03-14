@@ -1355,6 +1355,11 @@
     opacity: 0.34;
     stroke-width: 0.8;
   }
+  .entry-city-masts {
+    opacity: 0.28;
+    stroke-width: 1.15;
+    filter: drop-shadow(0 0 8px rgb(217 166 80 / 0.08));
+  }
   .entry-city-band--near {
     opacity: 0.68;
     stroke-width: 1;

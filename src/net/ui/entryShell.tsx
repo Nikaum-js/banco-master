@@ -1,5 +1,5 @@
 // Casca das telas de ENTRADA (home, identidade, sala, reentrada). O cenário acompanha o
-// tema do app: Atlas recebe uma carta de ESPAÇO AÉREO (rotas, radar, pista e aeronaves);
+// tema do app: Atlas recebe uma carta de ESPAÇO AÉREO (rotas, pista e aeronaves);
 // Neon reutiliza sua metrópole arcade. Essa escolha acontece aqui porque as telas depois
 // da home também passam por `EntryStage` — deixar o palco fixo no Atlas vazava um tema no
 // outro.
@@ -11,37 +11,7 @@ import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 import { AtlasCityscape } from './home/AtlasCityscape'
 import { NeonBackdrop } from './home/NeonBackdrop'
 
-const RADAR_TICKS = Array.from({ length: 48 }, (_, i) => i * 7.5)
 const RUNWAY_LIGHTS = [578, 628, 680, 734, 790, 848] as const
-
-function RadarScope({ x, y, scale }: { x: number; y: number; scale: number }) {
-  return (
-    <g transform={`translate(${x} ${y}) scale(${scale})`} stroke="currentColor">
-      <circle r="160" strokeWidth="1" opacity="0.23" />
-      <circle r="112" strokeWidth="0.8" strokeDasharray="3 7" opacity="0.18" />
-      <circle r="62" strokeWidth="0.8" opacity="0.18" />
-      <path d="M-160 0H160M0-160V160M-113-113 113 113M113-113-113 113" strokeWidth="0.65" opacity="0.12" />
-      <g opacity="0.27">
-        {RADAR_TICKS.map((angle) => (
-          <line
-            key={angle}
-            x1="0"
-            y1="-160"
-            x2="0"
-            y2={angle % 45 === 0 ? -149 : -154}
-            transform={`rotate(${angle})`}
-          />
-        ))}
-      </g>
-      <path d="M0 0 16-156A157 157 0 0 1 96-126Z" fill="currentColor" fillOpacity="0.035" stroke="none" />
-      <g fill="currentColor" stroke="none" opacity="0.38">
-        <circle cx="-76" cy="-54" r="3" />
-        <circle cx="46" cy="-96" r="2.5" />
-        <circle cx="104" cy="28" r="3" />
-      </g>
-    </g>
-  )
-}
 
 // Aeronave top-down: fuselagem, asas enflechadas, estabilizadores, turbinas, janelas,
 // cockpit, luzes de navegação e duas trilhas de condensação. O pai segue a rota; só o
@@ -89,18 +59,15 @@ function AirlinerMark({ scale }: { scale: number }) {
 
 const FLIGHT_ROUTES = [
   {
-    d: 'M-170 700C170 615 360 750 640 605S1070 300 1580 410',
+    // A curva inteira fica acima da fachada mais alta (topo a y=606), já
+    // considerando a envergadura. Antes ela descia a y=750 e o avião parecia
+    // atravessar os prédios.
+    d: 'M-170 510C170 405 380 510 650 405S1080 185 1580 270',
     duration: '58s',
     delay: '-23s',
     rest: '39%',
     scale: 1.04,
-    opacity: 0.52,
-    waypoints: [
-      [126, 647],
-      [398, 682],
-      [832, 490],
-      [1220, 348],
-    ],
+    opacity: 0.58,
   },
   {
     d: 'M1570 72C1240 142 1015 42 740 96S280 210-150 132',
@@ -109,12 +76,6 @@ const FLIGHT_ROUTES = [
     rest: '48%',
     scale: 0.78,
     opacity: 0.44,
-    waypoints: [
-      [1290, 124],
-      [940, 72],
-      [602, 132],
-      [220, 188],
-    ],
   },
 ] as const
 
@@ -137,13 +98,6 @@ function AirspaceRoutes({ className }: { className?: string }) {
             strokeLinecap="round"
             opacity={index === 0 ? 0.22 : 0.15}
           />
-          {route.waypoints.map(([x, y]) => (
-            <g key={`${x}-${y}`} transform={`translate(${x} ${y})`} stroke="currentColor" opacity="0.28">
-              <circle r="9" strokeWidth="0.9" strokeDasharray="2 3" />
-              <circle r="2.6" fill="currentColor" stroke="none" />
-              <path d="M-14 0H-9M9 0h5M0-14v5M0 9v5" strokeWidth="0.8" />
-            </g>
-          ))}
           <g
             className="entry-flyer entry-aircraft"
             opacity={route.opacity}
@@ -184,9 +138,6 @@ function AviationChart({ className }: { className?: string }) {
         <path d="M230 0V900M720 0V900M1210 0V900" strokeWidth="0.7" strokeDasharray="2 18" />
         <path d="M0 440h18M0 450h30M0 460h18M1410 440h30M1422 450h18M1410 460h30" />
       </g>
-
-      <RadarScope x={118} y={116} scale={0.9} />
-      <RadarScope x={1320} y={782} scale={1.22} />
 
       <g stroke="currentColor" opacity="0.2">
         <path d="M472 920 676 548M968 920 764 548" strokeWidth="1.3" />
