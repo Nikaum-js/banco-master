@@ -10,6 +10,12 @@ export const RARITY_COLOR: Record<Rarity, string> = {
   comum: '#22c55e', // verde
 }
 
+export const RARITY_LABEL: Record<Rarity, string> = {
+  lendaria: 'Lendária',
+  rara: 'Rara',
+  comum: 'Comum',
+}
+
 // Rótulo legível por efeito.
 export const CARD_LABEL: Record<string, string> = {
   aquisicaoHostil: 'Aquisição Hostil',
@@ -44,12 +50,12 @@ export function cardLabel(effect: string): string {
 
 // Descrição curta por efeito (apresentação). Fallback no nome.
 export const CARD_DESC: Record<string, string> = {
-  aquisicaoHostil: 'Force a venda de uma propriedade de um adversário a você.',
-  despejo: 'Remove uma casa de uma propriedade adversária.',
-  auditoriaFiscal: 'O alvo paga 10% do patrimônio ao pote.',
-  boicote: 'Uma propriedade fica sem cobrar aluguel por 2 voltas.',
+  aquisicaoHostil: 'No seu turno, force um adversário a te vender uma propriedade dele (sem construções) pelo preço de tabela.',
+  despejo: 'No seu turno, demole 1 casa de uma propriedade de um adversário. Ela volta ao banco e o dono não recebe nada.',
+  auditoriaFiscal: 'No seu turno, escolha um adversário: ele paga 10% do patrimônio ao pote do Free Parking.',
+  boicote: 'No seu turno, escolha uma propriedade de um adversário: por 2 voltas ela não cobra aluguel de ninguém.',
   criseImobiliaria: 'Crise no mercado imobiliário.',
-  atalho: 'Mova-se 3 casas — para a frente ou para trás (você escolhe).',
+  atalho: 'Mova-se 3 casas, para a frente ou para trás (você escolhe).',
   apagao: 'Hangares ficam inativos por 1 volta.',
   greveUtilidades: 'Utilidades não cobram aluguel por 1 volta.',
   vaPrisao: 'Vá direto para a Prisão.',
@@ -57,15 +63,15 @@ export const CARD_DESC: Record<string, string> = {
   consertoImoveis: 'Pague pela manutenção dos seus imóveis.',
   avance3: 'Avance 3 casas.',
   volte3: 'Volte 3 casas.',
-  diplomacia: 'Reação: anula uma carta ofensiva contra você.',
-  imunidade: 'Concede imunidade de aluguel numa propriedade.',
-  saiaPrisao: 'Guarde para sair da prisão quando precisar.',
-  bunkerFiscal: 'Reação: anula uma cobrança de imposto.',
-  boomEconomico: 'Boom econômico — todos lucram.',
+  diplomacia: 'Reação (automática): quando uma carta ofensiva for usada contra você, ela é anulada.',
+  imunidade: 'No seu turno, escolha uma propriedade sua: por 2 voltas ela fica imune a Aquisição, Despejo e Boicote.',
+  saiaPrisao: 'Quando estiver preso, use para sair sem pagar a multa de $50.',
+  bunkerFiscal: 'Reação (automática): quando você for pagar um imposto, esse pagamento é cancelado.',
+  boomEconomico: 'Boom econômico: todos lucram.',
   investidorAnjo: 'Receba um aporte de um investidor.',
   refinanciamento: 'Refinancie suas dívidas.',
   passagemOnibus: 'Ganhe uma Passagem de Ônibus.',
-  erroBanco: 'Erro do banco a seu favor — receba.',
-  aniversario: 'É seu aniversário — cada jogador te paga.',
+  erroBanco: 'Erro do banco a seu favor: receba.',
+  aniversario: 'É seu aniversário: cada jogador te paga.',
   honorarios: 'Receba honorários.',
 }
