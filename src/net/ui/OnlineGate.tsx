@@ -198,7 +198,7 @@ function OnlineRoom({
       error === 'already-started'
         ? 'A partida desta sala já começou. Peça um novo link ao host.'
         : error === 'ended'
-          ? 'Esta partida já terminou. Crie uma sala nova para jogar de novo.'
+          ? 'Esta partida terminou e aguarda o host reabrir a sala.'
           : String(error ?? 'Erro desconhecido.')
     return (
       <LobbyMessage

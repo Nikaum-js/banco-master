@@ -351,7 +351,7 @@ export function OrnamentRule({ className }: { className?: string }) {
 // Header de prancha — kicker em versalete de latão, título display, filete. Substitui a
 // faixa dourada chapada do ModalHeader nessas telas: latão como FIO, não como placa.
 export function EntryHeader({
-  kicker = 'Banco Master · Cidades do Mundo',
+  kicker = 'Magnata Imobiliário · Cidades do Mundo',
   title,
   subtitle,
 }: {

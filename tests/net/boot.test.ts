@@ -43,6 +43,7 @@ function makeSession(
       now: timing.now ?? (() => 1_000),
       openingAuctionMs: timing.openingAuctionMs ?? 0,
       openingRollMs: timing.openingRollMs ?? 0,
+      openingRollRevealMs: 0, // resolve e fecha no mesmo tick — seam determinístico
     },
     revealMs: timing.revealMs ?? 0,
   })

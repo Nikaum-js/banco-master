@@ -30,6 +30,11 @@ export const OPENING_BID_MAX = 500
 export const OPENING_BID_STEP = 50
 export const OPENING_AUCTION_MS = 15_000
 export const OPENING_ROLL_MS = 1_400
+/** Janela pública da REVELAÇÃO do último arremesso: tumble 3D (~1,05s) + leitura do
+ * resultado em todas as telas antes de a autoridade ordenar e embarcar. Sem ela, o
+ * snapshot que revela o último dado seria o mesmo que troca de tela — ninguém veria
+ * o arremesso decisivo cair. */
+export const OPENING_ROLL_REVEAL_MS = 2_600
 
 export type RoomStatus = 'lobby' | 'bidding' | 'rolling' | 'playing' | 'paused' | 'ended'
 export type OpeningMode = 'sealed-bid' | 'dice-roll'
@@ -71,6 +76,12 @@ export interface Room {
   id: string
   status: RoomStatus
   seats: Seat[] // ordem de entrada; host = seats[0]
+  /** 049/D-052: ciclo de partida dentro da mesma sala. Cresce uma vez ao reabrir o lobby;
+   * opcional apenas para salas persistidas antes da migration 0006. */
+  matchGeneration?: number
+  /** Espelho do `rooms.seq`: ordena publicações de sala e permite ao host continuar a
+   * sequência depois de recarregar um lobby de revanche. */
+  revision?: number
   /** Escolha pública do host; opcional apenas para absorver salas anteriores à 045. */
   openingMode?: OpeningMode
   /** Prazo da rodada pré-partida. Opcional só para shapes legados. */
@@ -91,6 +102,8 @@ export interface PublicRoom {
   id: string
   status: RoomStatus
   seats: PublicSeat[]
+  matchGeneration?: number
+  revision?: number
   openingMode?: OpeningMode
   openingAuction?: OpeningAuction | null
 }
@@ -101,6 +114,8 @@ export function toPublicRoom(room: Room): PublicRoom {
   return {
     id: normalized.id,
     status: normalized.status,
+    matchGeneration: normalized.matchGeneration,
+    revision: normalized.revision,
     openingMode: normalized.openingMode,
     openingAuction: normalized.openingAuction,
     seats: normalized.seats.map(({ reentryCode: _reentryCode, openingBid, bidLocked, ...rest }) => ({
@@ -129,6 +144,12 @@ export function redactRoom(room: Room): Room {
 export function normalizeRoom(room: Room): Room {
   return {
     ...room,
+    matchGeneration: Number.isSafeInteger(room.matchGeneration) && (room.matchGeneration ?? -1) >= 0
+      ? room.matchGeneration
+      : 0,
+    revision: Number.isSafeInteger(room.revision) && (room.revision ?? -2) >= -1
+      ? room.revision
+      : -1,
     openingMode: room.openingMode === 'dice-roll' ? 'dice-roll' : 'sealed-bid',
     openingAuction: room.openingAuction ?? null,
     seats: room.seats.map((seat) => ({
@@ -140,6 +161,32 @@ export function normalizeRoom(room: Room): Room {
       openingRoll: seat.openingRoll ?? null,
       openingRollStartedAt: seat.openingRollStartedAt ?? null,
       openingRollResolvesAt: seat.openingRollResolvesAt ?? null,
+    })),
+  }
+}
+
+/** Ordenação total da sala publicada: geração vence primeiro; dentro dela, revisão. */
+export function compareRoomVersion(a: Pick<Room, 'matchGeneration' | 'revision'>, b: Pick<Room, 'matchGeneration' | 'revision'>): number {
+  const generation = (a.matchGeneration ?? 0) - (b.matchGeneration ?? 0)
+  return generation !== 0 ? generation : (a.revision ?? -1) - (b.revision ?? -1)
+}
+
+/** Partida encerrada → lobby da geração seguinte. Só limpa fatos do ciclo; assentos e
+ * identidade atravessam por construção. A autoridade persiste isto atomicamente. */
+export function prepareRematch(room: Room): Room {
+  const current = normalizeRoom(room)
+  return {
+    ...current,
+    status: 'lobby',
+    matchGeneration: current.matchGeneration! + 1,
+    openingAuction: null,
+    seats: current.seats.map((seat) => ({
+      ...seat,
+      openingBid: null,
+      bidLocked: false,
+      openingRoll: null,
+      openingRollStartedAt: null,
+      openingRollResolvesAt: null,
     })),
   }
 }
@@ -179,6 +226,8 @@ export function createRoom(id: string, host: Identity): Room {
   return {
     id,
     status: 'lobby',
+    matchGeneration: 0,
+    revision: -1,
     openingMode: 'sealed-bid',
     openingAuction: null,
     seats: [{
@@ -490,11 +539,15 @@ export type ResolveOpeningRollResult =
   | { ok: true; room: Room }
   | { ok: false; reason: 'not-rolling' | 'not-ready' }
 
-/** Resolve somente a janela vencida; o último resultado também fecha e ordena a disputa. */
+/** Resolve somente a janela vencida. O último resultado NÃO fecha a disputa: ele reusa a
+ * própria janela do assento (`openingRollStartedAt`/`ResolvesAt`, que persiste no jsonb de
+ * `seats` sem migration) como prazo de revelação — `closeOpeningRolls` ordena e embarca só
+ * quando ela vence, para toda tela ver o arremesso decisivo cair. */
 export function resolveOpeningRoll(
   room: Room,
   rng: () => number,
   now: number,
+  revealMs: number = OPENING_ROLL_REVEAL_MS,
 ): ResolveOpeningRollResult {
   if (room.status !== 'rolling') return { ok: false, reason: 'not-rolling' }
   const normalized = normalizeRoom(room)
@@ -506,21 +559,44 @@ export function resolveOpeningRoll(
   ) {
     return { ok: false, reason: 'not-ready' }
   }
+  const isLast = normalized.seats.every((seat) => seat.openingRoll !== null || seat.uid === current.uid)
   const rolled = normalized.seats.map((seat) => (
     seat.uid === current.uid
       ? {
           ...seat,
           openingRoll: [openingDie(rng), openingDie(rng)] as [number, number],
-          openingRollStartedAt: null,
-          openingRollResolvesAt: null,
+          openingRollStartedAt: isLast ? now : null,
+          openingRollResolvesAt: isLast ? now + Math.max(0, revealMs) : null,
         }
       : seat
   ))
-  if (rolled.some((seat) => seat.openingRoll === null)) {
-    return { ok: true, room: { ...normalized, seats: rolled } }
+  return { ok: true, room: { ...normalized, seats: rolled } }
+}
+
+export type CloseOpeningRollsResult =
+  | { ok: true; room: Room }
+  | { ok: false; reason: 'not-rolling' | 'not-ready' }
+
+/** Fecha a disputa quando todos rolaram E a janela de revelação do último venceu:
+ * ordena por soma (RNG desempata só o grupo empatado) e embarca. Janela ausente
+ * (sala legada) conta como vencida — a mesa nunca fica presa em 'rolling'. */
+export function closeOpeningRolls(
+  room: Room,
+  rng: () => number,
+  now: number,
+): CloseOpeningRollsResult {
+  if (room.status !== 'rolling') return { ok: false, reason: 'not-rolling' }
+  const normalized = normalizeRoom(room)
+  if (normalized.seats.some((seat) => seat.openingRoll === null)) {
+    return { ok: false, reason: 'not-ready' }
   }
+  const revealEndsAt = Math.max(
+    0,
+    ...normalized.seats.map((seat) => seat.openingRollResolvesAt ?? 0),
+  )
+  if (now < revealEndsAt) return { ok: false, reason: 'not-ready' }
   const bySum = new Map<number, Seat[]>()
-  for (const seat of rolled) {
+  for (const seat of normalized.seats) {
     const sum = (seat.openingRoll?.[0] ?? 0) + (seat.openingRoll?.[1] ?? 0)
     const group = bySum.get(sum) ?? []
     group.push(seat)

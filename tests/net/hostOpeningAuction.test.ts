@@ -64,6 +64,18 @@ describe('Leilão da Largada — autoridade', () => {
     guestTransport.submitOpeningRoll()
     now = 3_800
     host.tick()
+
+    // O último resultado sai num snapshot ainda 'rolling' — a mesa vê o dado decisivo cair
+    // antes de embarcar; o embarque só acontece quando a janela de revelação vence.
+    expect(host.room().status).toBe('rolling')
+    expect(host.room().seats[1]).toMatchObject({
+      name: 'Bruno',
+      openingRoll: [6, 6],
+      openingRollResolvesAt: 6_400,
+    })
+
+    now = 6_400
+    host.tick()
     await settleHost(host)
 
     expect(host.room().status).toBe('playing')

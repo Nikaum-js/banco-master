@@ -9,7 +9,7 @@ import type { TurnCtx } from '@/game/turn/turnMachine'
 import { applyCommand, type PlayerAction } from '@/game/commands'
 import { buildGameCtx } from '@/game/setup'
 import { replayCtx } from './recorder'
-import { fromPublicRoom, redactRoom, seatByUid, type JoinError, type Room } from './room'
+import { compareRoomVersion, fromPublicRoom, normalizeRoom, redactRoom, seatByUid, type JoinError, type Room } from './room'
 import type { AcceptedCommand, JoinRequest, Transport, Unsubscribe } from './transport'
 
 // Conexão da PRÓPRIA sessão (041, data-model §4) — não é regra de jogo (difere por cliente,
@@ -67,6 +67,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
   let game: GameState | null = null
   let room: Room | null = null
   let seq = -1
+  let gameGeneration = -1 // geração do `game`; `room` pode já estar no lobby seguinte
   // Histórico curto dos últimos comandos aplicados — `{seq, preGame, cmd, origin}` (043,
   // T043). As duas cópias de um `seq` privacidade-sensível (pública redigida + privada
   // completa) trafegam por canais DIFERENTES, sem ordem garantida em rede real; e a defasagem
@@ -189,14 +190,19 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
             if (resyncTarget < 0) return // ninguém prometeu partida — não é falha, não repete
             throw new Error('resync: snapshot ainda não gravado — tenta de novo')
           }
+          const snapshotRoom = normalizeRoom({ ...snap.room, revision: snap.seq })
+          if (room && compareRoomVersion(snapshotRoom, room) < 0) {
+            throw new Error('resync: snapshot de geração anterior — tenta de novo')
+          }
           if (snap.seq < resyncTarget) throw new Error('resync: leitura aquém do piso — tenta de novo')
           game = snap.game
           // 043, T023: `loadSnapshot` ainda lê a linha inteira (a leitura por RPC é a Fase 5,
           // `read_snapshot`) — extrai o PRÓPRIO código antes de redigir tudo, para nenhum
           // código alheio sobreviver até lá e `myReentryCode` continuar disponível em partida.
           myReentryCode = snap.room.seats.find((s) => s.uid === transport.uid)?.reentryCode || null
-          room = redactRoom(snap.room)
+          room = redactRoom(snapshotRoom)
           seq = snap.seq
+          gameGeneration = snapshotRoom.matchGeneration ?? 0
           // O `game` novo veio pronto do snapshot, não de encadear o histórico local — as
           // entradas antigas (`preGame`/replay em cadeia) não descrevem mais como chegar aqui
           // (043, T043). Mantê-las arriscaria um redo tardio reconstruir a partir de um
@@ -230,7 +236,10 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
       await transport.connect()
       subs.push(transport.onBroadcast(applyAccepted))
       subs.push(transport.onRoom((r) => {
-        room = fromPublicRoom(r) // nunca carrega código nenhum — nem o do dono (D-036)
+        const incoming = fromPublicRoom(r)
+        if (room && compareRoomVersion(incoming, room) < 0) return // 049: publicação atrasada
+        room = incoming // nunca carrega código nenhum — nem o do dono (D-036)
+        seq = Math.max(seq, incoming.revision ?? -1)
         resolvePlayerId()
         const mine = r.seats.find((seat) => seat.uid === transport.uid)
         if (r.status !== 'bidding' && mine?.openingBid != null) openingBid = mine.openingBid
@@ -240,7 +249,12 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
         // ler. Sem o piso, um snapshot ainda não commitado era lido como "não há partida" e
         // esta era a ÚNICA chance de descobrir o contrário — o convidado ficava no lobby
         // enquanto a mesa jogava.
-        if (!game && (r.status === 'playing' || r.status === 'paused' || r.status === 'ended')) void resync(0)
+        if (
+          (r.status === 'playing' || r.status === 'paused' || r.status === 'ended')
+          && (!game || (incoming.matchGeneration ?? 0) > gameGeneration)
+        ) {
+          void resync(Math.max(0, incoming.revision ?? 0))
+        }
         notify()
       }))
       subs.push(transport.onCommandRejected((toUid, info) => {
@@ -272,8 +286,9 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
       if (snap) {
         game = snap.game
         myReentryCode = snap.room.seats.find((s) => s.uid === transport.uid)?.reentryCode || null // ver `resync`
-        room = redactRoom(snap.room)
+        room = redactRoom(normalizeRoom({ ...snap.room, revision: snap.seq }))
         seq = snap.seq
+        gameGeneration = snap.room.matchGeneration ?? 0
         resolvePlayerId()
         drainPending()
         notify()
@@ -290,6 +305,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
       }
       if (persisted && !room) {
         room = redactRoom(persisted) // room() nunca carrega código nenhum, nem o do dono
+        seq = Math.max(seq, room.revision ?? -1)
         resolvePlayerId()
         notify()
       }

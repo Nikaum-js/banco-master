@@ -2,8 +2,8 @@
 // EndGameScreen (044, T012/T014) — consome `matchSummary(game)` puro e nunca inventa o que
 // o estado não registrou. Estilo de teste segue o padrão de componente da 042
 // (tests/ui/errorBoundaries): pragma jsdom na 1ª linha, @testing-library/react.
-import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { EndGameScreen } from '@/game/ui/EndGameScreen'
 import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
@@ -62,6 +62,33 @@ describe('EndGameScreen (T014)', () => {
     const rows = tbodyRows()
     expect(within(rows[0]).getByText(playerLabel('p2'))).toBeTruthy()
     expect(within(rows[0]).getByText('1º')).toBeTruthy()
+  })
+
+  it('apresenta o vencedor como foco e identifica a classificação final', () => {
+    const g = seed(2)
+    g.players[0].eliminated = true
+    g.eliminationOrder = [{ playerId: 'p1', round: 3 }]
+    g.phase = 'ended'
+
+    render(<EndGameScreen game={g} online={false} onExit={() => {}} />)
+
+    expect(screen.getByText('PARTIDA ENCERRADA')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: playerLabel('p2') })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Classificação final' })).toBeTruthy()
+  })
+
+  it('em sala online oferece voltar à própria sala, não ao início do app', () => {
+    const g = seed(2)
+    g.players[0].eliminated = true
+    g.eliminationOrder = [{ playerId: 'p1', round: 3 }]
+    g.phase = 'ended'
+    const onExit = vi.fn()
+
+    render(<EndGameScreen game={g} online onExit={onExit} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar à sala' }))
+    expect(onExit).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('button', { name: 'Voltar ao início' })).toBeNull()
   })
 
   it('eliminado mostra a rodada em que caiu', () => {

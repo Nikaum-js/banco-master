@@ -25,9 +25,12 @@ import {
   markConnected,
   markDisconnected,
   normalizeRoom,
+  prepareRematch,
+  closeOpeningRolls,
   openOpeningAuction,
   OPENING_AUCTION_MS,
   OPENING_ROLL_MS,
+  OPENING_ROLL_REVEAL_MS,
   openOpeningRolls,
   playerIdsInOrder,
   requestOpeningRoll,
@@ -54,12 +57,14 @@ export interface HostOptions {
   telemetry?: Telemetry // padrão `nullTelemetry` (044, D-040) — emissão é do host, nunca da tela
   openingAuctionMs?: number // padrão 15s; `0` é o seam determinístico de testes legados
   openingRollMs?: number // D-051: janela pública de um arremesso; padrão 1,4s
+  openingRollRevealMs?: number // revelação do último arremesso antes do embarque; padrão 2,6s; `0` = seam determinístico
 }
 
 export interface Host {
   open(): Promise<void> // abre o LOBBY: escuta pedidos de assento/presença e publica a sala (FR-001/002)
   start(): Promise<void> // cria o estado inicial, persiste como 1º snapshot e publica a sala em 'playing'
   startMatch(): Promise<{ ok: true } | { ok: false; reason: 'too-few' | 'already-started' | 'not-host' }> // lobby → partida (FR-006)
+  reopenRoom(): Promise<{ ok: true } | { ok: false; reason: 'not-ended' | 'persistence' }> // 049: fim → mesmo lobby
   setOpeningMode(mode: OpeningMode): { ok: true } | { ok: false; reason: 'not-in-lobby' }
   kick(uid: string): { ok: true } | { ok: false; reason: 'not-in-lobby' | 'is-host' | 'unknown-uid' } // remoção no lobby (FR-024)
   stop(): void
@@ -76,10 +81,11 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   const telemetry = opts.telemetry ?? nullTelemetry
   const openingAuctionMs = opts.openingAuctionMs ?? OPENING_AUCTION_MS
   const openingRollMs = opts.openingRollMs ?? OPENING_ROLL_MS
+  const openingRollRevealMs = opts.openingRollRevealMs ?? OPENING_ROLL_REVEAL_MS
 
   let room = normalizeRoom(initialRoom)
   let game: GameState | null = null
-  let seq = -1 // -1 = ainda não iniciado; o snapshot inicial fica em seq 0
+  let seq = room.revision ?? -1 // global pela vida da sala; a revanche NÃO reinicia em zero
   let opened = false
   let closingOpeningAuction = false
   const subs: Unsubscribe[] = []
@@ -92,7 +98,8 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   // por fato, não um hash novo a cada emissão.
   let cachedMatchKey: string | null = null
   async function ensureMatchKey(): Promise<void> {
-    cachedMatchKey ??= await matchKey(room.id)
+    const generation = room.matchGeneration ?? 0
+    cachedMatchKey ??= await matchKey(generation === 0 ? room.id : `${room.id}:${generation}`)
   }
 
   // T1/T2 do contrato: a partida NUNCA sente uma falha de telemetria. O adaptador de
@@ -161,6 +168,11 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     if (next === game) return false // no-op / inválido → descarta (FR-009)
     game = next
     seq += 1
+    room = {
+      ...room,
+      revision: seq,
+      status: !wasEnded && game.phase === 'ended' ? 'ended' : room.status,
+    }
     const cmd: AcceptedCommand = { seq, action, resolved: drain() }
     persistSnapshot() // FR-013 (upsert)
     // 043, D9/D10: a cópia PRIVADA (íntegra) vai ANTES da pública (redigida) — o dono aplica a
@@ -191,6 +203,8 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     if (!wasEnded && game.phase === 'ended') {
       const summary = matchSummary(game)
       trackSafely({ kind: 'match_ended', matchKey: key, players: game.players.length, rounds: summary.rounds, durationMs: summary.durationMs })
+      transport.publishRoom(toPublicRoom(room))
+      notify()
     }
     return true
   }
@@ -386,7 +400,8 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     game = room.openingMode === 'sealed-bid'
       ? applyOpeningAuction(initialGame, room)
       : initialGame
-    seq = 0
+    seq += 1
+    room = { ...room, revision: seq }
     const { publicGame, secrets } = splitSnapshot(game, room)
     await transport.saveSnapshot({ seq, game: publicGame, secrets, room }) // 1º snapshot (FR-006/013): clientes leem ao entrar
     transport.publishRoom(toPublicRoom(room)) // status já 'playing' (definido por startGame antes de criar o host)
@@ -400,9 +415,9 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     async open(): Promise<void> {
       const snap = await transport.loadSnapshot()
       if (snap && snap.seq >= 0) {
-        game = snap.game
+        game = snap.room.status === 'lobby' ? null : snap.game
         seq = snap.seq
-        room = snap.room
+        room = normalizeRoom({ ...snap.room, revision: snap.seq })
       } else {
         // Sem partida ainda (lobby): a sala com que esta autoridade foi construída pode vir de
         // `Client.room()`, que NUNCA carrega código (T023) — é o caso do host que dá F5
@@ -416,6 +431,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
           room = stored.status === 'bidding' || stored.status === 'rolling'
             ? withKnownCodes(stored, room)
             : withKnownCodes(room, stored)
+          seq = Math.max(seq, room.revision ?? -1)
         }
       }
       await ensureOpen()
@@ -428,6 +444,23 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     },
 
     start: startInternal,
+
+    async reopenRoom() {
+      if (!game && room.status === 'lobby') return { ok: true as const }
+      if (!game || game.phase !== 'ended') return { ok: false as const, reason: 'not-ended' as const }
+      const next = prepareRematch({ ...room, revision: seq })
+      try {
+        await transport.reopenRoom(next)
+      } catch {
+        return { ok: false as const, reason: 'persistence' as const }
+      }
+      room = next
+      game = null
+      cachedMatchKey = null
+      transport.publishRoom(toPublicRoom(room))
+      notify()
+      return { ok: true as const }
+    },
 
     // O host inicia o modo já persistido no lobby. Leilão coleta em paralelo; Maior dado
     // abre a sequência pública da D-051. Nos dois casos, a ordem vive no primeiro snapshot.
@@ -487,12 +520,17 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
         return
       }
       if (room.status === 'rolling') {
-        const resolved = resolveOpeningRoll(room, rng, t)
-        if (!resolved.ok) return
-        room = resolved.room
-        if (room.status === 'playing') {
+        // Resolver e fechar são passos separados: o último resultado sai num snapshot ainda
+        // 'rolling' (toda tela vê o dado decisivo cair) e o embarque espera a janela de
+        // revelação vencer. Com `openingRollRevealMs: 0` (seam de teste) os dois acontecem
+        // no mesmo tick.
+        const resolved = resolveOpeningRoll(room, rng, t, openingRollRevealMs)
+        if (resolved.ok) room = resolved.room
+        const closed = closeOpeningRolls(room, rng, t)
+        if (closed.ok) {
+          room = closed.room
           void startInternal().then(syncPause)
-        } else {
+        } else if (resolved.ok) {
           publishAndPersistRoom()
         }
         return

@@ -564,6 +564,41 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     // legados (paused/log e, desde 047, coleção de propostas).
     expect(snap?.game).toMatchObject(game)
   })
+
+  it('049: reopenRoom avança a geração e limpa o snapshot atomicamente', async () => {
+    const f = fixture()
+    const t = f.make('t-host')
+    await t.connect()
+    const ended: Room = {
+      ...ROOM,
+      status: 'ended',
+      matchGeneration: 0,
+      revision: 7,
+      seats: [seat('t-host', true)],
+    }
+    await t.saveRoom(ended)
+    await t.saveSnapshot({
+      seq: 7,
+      game: { phase: 'ended', log: [], paused: null } as never,
+      secrets: { hands: {}, decks: {} },
+      room: ended,
+    })
+
+    const lobby = normalizeRoom({
+      ...ended,
+      status: 'lobby',
+      matchGeneration: 1,
+      openingAuction: null,
+    })
+    await t.reopenRoom(lobby)
+
+    expect(await t.loadSnapshot()).toBeNull()
+    expect(await t.loadRoom()).toMatchObject({
+      status: 'lobby',
+      matchGeneration: 1,
+      revision: 7,
+    })
+  })
 })
 
 // 041 — contrato §1/§2: conexão da PRÓPRIA sessão e presença em conjunto. O contrato exige

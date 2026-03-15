@@ -184,6 +184,9 @@ export interface Transport {
   // assento sem código, EXCETO o de quem chamou — é assim que o dono lê o próprio (D5).
   saveRoom(room: Room): Promise<void>
   loadRoom(): Promise<Room | null>
+  /** 049/D-052: transição atômica de fim → lobby. Diferente de `saveRoom`, limpa o
+   * snapshot/segredos da partida encerrada e só resolve depois da gravação real. */
+  reopenRoom(room: Room): Promise<void>
 
   // presença (host observa (des)conexões)
   onPresence(cb: (change: PresenceChange) => void): Unsubscribe

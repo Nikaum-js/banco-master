@@ -12,8 +12,8 @@ import { HomeMapPanel } from './HomeMapPanel'
 import type { BoardTheme } from '@/game/ui/theme/boardTheme'
 
 const WORDMARK = [
-  { text: 'Banco', tone: 'text-starlight' },
-  { text: 'Master', tone: 'text-brass' },
+  { text: 'Magnata', tone: 'text-starlight' },
+  { text: 'Imobiliário', tone: 'text-brass' },
 ] as const
 
 // Letra a letra, cada uma caindo com seu atraso — o letreiro monta na frente de quem
@@ -57,7 +57,7 @@ function Wordmark() {
   const { reduced } = useMotion()
   return (
     <h1 className="display leading-[0.88] mt-2.5 text-[clamp(2.5rem,min(10vw,14vh),5.25rem)]">
-      <span className="sr-only">Banco Master</span>
+      <span className="sr-only">Magnata Imobiliário</span>
       <span aria-hidden="true" className="relative inline-block">
         {letters(true, reduced)}
         {/* varredura de luz sobre as letras (CSS; some sob movimento reduzido) */}

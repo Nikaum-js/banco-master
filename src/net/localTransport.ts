@@ -5,7 +5,7 @@
 // porta sobre Realtime/Postgres.
 import type { AcceptedCommand, CommandEnvelope, CommandFailure, ConnStatus, JoinRequest, OpeningBidMessage, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import { mergeSnapshot, type Secrets } from './perspective'
-import { normalizeRoom, reattachByCode, toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
+import { compareRoomVersion, normalizeRoom, reattachByCode, toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
 
 type SubmitCb = (cmd: CommandEnvelope, fromUid: string) => void
 type OpeningBidCb = (message: OpeningBidMessage, fromUid: string) => void
@@ -153,11 +153,17 @@ export class LocalHub {
     return false
   }
 
-  // Guarda monotônica (041, D9) — espelha o trigger SQL: escrita com `seq` menor que o já
-  // aplicado é NO-OP silencioso. `saveRoom` (que não envia `seq`) não é afetado por esta guarda.
+  // Guarda monotônica (041/D9 + 049/D-052): geração anterior nunca vence; dentro da mesma
+  // geração, escrita com `seq` menor é NO-OP silencioso.
   private applySnapshot(snap: PersistedSnapshot): void {
-    if (this.snapshot && snap.seq < this.snapshot.seq) return
-    const room = this.preserveSeatCodes(snap.room)
+    const candidate = normalizeRoom({ ...snap.room, revision: snap.seq })
+    if (this.storedRoom && compareRoomVersion(candidate, this.storedRoom) < 0) return
+    if (
+      this.snapshot
+      && (candidate.matchGeneration ?? 0) === (this.snapshot.room.matchGeneration ?? 0)
+      && snap.seq < this.snapshot.seq
+    ) return
+    const room = this.preserveSeatCodes(candidate)
     this.snapshot = { ...snap, room }
     this.storedRoom = room
   }
@@ -322,9 +328,21 @@ export class LocalHub {
 
   async saveRoom(room: Room): Promise<void> {
     if (this.consumeWriteFailure()) throw new Error('injected write failure (saveRoom)')
-    const kept = this.preserveSeatCodes(room)
+    const normalized = normalizeRoom(room)
+    if (this.storedRoom && compareRoomVersion(normalized, this.storedRoom) < 0) return
+    const kept = this.preserveSeatCodes(normalized)
     this.storedRoom = kept
     if (this.snapshot) this.snapshot = { ...this.snapshot, room: kept }
+  }
+
+  async reopenRoom(room: Room, fromUid: string): Promise<void> {
+    if (this.consumeWriteFailure()) throw new Error('injected write failure (reopenRoom)')
+    if (fromUid !== this.currentHostUid()) throw new Error('not the current host of this room')
+    const normalized = normalizeRoom(room)
+    if (this.storedRoom && compareRoomVersion(normalized, this.storedRoom) < 0) return
+    this.storedRoom = this.preserveSeatCodes(normalized)
+    this.snapshot = null
+    this.held = null
   }
 
   async loadRoom(): Promise<Room | null> {
@@ -466,6 +484,10 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
 
     saveRoom(room: Room): Promise<void> {
       return hub.saveRoom(room)
+    },
+
+    reopenRoom(room: Room): Promise<void> {
+      return hub.reopenRoom(room, uid)
     },
 
     // Paridade com `room_preview` (043, T022/T025): redige o código de todo mundo, EXCETO o

@@ -3,6 +3,7 @@ import {
   OPENING_AUCTION_MS,
   OPENING_ROLL_MS,
   allOpeningBidsLocked,
+  closeOpeningRolls,
   createRoom,
   finalizeOpeningAuction,
   joinRoom,
@@ -115,6 +116,21 @@ describe('Leilão da Largada — reducers da sala', () => {
       room = resolved.room
     }
 
+    // O último resultado NÃO fecha a disputa: sai ainda em 'rolling', com a janela de
+    // revelação aberta no próprio assento, pra toda tela ver o dado decisivo cair.
+    expect(room.status).toBe('rolling')
+    expect(room.seats[2]).toMatchObject({
+      name: 'Caio',
+      openingRoll: [4, 4],
+      openingRollStartedAt: 2_400,
+      openingRollResolvesAt: 5_000,
+    })
+    expect(closeOpeningRolls(room, () => 0, 4_999)).toEqual({ ok: false, reason: 'not-ready' })
+
+    const closed = closeOpeningRolls(room, () => 0, 5_000)
+    if (!closed.ok) throw new Error(closed.reason)
+    room = closed.room
+
     expect(room.status).toBe('playing')
     expect(room.seats.map((seat) => [seat.name, seat.openingRoll, seat.playerId])).toEqual([
       ['Bruno', [6, 4], 'p1'],
@@ -122,6 +138,7 @@ describe('Leilão da Largada — reducers da sala', () => {
       ['Ana', [1, 1], 'p3'],
     ])
     expect(room.seats.every((seat) => seat.openingBid === null && !seat.bidLocked)).toBe(true)
+    expect(room.seats.every((seat) => seat.openingRollResolvesAt === null)).toBe(true)
   })
 
   it('Maior dado desempata apenas o grupo com a mesma soma pelo RNG da autoridade', () => {
@@ -138,6 +155,9 @@ describe('Leilão da Largada — reducers da sala', () => {
       if (!resolved.ok) throw new Error(resolved.reason)
       room = resolved.room
     }
+    const closed = closeOpeningRolls(room, () => values.shift() ?? 0, 5_000)
+    if (!closed.ok) throw new Error(closed.reason)
+    room = closed.room
 
     expect(room.seats.map((seat) => seat.name)).toEqual(['Bruno', 'Ana', 'Caio'])
     expect(room.seats.map((seat) => seat.openingRoll)).toEqual([[3, 3], [3, 3], [1, 1]])
@@ -168,6 +188,9 @@ describe('Leilão da Largada — reducers da sala', () => {
       if (!resolved.ok) throw new Error(resolved.reason)
       room = resolved.room
     }
+    const closed = closeOpeningRolls(room, () => ((draw++ * 0.17) % 1), 5_000)
+    if (!closed.ok) throw new Error(closed.reason)
+    room = closed.room
 
     const sums = room.seats.map((seat) => (seat.openingRoll?.[0] ?? 0) + (seat.openingRoll?.[1] ?? 0))
     expect(room.seats).toHaveLength(count)

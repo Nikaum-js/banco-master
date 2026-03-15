@@ -25,26 +25,26 @@ import { HomeMapPanel } from './HomeMapPanel'
 import type { BoardTheme } from '@/game/ui/theme/boardTheme'
 
 // ---------------------------------------------------------------------
-// Letreiro de pixel — matriz 5×7 por letra, só as dez de "BANCO MASTER".
+// Letreiro de pixel — matriz 5×7 por letra, só as dez de "MAGNATA IMOBILIARIO".
 // Por que matriz e não fonte: fonte pixel de verdade é um arquivo a mais no bundle e ainda
 // escala com antialias no meio. Dez letras cabem em 70 bytes de string, e o desenho fica
 // nítido em qualquer tamanho porque são retângulos.
 // ---------------------------------------------------------------------
 const GLYPHS: Record<string, string[]> = {
-  B: ['11110', '10001', '10001', '11110', '10001', '10001', '11110'],
-  A: ['01110', '10001', '10001', '11111', '10001', '10001', '10001'],
-  N: ['10001', '11001', '11001', '10101', '10011', '10011', '10001'],
-  C: ['01110', '10001', '10000', '10000', '10000', '10001', '01110'],
-  O: ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
   M: ['10001', '11011', '10101', '10101', '10001', '10001', '10001'],
-  S: ['01111', '10000', '10000', '01110', '00001', '00001', '11110'],
+  A: ['01110', '10001', '10001', '11111', '10001', '10001', '10001'],
+  G: ['01110', '10001', '10000', '10011', '10001', '10001', '01110'],
+  N: ['10001', '11001', '11001', '10101', '10011', '10011', '10001'],
   T: ['11111', '00100', '00100', '00100', '00100', '00100', '00100'],
-  E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111'],
+  I: ['01110', '00100', '00100', '00100', '00100', '00100', '01110'],
+  O: ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
+  B: ['11110', '10001', '10001', '11110', '10001', '10001', '11110'],
+  L: ['10000', '10000', '10000', '10000', '10000', '10000', '11111'],
   R: ['11110', '10001', '10001', '11110', '10100', '10010', '10001'],
 }
 
-const LINE1 = 'BANCO'
-const LINE2 = 'MASTER'
+const LINE1 = 'MAGNATA'
+const LINE2 = 'IMOBILIARIO'
 const GLYPH_W = 5
 const GAP = 1
 const W2 = LINE2.length * (GLYPH_W + GAP) - GAP
@@ -71,7 +71,7 @@ function pixels(word: string, row: number, colorOf: (x: number) => string) {
 
 function PixelWordmark() {
   const { reduced } = useMotion()
-  // "BANCO" em ciano; "MASTER" na rampa quente do arcade. A cor varia por COLUNA, então o
+  // "MAGNATA" em ciano; "IMOBILIARIO" na rampa quente do arcade. A cor varia por COLUNA, então o
   // gradiente é feito de pixels, não de um degradê suavizado (que trairia o estilo).
   const cool = () => 'var(--color-group-skyblue)'
   const hot = (x: number) => {
@@ -82,7 +82,7 @@ function PixelWordmark() {
 
   return (
     <h1 className="neon-pixelmark">
-      <span className="sr-only">Banco Master</span>
+      <span className="sr-only">Magnata Imobiliário</span>
       <svg viewBox={`-0.5 -0.5 ${WORD_W + 1} ${WORD_H + 1}`} aria-hidden="true" shapeRendering="crispEdges">
         {all.map((p) => (
           <motion.rect

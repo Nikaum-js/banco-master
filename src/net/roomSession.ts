@@ -65,6 +65,8 @@ export interface RoomSession {
   requestReentry(code: string): void
   setOpeningMode(mode: OpeningMode): void
   startMatch(): Promise<void>
+  /** 049/D-052: fecha o resumo neste cliente; o host também reabre a sala de forma durável. */
+  returnToLobby(): Promise<void>
   submitOpeningBid(amount: number): void
   submitOpeningRoll(): void
   kick(target: string): void
@@ -126,6 +128,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
   let host: Host | null = null
   let disconnectStore: (() => void) | null = null
   let revealTimer: ReturnType<typeof setTimeout> | null = null
+  let postgameLobby = false
   const subs: Unsubscribe[] = []
   const listeners: (() => void)[] = []
 
@@ -176,6 +179,19 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
     const myReentryCode = c.myReentryCode()
     const openingBid = c.openingBid()
 
+    // A geração seguinte já entrou no Ritual de Largada. Isto prevalece sobre um resumo
+    // encerrado que este cliente ainda mantinha aberto localmente (049/FR-020).
+    if (c.playerId() && room?.status === 'bidding') {
+      postgameLobby = false
+      emit({ room, error: joinError, busy: false, phase: 'auction', myReentryCode, openingBid })
+      return
+    }
+    if (c.playerId() && room?.status === 'rolling') {
+      postgameLobby = false
+      emit({ room, error: joinError, busy: false, phase: 'rolling', myReentryCode, openingBid })
+      return
+    }
+
     // Partida em curso mas AINDA sem assento (041, D-033): reentrada pendente ou recusada
     // por código inválido. Fica no formulário — NUNCA pula para 'playing'/'order' sem
     // assento, mesmo com o `GameState` já carregado (é o mesmo `game` de todo mundo).
@@ -184,6 +200,10 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
       return
     }
     if (game) {
+      if (game.phase === 'ended' && postgameLobby) {
+        emit({ room, error: joinError, busy: false, phase: 'lobby', myReentryCode, openingBid })
+        return
+      }
       // Um comando sistêmico pode avançar `seq` durante o próprio start (por exemplo,
       // ausência detectada logo após o snapshot). Quem já estava no lobby/leilão continua
       // no ritual de abertura; `seq > 0` só caracteriza reentrada fora desse fluxo.
@@ -254,7 +274,6 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
         const c = await openSession(roomId)
         const current = c.room()
         if (!current) return fail('Sala não encontrada — confira o link.')
-        if (c.game()?.phase === 'ended') return fail('ended') // FR-028: o link não reabre a mesa
 
         const myUid = transport!.uid
         const mine = seatByUid(current, myUid)
@@ -263,6 +282,15 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
         // formulário de reentrada por código, em vez de recusar com 'already-started'.
         if (!mine && current.status !== 'lobby') {
           emit({ room: current, phase: 'reentry', error: null })
+          return
+        }
+
+        // 049/FR-018: quem tem assento recupera a classificação encerrada; visitante continua
+        // na escada de reentrada e não recebe uma tela privada só por conhecer o link.
+        if (mine && c.game()?.phase === 'ended') {
+          postgameLobby = false
+          emit({ room: current, phase: 'playing' })
+          syncFromClient(c)
           return
         }
 
@@ -328,6 +356,29 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
         emit({ error: result.reason === 'too-few' ? 'São necessários ao menos 2 jogadores.' : result.reason })
       }
       emit({ busy: false })
+    },
+
+    async returnToLobby(): Promise<void> {
+      const ended = client?.game()?.phase === 'ended'
+      if (!ended && state.room?.status !== 'lobby') return
+      if (state.isHost) {
+        emit({ busy: true, error: null })
+        const result = await host?.reopenRoom()
+        if (!result || !result.ok) {
+          emit({
+            busy: false,
+            error: result?.reason === 'persistence'
+              ? 'Não foi possível reabrir a sala. A classificação continua preservada.'
+              : 'A partida ainda não terminou.',
+          })
+          return
+        }
+        postgameLobby = true
+        emit({ phase: 'lobby', room: host?.room() ?? state.room, busy: false, error: null })
+        return
+      }
+      postgameLobby = true
+      emit({ phase: 'lobby', busy: false, error: null })
     },
 
     submitOpeningBid(amount: number): void {

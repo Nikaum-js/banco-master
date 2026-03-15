@@ -3,7 +3,8 @@
 // tabuleiro — graticule, latão, marcas de registro).
 import { useEffect, useRef, useState } from 'react'
 import { Button, Chip } from '@/game/ui/primitives'
-import { Dice } from '@/game/ui/dice'
+import { Dice, ROLL_DURATION_MS } from '@/game/ui/dice'
+import { useMotion } from '@/game/ui/motion'
 import { PlayerFace } from '@/boards/PlayerFace'
 import { DEFAULT_AVATAR, type AvatarId } from '@/boards/playerAvatarCatalog'
 import { DEFAULT_SKIN, type SkinId } from '@/boards/playerSkinCatalog'
@@ -233,6 +234,7 @@ export function RoomLobby({
   }
 
   const faltam = MIN_SEATS - room.seats.length
+  const awaitingRematch = room.status === 'ended'
   const openingMode = room.openingMode ?? 'sealed-bid'
   const compactLink = link.replace(/^https?:\/\//, '')
   const waitingCopy = faltam === 1
@@ -241,8 +243,10 @@ export function RoomLobby({
 
   return (
     <Frame
-      title="Sala aberta"
-      subtitle={faltam > 0
+      title={awaitingRematch ? 'De volta à sala' : 'Sala aberta'}
+      subtitle={awaitingRematch
+        ? 'Aguardando o host preparar a revanche'
+        : faltam > 0
         ? 'Aguardando jogadores…'
         : openingMode === 'sealed-bid'
           ? 'Ordem por Leilão secreto'
@@ -404,7 +408,11 @@ export function RoomLobby({
                 : 'Abrir disputa'}
         </Button>
       ) : (
-        <p className="label text-starlight-muted text-center">Aguardando o host iniciar a partida…</p>
+        <p className="label text-starlight-muted text-center">
+          {awaitingRematch
+            ? 'Seu lugar está guardado. O host ainda está na classificação…'
+            : 'Aguardando o host iniciar a partida…'}
+        </p>
       )}
 
       {/* 4. Código de reentrada do PRÓPRIO assento (041, D-033/FR-030): visível desde o
@@ -439,8 +447,10 @@ function OpeningDie({ value }: { value: number }) {
   )
 }
 
-// Segura o foco no jogador que acabou de rolar enquanto o dado 3D tomba na face
-// sorteada (tumble de ~1,05s do tabuleiro) — só depois o foco passa ao próximo.
+// Quanto tempo o resultado fica anunciado DEPOIS de o dado 3D pousar, antes de o foco
+// passar ao próximo. O tumble em si (`ROLL_DURATION_MS`, o mesmo do tabuleiro) vem antes:
+// enquanto o cubo gira, a tela segue dizendo "está rolando" — soma, líder e roster só
+// atualizam quando o dado assenta, como na arena de dados do tabuleiro.
 const OPENING_REVEAL_HOLD_MS = 1500
 
 export function OpeningRolls({
@@ -459,9 +469,13 @@ export function OpeningRolls({
   // Mesmos dados 3D do tabuleiro (`game/ui/dice`), mesma coreografia: o clique abre a
   // janela pública (D-051) e os dados chacoalham; quando a autoridade revela o
   // resultado (`openingRoll` sai de null), o tumble dispara e pousa na face certa —
-  // em TODAS as telas, não só na de quem clicou.
-  const [reveal, setReveal] = useState<{ uid: string; rollKey: number } | null>(null)
+  // em TODAS as telas, não só na de quem clicou. `landed` divide o reveal em duas fases:
+  // enquanto o cubo tomba, o resultado NÃO é anunciado (como na arena do tabuleiro);
+  // pousou, a soma entra e fica em cartaz por OPENING_REVEAL_HOLD_MS.
+  const { reduced } = useMotion()
+  const [reveal, setReveal] = useState<{ uid: string; rollKey: number; landed: boolean } | null>(null)
   const prevRolled = useRef<Record<string, boolean> | null>(null)
+  const landTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     const seen: Record<string, boolean> = {}
@@ -471,20 +485,35 @@ export function OpeningRolls({
     if (before === null) return // primeiro snapshot (entrada/reconexão): sem replay
     const justRolled = room.seats.find((seat) => seat.openingRoll !== null && before[seat.uid] === false)
     if (!justRolled) return
-    setReveal((r) => ({ uid: justRolled.uid, rollKey: (r?.rollKey ?? 0) + 1 }))
+    const tumbleMs = reduced ? 0 : ROLL_DURATION_MS
+    setReveal((r) => ({ uid: justRolled.uid, rollKey: (r?.rollKey ?? 0) + 1, landed: tumbleMs === 0 }))
+    if (landTimer.current) clearTimeout(landTimer.current)
     if (revealTimer.current) clearTimeout(revealTimer.current)
-    revealTimer.current = setTimeout(() => setReveal(null), OPENING_REVEAL_HOLD_MS)
-  }, [room.seats])
+    landTimer.current = setTimeout(() => {
+      setReveal((r) => (r ? { ...r, landed: true } : r))
+    }, tumbleMs)
+    // Último arremesso: não devolve o foco a ninguém — o resultado fica em cartaz até a
+    // autoridade fechar a disputa e trocar de tela (a janela de revelação do host).
+    const isLast = room.seats.every((seat) => seat.openingRoll !== null)
+    if (!isLast) {
+      revealTimer.current = setTimeout(() => setReveal(null), tumbleMs + OPENING_REVEAL_HOLD_MS)
+    }
+  }, [room.seats, reduced])
   useEffect(() => () => {
+    if (landTimer.current) clearTimeout(landTimer.current)
     if (revealTimer.current) clearTimeout(revealTimer.current)
   }, [])
 
   const revealSeat = reveal ? room.seats.find((seat) => seat.uid === reveal.uid) ?? null : null
+  const landed = reveal?.landed ?? false
   const focus = revealSeat ?? current ?? null
   const focusRoll = revealSeat?.openingRoll ?? null
   const focusSum = focusRoll ? focusRoll[0] + focusRoll[1] : 0
 
-  const leader = rolled.reduce<Room['seats'][number] | null>((best, seat) => {
+  // O assento cujo dado ainda está no ar não entra em líder/roster — o fato só existe
+  // publicamente quando o cubo assenta.
+  const settled = rolled.filter((seat) => !(seat.uid === reveal?.uid && !landed))
+  const leader = settled.reduce<Room['seats'][number] | null>((best, seat) => {
     if (!best) return seat
     const bestTotal = (best.openingRoll?.[0] ?? 0) + (best.openingRoll?.[1] ?? 0)
     const seatTotal = (seat.openingRoll?.[0] ?? 0) + (seat.openingRoll?.[1] ?? 0)
@@ -511,7 +540,7 @@ export function OpeningRolls({
               <span className="label text-brass">{revealSeat ? 'Na mesa' : 'Vez de jogar'}</span>
               <p className="display text-xl text-starlight">
                 {revealSeat
-                  ? `${focus.name} tirou ${focusSum}`
+                  ? landed ? `${focus.name} tirou ${focusSum}` : `${focus.name} está rolando`
                   : inFlight ? `${focus.name} está rolando` : `${focus.name} joga agora`}
               </p>
             </div>
@@ -520,9 +549,9 @@ export function OpeningRolls({
           <span
             className={`opening-rolls-dice ${inFlight && !revealSeat ? 'opening-rolls-dice--moving' : ''}`}
             role="img"
-            aria-label={revealSeat
+            aria-label={revealSeat && landed
               ? `Dados de ${focus.name}: ${focusRoll?.[0]} e ${focusRoll?.[1]}, soma ${focusSum}`
-              : inFlight
+              : revealSeat || inFlight
                 ? `Dados de ${focus.name} em movimento`
                 : `Dados de ${focus.name} aguardando arremesso`}
           >
@@ -542,7 +571,9 @@ export function OpeningRolls({
       <ol className="opening-rolls-roster">
         {room.seats.map((seat, index) => {
           const isCurrent = seat.uid === current?.uid
-          const roll = seat.openingRoll
+          // Dado ainda no ar: o roster também espera o pouso pra estampar a soma.
+          const inTumble = seat.uid === reveal?.uid && !landed
+          const roll = inTumble ? null : seat.openingRoll
           const sum = (roll?.[0] ?? 0) + (roll?.[1] ?? 0)
           return (
             <li
@@ -556,7 +587,7 @@ export function OpeningRolls({
               <span className="opening-rolls-player__identity">
                 <strong>{seat.name}</strong>
                 <small>
-                  {roll ? `Soma ${sum}` : isCurrent ? 'na mesa' : 'aguardando'}
+                  {roll ? `Soma ${sum}` : inTumble ? 'rolando' : isCurrent ? 'na mesa' : 'aguardando'}
                 </small>
               </span>
               {roll ? (
@@ -571,7 +602,7 @@ export function OpeningRolls({
                 </span>
               ) : (
                 <span className="opening-rolls-player__state">
-                  {isCurrent ? (inFlight ? 'rolando' : 'sua vez') : 'em espera'}
+                  {inTumble ? 'rolando' : isCurrent ? (inFlight ? 'rolando' : 'sua vez') : 'em espera'}
                 </span>
               )}
             </li>
@@ -579,7 +610,10 @@ export function OpeningRolls({
         })}
       </ol>
 
-      {current?.uid === myUid && !inFlight ? (
+      {reveal && !landed && revealSeat ? (
+        // Dado no ar: ninguém age até ele pousar — nem o próximo da fila.
+        <p className="opening-rolls-wait">A mesa acompanha {revealSeat.name}</p>
+      ) : current?.uid === myUid && !inFlight ? (
         <Button className="opening-rolls-action" onClick={onRoll}>
           Rolar meus dados
         </Button>

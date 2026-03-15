@@ -113,6 +113,13 @@ export interface SupabaseLike {
   rpc(fn: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: unknown }>
 }
 
+function isMissingRpcSignature(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const { code, message } = error as { code?: unknown; message?: unknown }
+  return code === 'PGRST202'
+    || (typeof message === 'string' && message.includes('Could not find the function'))
+}
+
 interface RoomRow {
   id: string
   status: string
@@ -589,13 +596,28 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     // `request_seat`/`reattach_by_code`). Upsert PARCIAL preservado: só toca `status`/`seats`,
     // nunca `game`/`seq`/`secrets` — a função só declara essas duas colunas no `do update set`.
     async saveRoom(room: Room): Promise<void> {
-      const { error } = await supabase.rpc('write_room', {
+      const args = {
         room_id: roomId,
         status: room.status,
         seats: room.seats,
+        match_generation: room.matchGeneration ?? 0,
         opening_mode: room.openingMode ?? 'sealed-bid',
         opening_auction: room.openingAuction ?? null,
-      })
+      }
+      let { error } = await supabase.rpc('write_room', args)
+      // Janela segura de deploy: o frontend pode chegar antes da migration 0006. Na geração
+      // inicial, a assinatura da 0005 ainda representa exatamente o mesmo estado; depois de
+      // uma revanche jamais recuamos, porque aí `match_generation` já é parte da identidade.
+      if (isMissingRpcSignature(error) && args.match_generation === 0) {
+        const legacy = await supabase.rpc('write_room', {
+          room_id: args.room_id,
+          status: args.status,
+          seats: args.seats,
+          opening_mode: args.opening_mode,
+          opening_auction: args.opening_auction,
+        })
+        error = legacy.error
+      }
       if (error) throw error
       // A linha agora existe — e é ela que as políticas dos dois canais consultam. `:lobby`
       // reavalia a ESCRITA (só a autoridade escreve lá); `:play` reavalia a LEITURA, que exige
@@ -616,6 +638,8 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         id: string
         status: Room['status']
         seats: Room['seats']
+        matchGeneration?: number
+        revision?: number
         openingMode?: Room['openingMode']
         openingAuction?: Room['openingAuction']
       }
@@ -623,9 +647,24 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         id: row.id,
         status: row.status,
         seats: row.seats.map((s) => ({ ...s, reentryCode: s.reentryCode ?? '' })),
+        matchGeneration: row.matchGeneration,
+        revision: row.revision,
         openingMode: row.openingMode,
         openingAuction: row.openingAuction ?? null,
       })
+    },
+
+    // 049/D-052 — uma RPC própria porque `write_room` é deliberadamente parcial e não
+    // limpa `game`/`secrets`. A Promise representa o commit real: só depois dela o host
+    // publica o lobby da geração seguinte.
+    async reopenRoom(room: Room): Promise<void> {
+      const { error } = await supabase.rpc('reopen_room', {
+        room_id: roomId,
+        seats: room.seats,
+        match_generation: room.matchGeneration ?? 0,
+        opening_mode: room.openingMode ?? 'sealed-bid',
+      })
+      if (error) throw error
     },
 
     onPresence(cb): Unsubscribe {
@@ -636,16 +675,31 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     // Por RPC (`write_snapshot`) — mesmo motivo de `saveRoom` acima: `.upsert()` direto contra
     // `rooms` nunca afeta uma linha já existente sob RLS sem select policy.
     async saveSnapshot(snap: PersistedSnapshot): Promise<void> {
-      const { error } = await supabase.rpc('write_snapshot', {
+      const args = {
         room_id: roomId,
         seq: snap.seq,
         game: snap.game, // 043, T034/T037: já a parte PÚBLICA (host.ts separa via `splitSnapshot`)
         secrets: snap.secrets,
         status: snap.room.status,
         seats: snap.room.seats,
+        match_generation: snap.room.matchGeneration ?? 0,
         opening_mode: snap.room.openingMode ?? 'sealed-bid',
         opening_auction: snap.room.openingAuction ?? null,
-      })
+      }
+      let { error } = await supabase.rpc('write_snapshot', args)
+      if (isMissingRpcSignature(error) && args.match_generation === 0) {
+        const legacy = await supabase.rpc('write_snapshot', {
+          room_id: args.room_id,
+          seq: args.seq,
+          game: args.game,
+          secrets: args.secrets,
+          status: args.status,
+          seats: args.seats,
+          opening_mode: args.opening_mode,
+          opening_auction: args.opening_auction,
+        })
+        error = legacy.error
+      }
       if (error) throw error
     },
 
@@ -666,6 +720,8 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         id: string
         status: Room['status']
         seats: Room['seats']
+        matchGeneration?: number
+        revision?: number
         openingMode?: Room['openingMode']
         openingAuction?: Room['openingAuction']
         seq: number
@@ -677,6 +733,8 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         id: row.id,
         status: row.status,
         seats: row.seats,
+        matchGeneration: row.matchGeneration,
+        revision: row.revision ?? row.seq,
         openingMode: row.openingMode,
         openingAuction: row.openingAuction ?? null,
       })

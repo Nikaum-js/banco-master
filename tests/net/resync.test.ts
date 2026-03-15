@@ -39,6 +39,7 @@ function stubTransport() {
     onRoom: () => () => {},
     saveRoom: () => Promise.resolve(),
     loadRoom: () => Promise.resolve(room),
+    reopenRoom: () => Promise.resolve(),
     onPresence: () => () => {},
     onStatus: (cb) => { statusCbs.push(cb); return () => {} },
     onPresenceSync: () => () => {},

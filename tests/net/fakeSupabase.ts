@@ -323,6 +323,8 @@ export function fakeSupabase(): FakeSupabase {
               data: {
                 id: row.id,
                 status: row.status,
+                matchGeneration: row.matchGeneration ?? 0,
+                revision: row.seq ?? -1,
                 openingMode: row.openingMode,
                 openingAuction: row.openingAuction,
                 seats: scoped,
@@ -351,6 +353,8 @@ export function fakeSupabase(): FakeSupabase {
               data: {
                 id: row.id,
                 status: row.status,
+                matchGeneration: row.matchGeneration ?? 0,
+                revision: row.seq ?? -1,
                 openingMode: row.openingMode,
                 openingAuction: row.openingAuction,
                 seats: scopedSeats,
@@ -394,6 +398,7 @@ export function fakeSupabase(): FakeSupabase {
               id: roomId,
               status: args.status,
               seats: preserveSeatCodes(args.seats),
+              matchGeneration: args.match_generation ?? 0,
               openingMode: args.opening_mode,
               openingAuction: args.opening_auction,
             })
@@ -407,7 +412,18 @@ export function fakeSupabase(): FakeSupabase {
               return Promise.resolve({ data: null, error: new Error('not authorized to write this room') })
             }
             const existing = broker.rows.get(key)
-            if (existing && typeof args.seq === 'number' && typeof existing.seq === 'number' && args.seq < existing.seq) {
+            const incomingGeneration = Number(args.match_generation ?? 0)
+            const storedGeneration = Number(existing?.matchGeneration ?? 0)
+            if (existing && incomingGeneration < storedGeneration) {
+              return Promise.resolve({ data: null, error: null })
+            }
+            if (
+              existing
+              && incomingGeneration === storedGeneration
+              && typeof args.seq === 'number'
+              && typeof existing.seq === 'number'
+              && args.seq < existing.seq
+            ) {
               return Promise.resolve({ data: null, error: null }) // no-op silencioso, como o trigger real
             }
             broker.rows.set(key, {
@@ -415,11 +431,39 @@ export function fakeSupabase(): FakeSupabase {
               id: roomId,
               status: args.status,
               seats: preserveSeatCodes(args.seats),
+              matchGeneration: incomingGeneration,
               openingMode: args.opening_mode,
               openingAuction: args.opening_auction,
               seq: args.seq,
               game: args.game,
               secrets: args.secrets,
+            })
+            return Promise.resolve({ data: null, error: null })
+          }
+          if (fn === 'reopen_room') {
+            if (consumeWriteFailure()) return Promise.resolve({ data: null, error: new Error('injected write failure') })
+            const key = `rooms:${roomId}`
+            const existing = broker.rows.get(key)
+            if (hostUidOf(broker, roomId) !== uid) {
+              return Promise.resolve({ data: null, error: new Error('not authorized to reopen this room') })
+            }
+            const requested = Number(args.match_generation ?? 0)
+            const current = Number(existing?.matchGeneration ?? 0)
+            if (existing?.status === 'lobby' && requested === current && existing.game == null) {
+              return Promise.resolve({ data: null, error: null })
+            }
+            if (existing?.status !== 'ended' || requested !== current + 1) {
+              return Promise.resolve({ data: null, error: new Error('room is not ready for rematch') })
+            }
+            broker.rows.set(key, {
+              ...(existing ?? {}),
+              status: 'lobby',
+              seats: preserveSeatCodes(args.seats),
+              matchGeneration: requested,
+              openingMode: args.opening_mode,
+              openingAuction: null,
+              game: null,
+              secrets: {},
             })
             return Promise.resolve({ data: null, error: null })
           }
