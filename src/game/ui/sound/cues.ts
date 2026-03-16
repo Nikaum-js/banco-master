@@ -18,23 +18,29 @@ export type SoundCue =
 
 // Auto-mapa: qualquer arquivo `<cue>.{webm,mp3,ogg,wav}` em src/assets/sfx vira CUE_SRC[cue].
 // import.meta.glob é do Vite (e suportado pelo vitest); em ambiente sem assets retorna {}.
-const modules = import.meta.glob('../../../assets/sfx/*.{webm,mp3,ogg,wav}', {
-  eager: true,
-  query: '?url',
-  import: 'default',
-}) as Record<string, string>
+//
+// O SOM É O MESMO NOS DOIS MAPAS. Existiu aqui um mecanismo de variante por mapa
+// (`fuligem--buy.wav` sobrepondo `buy`), da spec 055/US5 — "identidade sonora da Fuligem".
+// Foi removido por decisão do dono do produto: trocar mapa troca o mundo VISUAL, não o
+// vocabulário sonoro, e o jogador que aprendeu o que cada som significa no Atlas não deve
+// ter que reaprender na Fuligem. Cue é identificador SEMÂNTICO (§spec 035) — "comprei",
+// "paguei aluguel" —, e semântica igual pedindo som diferente é custo de aprendizado sem
+// retorno. Os 18 `fuligem--*.wav` continuam em `src/assets/sfx/`, mas o glob negativo os
+// deixa FORA do bundle: nada foi apagado, nada é embarcado.
+const modules = import.meta.glob(
+  [
+    '../../../assets/sfx/*.{webm,mp3,ogg,wav}',
+    '!../../../assets/sfx/*--*.{webm,mp3,ogg,wav}',
+  ],
+  {
+    eager: true,
+    query: '?url',
+    import: 'default',
+  },
+) as Record<string, string>
 
 export const CUE_SRC: Partial<Record<SoundCue, string>> = {}
-/** Variantes por MAPA (055/D-069): `fuligem--buy.wav` toca no lugar de `buy` quando o
- * mapa ativo é a Cidade da Fuligem. Sem variante, o cue base vale para todos os mapas. */
-export const CUE_VARIANTS: Record<string, Partial<Record<SoundCue, string>>> = {}
 for (const [path, url] of Object.entries(modules)) {
   const name = path.split('/').pop()!.replace(/\.(webm|mp3|ogg|wav)$/, '')
-  const variant = name.match(/^([a-z]+)--(.+)$/)
-  if (variant) {
-    const [, mapId, cue] = variant
-    ;(CUE_VARIANTS[mapId] ??= {})[cue as SoundCue] = url
-  } else {
-    CUE_SRC[name as SoundCue] = url
-  }
+  CUE_SRC[name as SoundCue] = url
 }

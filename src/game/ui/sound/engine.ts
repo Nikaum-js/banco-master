@@ -2,8 +2,7 @@
 // lazy (criado no 1º play), GainNode master para volume/mute, buffers cacheados,
 // throttle anti-spam por cue. `play` é não-bloqueante e NUNCA lança (FR-019/FR-020).
 // Antes do 1º gesto do usuário, `play` é no-op (política de autoplay — FR-015).
-import { CUE_SRC, CUE_VARIANTS, type SoundCue } from './cues'
-import { useBoardTheme } from '@/game/ui/theme/boardTheme'
+import { CUE_SRC, type SoundCue } from './cues'
 
 const MIN_GAP_MS = 70 // janela de coalescência por cue (FR-009)
 
@@ -38,11 +37,11 @@ export function setMasterGain(volume: number, muted: boolean): void {
   if (master) master.gain.value = mut ? 0 : vol
 }
 
-// A identidade sonora acompanha o MAPA (055/D-069): variante `<mapa>--<cue>` quando
-// existe, senão o asset base. O mapa nunca muda mid-game, então resolver na hora do
-// play é estável — e o cache passa a ser por URL, não por cue.
+// O asset de um cue NÃO depende do mapa: os dois mapas soam igual, de propósito (ver
+// `cues.ts`). Antes havia resolução por tema aqui; sem ela, o cue resolve direto no asset
+// base e o `useBoardTheme` deixa de ser dependência da camada de som.
 function srcFor(cue: SoundCue): string | undefined {
-  return CUE_VARIANTS[useBoardTheme.getState().theme]?.[cue] ?? CUE_SRC[cue]
+  return CUE_SRC[cue]
 }
 
 // Cacheia a PROMISE (não o buffer): plays concorrentes do mesmo cue antes do 1º
