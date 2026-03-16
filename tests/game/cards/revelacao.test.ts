@@ -24,13 +24,23 @@ const rctx = (g: GameState, pos: number) => ({
 })
 
 describe('cardRevealResolve — peek + pausa (US1)', () => {
-  it('SC-001: seta card-reveal com o topo, sem mutar deck/mão', () => {
-    const g = onCard('acaso', ['atalho-1', 'apagao-1'], 8)
-    const out = cardRevealResolve(rctx(g, 8))
+  it('SC-001: carta de MÃO seta card-reveal com o topo, sem mutar deck/mão', () => {
+    const g = onCard('tesouro', ['saia-prisao-1', 'diplomacia-1'], 2) // topo = carta de mão
+    const out = cardRevealResolve(rctx(g, 2))
     expect(out).toEqual({ done: false, blocksFinalize: true })
-    expect(g.resolution).toEqual({ kind: 'card-reveal', deckId: 'acaso', cardId: 'atalho-1' })
-    expect(g.decks.acaso).toEqual(['atalho-1', 'apagao-1']) // deck intacto
+    expect(g.resolution).toEqual({ kind: 'card-reveal', deckId: 'tesouro', cardId: 'saia-prisao-1' })
+    expect(g.decks.tesouro).toEqual(['saia-prisao-1', 'diplomacia-1']) // deck intacto
     expect(g.players[0].hand).toEqual([]) // mão intacta
+  })
+
+  it('carta IMEDIATA não abre tela — processa e loga na hora (sem card-reveal)', () => {
+    const g = onCard('tesouro', ['erro-banco-1', 'aniversario-1'], 2) // topo imediato (+$200)
+    const cashBefore = g.players[0].cash
+    const out = cardRevealResolve(rctx(g, 2))
+    expect(out).toEqual({ done: true })
+    expect(g.resolution).toBeNull() // não abre modal
+    expect(g.players[0].cash).toBe(cashBefore + 200) // efeito aplicado já
+    expect(g.log.at(-1)?.what).toContain('recebeu') // só vai pro log
   })
 })
 
