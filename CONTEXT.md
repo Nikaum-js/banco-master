@@ -16,6 +16,30 @@ _Avoid_: peça
 Visual sobreposto ao Avatar. O catálogo contém Careca, Cavanhaque, Topete, Cartola, Safári, Aviador, Robô e Astronauta; toda Skin é compatível com todo Avatar e a combinação persiste como identidade do assento ([D-047](./docs/adr/D-047-avatares-escolhiveis-e-persistentes.md)).
 _Avoid_: peça, Avatar
 
+**Sala privada**:
+Sala que não foi publicada no Diretório de salas. O link continua sendo sua credencial de entrada e ela nunca aparece por enumeração ([D-036](./docs/adr/D-036-acesso-a-sala-autorizado-no-servidor.md), [D-068](./docs/adr/D-068-diretorio-opt-in-de-lobbies-anonimos.md)).
+_Avoid_: sala oculta, sala não listada por acaso
+
+**Sala pública**:
+Lobby que o host publicou explicitamente no Diretório de salas. “Pública” descreve somente sua descoberta e entrada; a partida e seu estado continuam privados aos assentos ([D-068](./docs/adr/D-068-diretorio-opt-in-de-lobbies-anonimos.md)).
+_Avoid_: partida pública, matchmaking
+
+**Diretório de salas**:
+Lista de metadados mínimos das Salas públicas elegíveis, escolhidas manualmente por quem procura uma mesa ([D-068](./docs/adr/D-068-diretorio-opt-in-de-lobbies-anonimos.md)).
+_Avoid_: matchmaking, fila, lobby global
+
+**Publicação da sala**:
+Opção do host que permite ao lobby privado tornar-se uma Sala pública enquanto continuar elegível ([D-068](./docs/adr/D-068-diretorio-opt-in-de-lobbies-anonimos.md)).
+_Avoid_: abrir a partida, tornar snapshot público
+
+**Identificador de listagem**:
+Nome gerado e descartável mostrado no Diretório de salas, como “Mesa 7Q2M”. Não é o `roomId`, código de reentrada nem perfil do host ([D-068](./docs/adr/D-068-diretorio-opt-in-de-lobbies-anonimos.md)).
+_Avoid_: código da sala, link da sala, nome da sala
+
+**Elegibilidade da listagem**:
+Condição que determina se uma Sala pública pode aparecer agora no diretório, sem alterar a existência ou o estado da sala ([D-068](./docs/adr/D-068-diretorio-opt-in-de-lobbies-anonimos.md)).
+_Avoid_: validade da sala, atividade da partida
+
 **Revanche**:
 Nova partida iniciada no lobby da mesma sala depois do resumo final. Preserva assentos e identidades, mas recria todo o estado de jogo ([D-052](./docs/adr/D-052-revanche-reabre-a-mesma-sala.md)).
 _Avoid_: reiniciar a partida, recriar sala

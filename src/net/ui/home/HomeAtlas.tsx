@@ -7,7 +7,7 @@ import { motion } from 'motion/react'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import { DepartureFlap } from '../departureFlap'
 import { EntryStage, OrnamentRule } from '../entryShell'
-import { TAGLINE, type HomeForm } from './homeShared'
+import { TAGLINE, type HomeForm, type HomePublicDirectory } from './homeShared'
 import { HomeMapPanel } from './HomeMapPanel'
 import type { BoardTheme } from '@/game/ui/theme/boardTheme'
 
@@ -69,10 +69,12 @@ function Wordmark() {
 
 export function HomeAtlas({
   f,
+  directory,
   onChangeMap,
   mapChanging,
 }: {
   f: HomeForm
+  directory: HomePublicDirectory
   onChangeMap: (theme: BoardTheme) => void
   mapChanging: boolean
 }) {
@@ -93,6 +95,7 @@ export function HomeAtlas({
 
       <HomeMapPanel
         f={f}
+        directory={directory}
         reduced={reduced}
         skin="atlas"
         onChangeMap={onChangeMap}

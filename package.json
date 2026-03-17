@@ -14,6 +14,7 @@
     "sim:batch": "bun run scripts/sim-batch.ts",
     "test:sim": "SIM=1 vitest run tests/sim/headless",
     "attack": "bun run scripts/attack.ts",
+    "attack:public-rooms": "bun run scripts/attack-public-rooms.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

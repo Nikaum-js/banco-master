@@ -1,6 +1,6 @@
 # Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.29
+**Versão:** 1.30
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -86,6 +86,7 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Rastreabilidade de caixa | Toda mudança de caixa tem motivo registrado; nenhuma regra move dinheiro em silêncio (D-063, §12.3) |
 | Fim de jogo | Classificação completa por ordem inversa de eliminação, com patrimônio e duração; depois, retorno à mesma sala para revanche (D-038/D-052) |
 | Retenção da sala | Até 10 resumos de partidas finalizadas na mesma sala, com estatísticas derivadas e sem perfil global (D-067) |
+| Diretório de salas | Lobbies anônimos podem ser publicados pelo host em um diretório opt-in de metadados mínimos; salas privadas e partidas continuam não enumeráveis (D-068) |
 | Acessibilidade | WCAG 2.2 AA no caminho de jogo, verificada automaticamente; paisagem é a orientação de jogo (D-039) |
 | Telemetria | Mínima e anônima — contagem de partidas no próprio Supabase, exceção em monitoramento de erro (D-040) |
 | Ordem inicial | Host escolhe no lobby entre Leilão secreto e Maior dado; neste, cada jogador rola à vista da mesa (D-046/D-051) |
@@ -877,6 +878,7 @@ Regras de v1.10, introduzidas por [D-042](adr/D-042-identidade-de-transporte-ate
 - **Presença é do próprio.** Conexão e desconexão de um assento só podem ser anunciadas por aquele assento — ninguém provoca a pausa da mesa (§11.3) fingindo a queda de outro.
 - **O código de reentrada é segredo do dono** (§11.4). Não é exibido nem transmitido a outros jogadores: é a credencial que reanexa um assento, e quem o tivesse poderia tomar o assento alheio.
 - **O link entra, não lê.** O link da sala continua sendo a credencial de **entrada** (§11.2, D-019): quem o apresenta vê a **prévia** da sala — que ela existe, seu status e quem já sentou — e pode pedir assento. O **estado da partida** só é legível por quem tem assento nela.
+- **O diretório só enumera o que foi publicado.** A exceção da [D-068](adr/D-068-diretorio-opt-in-de-lobbies-anonimos.md) devolve somente metadados mínimos de lobbies que o próprio host publicou. Ela não dá acesso à linha da sala, à prévia privada por `roomId` nem ao estado da partida, e nunca inclui uma sala privada.
 
 ### 11.6 Revanche na Mesma Sala
 
@@ -886,6 +888,7 @@ Regras de v1.19, introduzidas pela [D-052](adr/D-052-revanche-reabre-a-mesma-sal
 - O host preserva sua autoridade e é quem reabre a sala e inicia a próxima partida.
 - A sala preserva assentos, nomes, cores, Avatar, Skin, códigos de reentrada e estado de conexão.
 - A próxima partida não começa automaticamente: o host escolhe novamente o Ritual de Largada e confirma o início.
+- A publicação no diretório também não atravessa a partida: iniciar despublica a sala, e o lobby de revanche só volta ao diretório se o host publicar novamente.
 - O estado econômico e mecânico da partida anterior não atravessa a revanche: caixa, posições, propriedades, construções, cartas, efeitos, imunidades, empréstimos, negociações, leilões, ordem, Loteria, decks e log são recriados. A classificação completa permanece apenas no resumo limitado da sala (§11.7).
 - A classificação encerrada permanece estável para quem ainda não saiu dela; a volta de outro jogador não apaga o resumo local.
 - Reload e mensagens atrasadas não podem restaurar o jogo encerrado depois que a sala foi reaberta. A versão vigente da mesa é sempre a publicada pela autoridade.
@@ -903,6 +906,23 @@ Regras de v1.29, introduzidas pela [D-067](adr/D-067-retencao-leve-fica-na-sala-
 - O histórico não cruza salas e não cria conta, perfil, ranking público, leaderboard, replay, matchmaking nem analytics individual.
 - Um **preset de sala** é somente um mapeamento nomeado para configurações já suportadas. “Leilão secreto” seleciona `sealed-bid`; “Maior dado” seleciona `dice-roll`. O host escolhe antes do início e todos veem a configuração publicada.
 - A preferência local do navegador pode preencher a escolha inicial de uma sala nova do host, mas nunca substitui o estado publicado de uma sala existente. Convidado não altera preset e a escolha não muda depois que a partida começa.
+
+### 11.8 Diretório Opt-in de Salas Públicas
+
+Regras de v1.30, introduzidas pela [D-068](adr/D-068-diretorio-opt-in-de-lobbies-anonimos.md).
+
+- **Sala privada continua sendo o padrão.** Somente a identidade anônima atestada que ocupa o assento do host pode publicar ou despublicar o lobby. Não existe conta permanente, perfil global nem login adicional.
+- **Sala pública é um lobby descobrível, não uma partida pública.** Publicar não torna snapshot, mãos, cartas, histórico, códigos de reentrada ou qualquer estado da partida acessível a quem não tem assento.
+- **A listagem é mínima.** Cada item contém somente identificador público gerado (“Mesa 7Q2M” ou equivalente), vagas, capacidade, Ritual de Largada e tempo aproximado desde a criação. Não contém título ou descrição livre, nomes, identidade visual dos assentos, `roomId` ou credencial.
+- **A entrada continua anônima.** Selecionar uma listagem pede assento pelo fluxo existente, com identidade atestada no servidor e escolha de nome, cor, Avatar e Skin para aquela sala. O nome não é único, global nem persistente entre salas.
+- **Só lobbies elegíveis aparecem.** A sala precisa estar explicitamente publicada, ainda no lobby, com host presente e ao menos uma vaga. O diretório permite filtrar por quantidade mínima de vagas e Ritual de Largada e, por padrão, ordena as salas pelas mais recentes.
+- **Lotação apenas esconde.** Se a sala lotar, sai do diretório sem ser despublicada; se uma vaga surgir enquanto ela continuar no lobby, publicada e com host presente, pode reaparecer. Lotação e liberação de vaga devem ser refletidas no diretório em até 5 segundos.
+- **Início despublica.** Quando a partida começa, a listagem some e a publicação é encerrada em até 5 segundos. Fim de jogo e lobby de revanche não republicam automaticamente; o host precisa optar novamente.
+- **Ausência do host apenas esconde.** Depois de 60 segundos sem presença do host, a listagem torna-se inelegível e deve sair do diretório em até mais 30 segundos. Sala, assentos, intenção de publicação e reentrada permanecem intactos. Se o host voltar enquanto o lobby continuar publicado e elegível, a listagem reaparece.
+- **Autoridade e limites são server-side.** Convidado não publica sala alheia, cliente adulterado não forja elegibilidade e a chave pública do frontend não lista salas privadas. Cada identidade anônima pode criar até 3 salas distintas que cheguem a ser públicas em 10 minutos, manter no máximo 1 lobby com publicação vigente, tentar entrar em sala pública até 10 vezes por minuto e atualizar o diretório no máximo uma vez a cada 5 segundos. Republicar a mesma sala no lobby de revanche não é criar outra sala.
+- **O fluxo privado não muda.** Entrada por link, QR Code ou compartilhamento, prévia privada, kick do host, desconexão, recuperação, reentrada e revanche seguem §11.1–§11.7. Os limites do diretório não são aplicados ao convite privado.
+- **Falha fecha sem vazamento.** Indisponibilidade do diretório produz estado próprio de erro, sem fallback para leitura de salas, e não afeta convite direto nem sala em andamento. Sala legada sem publicação explícita é privada.
+- **Não há camada social.** Chat, mensagens privadas, espectadores, contas, perfis, denúncia, bloqueio, moderação, sanções, ranking, fila, Elo e matchmaking continuam fora do escopo.
 
 
 ---
@@ -986,7 +1006,7 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor d
 
 > Seção nova em v1.9, apoiada em [D-039](adr/D-039-acessibilidade-aa-no-caminho-de-jogo.md).
 
-**Alvo:** WCAG 2.2 nível **AA** no **caminho de jogo** — home, lobby, tabuleiro e HUD, modais de decisão (§12.2), superfícies de pausa/reconexão (§11.3/§11.4) e fim de jogo (§9.5). O alvo é verificado automaticamente e bloqueia a publicação (§12.8). Fora do caminho de jogo (popovers informativos, superfícies de diagnóstico) o alvo é o mesmo, sem verificação automatizada.
+**Alvo:** WCAG 2.2 nível **AA** no **caminho de jogo** — home, diretório de salas (§11.8), lobby, tabuleiro e HUD, modais de decisão (§12.2), superfícies de pausa/reconexão (§11.3/§11.4) e fim de jogo (§9.5). O alvo é verificado automaticamente e bloqueia a publicação (§12.8). Fora do caminho de jogo (popovers informativos, superfícies de diagnóstico) o alvo é o mesmo, sem verificação automatizada.
 
 | Compromisso | Regra |
 |---|---|
@@ -1022,6 +1042,7 @@ Invariantes:
 - **Sem efeito na partida.** Falha de envio não pausa, não bloqueia comando e não vira causa de pausa (§11.3).
 - **Desligável.** Sem configuração de ambiente, o produto funciona inteiro e não envia nada; desenvolvimento não emite.
 - **Contagem, não comportamento.** Mede partidas, não pessoas: sem perfil, sem funil por jogador, sem rastreio entre salas.
+- **Diretório não amplia a coleta.** Publicação, consulta, limite ou falha do diretório (§11.8) não autoriza registrar identificador de sala/listagem, nome ou identidade anônima na telemetria. Diagnóstico operacional precisa permanecer agregado e sem correlação individual.
 
 ### 12.8 Publicação
 
@@ -1255,7 +1276,8 @@ Todo empréstimo nasce com **prazo de 3 voltas do devedor**, contadas pelas pass
 | Chat em tempo real | Não previsto no v1 |
 | Espectadores | Não previsto no v1 |
 | Histórico global de partidas | Não previsto no v1; a única exceção é o histórico limitado à sala privada atual (§11.7, D-067) |
-| Sistema de contas/perfis | A definir se auth anônima ou por email será necessária |
+| Sistema de contas/perfis | Fora do v1; salas privadas e o diretório opt-in usam sessão anônima atestada (§11.8, D-019/D-042/D-068) |
+| Matchmaking, fila e ranking público | Fora do v1; o diretório opt-in apenas apresenta lobbies publicados e a pessoa escolhe onde pedir entrada (§11.8) |
 | Versão mobile nativa | Web responsivo apenas |
 | Mercado de ações / investimento em propriedades alheias | Candidata a v2 |
 | Modo jogo rápido | Candidato a v2 como modo alternativo de sala |
@@ -1271,4 +1293,4 @@ sendo a fonte de verdade da **regra**, o `CONTEXT.md` é a fonte dos **nomes**.
 
 ---
 
-**Magnata Imobiliário — SRS v1.28 | Julho 2026 | Documento de fonte de verdade absoluta**
+**Magnata Imobiliário — SRS v1.30 | Julho 2026 | Documento de fonte de verdade absoluta**

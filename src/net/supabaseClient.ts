@@ -7,6 +7,11 @@ import { supabaseTransport, type SupabaseLike } from './supabaseTransport'
 import { durableWrites } from './durableWrites'
 import type { Transport } from './transport'
 import { validateSupabaseEnv } from '@/config/supabaseEnv'
+import {
+  createPublicRoomGateway,
+  type PublicRoomGateway,
+  type PublicRoomsRpc,
+} from './publicRoomDirectory'
 
 const url = import.meta.env.VITE_SUPABASE_URL
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -66,6 +71,18 @@ export async function ensureSession(): Promise<{ uid: string }> {
   const { data, error } = await supabase.auth.signInAnonymously()
   if (error) throw error
   return { uid: data.user!.id }
+}
+
+let publicRooms: PublicRoomGateway | null = null
+
+/** Contratos enumeráveis da 054. A sessão continua anônima e atestada; este gateway não
+ * conhece `service_role`, não lê `rooms` e não participa do caminho privado por convite. */
+export function getPublicRoomGateway(): PublicRoomGateway {
+  publicRooms ??= createPublicRoomGateway(async () => {
+    await ensureSession()
+    return getSupabase() as unknown as PublicRoomsRpc
+  })
+  return publicRooms
 }
 
 // Transporte Supabase para uma sala. O `as unknown as SupabaseLike` estreita o cliente real

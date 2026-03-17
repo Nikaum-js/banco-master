@@ -19,6 +19,7 @@ import {
   createSupabaseTransport,
   describeInfraError,
   describeSupabaseConfiguration,
+  getPublicRoomGateway,
   isSupabaseConfigured,
 } from '@/net/supabaseClient'
 import { resolveTelemetry } from '@/telemetry'
@@ -38,11 +39,15 @@ import { OrientationGate } from '@/game/ui/OrientationGate'
 import type { AvatarId } from '@/boards/playerAvatarCatalog'
 import type { SkinId } from '@/boards/playerSkinCatalog'
 import { recallRoomPreset, rememberRoomPreset } from '@/net/roomPresets'
+import { PublicRoomControl } from './PublicRoomControl'
+import type { PublicRoomGateway } from '@/net/publicRoomDirectory'
+import type { Telemetry } from '@/telemetry/port'
 
 const TICK_MS = 250 // o host fecha prazos vencidos (soft-close de leilão, janela de reação)
 
 export function OnlineGate({ children }: { children: ReactNode }) {
   const [link, setLink] = useState(() => parseRoomLink(window.location.search))
+  const [telemetry] = useState(() => resolveTelemetry())
   // `?local=1` (ou o botão "jogar local") entrega o cliente único de sempre — o andaime de
   // desenvolvimento e demonstração segue existindo, intacto (FR-029/SC-007). `?players=N`
   // é o hook de boot do smoke E2E (036): também é partida local e NÃO pode ver a home,
@@ -76,13 +81,16 @@ export function OnlineGate({ children }: { children: ReactNode }) {
       </OrientationGate>
     )
   }
-  if (!link.roomId && !link.createHost) {
+  if (!link.roomId && !link.publicListingId && !link.createHost) {
     // Porta de entrada de verdade (FR-021): ninguém precisa saber o que é `?host=1`.
     return (
       <HomeScreen
         onCreate={() => navigateEntry('?host=1')}
         onJoin={(roomId) => navigateEntry(`?room=${encodeURIComponent(roomId)}`)}
+        onJoinPublic={(listingId) => navigateEntry(`?public=${encodeURIComponent(listingId)}`)}
         onLocal={() => setLocal(true)}
+        publicRooms={isSupabaseConfigured() ? getPublicRoomGateway() : null}
+        telemetry={telemetry}
       />
     )
   }
@@ -95,15 +103,31 @@ export function OnlineGate({ children }: { children: ReactNode }) {
       />
     )
   }
-  return <OnlineRoom roomId={link.roomId} onExit={() => navigateEntry('')}>{children}</OnlineRoom>
+  return (
+    <OnlineRoom
+      roomId={link.roomId}
+      publicListingId={link.publicListingId}
+      publicRooms={getPublicRoomGateway()}
+      telemetry={telemetry}
+      onExit={() => navigateEntry('')}
+    >
+      {children}
+    </OnlineRoom>
+  )
 }
 
 function OnlineRoom({
   roomId,
+  publicListingId,
+  publicRooms,
+  telemetry,
   onExit,
   children,
 }: {
   roomId: string | null
+  publicListingId: string | null
+  publicRooms: PublicRoomGateway
+  telemetry: Telemetry
   onExit: () => void
   children: ReactNode
 }) {
@@ -117,9 +141,10 @@ function OnlineRoom({
   const [session] = useState<RoomSession>(() =>
     createRoomSession({
       createTransport: createSupabaseTransport, // a seam: em teste, entra o hub in-memory
+      publicRooms,
       connectStore: connectMultiplayer,
       describeError: describeInfraError,
-      telemetry: resolveTelemetry(), // 044: nulo sem env/DEV — nenhuma requisição sai (FR-038)
+      telemetry, // 044: nulo sem env/DEV — nenhuma requisição sai (FR-038)
       initialRoomPreset: recallRoomPreset(),
       onRoomPresetSelected: rememberRoomPreset,
     }),
@@ -135,10 +160,10 @@ function OnlineRoom({
 
   // Entrada por link (convidado OU host reabrindo). O guard sobrevive ao StrictMode.
   useEffect(() => {
-    if (!roomId || entered.current) return
+    if (!roomId || publicListingId || entered.current) return
     entered.current = true
     void session.enter(roomId)
-  }, [roomId, session])
+  }, [publicListingId, roomId, session])
 
   // Prazos em voo são fechados pelo host (congelam sozinhos na pausa — FR-017).
   useEffect(() => {
@@ -220,6 +245,24 @@ function OnlineRoom({
         if (id) window.history.replaceState(null, '', roomLink(id, window.location.origin))
       })
     }
+    if (publicListingId) {
+      const joinPublic = (name: string, color: string, avatar: AvatarId, skin: SkinId): void => {
+        void session.joinPublic(publicListingId, { name, color, avatar, skin }).then((id) => {
+          if (id) window.history.replaceState(null, '', roomLink(id, window.location.origin))
+        })
+      }
+      return (
+        <IdentityForm
+          title="Entrar em mesa pública"
+          subtitle="Escolha como você aparece. A entrada será confirmada pelo servidor"
+          room={null}
+          cta="Confirmar e entrar"
+          busy={busy}
+          error={error}
+          onSubmit={joinPublic}
+        />
+      )
+    }
     return roomId ? (
       <IdentityForm
         title="Entrar na sala"
@@ -256,6 +299,9 @@ function OnlineRoom({
       onOpeningModeChange={session.setOpeningMode}
       onStart={() => void session.startMatch()}
       onKick={session.kick}
+      publicRoomControl={state.isHost ? (
+        <PublicRoomControl roomId={room.id} gateway={publicRooms} telemetry={telemetry} />
+      ) : undefined}
     />
   )
 }

@@ -12,6 +12,9 @@ export type TelemetryEvent =
   | { kind: 'match_started'; matchKey: string; players: number }
   | { kind: 'match_ended'; matchKey: string; players: number; rounds: number; durationMs: number | null }
   | { kind: 'match_paused'; matchKey: string; cause: 'disconnect' | 'persistence' }
+  | { kind: 'public_directory_opened' }
+  | { kind: 'public_room_published' }
+  | { kind: 'public_room_joined' }
 
 export interface Telemetry {
   /** Dispara e esquece (T1/T2 do contrato). NUNCA lança, NUNCA devolve algo que o chamador

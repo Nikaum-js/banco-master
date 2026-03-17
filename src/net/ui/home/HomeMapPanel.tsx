@@ -18,7 +18,9 @@ import {
   NAME_MAX,
   type HomeMapFact,
   type HomeForm,
+  type HomePublicDirectory,
 } from './homeShared'
+import { PublicRoomDirectory } from '../PublicRoomDirectory'
 
 type HomeMapSkin = 'atlas' | 'neon'
 
@@ -155,12 +157,14 @@ function NameCounter({ length }: { length: number }) {
 
 export function HomeMapPanel({
   f,
+  directory,
   reduced,
   skin,
   onChangeMap,
   mapChanging,
 }: {
   f: HomeForm
+  directory: HomePublicDirectory
   reduced: boolean
   skin: HomeMapSkin
   onChangeMap: (theme: BoardTheme) => void
@@ -171,6 +175,7 @@ export function HomeMapPanel({
   const map = HOME_MAPS[theme]
   const nextMap = HOME_MAPS[nextTheme]
   const fieldId = `${skin}-home-invite`
+  const directoryId = `${skin}-public-rooms`
   const inputClass = skin === 'neon'
     ? 'neon-input min-w-0 flex-1 tracking-normal normal-case text-left'
     : 'entry-input min-w-0 flex-1'
@@ -317,6 +322,39 @@ export function HomeMapPanel({
                       </Button>
                     </div>
                   </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <button
+              type="button"
+              className="home-map-panel__invite home-map-panel__public"
+              aria-expanded={f.directoryOpen}
+              aria-controls={f.directoryOpen ? directoryId : undefined}
+              onClick={f.toggleDirectory}
+            >
+              <Globe2 size={15} aria-hidden />
+              Encontrar sala pública
+              <ArrowRight size={15} aria-hidden />
+            </button>
+
+            <AnimatePresence initial={false}>
+              {f.directoryOpen && (
+                <motion.div
+                  id={directoryId}
+                  key={directoryId}
+                  initial={reduced ? false : { opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={reduced ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                  transition={reduced ? { duration: 0 } : { duration: MOTION.base, ease: EASE.emphasis }}
+                  className="overflow-hidden"
+                >
+                  <PublicRoomDirectory
+                    state={directory.state}
+                    available={directory.available}
+                    onRefresh={directory.refresh}
+                    onJoin={f.joinPublic}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>

@@ -16,20 +16,42 @@
 // mora em `home/homeShared.ts`, uma vez só: as duas desenham o mesmo formulário de jeitos
 // diferentes.
 import { motion } from 'motion/react'
-import { Activity, useEffect, useState } from 'react'
+import { Activity, useEffect, useRef, useState } from 'react'
 import { Map } from 'lucide-react'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import type { BoardTheme } from '@/game/ui/theme/boardTheme'
 import { HomeAtlas } from './home/HomeAtlas'
 import { HomeNeonArcade } from './home/HomeNeonArcade'
 import { HOME_MAPS, useHomeForm, type HomeActions } from './home/homeShared'
+import {
+  usePublicRoomDirectory,
+  type PublicRoomGateway,
+} from '@/net/publicRoomDirectory'
+import type { Telemetry } from '@/telemetry/port'
+import { nullTelemetry } from '@/telemetry/port'
 
 const SCREEN = {
   atlas: HomeAtlas,
   neon: HomeNeonArcade,
 } as const
 
-export function HomeScreen(actions: HomeActions) {
+const UNAVAILABLE_GATEWAY: PublicRoomGateway = {
+  list: () => Promise.reject(new Error('unavailable')),
+  publication: () => Promise.reject(new Error('unavailable')),
+  publish: () => Promise.reject(new Error('unavailable')),
+  unpublish: () => Promise.reject(new Error('unavailable')),
+  heartbeat: () => Promise.reject(new Error('unavailable')),
+  join: () => Promise.reject(new Error('unavailable')),
+}
+
+export function HomeScreen({
+  publicRooms = null,
+  telemetry = nullTelemetry,
+  ...actions
+}: HomeActions & {
+  publicRooms?: PublicRoomGateway | null
+  telemetry?: Telemetry
+}) {
   const { reduced } = useMotion()
   // A prévia de mapa pertence somente à home. O tema do jogo não muda junto:
   // Metrópole Neon ainda não existe como tabuleiro jogável.
@@ -42,6 +64,17 @@ export function HomeScreen(actions: HomeActions) {
   // Acima da troca de pele: nome, convite e gaveta permanecem intactos quando
   // o seletor de mapa alterna Atlas ⇄ Neon.
   const f = useHomeForm(actions)
+  const directoryState = usePublicRoomDirectory(
+    publicRooms ?? UNAVAILABLE_GATEWAY,
+    f.directoryOpen && publicRooms !== null,
+  )
+  const directoryOpened = useRef(false)
+
+  useEffect(() => {
+    if (!f.directoryOpen || directoryOpened.current) return
+    directoryOpened.current = true
+    telemetry.track({ kind: 'public_directory_opened' })
+  }, [f.directoryOpen, telemetry])
 
   // Cada palco tem mais de mil nós decorativos. Depois da primeira montagem, mantê-lo no
   // DOM e tirá-lo apenas da renderização evita reconstruir todo o SVG a cada comparação.
@@ -104,6 +137,11 @@ export function HomeScreen(actions: HomeActions) {
             >
               <Screen
                 f={f}
+                directory={{
+                  state: directoryState,
+                  available: publicRooms !== null,
+                  refresh: directoryState.refresh,
+                }}
                 onChangeMap={changeMap}
                 mapChanging={active && themeTransition !== null}
               />

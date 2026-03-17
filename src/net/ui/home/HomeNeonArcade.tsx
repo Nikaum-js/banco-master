@@ -19,7 +19,7 @@
 import { useState } from 'react'
 import { motion } from 'motion/react'
 import { useMotion } from '@/game/ui/motion'
-import { CITIES, COMMIT_SHA, STATS, type HomeForm } from './homeShared'
+import { CITIES, COMMIT_SHA, STATS, type HomeForm, type HomePublicDirectory } from './homeShared'
 import { NeonBackdrop } from './NeonBackdrop'
 import { HomeMapPanel } from './HomeMapPanel'
 import type { BoardTheme } from '@/game/ui/theme/boardTheme'
@@ -104,10 +104,12 @@ function PixelWordmark() {
 
 export function HomeNeonArcade({
   f,
+  directory,
   onChangeMap,
   mapChanging,
 }: {
   f: HomeForm
+  directory: HomePublicDirectory
   onChangeMap: (theme: BoardTheme) => void
   mapChanging: boolean
 }) {
@@ -140,6 +142,7 @@ export function HomeNeonArcade({
 
         <HomeMapPanel
           f={f}
+          directory={directory}
           reduced={reduced}
           skin="neon"
           onChangeMap={onChangeMap}

@@ -359,6 +359,27 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     expect(recusas).toEqual(['t-guest:already-started'])
   })
 
+  it('054: convite privado conserva room_preview e requestJoin fora do diretório', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    const guest = f.make('t-private')
+    await asHost(host)
+    await host.connect()
+    await guest.connect()
+
+    await expect(guest.loadRoom()).resolves.toMatchObject({
+      id: 'sala1',
+      status: 'lobby',
+      seats: [{ uid: 't-host', isHost: true }],
+    })
+
+    const requests: string[] = []
+    host.onJoinRequest((_who, fromUid) => requests.push(fromUid))
+    await guest.requestJoin({ name: 'Privado', color: '#fff' })
+
+    expect(requests).toEqual(['t-private'])
+  })
+
   it('§3: recusa por código inválido ("bad-code") chega, e o pedinte a reconhece como sua', async () => {
     const f = fixture()
     const host = f.make('t-host')

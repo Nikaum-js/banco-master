@@ -214,6 +214,7 @@ export function RoomLobby({
   onOpeningModeChange,
   onStart,
   onKick,
+  publicRoomControl,
 }: {
   room: Room
   myUid: string
@@ -226,6 +227,7 @@ export function RoomLobby({
   onOpeningModeChange?: (mode: OpeningMode) => void
   onStart: () => void
   onKick?: (uid: string) => void
+  publicRoomControl?: React.ReactNode
 }) {
   const [copied, setCopied] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -369,6 +371,7 @@ export function RoomLobby({
       </section>
 
       <section className="lobby-column lobby-column--launch">
+      {publicRoomControl}
       <fieldset className="lobby-launch-fieldset">
         <legend className="label text-brass">Preset da sala</legend>
         <p className="lobby-launch-intro">Escolha o Ritual de Largada desta partida.</p>

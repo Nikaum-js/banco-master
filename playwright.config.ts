@@ -12,6 +12,17 @@ import { defineConfig, devices } from '@playwright/test'
 const FAKE_SUPABASE_URL = 'https://e2e-placeholder.supabase.co'
 const FAKE_SUPABASE_ANON_KEY = 'sb_publishable_e2e_placeholder_key_x'
 
+function testPort(name: string, fallback: string): string {
+  const value = process.env[name] ?? fallback
+  if (!/^\d{2,5}$/.test(value) || Number(value) > 65_535) {
+    throw new Error(`${name} precisa ser uma porta TCP válida`)
+  }
+  return value
+}
+
+const DEV_PORT = testPort('PLAYWRIGHT_DEV_PORT', '5173')
+const PREVIEW_PORT = testPort('PLAYWRIGHT_PREVIEW_PORT', '4173')
+
 export default defineConfig({
   testDir: './e2e',
   // Cada turno depende de animações reais (rolagem ~1s + passo do peão). Com o passo
@@ -31,7 +42,7 @@ export default defineConfig({
   retries: 0,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: `http://localhost:${DEV_PORT}`,
     trace: 'retain-on-failure',
   },
   projects: [
@@ -45,22 +56,22 @@ export default defineConfig({
       // FR-051 (044/T052): partida completa e acessibilidade rodam sobre a versão
       // CONSTRUÍDA — o que o CI promoveria —, nunca o dev server.
       name: 'built',
-      use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:4173' },
+      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${PREVIEW_PORT}` },
       testMatch: ['**/fullMatch.spec.ts', '**/a11y.spec.ts', '**/avatarSkins.spec.ts'],
     },
   ],
   webServer: [
     {
-      command: 'bun run dev',
-      url: 'http://localhost:5173',
+      command: `bun run dev -- --port ${DEV_PORT} --strictPort`,
+      url: `http://localhost:${DEV_PORT}`,
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
     },
     {
       // `build && preview` no mesmo comando: cada execução audita um bundle fresco, nunca
       // um `dist/` esquecido de uma rodada anterior.
-      command: 'bun run build && bun run preview -- --port 4173 --strictPort',
-      url: 'http://localhost:4173',
+      command: `bun run build && bun run preview -- --port ${PREVIEW_PORT} --strictPort`,
+      url: `http://localhost:${PREVIEW_PORT}`,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
       env: {

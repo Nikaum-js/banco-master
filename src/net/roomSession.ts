@@ -23,6 +23,11 @@ import {
   type RoomPreset,
   type RoomPresetId,
 } from './roomPresets'
+import {
+  PublicRoomError,
+  type PublicJoinIdentity,
+  type PublicRoomGateway,
+} from './publicRoomDirectory'
 
 /** Ritual de início (`reveal`) é de ENTRADA, nunca de reconexão — ver `isReentry`.
  * `'reentry'` (041, D-033): partida em curso, sem assento — perder o aparelho não é mais
@@ -65,6 +70,8 @@ export interface RoomSession {
   enter(roomId: string): Promise<void>
   /** Cria a sala e assume a autoridade. Devolve o id, ou `null` se falhou. */
   create(who: SessionIdentity): Promise<string | null>
+  /** 054/D-068: admite o assento pelo listing antes de revelar/abrir o roomId. */
+  joinPublic(listingId: string, who: PublicJoinIdentity): Promise<string | null>
   requestSeat(who: SessionIdentity): void
   /** Reanexa ao próprio assento por CÓDIGO (041, D-033) — quando o link + uid não bastam. */
   requestReentry(code: string): void
@@ -92,6 +99,8 @@ export interface RoomSessionOptions {
    * atestada (`ensureSession()`) antes de conectar (043, D1). Os testes passam o hub
    * in-memory, síncrono; `await` funciona igual nos dois. */
   createTransport(roomId: string): Transport | Promise<Transport>
+  /** Gateway separado: o fluxo privado nunca o consulta. */
+  publicRooms?: Pick<PublicRoomGateway, 'join'>
   /** Liga o `useGameStore` ao client quando a partida existe. Devolve o desligador. */
   connectStore(client: Client): () => void
   /** Traduz falha de infra em mensagem acionável — específico do adapter. */
@@ -155,6 +164,19 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
 
   function fail(error: JoinError | string): void {
     emit({ phase: 'error', error, busy: false })
+  }
+
+  function describePublicJoinError(error: unknown): string {
+    if (!(error instanceof PublicRoomError)) return describeError(error)
+    if (error.code === 'color-taken') return 'Essa cor acabou de ser escolhida. Selecione outra.'
+    if (error.code === 'rate-limited') {
+      return 'Muitas tentativas de entrada. Aguarde um minuto e tente novamente.'
+    }
+    if (error.code === 'invalid-name') return 'Use um nome entre 1 e 16 caracteres.'
+    if (error.code === 'invalid-color' || error.code === 'invalid-appearance') {
+      return 'A apresentação escolhida não é válida.'
+    }
+    return 'Esta mesa pública não está mais disponível.'
   }
 
   /**
@@ -335,6 +357,37 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
         return id
       } catch (e) {
         fail(describeError(e))
+        return null
+      }
+    },
+
+    async joinPublic(listingId: string, who: PublicJoinIdentity): Promise<string | null> {
+      emit({ busy: true, error: null })
+      try {
+        if (!opts.publicRooms) throw new Error('Diretório público indisponível.')
+        const id = await opts.publicRooms.join(listingId, who)
+        const c = await openSession(id)
+        const current = c.room()
+        const mine = current ? seatByUid(current, transport!.uid) : null
+        if (!current || !mine) {
+          fail('Esta mesa pública não está mais disponível.')
+          return null
+        }
+        emit({ room: current, phase: 'lobby', busy: false, error: null })
+        syncFromClient(c)
+        trackSafely({ kind: 'public_room_joined' })
+        return id
+      } catch (error) {
+        const message = describePublicJoinError(error)
+        if (
+          error instanceof PublicRoomError
+          && error.code !== 'unavailable'
+          && error.code !== 'invalid-response'
+        ) {
+          emit({ phase: 'identity', error: message, busy: false })
+        } else {
+          fail(message)
+        }
         return null
       }
     },

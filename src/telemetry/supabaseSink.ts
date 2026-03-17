@@ -18,7 +18,11 @@ export interface TelemetrySupabaseLike {
 // é dado de privacidade, é metadado de operação, e por isso fica de fora da união fechada.
 function toRow(event: TelemetryEvent): Record<string, unknown> {
   const version = (import.meta.env.VITE_COMMIT_SHA as string | undefined) ?? null
-  const base = { kind: event.kind, match_key: event.matchKey, version }
+  const base = {
+    kind: event.kind,
+    match_key: 'matchKey' in event ? event.matchKey : null,
+    version,
+  }
   switch (event.kind) {
     case 'room_created':
       return { ...base, players: null, rounds: null, duration_ms: null, cause: null }
@@ -28,6 +32,10 @@ function toRow(event: TelemetryEvent): Record<string, unknown> {
       return { ...base, players: event.players, rounds: event.rounds, duration_ms: event.durationMs, cause: null }
     case 'match_paused':
       return { ...base, players: null, rounds: null, duration_ms: null, cause: event.cause }
+    case 'public_directory_opened':
+    case 'public_room_published':
+    case 'public_room_joined':
+      return { ...base, players: null, rounds: null, duration_ms: null, cause: null }
   }
 }
 

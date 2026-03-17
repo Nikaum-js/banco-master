@@ -4,8 +4,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OnlineGate } from '@/net/ui/OnlineGate'
 
 vi.mock('@/net/ui/HomeScreen', () => ({
-  HomeScreen: ({ onCreate }: { onCreate: () => void }) => (
-    <button type="button" onClick={onCreate}>Criar sala</button>
+  HomeScreen: ({
+    onCreate,
+    onJoinPublic,
+  }: {
+    onCreate: () => void
+    onJoinPublic: (listingId: string) => void
+  }) => (
+    <>
+      <button type="button" onClick={onCreate}>Criar sala</button>
+      <button
+        type="button"
+        onClick={() => onJoinPublic('123e4567-e89b-42d3-a456-426614174000')}
+      >
+        Entrar em mesa pública
+      </button>
+    </>
   ),
 }))
 
@@ -41,6 +55,20 @@ describe('navegação da porta de entrada', () => {
 
     expect(pushState).toHaveBeenCalledOnce()
     expect(window.location.search).toBe('?host=1')
+    expect(screen.getByText('Multiplayer indisponível')).toBeTruthy()
+  })
+
+  it('navega por listingId sem transformar o valor em roomId', () => {
+    render(
+      <OnlineGate>
+        <div>Partida</div>
+      </OnlineGate>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar em mesa pública' }))
+
+    expect(window.location.search).toBe('?public=123e4567-e89b-42d3-a456-426614174000')
+    expect(window.location.search).not.toContain('room=')
     expect(screen.getByText('Multiplayer indisponível')).toBeTruthy()
   })
 })

@@ -11,12 +11,17 @@ function newToken(): string {
 
 export interface RoomLink {
   roomId: string | null // ?room=<id> → entrar; null → sem sala
+  publicListingId: string | null // ?public=<listingId> → identidade e admissão server-side
   createHost: boolean // ?host=1 → criar sala
 }
 
 export function parseRoomLink(search: string): RoomLink {
   const q = new URLSearchParams(search)
-  return { roomId: q.get('room'), createHost: q.get('host') === '1' }
+  return {
+    roomId: q.get('room'),
+    publicListingId: q.get('public'),
+    createHost: q.get('host') === '1',
+  }
 }
 
 // Link compartilhável de uma sala (FR-001). Desde a 051 o app vive em `/play` — a raiz

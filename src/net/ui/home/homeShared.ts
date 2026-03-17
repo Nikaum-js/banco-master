@@ -5,6 +5,7 @@ import { useState } from 'react'
 import type { BoardTheme } from '@/game/ui/theme/boardTheme'
 import { BOARD, GROUPS, type PropertySquare } from '@/lib/boardData'
 import { extractRoomId, rememberPlayerName, recallPlayerName, NAME_MAX } from '@/net/session'
+import type { PublicDirectoryState } from '@/net/publicRoomDirectory'
 
 // Injetado pelo `vite.config.ts` a partir do sha do commit publicado (Vercel/Actions).
 export const COMMIT_SHA = (import.meta.env.VITE_COMMIT_SHA as string | undefined) ?? ''
@@ -59,7 +60,14 @@ export { NAME_MAX }
 export interface HomeActions {
   onCreate: () => void
   onJoin: (roomId: string) => void
+  onJoinPublic?: (listingId: string) => void
   onLocal: () => void
+}
+
+export interface HomePublicDirectory {
+  state: PublicDirectoryState
+  available: boolean
+  refresh: () => void
 }
 
 /** Cidades do tabuleiro de verdade — letreiro, ticker e mapa da home saem daqui. */
@@ -71,9 +79,10 @@ export const CITIES = BOARD.filter((s): s is PropertySquare => s.kind === 'prope
   price: s.price,
 }))
 
-export function useHomeForm({ onCreate, onJoin, onLocal }: HomeActions) {
+export function useHomeForm({ onCreate, onJoin, onJoinPublic, onLocal }: HomeActions) {
   const [name, setName] = useState(() => recallPlayerName())
   const [joinOpen, setJoinOpen] = useState(false)
+  const [directoryOpen, setDirectoryOpen] = useState(false)
   const [link, setLink] = useState('')
   const [pasteFailed, setPasteFailed] = useState(false)
   const roomId = extractRoomId(link)
@@ -105,6 +114,8 @@ export function useHomeForm({ onCreate, onJoin, onLocal }: HomeActions) {
     setName: (v: string) => setName(v.slice(0, NAME_MAX)),
     joinOpen,
     toggleJoin: () => setJoinOpen((v) => !v),
+    directoryOpen,
+    toggleDirectory: () => setDirectoryOpen((v) => !v),
     link,
     setLink,
     roomId,
@@ -114,6 +125,7 @@ export function useHomeForm({ onCreate, onJoin, onLocal }: HomeActions) {
     create: () => go(onCreate),
     local: () => go(onLocal),
     join: () => roomId && go(() => onJoin(roomId)),
+    joinPublic: (listingId: string) => onJoinPublic && go(() => onJoinPublic(listingId)),
   }
 }
 

@@ -73,6 +73,9 @@ describe('3. serialização de cada variante de evento não carrega dado sensív
       { kind: 'match_started', matchKey: key, players: 4 },
       { kind: 'match_ended', matchKey: key, players: 4, rounds: 12, durationMs: 900_000 },
       { kind: 'match_paused', matchKey: key, cause: 'disconnect' },
+      { kind: 'public_directory_opened' },
+      { kind: 'public_room_published' },
+      { kind: 'public_room_joined' },
     ]
 
     const sentinels = [NAME_SENTINEL, TOKEN_SENTINEL, REENTRY_SENTINEL, ROOM_ID_SENTINEL]
@@ -80,6 +83,20 @@ describe('3. serialização de cada variante de evento não carrega dado sensív
       const json = JSON.stringify(event)
       for (const sentinel of sentinels) expect(json).not.toContain(sentinel)
     }
+  })
+
+  it('eventos públicos serializam com match_key nulo e sem identificador', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null })
+    const sink = createSupabaseSink({ from: () => ({ insert }) })
+
+    sink.track({ kind: 'public_room_joined' })
+    await Promise.resolve()
+
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'public_room_joined',
+      match_key: null,
+    }))
+    expect(JSON.stringify(insert.mock.calls[0][0])).not.toMatch(/roomId|listingId|uid|name/)
   })
 })
 
