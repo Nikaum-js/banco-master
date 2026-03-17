@@ -58,7 +58,7 @@ describe('CARD 02 — obrigação a outro jogador não é truncada (§9.1/D-061)
     expect(obligationTotalFor(g, 'p2')).toBe(7)
     expect(g.obligations).toEqual([{ debtorId: 'p2', creditorId: 'p1', amount: 7, cause: 'obligation' }])
     expect(g.log).toEqual(expect.arrayContaining([
-      { kind: 'card-collect', who: 'p2', name: 'Aniversario', delta: -43, counterpartId: 'p1' },
+      { kind: 'card-collect', who: 'p2', name: 'Aniversario', delta: -43, due: 50, counterpartId: 'p1' },
       { kind: 'debt-open', who: 'p2', amount: 7, creditorId: 'p1', cause: 'obligation' },
     ]))
   })

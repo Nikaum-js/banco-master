@@ -81,7 +81,7 @@ export function logKey(e: LogEntry): string {
     case 'audit': return [e.kind, e.who, e.targetId, e.amount].join('|')
     case 'evict': return [e.kind, e.who, e.pos, e.victimId].join('|')
     case 'swap': return [e.kind, e.who, e.posGiven, e.posTaken, e.victimId].join('|')
-    case 'card-collect': return [e.kind, e.who, e.name, e.delta, e.counterpartId].join('|')
+    case 'card-collect': return [e.kind, e.who, e.name, e.delta, e.due, e.counterpartId].join('|')
     case 'loan-interest': return [e.kind, e.who, e.amount, e.creditorId].join('|')
     case 'loan-interest-short': return [e.kind, e.who, e.amount, e.creditorId, e.shortfall].join('|')
     case 'loan-due': return [e.kind, e.who, e.amount, e.creditorId, e.principal, e.interest].join('|')

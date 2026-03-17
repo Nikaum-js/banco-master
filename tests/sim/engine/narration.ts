@@ -169,14 +169,16 @@ export function checkNoTruncation(prev: GameState, next: GameState): Violation[]
     const owed =
       next.obligations.filter((o) => o.debtorId === e.who).reduce((s, o) => s + o.amount, 0) +
       (next.resolution?.kind === 'debt' && next.resolution.debtorId === e.who ? next.resolution.amount : 0)
-    const before = prev.players.find((p) => p.id === e.who)
-    // Pagou tudo o que tinha E ficou em zero: se a obrigação era maior que o caixa, o resto
-    // precisa estar registrado. `owed === 0` aqui é a forma exata do CARD 02.
-    if (before && -e.delta === before.cash && owed === 0) {
+    // O pagamento foi CURTO? Esta é a pergunta, e ela precisa de `due` (o que a regra queria
+    // mover) além de `delta` (o que moveu). Sem `due`, "pagou todo o caixa e ficou em zero"
+    // inclui quem tinha o valor EXATO — pagamento completo, obrigação nenhuma. Foi esse falso
+    // positivo que 300 partidas do lote headless acusaram: três seeds em que o devedor tinha
+    // exatamente os $50 do Aniversário.
+    if (-e.delta < e.due && owed === 0) {
       out.push({
         code: 't',
         detail:
-          `${e.who} pagou todo o caixa (${-e.delta}) a ${e.counterpartId} por "${e.name}" e ficou em zero ` +
+          `${e.who} pagou ${-e.delta} de ${e.due} a ${e.counterpartId} por "${e.name}" e ficou em zero ` +
           `sem obrigação registrada — o restante da cobrança desapareceu (D-061)`,
       })
     }

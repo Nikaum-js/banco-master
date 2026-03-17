@@ -113,7 +113,7 @@ describe('(t) não-truncagem — obrigação a jogador não pode desaparecer', (
     const next = structuredClone(prev)
     next.players[1].cash = 0
     next.players[0].cash += 43
-    next.log.push({ kind: 'card-collect', who: 'p2', name: 'Aniversario', delta: -43, counterpartId: 'p1' })
+    next.log.push({ kind: 'card-collect', who: 'p2', name: 'Aniversario', delta: -43, due: 50, counterpartId: 'p1' })
     // e NADA em `obligations` — é exatamente o estado que o motor produzia antes da D-061
 
     const vs = checkNoTruncation(prev, next)
@@ -129,7 +129,7 @@ describe('(t) não-truncagem — obrigação a jogador não pode desaparecer', (
     next.players[1].cash = 0
     next.players[0].cash += 43
     next.obligations = [{ debtorId: 'p2', creditorId: 'p1', amount: 7, cause: 'obligation' }]
-    next.log.push({ kind: 'card-collect', who: 'p2', name: 'Aniversario', delta: -43, counterpartId: 'p1' })
+    next.log.push({ kind: 'card-collect', who: 'p2', name: 'Aniversario', delta: -43, due: 50, counterpartId: 'p1' })
 
     expect(checkNoTruncation(prev, next)).toEqual([])
   })
@@ -140,7 +140,7 @@ describe('(t) não-truncagem — obrigação a jogador não pode desaparecer', (
     const next = structuredClone(prev)
     next.players[0].cash = 0
     next.centerPot += 20
-    next.log.push({ kind: 'card-collect', who: 'p1', name: 'Honorarios', delta: -20, counterpartId: 'bank' })
+    next.log.push({ kind: 'card-collect', who: 'p1', name: 'Honorarios', delta: -20, due: 20, counterpartId: 'bank' })
 
     expect(checkNoTruncation(prev, next)).toEqual([]) // pote não é parte lesada
   })

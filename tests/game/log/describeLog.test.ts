@@ -39,7 +39,7 @@ function sampleFor(kind: LogKind): LogEntry {
     case 'hostile-takeover': return { kind, who: 'p1', pos: 1, amount: 66, victimId: 'p2' }
     case 'audit': return { kind, who: 'p1', targetId: 'p2', amount: 120 }
     case 'evict': return { kind, who: 'p1', pos: 1, victimId: 'p2' }
-    case 'card-collect': return { kind, who: 'p2', name: 'Aniversario', delta: -50, counterpartId: 'p1' }
+    case 'card-collect': return { kind, who: 'p2', name: 'Aniversario', delta: -50, due: 50, counterpartId: 'p1' }
     case 'swap': return { kind, who: 'p1', posGiven: 1, posTaken: 3, victimId: 'p2' }
     case 'legacy': return { kind, who: 'p1', what: 'evento antigo' }
   }

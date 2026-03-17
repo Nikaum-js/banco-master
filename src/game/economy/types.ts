@@ -155,7 +155,10 @@ export type LogEntry =
   // Carta imediata que move o caixa de quem NÃO sacou (Aniversário, Boom, Crise). `card-immediate`
   // registra só o delta do sacador; os outros mudavam de saldo sem fato. `delta` é assinado;
   // `counterpartId` é quem está do outro lado ('bank' quando é banco/pote).
-  | { kind: 'card-collect'; who: string; name: string; delta: number; counterpartId: string }
+  // `due` é o que a REGRA queria mover; `delta` é o que de fato moveu. Os dois separados porque
+  // sem eles não se distingue pagamento completo de truncado — e foi exatamente essa confusão
+  // que fez o invariante de não-truncagem acusar falso positivo em quem tinha o valor exato.
+  | { kind: 'card-collect'; who: string; name: string; delta: number; due: number; counterpartId: string }
   | { kind: 'legacy'; who: string; what: string } // NUNCA emitida por reducer — só normalização de snapshot velho (FR-022)
 
 export interface TempEffect {

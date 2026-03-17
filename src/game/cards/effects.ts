@@ -46,7 +46,7 @@ const handlers: Record<string, Handler> = {
       p.cash += 200
       // `card-immediate` registra só o delta de QUEM SACOU; sem esta linha os demais recebiam
       // $200 sem nenhum fato no histórico (D-063).
-      if (p.id !== id) logEvent(s, { kind: 'card-collect', who: p.id, name: 'Boom Economico', delta: 200, counterpartId: 'bank' })
+      if (p.id !== id) logEvent(s, { kind: 'card-collect', who: p.id, name: 'Boom Economico', delta: 200, due: 200, counterpartId: 'bank' })
     }
   },
   erroBanco: (s, id) => {
@@ -65,7 +65,7 @@ const handlers: Record<string, Handler> = {
       if (p.id === id || p.eliminated) continue
       if (isPlayerImmune(s, p.id)) continue // Imunidade Total (D-064): não é alvo de cobrança de carta alheia
       const paid = chargePlayer(s, p.id, id, 50, 'obligation')
-      if (paid > 0) logEvent(s, { kind: 'card-collect', who: p.id, name: 'Aniversario', delta: -paid, counterpartId: id })
+      if (paid > 0) logEvent(s, { kind: 'card-collect', who: p.id, name: 'Aniversario', delta: -paid, due: 50, counterpartId: id })
     }
   },
   honorarios: (s, id, ports) => {
@@ -89,7 +89,7 @@ const handlers: Record<string, Handler> = {
       const paid = Math.min(owed, p.cash)
       p.cash -= paid
       ports.onPayToCenter(s, paid)
-      if (paid > 0) logEvent(s, { kind: 'card-collect', who: p.id, name: 'Crise Imobiliaria', delta: -paid, counterpartId: 'bank' })
+      if (paid > 0) logEvent(s, { kind: 'card-collect', who: p.id, name: 'Crise Imobiliaria', delta: -paid, due: owed, counterpartId: 'bank' })
     }
   },
   consertoImoveis: (s, id, ports) => {
