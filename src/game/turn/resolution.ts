@@ -10,6 +10,7 @@
 // Até a spec dona existir, o handler é um STUB no-op ({ done: true }).
 import type { Square } from '@/lib/boardData'
 import type { Roll, GameState } from './types'
+import type { RNG } from './dice'
 
 export interface TurnPorts {
   onPassGo(state: GameState, playerId: string): number // bônus do GO; advance credita o retorno (007)
@@ -18,6 +19,7 @@ export interface TurnPorts {
   isEliminated(playerId: string): boolean
   onInsolvency?(playerId: string, amount: number, creditorId: string | null): void // → Falência (003)
   afterPassGo?(state: GameState, playerId: string): void // → juros de empréstimo no GO (010)
+  taxMan?(state: GameState, rng: RNG): void // → Fiscal move 1×/turno e cobra o dono (012)
 }
 
 export interface ResolveCtx {
