@@ -337,7 +337,11 @@ describe('apresentação da negociação', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Incluir o título Roma' }))
     fireEvent.click(screen.getByRole('button', { name: 'Incluir o título Veneza' }))
 
-    expect(screen.queryByRole('status')).toBeNull()
+    // A explicação some; a CAIXA dela fica. Renderizada condicionalmente, ela crescia e
+    // encolhia o cartão a cada mexida no trilho de dinheiro — no celular o "Confirmar"
+    // fugia do dedo no meio do arrasto (D-079). O espaço passou a ser reservado, então o
+    // que se prova aqui é o texto vazio, não o elemento ausente.
+    expect(screen.getByRole('status').textContent).toBe('')
     expect((screen.getByRole('button', { name: 'Confirmar' }) as HTMLButtonElement).disabled).toBe(false)
   })
 })

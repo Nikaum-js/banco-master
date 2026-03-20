@@ -512,6 +512,98 @@ for (const size of [
   })
 }
 
+// Negociação em retrato — três defeitos relatados no aparelho, três invariantes.
+test('retrato: a negociação não pede arrasto horizontal e não salta de altura', async ({ page }) => {
+  await page.setViewportSize(PHONE_SMALL_PORTRAIT)
+  // `endgame` semeia títulos dos dois lados — sem propriedade não há o que provar aqui.
+  await page.goto('/play?players=2&scenario=endgame')
+  await page.waitForSelector('.board-stage')
+  await page.waitForTimeout(700)
+  await page.getByRole('tab', { name: 'Ações' }).click()
+  await page.getByRole('button', { name: /nova negocia/i }).first().click()
+  await page.waitForTimeout(600)
+
+  const geom = await page.evaluate(() => {
+    const de = document.documentElement
+    const rows = Array.from(document.querySelectorAll('.trade-property-term'))
+    return {
+      rows: rows.length,
+      // O grupo Título/Imunidade era cortado pelo `overflow: hidden` da linha, e chegar na
+      // imunidade exigia arrastar. Empilhados, os dois lados têm a largura inteira.
+      clipped: rows.filter((el) => el.scrollWidth > el.clientWidth + 1).length,
+      offscreen: Array.from(document.querySelectorAll('.trade-property-term__actions'))
+        .filter((el) => el.getBoundingClientRect().right > de.clientWidth + 1).length,
+      stacked: getComputedStyle(document.querySelector('.trade-composer__sides')!).flexDirection,
+    }
+  })
+  expect(geom.rows, 'cenário sem propriedades — o teste não prova nada').toBeGreaterThan(0)
+  expect(geom.clipped, 'linha de propriedade cortada: a imunidade voltou a pedir arrasto').toBe(0)
+  expect(geom.offscreen, 'grupo Título/Imunidade fora da tela').toBe(0)
+  expect(geom.stacked, 'os dois lados voltaram a dividir a largura').toBe('column')
+
+  // A trava de esvaziamento aparece e some conforme o dinheiro muda. A CAIXA dela é
+  // reservada, então o cartão não pode mudar de altura — era isso que fazia o "Confirmar"
+  // fugir do dedo no meio do arrasto.
+  const cardHeight = () => page.evaluate(() =>
+    Math.round(document.querySelector('.trade-composer__veto')!.parentElement!.getBoundingClientRect().height))
+  const before = await cardHeight()
+  await page.locator('.trade-cash-range').first().evaluate((el: HTMLInputElement) => {
+    el.value = String(Math.floor(Number(el.max) / 2))
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  await page.waitForTimeout(400)
+  expect(await cardHeight(), 'o cartão da negociação saltou de altura').toBe(before)
+})
+
+// A escritura muda de FORMA no celular (D-079): balão ancorado pressupõe espaço ao lado da
+// casa, e num tabuleiro que ocupa a largura da tela não existe "ao lado".
+test('retrato: a escritura da casa é modal centrado, não balão ancorado', async ({ page }) => {
+  await page.setViewportSize(PHONE_PORTRAIT)
+  await page.goto('/play?players=2')
+  await page.waitForSelector('.board-stage')
+  await page.waitForTimeout(700)
+  await page.locator('.board-square-button').nth(3).click({ force: true })
+  await page.waitForTimeout(500)
+
+  const deed = await page.evaluate(() => {
+    const surf = document.querySelector('.deed-popover')
+    if (!surf) return null
+    const b = surf.getBoundingClientRect()
+    return {
+      modal: !!document.querySelector('.deed-modal'),
+      offscreen: b.right > document.documentElement.clientWidth + 1 || b.left < -1
+        || b.bottom > window.innerHeight + 1 || b.top < -1,
+    }
+  })
+  expect(deed, 'escritura não abriu').not.toBeNull()
+  expect(deed!.modal, 'a escritura voltou a ser balão ancorado em retrato').toBe(true)
+  expect(deed!.offscreen, 'a escritura saiu da tela').toBe(false)
+})
+
+// O Diário troca de lugar em retrato: sai do miolo (onde era esmagado a 16px) e vira aba.
+test('retrato: o Diário sai do miolo e vira aba com altura de verdade', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 640 })
+  await page.goto('/play?players=2')
+  await page.waitForSelector('.board-stage')
+  await page.waitForTimeout(700)
+
+  expect(
+    await page.locator('.board-frame .center-log').count(),
+    'o Diário continua disputando o miolo com os dados',
+  ).toBe(0)
+
+  await page.getByRole('tab', { name: 'Diário' }).click()
+  await page.waitForTimeout(400)
+  const logH = await page.evaluate(() =>
+    Math.round(document.querySelector('.side-panel--log .center-log')!.getBoundingClientRect().height))
+  expect(logH, 'o Diário voltou a ser uma faixa sem altura').toBeGreaterThan(90)
+
+  // O avatar do miolo nasce com 72px inline; em retrato ele cede espaço ao resto.
+  const face = await page.evaluate(() =>
+    Math.round(document.querySelector('.dice-arena__face')!.getBoundingClientRect().height))
+  expect(face, 'avatar do miolo voltou ao tamanho de desktop').toBeLessThanOrEqual(52)
+})
+
 test('retrato: o convite com QR não estoura o modal no menor telefone', async ({ page }) => {
   // A grade do convite tinha piso RÍGIDO de duas colunas (~386px de largura mínima)
   // inclusive no bloco "de celular" — não cabia em 390px e destruía 320px. Piso mínimo

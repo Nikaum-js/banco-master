@@ -8,6 +8,7 @@ import {
   PlayersPanel,
   ActionsPanel,
   CenterArena,
+  CenterLog,
   PropertyPopover,
   AirportPopover,
   UtilityPopover,
@@ -26,12 +27,7 @@ import { StageBackdrop } from './StageBackdrop'
 import { topologyOf } from './topology'
 import { PortraitDock } from './PortraitDock'
 import { DOCK_TABS, type DockTab } from './dockTabs'
-import { useMediaQuery } from '@/game/ui/media'
-
-// Limiar do layout de retrato (D-079). Casa com o bloco de mesmo nome em `index.css`:
-// acima dele o empilhamento de tablet (1100px) já serve a mesa sem virar miniatura, e a
-// gaveta com abas só faria esconder o que cabia à vista.
-const PORTRAIT_PHONE = '(orientation: portrait) and (max-width: 820px)'
+import { useMediaQuery, PORTRAIT_PHONE } from '@/game/ui/media'
 
 export default function Board01Classic() {
   // O tabuleiro vem do catálogo do mapa da sala (055/D-069) — cada mapa tem o seu, com
@@ -226,6 +222,19 @@ export default function Board01Classic() {
       </div>
 
       <ActionsPanel dock={portrait ? { ...DOCK_TABS[1], hidden: dockTab !== 'actions' } : undefined} />
+
+      {/* O Diário só existe como painel em retrato — em paisagem ele está no miolo. */}
+      {portrait && (
+        <aside
+          className="side-panel side-panel--log"
+          id={DOCK_TABS[2].panelId}
+          role="tabpanel"
+          aria-labelledby={DOCK_TABS[2].tabId}
+          hidden={dockTab !== 'log'}
+        >
+          <CenterLog />
+        </aside>
+      )}
 
       {portrait && <PortraitDock tab={dockTab} onTab={setDockTab} />}
     </main>

@@ -818,9 +818,13 @@ function Composer({ onClose, proposerId }: { onClose: () => void; proposerId: st
       {/* Trava de esvaziamento (§8.5, D-058): recusa explicada COM o motivo. Sem isso, o
           botão desabilitado é indistinguível de bug. Doação pura pede qualquer contrapartida;
           esvaziamento diz quanto falta em valor real. */}
-      {counterpart && (
-        <p className="px-5 pt-3 label text-signal-glow normal-case leading-snug shrink-0" role="status">
-          {counterpart.fromMissing > 0 && counterpart.toMissing > 0
+      {/* Renderizado SEMPRE, com altura reservada (`trade-composer__veto`). Condicional, ele
+          crescia e encolhia o cartão a cada mexida no trilho de dinheiro — o modal pulava
+          debaixo do dedo enquanto se arrastava, que é exatamente quando a mão precisa de um
+          alvo parado. A trava em si não muda: o texto é que aparece e some, não a caixa. */}
+      <p className="trade-composer__veto px-5 pt-3 label text-signal-glow normal-case leading-snug shrink-0" role="status">
+        {counterpart && (
+          counterpart.fromMissing > 0 && counterpart.toMissing > 0
             ? `Essa troca esvaziaria os dois lados: faltam ${money(counterpart.fromMissing)} para você e ${money(counterpart.toMissing)} para ${themIdentity?.name ?? 'o outro lado'}.`
             : counterpart.fromMissing > 0
               ? `Essa troca esvaziaria você. Quem entrega quase tudo precisa receber valor real: faltam ${money(counterpart.fromMissing)}.`
@@ -828,9 +832,9 @@ function Composer({ onClose, proposerId }: { onClose: () => void; proposerId: st
                 ? `Essa troca esvaziaria ${themIdentity?.name ?? 'o outro lado'} . Quem entrega quase tudo precisa receber valor real: faltam ${money(counterpart.toMissing)}.`
                 : counterpart.fromDonation
                   ? 'Você está entregando sem receber nada em troca. Inclua qualquer contrapartida.'
-                  : `${themIdentity?.name ?? 'O outro lado'} entrega sem receber nada em troca. Inclua qualquer contrapartida.`}
-        </p>
-      )}
+                  : `${themIdentity?.name ?? 'O outro lado'} entrega sem receber nada em troca. Inclua qualquer contrapartida.`
+        )}
+      </p>
 
       {/* Convenção de rodapé: secundário à ESQUERDA, primário à DIREITA */}
       <div className="trade-composer__footer px-5 py-3 border-t-2 border-coffee-950 shrink-0 flex gap-2">

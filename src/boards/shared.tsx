@@ -6,6 +6,8 @@ import { createPortal } from 'react-dom'
 
 import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare, MineSquare } from '@/lib/boardData'
 import { activeBoard } from '@/game/ui/theme/boardTheme'
+import { useMediaQuery, PORTRAIT_PHONE } from '@/game/ui/media'
+import { Overlay, ModalShell } from '@/game/ui/shell'
 import { railHopTargets } from '@/game/turn/turnMachine'
 import { METAL_ACCENT, METAL_LABEL } from '@/boards/glyphs/metals'
 import { buildingFamily } from '@/boards/glyphs/buildingFamily'
@@ -1167,15 +1169,16 @@ export function DiceArena() {
           active={canRoll}
           showActiveRing={false}
           size={72}
+          className="dice-arena__face"
         />
         {/* O bônus de GO NÃO aparece aqui. Dinheiro tem UM lugar nesta tela: a caixa de
             jogadores à esquerda, onde o `player-row__pulse` já mostra o delta. Um segundo
             pulso em cima da carinha central duplicava a informação no ponto de maior
             atenção da tela — justo onde ficam os dados e o botão de rolar. */}
-        <p className="display text-cream text-xl leading-none tracking-wide">
+        <p className="dice-arena__name display text-cream text-xl leading-none tracking-wide">
           {active.name}
         </p>
-        <p className={cn('label', isDoubleReroll ? 'text-gold font-bold' : 'text-cream-muted')}>{status}</p>
+        <p className={cn('dice-arena__status label', isDoubleReroll ? 'text-gold font-bold' : 'text-cream-muted')}>{status}</p>
       </div>
 
       <div className="flex items-center justify-center gap-4">
@@ -1528,7 +1531,7 @@ function LogSentenceView({ sentence }: { sentence: ReturnType<typeof describeLog
 // Seletor estável (`s.game.log`) + reverse no corpo — recência ao topo (021).
 // A frase e a cor vêm da identidade da SALA (040/FR-019) — nunca de `PLAYER_COLORS[i]`
 // nem do id cru: é o que mata `p1` desta tela em definitivo (SC-001).
-function CenterLog() {
+export function CenterLog() {
   const log = useGameStore((s) => s.game.log)
   const room = useRoomStore((s) => s.room)
   const { reduced } = useMotion()
@@ -1634,6 +1637,7 @@ function CenterLog() {
 }
 
 export function CenterArena() {
+  const portraitPhone = useMediaQuery(PORTRAIT_PHONE)
   const boardTheme = useBoardTheme((t) => t.theme)
   return (
     <div
@@ -1684,12 +1688,17 @@ export function CenterArena() {
         </>
       )}
 
-      {/* CENTRO — split: dados/boneco em cima, histórico embaixo */}
-      <div className="absolute inset-0 flex flex-col items-center justify-start pt-[6%] pb-[5%] px-[6%] gap-3">
+      {/* CENTRO — dados/boneco em cima, histórico embaixo.
+          Em retrato de celular o Diário SAI daqui (D-079): o miolo útil fica em ~240px, e
+          `DiceArena` é `shrink-0`, então todo o déficit caía no log — medido, ele chegava a
+          16px de altura e cortava a própria primeira linha. Um histórico de 16px não é um
+          histórico compacto, é um histórico ausente ocupando espaço. Ele reaparece inteiro
+          como terceira aba da gaveta, onde há altura para ele existir. */}
+      <div className="board-center__stack absolute inset-0 flex flex-col items-center justify-start pt-[6%] pb-[5%] px-[6%] gap-3">
         <div className="shrink-0">
           <DiceArena />
         </div>
-        <CenterLog />
+        {!portraitPhone && <CenterLog />}
       </div>
 
     </div>
@@ -1797,19 +1806,46 @@ function deedPopoverLayer(node: ReactNode, anchored: boolean): ReactNode {
     : node
 }
 
-export function PropertyPopover({
-  square,
+/**
+ * Casca das quatro escrituras (propriedade, aeroporto, utilidade, mina).
+ *
+ * Em paisagem e desktop é o BALÃO de sempre: ancorado na casa, com rabicho, do lado interno
+ * do tabuleiro — ali a mesa é larga e o balão aponta para a casa sem cobrir o resto.
+ *
+ * Em retrato de celular é um MODAL centrado (D-079). O balão ancorado pressupõe espaço ao
+ * lado da casa, e num tabuleiro que ocupa a largura inteira da tela não existe "ao lado":
+ * ele nascia por cima do próprio tabuleiro, preso à borda pelo clamp de viewport, com o
+ * rabicho apontando para lugar nenhum. O modal é a forma que o jogador já conhece da carta
+ * de Tesouro, e o `Overlay` traz foco, Esc e clique-fora do primitivo, em vez de reimplementar.
+ *
+ * O portal é obrigatório nos DOIS casos: as casas das laterais são rotacionadas, e
+ * `position: fixed` dentro de um ancestral com `transform` passa a ser relativo a ele —
+ * o modal ficaria preso à célula girada.
+ */
+function DeedSurface({
   side,
   anchor,
   onClose,
+  label,
+  surfaceClassName,
+  surfaceStyle,
+  children,
 }: {
-  square: PropertySquare
   side: Side
   anchor?: HTMLElement | null
   onClose: () => void
+  label: string
+  surfaceClassName: string
+  surfaceStyle?: React.CSSProperties
+  children: ReactNode
 }) {
+  const portrait = useMediaQuery(PORTRAIT_PHONE)
   const { ref: clampRef, off } = useViewportClamp()
-  // Esc fecha
+  const { tail: tailStyle } = popoverPlacement(side)
+  const { position: positionStyle, centerTransform } = useAnchoredPopover(anchor, side)
+
+  // Esc fecha nos dois formatos. No modal o `Overlay` também fecha; o listener é o que
+  // cobre o balão, que não tem overlay nenhum.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -1818,12 +1854,16 @@ export function PropertyPopover({
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
-  // Posicionamento adjacente — sempre do lado interno do tabuleiro.
-  // Geometria do balão vem de `./topology` — este bloco estava escrito TRÊS vezes,
-  // uma por popover (property/airport/utility).
-  const { tail: tailStyle } = popoverPlacement(side)
-  const { position: positionStyle, centerTransform } = useAnchoredPopover(anchor, side)
-  const popoverAccent = deedPresentation(square).accent
+  if (portrait) {
+    const node = (
+      <Overlay z={65} dismissible onClick={onClose} ariaLabel={label}>
+        <ModalShell className={cn('deed-modal', surfaceClassName)}>
+          <div style={surfaceStyle}>{children}</div>
+        </ModalShell>
+      </Overlay>
+    )
+    return typeof document !== 'undefined' ? createPortal(node, document.body) : node
+  }
 
   return deedPopoverLayer((
     <div
@@ -1844,23 +1884,41 @@ export function PropertyPopover({
         transition={{ type: 'spring', stiffness: 380, damping: 26 }}
         style={{ position: 'relative' }}
       >
-        {/* Body do balão — overflow-hidden pra cortar o conteúdo no border-radius.
-            `tabIndex={0}` (044/T051, axe `scrollable-region-focusable`): quando o conteúdo
-            da propriedade estoura `max-h`, a rolagem precisa estar alcançável pelo teclado. */}
-        <div
-          tabIndex={0}
-          className="atlas-surface atlas-surface--popover deed-popover property-deed
-            overflow-x-hidden overflow-y-auto max-h-[calc(100vh-24px)]
-          "
-          style={{ '--atlas-surface-accent': popoverAccent } as React.CSSProperties}
-        >
-          <PropertyDeedContent square={square} onClose={onClose} />
+        <div tabIndex={0} className={surfaceClassName} style={surfaceStyle}>
+          {children}
         </div>
         {/* Rabicho — dentro do motion.div pra animar junto (opacity + scale) */}
         <div style={tailStyle} />
       </motion.div>
     </div>
   ), Boolean(anchor))
+}
+
+export function PropertyPopover({
+  square,
+  side,
+  anchor,
+  onClose,
+}: {
+  square: PropertySquare
+  side: Side
+  anchor?: HTMLElement | null
+  onClose: () => void
+}) {
+  const popoverAccent = deedPresentation(square).accent
+
+  return (
+    <DeedSurface
+      side={side}
+      anchor={anchor}
+      onClose={onClose}
+      label={`Escritura de ${square.name}`}
+      surfaceClassName="atlas-surface atlas-surface--popover deed-popover property-deed overflow-x-hidden overflow-y-auto max-h-[calc(100vh-24px)]"
+      surfaceStyle={{ '--atlas-surface-accent': popoverAccent } as React.CSSProperties}
+    >
+      <PropertyDeedContent square={square} onClose={onClose} />
+    </DeedSurface>
+  )
 }
 
 // Botão de ação do deed — casca compacta (text-xs) sobre o primitivo Button.
@@ -2188,23 +2246,16 @@ export function AirportPopover({
   anchor?: HTMLElement | null
   onClose: () => void
 }) {
-  const { ref: clampRef, off } = useViewportClamp()
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
-
-  // Geometria do balão vem de `./topology` — este bloco estava escrito TRÊS vezes,
-  // uma por popover (property/airport/utility).
-  const { tail: tailStyle } = popoverPlacement(side)
-  const { position: positionStyle, centerTransform } = useAnchoredPopover(anchor, side)
   const presentation = deedPresentation(square)
 
-  return deedPopoverLayer((
-    <div data-deed-popover-layer ref={clampRef} style={{ position: anchor ? 'fixed' : 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ position: 'relative' }}>
-        <div className="atlas-surface atlas-surface--popover deed-popover w-[270px] overflow-hidden">
+  return (
+    <DeedSurface
+      side={side}
+      anchor={anchor}
+      onClose={onClose}
+      label={`Escritura de ${square.name}`}
+      surfaceClassName="atlas-surface atlas-surface--popover deed-popover w-[270px] overflow-hidden"
+    >
           {/* Header integrado à prancha Atlas. */}
           <div className="deed-header relative px-4 pt-4 pb-3" style={{ '--deed-accent': 'var(--color-brass)' } as React.CSSProperties}>
             <button onClick={onClose} aria-label="Fechar" className="deed-close absolute top-1.5 right-1.5 w-11 h-11 flex items-center justify-center text-xs transition-colors">✕</button>
@@ -2238,11 +2289,8 @@ export function AirportPopover({
             </div>
             <DeedActions pos={square.pos} />
           </div>
-        </div>
-        <div style={tailStyle} />
-      </motion.div>
-    </div>
-  ), Boolean(anchor))
+    </DeedSurface>
+  )
 }
 
 // ---------------------------------------------------------------------
@@ -2268,26 +2316,18 @@ export function MinePopover({
   anchor?: HTMLElement | null
   onClose: () => void
 }) {
-  const { ref: clampRef, off } = useViewportClamp()
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
-
-  const { tail: tailStyle } = popoverPlacement(side)
-  const { position: positionStyle, centerTransform } = useAnchoredPopover(anchor, side)
-
   const presentation = deedPresentation(square)
   const accentColor = presentation.accent
 
-  return deedPopoverLayer((
-    <div data-deed-popover-layer ref={clampRef} style={{ position: anchor ? 'fixed' : 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ position: 'relative' }}>
-        <div
-          className="atlas-surface atlas-surface--popover deed-popover w-[270px] overflow-hidden"
-          style={{ '--atlas-surface-accent': accentColor } as React.CSSProperties}
-        >
+  return (
+    <DeedSurface
+      side={side}
+      anchor={anchor}
+      onClose={onClose}
+      label={`Escritura de ${square.name}`}
+      surfaceClassName="atlas-surface atlas-surface--popover deed-popover w-[270px] overflow-hidden"
+      surfaceStyle={{ '--atlas-surface-accent': accentColor } as React.CSSProperties}
+    >
           <div className="deed-header relative px-4 pt-4 pb-3" style={{ '--deed-accent': accentColor } as React.CSSProperties}>
             <button onClick={onClose} aria-label="Fechar" className="deed-close absolute top-1.5 right-1.5 w-11 h-11 flex items-center justify-center text-xs transition-colors">✕</button>
             <div className="flex items-center gap-2.5 pr-10">
@@ -2318,11 +2358,8 @@ export function MinePopover({
             </div>
             <DeedActions pos={square.pos} />
           </div>
-        </div>
-        <div style={tailStyle} />
-      </motion.div>
-    </div>
-  ), Boolean(anchor))
+    </DeedSurface>
+  )
 }
 
 export function UtilityPopover({
@@ -2336,28 +2373,19 @@ export function UtilityPopover({
   anchor?: HTMLElement | null
   onClose: () => void
 }) {
-  const { ref: clampRef, off } = useViewportClamp()
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
-
-  // Geometria do balão vem de `./topology` — este bloco estava escrito TRÊS vezes,
-  // uma por popover (property/airport/utility).
-  const { tail: tailStyle } = popoverPlacement(side)
-  const { position: positionStyle, centerTransform } = useAnchoredPopover(anchor, side)
 
   const accentColor = square.icon === 'fuel' ? 'var(--color-group-green)' : square.icon === 'bolt' ? 'var(--color-brass-glow)' : 'var(--color-group-orange)'
   const presentation = deedPresentation(square)
 
-  return deedPopoverLayer((
-    <div data-deed-popover-layer ref={clampRef} style={{ position: anchor ? 'fixed' : 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ position: 'relative' }}>
-        <div
-          className="atlas-surface atlas-surface--popover deed-popover w-[270px] overflow-hidden"
-          style={{ '--atlas-surface-accent': accentColor } as React.CSSProperties}
-        >
+  return (
+    <DeedSurface
+      side={side}
+      anchor={anchor}
+      onClose={onClose}
+      label={`Escritura de ${square.name}`}
+      surfaceClassName="atlas-surface atlas-surface--popover deed-popover w-[270px] overflow-hidden"
+      surfaceStyle={{ '--atlas-surface-accent': accentColor } as React.CSSProperties}
+    >
           {/* Header integrado, com a cor do tipo restrita ao filete. */}
           <div className="deed-header relative px-4 pt-4 pb-3" style={{ '--deed-accent': accentColor } as React.CSSProperties}>
             <button onClick={onClose} aria-label="Fechar" className="deed-close absolute top-1.5 right-1.5 w-11 h-11 flex items-center justify-center text-xs transition-colors">✕</button>
@@ -2395,11 +2423,8 @@ export function UtilityPopover({
             </div>
             <DeedActions pos={square.pos} />
           </div>
-        </div>
-        <div style={tailStyle} />
-      </motion.div>
-    </div>
-  ), Boolean(anchor))
+    </DeedSurface>
+  )
 }
 
 // Linha compacta com valor textual (não monetário) — para utilidades.

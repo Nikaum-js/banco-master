@@ -13,6 +13,14 @@
 // de `prefers-reduced-motion`.
 import { useCallback, useSyncExternalStore } from 'react'
 
+/**
+ * Retrato de celular (D-079) — o limiar do layout próprio, com gaveta de abas no lugar das
+ * gavetas laterais. Mora aqui, e não em cada componente, porque três camadas decidem
+ * ESTRUTURA por ele (o tabuleiro, o miolo e o compositor de troca) e um limiar copiado é um
+ * limiar que diverge. Casa com o bloco de mesmo nome em `index.css`.
+ */
+export const PORTRAIT_PHONE = '(orientation: portrait) and (max-width: 820px)'
+
 function hasMatchMedia(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
 }

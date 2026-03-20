@@ -3,7 +3,7 @@
 // rotulam (`aria-controls`/`aria-labelledby` precisam casar) e o `Board01Classic`, que
 // decide qual está aberta. Constante exportada de um arquivo de componente também quebra o
 // fast refresh, e essa é a razão mecânica de o módulo existir separado.
-export type DockTab = 'players' | 'actions'
+export type DockTab = 'players' | 'actions' | 'log'
 
 export type DockTabSpec = {
   id: DockTab
@@ -14,7 +14,10 @@ export type DockTabSpec = {
   tabId: string
 }
 
+// O Diário de bordo é aba SÓ em retrato: em paisagem ele vive no miolo do tabuleiro, onde
+// há altura para ele. Aqui ele reaparece porque o miolo de celular o esmagava a 16px.
 export const DOCK_TABS: readonly DockTabSpec[] = [
   { id: 'players', label: 'Jogadores', panelId: 'dock-panel-players', tabId: 'dock-tab-players' },
   { id: 'actions', label: 'Ações', panelId: 'dock-panel-actions', tabId: 'dock-tab-actions' },
+  { id: 'log', label: 'Diário', panelId: 'dock-panel-log', tabId: 'dock-tab-log' },
 ]

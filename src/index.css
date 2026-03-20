@@ -265,6 +265,47 @@
   }
 }
 
+/* A trava de esvaziamento (§8.5, D-058) ocupa lugar mesmo calada. Ela aparece e some
+   conforme o trilho de dinheiro se move, e como o cartão do compositor é dimensionado pelo
+   conteúdo, cada aparição empurrava o rodapé para baixo — o "Confirmar" fugia do dedo no
+   exato momento em que se estava arrastando. Duas linhas de reserva cobrem as mensagens
+   curtas (a de doação pura, que é a comum); as longas ainda crescem, mas de duas para três
+   linhas, e não do nada para duas. */
+.trade-composer__veto {
+  min-block-size: 3.4rem;
+}
+
+/* Compositor de troca em retrato de celular: os dois lados EMPILHAM.
+   Lado a lado, cada um fica com metade de ~340px, e a linha de propriedade precisa de
+   ~160px só para os botões "Título" e "Imunidade" — sobrava nada para o nome e o grupo de
+   ações era cortado pelo `overflow: hidden` da linha. Chegar na imunidade exigia arrastar
+   a linha na horizontal, que é o defeito relatado.
+   Empilhados, cada lado tem a largura inteira e a linha cabe sem arrasto nenhum. O preço é
+   altura, e altura é rolagem vertical — o gesto que a mão já espera num modal. */
+@media (orientation: portrait) and (max-width: 820px) {
+  .trade-composer__sides {
+    flex-direction: column;
+    /* UM scroller para o conjunto, em vez de dois independentes lado a lado: com dois, cada
+       lado ficaria com metade da altura e a proposta seria montada por duas janelinhas. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .trade-composer__sides > div {
+    flex: 0 0 auto;
+  }
+  /* A área rolável de cada lado deixa de rolar sozinha e passa a medir pelo conteúdo. */
+  .trade-composer__sides > div > div:last-child {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+  /* `divide-x` do Tailwind desenha a divisa à ESQUERDA — em coluna, ela tem de ficar em
+     cima, senão os dois lados se encostam sem fronteira nenhuma. */
+  .trade-composer__sides > div + div {
+    border-left-width: 0;
+    border-top: 1px solid color-mix(in srgb, var(--color-coffee-500) 40%, transparent);
+  }
+}
+
 /* Em celular paisagem, os dois cabeçalhos das colunas já identificam as partes.
    A balança é o resumo visual redundante: ela cede espaço para os termos roláveis,
    preservando a operação completa da troca em 740×360 (044/055). */
@@ -4640,6 +4681,60 @@
     }
     .session-access__trigger {
       --float-side: right;
+    }
+  }
+
+  /* Miolo do tabuleiro em escala de celular (D-079).
+
+     O miolo é dimensionado pelo TABULEIRO, e em retrato o tabuleiro é a largura da tela —
+     o centro útil fica em ~270px. Dentro dele, o avatar do jogador da vez nasce com 72px
+     inline e o nome em `text-xl`: sozinhos comem metade da altura, e o que sobra para o
+     Diário de Bordo é uma faixa onde a própria linha de evento não cabe (media: o log
+     ficava com ~60px e cortava a primeira frase).
+
+     Encolher aqui não é preferência estética — é o que devolve altura ao único elemento do
+     miolo que tem conteúdo variável. O botão de ação NÃO encolhe: ele é o alvo principal do
+     turno e continua nos 44px do §12.6. */
+  @media (orientation: portrait) and (max-width: 820px) {
+    .dice-arena {
+      gap: 0.45rem;
+    }
+    /* `width`/`height` de SVG são propriedades de geometria: a folha vence o atributo, e
+       por isso o `size={72}` do componente não precisa virar prop nova. */
+    .dice-arena__face {
+      width: 46px;
+      height: 46px;
+    }
+    .dice-arena__name {
+      font-size: 0.95rem;
+    }
+    .dice-arena__status {
+      font-size: 0.58rem;
+    }
+    /* Distância entre os dados: `gap-4` são 16px entre dados que agora medem 34. */
+    .dice-arena > div:nth-of-type(2) {
+      gap: 0.55rem;
+    }
+
+    /* Sem o Diário embaixo, o alinhamento ao topo deixa um vazio no terço inferior: o que
+       resta é um bloco só (jogador · dados · ação) e ele pertence ao centro do miolo. */
+    .board-center__stack {
+      justify-content: center;
+    }
+
+    /* O Diário virou aba da gaveta (D-079). Ali ele tem a largura e a altura inteiras —
+       `max-width: 80%` é reserva de respiro que só faz sentido dentro do miolo. */
+    .side-panel--log {
+      overflow: hidden;
+    }
+    .side-panel--log > .center-log {
+      flex: 1 1 auto;
+      max-width: 100%;
+      min-height: 0;
+    }
+    .center-log-empty {
+      margin: 0.5rem;
+      padding: 0.75rem;
     }
   }
 
