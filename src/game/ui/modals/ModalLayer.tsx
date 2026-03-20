@@ -3,7 +3,7 @@
 // vocabulário visual dos popovers de propriedade (cartão coffee + header com stripe).
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Bus } from 'lucide-react'
+import { Bus, TramFront } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
 import { useLocalView, useRoomStore } from '@/net/roomStore'
@@ -28,8 +28,8 @@ import { useMotion } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { CountryFlag } from '@/boards/glyphs/flags'
-import { activeBoard, activeCatalog, activeLabels, capLabel } from '@/game/ui/theme/boardTheme'
-import { PropertyIconDisc } from '@/boards/glyphs/propertyIcons'
+import { activeBoard, activeCatalog, activeLabels, capLabel, useBoardTheme } from '@/game/ui/theme/boardTheme'
+import { PropertyIconArt, PropertyIconDisc } from '@/boards/glyphs/propertyIcons'
 import { METAL_ACCENT, METAL_LABEL } from '@/boards/glyphs/metals'
 
 // Botão de ação do modal — casca fina sobre o primitivo Button (flex-1).
@@ -361,6 +361,21 @@ export function ModalLayer() {
   )
 }
 
+/**
+ * O VEÍCULO DA LINHA SEGUE O MAPA (D-069). O `Bus` da lucide estava cravado nos três pontos
+ * deste fluxo — veículo na linha, ícone do cabeçalho e canhoto —, então usar o Bilhete de Trem
+ * na Cidade da Fuligem abria um seletor de ÔNIBUS. O `mapCatalog` já renomeia o item
+ * (`labels.busTicket` = "Bilhete de Trem") e a casa do tabuleiro já trocava o glifo desde a 055;
+ * só esta camada ficou para trás.
+ *
+ * Ícone da mesma família (lucide, `currentColor`) de propósito: os glifos de tabuleiro têm cor
+ * própria em `var(--color-brass*)` e ficariam errados dentro do disco dourado do veículo.
+ */
+function LineVehicle({ size }: { size: number }) {
+  const fuligem = useBoardTheme((s) => s.theme) === 'fuligem'
+  return fuligem ? <TramFront size={size} /> : <Bus size={size} />
+}
+
 // Bus Ticket — "linha de ônibus" (SRS §2.7): as casas do MESMO LADO viram
 // paradas de uma linha; o ônibus fica estacionado na sua parada e DESLIZA até a
 // parada sob o cursor. Clicar EMBARCA: o ônibus viaja até lá e só então o
@@ -535,7 +550,7 @@ function BusLine({
           className="absolute bottom-0 -ml-[18px] w-[36px] flex justify-center z-10 pointer-events-none"
         >
           <span className="w-8 h-8 rounded-full bg-gold text-coffee-950 grid place-items-center border-2 border-coffee-950 shadow-[var(--shadow-card)]">
-            <Bus size={17} />
+            <LineVehicle size={17} />
           </span>
         </motion.div>
       </div>
@@ -661,7 +676,7 @@ function BusPicker({
     <ModalShell className="bus-picker-modal w-[980px] max-w-[calc(100vw-2rem)] overflow-y-auto !overflow-x-hidden">
       <ModalHeader
         title={title}
-        icon={<Bus size={19} />}
+        icon={<LineVehicle size={19} />}
       />
       <div className="bus-picker-body min-w-0 max-w-full px-5 pt-3 pb-3">
         <BusLine
@@ -678,8 +693,8 @@ function BusPicker({
         <span className="absolute -right-[10px] -top-[10px] w-5 h-5 rounded-full bg-coffee-950 border-2 border-coffee-500" aria-hidden />
         <div className="pl-6 pr-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2 bg-coffee-900/60">
           <span className="flex items-center gap-2">
-            <Bus size={15} className="text-gold" />
-            <span className="label text-cream-muted">Bilhete de ônibus</span>
+            <LineVehicle size={15} />
+            <span className="label text-cream-muted">{capLabel(activeLabels().busTicket)}</span>
             <span className="currency text-gold-glow text-sm tabular-nums leading-none">×{tickets}</span>
           </span>
           <span className="label min-w-[10rem] flex-1 text-cream-muted/85 text-nano">1 bilhete será usado na viagem</span>
@@ -721,6 +736,15 @@ function DeedIcon({ sq }: { sq: AuctionSquare }) {
       <div className="title-auction-lot__flag">
         <CountryFlag code={deed.flagCode} fill />
       </div>
+    )
+  }
+  // Propriedade sem bandeira (Fuligem): `SquareIcon` devolve null em `property`, e o lote do
+  // leilão saía com o quadrado do avatar VAZIO. O ícone do bairro é o equivalente da bandeira.
+  if (sq.kind === 'property') {
+    return (
+      <span className="title-auction-lot__glyph" style={{ color: deed?.accent ?? 'var(--color-brass)' }}>
+        <PropertyIconArt icon={sq.icon ?? 'building'} size={32} />
+      </span>
     )
   }
   return <span className="title-auction-lot__glyph"><SquareIcon square={sq} size={32} /></span>

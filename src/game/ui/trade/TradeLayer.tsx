@@ -36,6 +36,7 @@ import {
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { TradeDeedItem } from './TradeDeedItem'
 import { CountryFlag } from '@/boards/glyphs/flags'
+import { PropertyIconArt } from '@/boards/glyphs/propertyIcons'
 import { activeBoard, activeLabels } from '@/game/ui/theme/boardTheme'
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n))
@@ -86,10 +87,20 @@ function Header({
 }
 
 // ---------------------------------------------------------------------
-// Avatar do título: bandeira circular (propriedade) ou glifo (aeroporto/utilidade).
+// Avatar do título: bandeira (Atlas), ícone do bairro (propriedade da Fuligem) ou glifo da
+// casa especial. Os três ramos são necessários e faltava justamente o do meio: `SquareIcon`
+// cobre só as casas ESPECIAIS e devolve `null` em `property`, então propriedade sem bandeira
+// caía num avatar VAZIO — ferrovia e mina apareciam com ícone e as ruas, sem nada.
 // ---------------------------------------------------------------------
 function DeedAvatar({ sq, size = 22 }: { sq: Square; size?: number }) {
   const deed = deedPresentation(sq)
+  if (sq.kind === 'property' && !deed?.flagCode) {
+    return (
+      <span className="shrink-0 flex items-center justify-center" style={{ width: size, height: size, color: deed?.accent ?? 'var(--color-brass)' }}>
+        <PropertyIconArt icon={sq.icon ?? 'building'} size={size * 0.85} />
+      </span>
+    )
+  }
   if (deed?.flagCode) {
     return (
       // `block`: fora de flex (ex. prato da balança) um span inline ignoraria width/height

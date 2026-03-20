@@ -23,6 +23,7 @@ import { MOTION, useMotion } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { CountryFlagDisc } from '@/boards/glyphs/flags'
+import { PropertyIconArt } from '@/boards/glyphs/propertyIcons'
 import { countryName } from '@/boards/glyphs/countries'
 import { activeBoard } from '@/game/ui/theme/boardTheme'
 
@@ -35,6 +36,16 @@ function LandDeedIcon({ sq, size = 40 }: { sq: Square; size?: number }) {
   if (deed?.flagCode) {
     return (
       <CountryFlagDisc code={deed.flagCode} size={size} />
+    )
+  }
+  // Terceiro ramo, o que faltava: propriedade SEM bandeira (Fuligem). `SquareIcon` só cobre
+  // casa especial e devolve null em `property`, então o lote saía sem avatar. Mesmo conserto do
+  // leilão comum e do compositor de negociação — a causa era uma só, em três telas.
+  if (sq.kind === 'property') {
+    return (
+      <span className="shrink-0 flex items-center justify-center" style={{ width: size, height: size, color: deed?.accent ?? 'var(--color-brass)' }}>
+        <PropertyIconArt icon={sq.icon ?? 'building'} size={size * 0.8} />
+      </span>
     )
   }
   return <span className="text-gold shrink-0"><SquareIcon square={sq} size={size * 0.8} /></span>
