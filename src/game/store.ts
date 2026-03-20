@@ -12,6 +12,7 @@ import {
   jailDecision,
   chooseBusMove,
   chooseTripleDest,
+  useBusTicket,
   startTurn,
   activePlayer,
   type TurnCtx,
@@ -24,6 +25,7 @@ import { openHouseAuction, declareBuildInterest, placeHouseBid, closeHouseAuctio
 import { mortgageProperty, unmortgageProperty } from './economy/mortgage'
 import { goBonus, payToCenter, collectCenter } from './balancing/balancing'
 import { payDebt, declareBankruptcy } from './falencia/falencia'
+import { grantLoan, payOffLoan, chargeLoanInterest } from './emprestimos/emprestimos'
 import { deckCardIds } from './cards/catalog'
 import { shuffle } from './cards/decks'
 import { cardResolve, playHandCard, resolveCardDiscard, resolveCardShortcut } from './cards/draw'
@@ -35,6 +37,7 @@ export const defaultPorts: TurnPorts = {
   onCollectCenter: (state, id) => collectCenter(state, id), // Free Parking (007)
   isEliminated: () => false,
   onInsolvency: () => {},
+  afterPassGo: (state, id) => chargeLoanInterest(state, id), // juros de empréstimo no GO (010)
 }
 
 function seedTitles(): Record<number, Title> {
@@ -79,6 +82,7 @@ export function createSeedState(playerIds: string[]): GameState {
     bank: { houses: 40, hotels: 16 }, // D-017
     decks: { acaso: deckCardIds('acaso'), tesouro: deckCardIds('tesouro') }, // 006 — embaralhar no store
     centerPot: 500, // 007 — Free Parking
+    loans: [], // 010 — empréstimos ativos
   }
   startTurn(state)
   return state
@@ -93,6 +97,7 @@ interface GameStore {
   jailDecision(d: 'pay' | 'card' | 'try'): void
   chooseBusMove(opt: 'die0' | 'die1' | 'sum'): void
   chooseTripleDest(pos: number): void
+  useBusTicket(dest: number): void
   buyProperty(): void
   declineProperty(): void
   placeBid(playerId: string, amount: number): void
@@ -109,6 +114,8 @@ interface GameStore {
   chooseCardShortcut(dir: 'frente' | 'tras'): void
   payDebt(): void
   declareBankruptcy(): void
+  grantLoan(creditorId: string, principal: number, ratePct: number): void
+  payOffLoan(): void
   setPaused(p: boolean): void
 }
 
@@ -157,6 +164,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     jailDecision: (d) => set((st) => ({ game: jailDecision(st.game, d, st.ctx) })),
     chooseBusMove: (opt) => set((st) => ({ game: chooseBusMove(st.game, opt, st.ctx) })),
     chooseTripleDest: (pos) => set((st) => ({ game: chooseTripleDest(st.game, pos, st.ctx) })),
+    useBusTicket: (dest) => set((st) => ({ game: useBusTicket(st.game, dest, st.ctx) })),
     buyProperty: () => set((st) => ({ game: buyProperty(st.game) })),
     declineProperty: () => {
       set((st) => ({ game: declineProperty(st.game, st.ctx.now!()) }))
@@ -186,6 +194,9 @@ export const useGameStore = create<GameStore>((set, get) => {
     chooseCardShortcut: (dir) => set((st) => ({ game: resolveCardShortcut(st.game, dir, st.ctx.ports) })),
     payDebt: () => set((st) => ({ game: payDebt(st.game) })),
     declareBankruptcy: () => set((st) => ({ game: declareBankruptcy(st.game, st.ctx) })),
+    grantLoan: (creditorId, principal, ratePct) =>
+      set((st) => ({ game: grantLoan(st.game, activePlayer(st.game).id, creditorId, principal, ratePct) })),
+    payOffLoan: () => set((st) => ({ game: payOffLoan(st.game, activePlayer(st.game).id) })),
     setPaused: (p) => {
       set((st) => ({ game: { ...st.game, paused: p } }))
       rearmAuction()
