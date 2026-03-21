@@ -71,7 +71,6 @@ export function canEvict(state: GameState, attackerId: string, pos: number): boo
 export function evict(state: GameState, attackerId: string, pos: number): boolean {
   if (!canEvict(state, attackerId, pos)) return false
   state.titles[pos].houses -= 1
-  state.bank.houses += 1 // volta ao estoque
   return true
 }
 

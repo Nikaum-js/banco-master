@@ -77,19 +77,10 @@ export function declareBankruptcy(state: GameState, ctx: TurnCtx): GameState {
     const t = s.titles[sq.pos]
     if (!t || t.ownerId !== debtor.id) continue
     if (sq.kind === 'property') {
-      if (t.skyscraper) {
-        s.bank.skyscrapers += 1 // Skyscraper volta ao estoque (011)
-        t.skyscraper = false
-      }
-      if (t.hotel2) {
-        s.bank.hotels += 1 // 2º hotel volta ao estoque (011)
-        t.hotel2 = false
-      }
-      if (t.hotel) {
-        s.bank.hotels += 1
-        t.hotel = false
-      }
-      s.bank.houses += t.houses // construções voltam ao banco (§9.2/§15.5)
+      // construções são desfeitas na herança (§9.2/§15.5); sem estoque do banco
+      t.skyscraper = false
+      t.hotel2 = false
+      t.hotel = false
       t.houses = 0
     }
     // Hangar de aeroporto NÃO é desfeito: segue o aeroporto ao herdeiro (§13.6).

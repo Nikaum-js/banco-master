@@ -31,7 +31,6 @@ export type BuildBlock =
   | 'topo'
   | 'uniformidade'
   | 'grupo-incompleto'
-  | 'estoque'
   | 'caixa'
   | null
 
@@ -86,14 +85,7 @@ function buildBlock(game: GameState, pos: number): BuildBlock {
   if (cur !== min) return 'uniformidade'
   const cash = game.players.find((pl) => pl.id === owner)?.cash ?? 0
   if (cash < buildCost(sq)) return 'caixa'
-  if (cur === 6) {
-    if (cities.length !== size) return 'grupo-incompleto'
-    if (game.bank.skyscrapers < 1) return 'estoque'
-  } else if (cur === 4 || cur === 5) {
-    if (game.bank.hotels < 1) return 'estoque'
-  } else if (game.bank.houses < 1) {
-    return 'estoque'
-  }
+  if (cur === 6 && cities.length !== size) return 'grupo-incompleto' // arranha-céu exige grupo completo
   return null
 }
 

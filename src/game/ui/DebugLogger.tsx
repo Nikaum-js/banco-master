@@ -32,7 +32,6 @@ export function DebugLogger() {
           jail: p.jail,
           eliminated: p.eliminated,
         })),
-        bank: game.bank,
         centerPot: game.centerPot,
         loans: game.loans,
         immunities: game.immunities,
