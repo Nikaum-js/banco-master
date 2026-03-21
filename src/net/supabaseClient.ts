@@ -16,11 +16,31 @@ export function isSupabaseConfigured(): boolean {
 
 let client: SupabaseClient | null = null
 
+// Identidade por ABA, só em desenvolvimento (`?multi` na URL). A sessão anônima mora em
+// `localStorage`, que é por origem+perfil e compartilhado entre abas — é por isso que abrir
+// o link da sala numa segunda aba devolve o MESMO `uid` e reanexa você ao mesmo assento.
+// Isso não é defeito: é a mesma persistência que faz o F5 não perder o assento (D-042,
+// Princípio VII). `sessionStorage` é por aba e também sobrevive ao F5, então trocar o
+// armazenamento dá um jogador por aba sem abrir mão da retomada — perde só o fechar-e-voltar,
+// que é justamente o caso que o código de reentrada da 041 (D-033) cobre.
+//
+// `import.meta.env.DEV` é estático: o ramo inteiro é eliminado no build de produção, então
+// não existe caminho em que um deploy troque o armazenamento da sessão.
+function devPerTabStorage(): Storage | undefined {
+  if (!import.meta.env.DEV) return undefined
+  if (typeof window === 'undefined') return undefined
+  return new URLSearchParams(window.location.search).has('multi') ? window.sessionStorage : undefined
+}
+
 export function getSupabase(): SupabaseClient {
   if (!url || !anonKey) {
     throw new Error('Supabase não configurado: defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env')
   }
-  client ??= createClient(url, anonKey, { realtime: { params: { eventsPerSecond: 20 } } })
+  const storage = devPerTabStorage()
+  client ??= createClient(url, anonKey, {
+    realtime: { params: { eventsPerSecond: 20 } },
+    ...(storage ? { auth: { storage, persistSession: true, autoRefreshToken: true } } : {}),
+  })
   return client
 }
 
