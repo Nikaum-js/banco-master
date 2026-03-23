@@ -20,6 +20,21 @@ export interface Auction {
   deadline: number // epoch ms — serializável; o timer é reconstruível (princípio VII)
 }
 
+// Leilão de escassez de TERRENOS (031, SRS §7.3) — pregão SIMULTÂNEO: cada lote é um
+// leilão inglês próprio; todos compartilham um `deadline`. Evento autônomo, fora do turno.
+// NÃO confundir com o leilão de CASAS (removido na D-022).
+export interface LandLot {
+  pos: number
+  currentBid: number // 0 = ainda sem lance
+  highBidder: string | null
+  deadline: number // epoch ms — prazo PRÓPRIO deste lote; reinicia só com lance NELE; fecha sozinho
+}
+
+export interface LandAuction {
+  lots: LandLot[] // 1..3 terrenos sem dono em disputa; cada lote fecha no seu próprio prazo
+  bidders: string[] // jogadores não-eliminados participantes (snapshot na abertura)
+}
+
 export interface Loan {
   debtorId: string // tomou o empréstimo (máx. 1 ativo por devedor, §15.3)
   creditorId: string // concedeu

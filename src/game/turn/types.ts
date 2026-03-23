@@ -1,6 +1,6 @@
 // Tipos de domínio do Fluxo de Turno (spec 002). Tudo serializável (JSON puro):
 // nada de funções/refs no estado — pré-requisito de pausa/reconexão (FR-028).
-import type { Title, ResolutionSlice, Loan, Immunity, TempEffect, LogEntry, Trade } from '../economy/types'
+import type { Title, ResolutionSlice, Loan, Immunity, TempEffect, LogEntry, Trade, LandAuction } from '../economy/types'
 import type { DeckId } from '../cards/types'
 
 export type SpeedFace = 1 | 2 | 3 | 'mr-banco' | 'onibus'
@@ -76,6 +76,8 @@ export interface GameState {
   tempEffects: TempEffect[] // efeitos temporários de carta (015, §10.6): apagão/greve/boicote/imunidade-temp
   log: LogEntry[] // eventos do jogo (021); bounded em 50, mais recentes ao fim
   pendingTrade: Trade | null // proposta de troca pendente (024); uma por vez; null = nenhuma
+  landAuction: LandAuction | null // pregão de escassez de terrenos (031, §7.3); evento autônomo, fora do turno
+  landAuctionArmed: boolean // trava de episódio do pregão (031): true = pode disparar nesta "descida" a ≤3
   tradeHistory: Trade[] // trocas aceitas (027); mais recentes ao fim, bounded ~12
   notice: Notice | null // notificação informativa ativa (030, §12.2); null = nenhuma
 }

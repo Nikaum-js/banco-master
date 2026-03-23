@@ -25,6 +25,11 @@ export const THEME = {
 
   JAIL_FINE: 50, // multa de prisão (§7)
 
+  // Leilão de escassez de TERRENOS (031, §7.3): dispara quando restam ≤ este nº de
+  // terrenos sem dono (e ≥2 vivos). Cada lote tem seu PRÓPRIO cronômetro (fecha sozinho).
+  LAND_AUCTION_THRESHOLD: 3,
+  LAND_AUCTION_SECONDS: 8, // janela por lote (reinicia só com lance NAQUELE lote)
+
   // D-003 (Speed Die) SUSPENSO pós-playtest: gerava confusão (3º dado + Mr.Banco/
   // Ônibus/Triple). false = jogo rola sempre 2 dados. Reversível: voltar a true
   // reativa o motor (código e testes do Speed Die preservados). Ver DECISIONS.
