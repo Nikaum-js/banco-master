@@ -26,7 +26,13 @@ interface Session {
 // Sessão anônima nova (identidade atestada, D-035) — cada ator do roteiro (anfitrião legítimo,
 // espectador legítimo, atacante) é uma conexão própria, exatamente como duas abas de verdade.
 async function session(): Promise<Session> {
-  const client = createSupabase(url!, key!, { realtime: { params: { eventsPerSecond: 20 } } })
+  // `persistSession: false` — várias identidades no MESMO processo Node; sem storage isolado
+  // por padrão, sessões concorrentes podem se pisar (achado ao depurar T043/T044 em
+  // verify-phase5-live.ts). Aqui as sessões são sequenciais, mas mantém por robustez.
+  const client = createSupabase(url!, key!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    realtime: { params: { eventsPerSecond: 20 } },
+  })
   const { data, error } = await client.auth.signInAnonymously()
   if (error) throw new Error(`signInAnonymously falhou (sessões anônimas habilitadas? T041): ${error.message}`)
   await client.realtime.setAuth()
