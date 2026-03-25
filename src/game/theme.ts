@@ -72,7 +72,11 @@ export const THEME = {
 
   // Pregão simultâneo (§7.3) — DUAS procedências: escassez de terrenos (§7.5) e espólio do
   // falido (§9.2). Cada lote tem seu PRÓPRIO cronômetro e fecha sozinho.
-  LAND_AUCTION_THRESHOLD: 3, // escassez: dispara quando restam ≤ este nº de terrenos sem dono (e ≥2 vivos)
+  // 6, não 3 (D-078): a ≤3 o pregão chegava quando a partida já estava decidida — três lotes
+  // num tabuleiro de 35 (Atlas) ou 30 (Fuligem) é 9% do inventário, e o resto do jogo já tinha
+  // acontecido esperando alguém CAIR neles. Seis é o ponto em que ainda há tabuleiro para
+  // disputar e o evento coletivo vira clímax em vez de formalidade.
+  LAND_AUCTION_THRESHOLD: 6, // escassez: dispara quando restam ≤ este nº de terrenos sem dono (e ≥2 vivos)
   // 24s, não 8s (D-060): oito segundos é menos que o tempo de ler o nome da cidade, achá-la no
   // tabuleiro e conferir o próprio caixa — o jogador não decidia, reagia. Foi a queixa que
   // motivou a D-059 a remover o mecanismo inteiro; a D-060 o traz de volta consertando ISTO.

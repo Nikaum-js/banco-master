@@ -67,9 +67,14 @@ export function lotsUntilScarcityAuction(state: GameState): number | null {
 }
 
 // Gatilho (chamado pelo store após eventos que mudam posse). Abre o pregão se:
-// 1 ≤ freeLots ≤ THRESHOLD, ≥2 vivos, sem pregão aberto e episódio armado.
+// 1 ≤ freeLots ≤ THRESHOLD (6 desde a D-078), ≥2 vivos, sem pregão aberto e episódio armado.
 // Cada lote nasce com seu próprio prazo (now + WINDOW).
 // Re-arma (armed=true) quando freeLots > THRESHOLD (ex.: falência devolveu terreno). No-op senão.
+//
+// O limiar é uma COMPARAÇÃO, nunca uma contagem de lotes: a descida pode pular valores (uma
+// troca que devolve dois terrenos, um espólio que fecha três de uma vez), e a regra é "cruzou
+// para baixo", não "encostou exatamente em 6". Por isso `free.length > threshold` decide o
+// re-arme e todo o resto entra no ramo de abertura — com 1 a 6 livres, TODOS viram lote.
 export function maybeOpenLandAuction(state: GameState, now: number): GameState {
   if (state.landAuction) return state // um por vez
   const free = freeLots(state)

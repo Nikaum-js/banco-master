@@ -118,7 +118,7 @@ export interface GameState {
   // campo — `normalizeGame` lê ausente como `[]`, que é a semântica de antes (nada devido).
   obligations: Obligation[]
   landAuction: LandAuction | null // pregão simultâneo (031 §7.5 / 039 §9.2); evento autônomo, fora do turno
-  landAuctionArmed: boolean // trava de episódio do pregão de escassez (031/D-060): true = pode disparar nesta "descida" a ≤3
+  landAuctionArmed: boolean // trava de episódio do pregão de escassez (031/D-060): true = pode disparar nesta "descida" a ≤6 (D-078)
   tradeHistory: Trade[] // trocas aceitas (027); mais recentes ao fim, bounded ~12
   notice: Notice | null // notificação informativa ativa (030, §12.2); null = nenhuma
 

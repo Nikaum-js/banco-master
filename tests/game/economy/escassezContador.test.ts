@@ -2,7 +2,8 @@
  * CARD 08 — quantos terrenos faltam para o pregão de escassez (§7.5, D-060).
  *
  * O relato pede "quantas VOLTAS faltam". O gatilho do §7.5 nunca foi por voltas: é a contagem de
- * terrenos compráveis **sem dono** caindo a ≤3. Voltas não existem como medida aqui, e inventar
+ * terrenos compráveis **sem dono** caindo a ≤`THEME.LAND_AUCTION_THRESHOLD`. Voltas não existem
+ * como medida aqui, e inventar
  * uma conversão ("nesse ritmo, ~2 voltas") seria a interface adivinhando — o contador teria de
  * mudar sozinho sem nada acontecer no tabuleiro, e erraria a cada compra fora do ritmo médio.
  *
@@ -36,7 +37,7 @@ describe('CARD 08 — contador de terrenos até o pregão de escassez (§7.5)', 
   })
 
   it('atualiza quando a posse muda — a fonte é o motor, não um contador paralelo', () => {
-    const g = comTerrenosLivres(6)
+    const g = comTerrenosLivres(THEME.LAND_AUCTION_THRESHOLD + 3)
     expect(lotsUntilScarcityAuction(g)).toBe(3)
 
     g.titles[freeLots(g)[0]].ownerId = 'p1' // alguém comprou
