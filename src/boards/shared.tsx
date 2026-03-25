@@ -12,14 +12,15 @@ import { THEME } from '@/game/theme'
 import { deedView, type BuildBlock } from '@/game/ui/deed/deedView'
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { GROUP_COLOR } from './groupColors'
+import '@/game/ui/deed/propertyPopover.css'
 import { PlayerFace } from './PlayerFace'
 import { useTradeUI } from '@/game/ui/trade/tradeUI'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { markLayout, popoverPlacement, sideOf, type Side } from './topology'
 import { SquareIcon, CardGlyph, LotteryGlyph } from './glyphs/squares'
 import {
-  HouseBadgeIcon, HotelBadgeIcon, SkyscraperBadgeIcon, HangarBadgeIcon,
   CalmGlyph, TradeArrowGlyph, PlusGlyph, SwapMiniGlyph, CheckTinyGlyph,
+  PlotBadgeIcon, HouseBadgeIcon, HotelBadgeIcon, SkyscraperBadgeIcon, HangarBadgeIcon,
 } from './glyphs/badges'
 import { ChartPattern, GridPattern } from './glyphs/patterns'
 import { playersView, PLAYER_COLORS, type Player } from '@/game/ui/panels/playersView'
@@ -420,6 +421,7 @@ export function BuildingMark({ pos }: { pos: number }) {
       style={{
         ...markLayout(sideOf(pos)),
         gap: '1.5px',
+        color: 'var(--color-brass-glow)',
         flexWrap: 'nowrap', // 4 casas NUNCA quebram pra outra linha
         width: 'max-content', // dimensiona pelo conteúdo (sem shrink-to-fit da célula)
         filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))',
@@ -1689,8 +1691,7 @@ export function PropertyPopover({
             da propriedade estoura `max-h`, a rolagem precisa estar alcançável pelo teclado. */}
         <div
           tabIndex={0}
-          className="atlas-surface atlas-surface--popover deed-popover
-            w-[270px]
+          className="atlas-surface atlas-surface--popover deed-popover property-deed
             overflow-x-hidden overflow-y-auto max-h-[calc(100vh-24px)]
           "
           style={{ '--atlas-surface-accent': popoverAccent } as React.CSSProperties}
@@ -1743,7 +1744,7 @@ function DeedBtn({
 const BUILD_BLOCK_MSG: Record<NonNullable<BuildBlock>, string> = {
   'hipoteca-no-grupo': 'Há propriedade hipotecada no grupo',
   topo: 'Esta cidade já está no nível máximo',
-  uniformidade: 'Construa por igual — suba as outras cidades do grupo primeiro',
+  uniformidade: 'Suba as outras cidades do grupo antes de construir aqui.',
   'grupo-incompleto': 'Arranha-céu exige o grupo completo',
   caixa: 'Caixa insuficiente',
 }
@@ -1765,9 +1766,15 @@ function DeedActions({ pos }: { pos: number }) {
   const blockMsg = dv.buildBlock ? BUILD_BLOCK_MSG[dv.buildBlock] : undefined
 
   return (
-    <div className="mt-3 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-1.5">
-      <p className="label text-gold text-micro">Gerenciar</p>
-      <div className="grid grid-cols-2 gap-1.5">
+    <div className="deed-actions">
+      <p className="property-deed__section-label">Gerenciar</p>
+      {dv.kind === 'property' && !flags.podeConstruir && blockMsg && (
+        <p className="deed-actions__note">
+          <i aria-hidden>!</i>
+          <span>{blockMsg}</span>
+        </p>
+      )}
+      <div className="deed-actions__grid">
         {dv.kind === 'property' && (
           <>
             <DeedBtn variant="primary" icon={<HouseIcon size={13} />} disabled={!flags.podeConstruir} onClick={() => buildHouse(pos)} title={blockMsg}>
@@ -1792,18 +1799,60 @@ function DeedActions({ pos }: { pos: number }) {
           </DeedBtn>
         )}
       </div>
-      {dv.kind === 'property' && !flags.podeConstruir && blockMsg && (
-        <p className="text-cream-muted text-micro">{blockMsg}</p>
-      )}
+    </div>
+  )
+}
+
+type PropertyRentTierKind = 'base' | 'house' | 'hotel' | 'skyscraper'
+
+function PropertyRentTier({
+  label,
+  value,
+  kind,
+  count = 1,
+  active = false,
+}: {
+  label: string
+  value: number
+  kind: PropertyRentTierKind
+  count?: number
+  active?: boolean
+}) {
+  const markers = (() => {
+    if (kind === 'base') return <PlotBadgeIcon />
+    if (kind === 'house') {
+      return Array.from({ length: count }, (_, index) => <HouseBadgeIcon key={index} />)
+    }
+    if (kind === 'hotel') {
+      return Array.from({ length: count }, (_, index) => <HotelBadgeIcon key={index} />)
+    }
+    return <SkyscraperBadgeIcon />
+  })()
+
+  return (
+    <div
+      className="property-rent-tier"
+      data-tier={kind}
+      data-active={active || undefined}
+    >
+      {active && <span className="sr-only">Nível atual</span>}
+      <span className="property-rent-tier__identity">{label}</span>
+      <span className="property-rent-tier__mark" aria-hidden>{markers}</span>
+      <span className="property-rent-tier__value">
+        <small>R$</small>
+        {fmtMoney(value)}
+      </span>
     </div>
   )
 }
 
 function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onClose: () => void }) {
   const game = useGameStore((s) => s.game)
+  const room = useRoomStore((s) => s.room)
   const dv = deedView(game, square.pos)!
   const presentation = deedPresentation(square)
   const owner = dv.owner
+  const ownerIdentity = owner ? identityOf(room, owner) : null
   const buildings = dv.level // 0–7 real
   const rents = presentation.rents
   const houseCost = dv.buildCost
@@ -1814,6 +1863,7 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
   // Linha de aluguel ATIVA (highlight) pelo nível real
   const activeRow: keyof typeof rents =
     buildings === 7 ? 'skyscraper' :
+    buildings === 6 ? 'hotel2' :
     buildings >= 5 ? 'hotel' :
     buildings === 4 ? 'house4' :
     buildings === 3 ? 'house3' :
@@ -1862,33 +1912,51 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
         </div>
       </div>
 
-      {/* Tabela de aluguéis */}
-      <div className="px-3.5 py-3">
-        <p className="label text-gold mb-2 text-micro">Aluguel</p>
-        <div className="flex flex-col gap-0.5">
-          <CompactRent label="Base"        value={rents.base}       active={activeRow === 'base'} />
-          <CompactRent label="1 casa"      value={rents.house1}     active={activeRow === 'house1'} />
-          <CompactRent label="2 casas"     value={rents.house2}     active={activeRow === 'house2'} />
-          <CompactRent label="3 casas"     value={rents.house3}     active={activeRow === 'house3'} />
-          <CompactRent label="4 casas"     value={rents.house4}     active={activeRow === 'house4'} />
-          <CompactRent label="Hotel"       value={rents.hotel}      active={activeRow === 'hotel'} />
-          <CompactRent label="Arranha-céu" value={rents.skyscraper} active={activeRow === 'skyscraper'} accent />
-        </div>
+      <div className="property-deed__body">
+        <section>
+          <p className="property-deed__section-label">Progressão de aluguel</p>
+          <div className="property-deed__rent-grid">
+            <PropertyRentTier label="Terreno"      value={rents.base}        kind="base"        active={activeRow === 'base'} />
+            <PropertyRentTier label="1 casa"       value={rents.house1}      kind="house"       active={activeRow === 'house1'} />
+            <PropertyRentTier label="2 casas"      value={rents.house2}      kind="house" count={2} active={activeRow === 'house2'} />
+            <PropertyRentTier label="3 casas"      value={rents.house3}      kind="house" count={3} active={activeRow === 'house3'} />
+            <PropertyRentTier label="4 casas"      value={rents.house4}      kind="house" count={4} active={activeRow === 'house4'} />
+            <PropertyRentTier label="Hotel"        value={rents.hotel}       kind="hotel"       active={activeRow === 'hotel'} />
+            <PropertyRentTier label="2º hotel"     value={rents.hotel2}      kind="hotel" count={2} active={activeRow === 'hotel2'} />
+            <PropertyRentTier label="Arranha-céu" value={rents.skyscraper} kind="skyscraper"  active={activeRow === 'skyscraper'} />
+          </div>
+        </section>
 
-        {/* Bloco de valores fixos */}
-        <div className="mt-3 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-0.5">
-          <CompactRent label="Preço"    value={square.price} muted />
-          <CompactRent label="Casa"     value={houseCost}    muted />
-          <CompactRent label="Hipoteca" value={mortgage}     muted />
-        </div>
+        <dl className="property-deed__facts" aria-label="Valores do título">
+          <div className="property-deed__fact">
+            <dt>Preço</dt>
+            <dd>R$ {fmtMoney(square.price)}</dd>
+          </div>
+          <div className="property-deed__fact">
+            <dt>Casa</dt>
+            <dd>R$ {fmtMoney(houseCost)}</dd>
+          </div>
+          <div className="property-deed__fact">
+            <dt>Hipoteca</dt>
+            <dd>R$ {fmtMoney(mortgage)}</dd>
+          </div>
+        </dl>
 
-        {/* Rodapé: dono + status */}
-        {(owner || isMortgaged) && (
-          <div className="mt-3 pt-2.5 border-t border-coffee-500/60 flex items-center gap-2">
-            {owner && (
-              <div className="flex-1 min-w-0">
-                <p className="label text-cream-muted text-nano">Dono</p>
-                <p className="display text-cream text-xs leading-none mt-0.5 truncate">{owner}</p>
+        {(ownerIdentity || isMortgaged) && (
+          <div className="property-deed__status">
+            {ownerIdentity && (
+              <div className="property-deed__owner">
+                <PlayerFace
+                  color={ownerIdentity.color}
+                  avatar={ownerIdentity.avatar}
+                  skin={ownerIdentity.skin}
+                  size={26}
+                  className="property-deed__owner-avatar"
+                />
+                <span className="property-deed__owner-copy">
+                  <span>Dono</span>
+                  <strong>{ownerIdentity.name}</strong>
+                </span>
               </div>
             )}
             {isMortgaged && (

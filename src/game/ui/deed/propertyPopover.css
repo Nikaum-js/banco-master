@@ -1,0 +1,271 @@
+.property-deed {
+  width: 17.5rem;
+}
+
+.property-deed__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.property-deed__section-label {
+  color: var(--color-brass-glow);
+  font-family: var(--font-sans);
+  font-size: 0.6rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.property-deed__rent-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.3rem;
+  margin-top: 0.45rem;
+}
+
+.property-rent-tier {
+  --tier-accent: var(--color-brass);
+  position: relative;
+  min-width: 0;
+  min-height: 2.6rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "identity mark"
+    "value value";
+  align-items: center;
+  gap: 0.18rem 0.35rem;
+  overflow: hidden;
+  padding: 0.42rem 0.48rem 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--tier-accent) 24%, var(--color-ink-500));
+  border-radius: var(--radius-sharp);
+  background:
+    linear-gradient(110deg, color-mix(in srgb, var(--tier-accent) 7%, transparent), transparent 58%),
+    color-mix(in srgb, var(--color-ink-950) 54%, transparent);
+}
+
+.property-rent-tier::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: color-mix(in srgb, var(--tier-accent) 58%, var(--color-ink-500));
+}
+
+.property-rent-tier[data-active] {
+  border-color: var(--tier-accent);
+  background:
+    linear-gradient(110deg, color-mix(in srgb, var(--tier-accent) 15%, transparent), transparent 62%),
+    color-mix(in srgb, var(--color-ink-800) 82%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--tier-accent) 18%, transparent),
+    0 7px 18px -16px color-mix(in srgb, var(--tier-accent) 80%, transparent);
+}
+
+.property-rent-tier[data-tier="skyscraper"] {
+  --tier-accent: var(--color-signal-glow);
+}
+
+.property-rent-tier__identity {
+  grid-area: identity;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-starlight-muted);
+  font-family: var(--font-sans);
+  font-size: 0.59rem;
+  font-weight: 680;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-rent-tier[data-active] .property-rent-tier__identity {
+  color: var(--color-starlight);
+}
+
+.property-rent-tier__mark {
+  grid-area: mark;
+  min-width: 1.25rem;
+  height: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1px;
+  color: var(--tier-accent);
+  line-height: 0;
+}
+
+.property-rent-tier__mark svg {
+  width: auto;
+  height: 0.9rem;
+  color: var(--tier-accent);
+  filter: drop-shadow(0 2px 3px color-mix(in srgb, var(--tier-accent) 18%, transparent));
+}
+
+.property-rent-tier__value {
+  grid-area: value;
+  color: var(--color-brass-glow);
+  font-family: var(--font-currency);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.property-rent-tier__value small {
+  margin-right: 0.14rem;
+  color: color-mix(in srgb, var(--tier-accent) 72%, var(--color-starlight-muted));
+  font-size: 0.68em;
+}
+
+.property-rent-tier[data-tier="skyscraper"] .property-rent-tier__value {
+  color: var(--color-signal-glow);
+}
+
+.property-deed__facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--color-ink-500);
+  border-radius: var(--radius-sharp);
+  background: var(--color-ink-500);
+}
+
+.property-deed__fact {
+  min-width: 0;
+  padding: 0.5rem 0.42rem;
+  background: color-mix(in srgb, var(--color-ink-950) 76%, transparent);
+}
+
+.property-deed__fact + .property-deed__fact {
+  border-left: 1px solid var(--color-ink-500);
+}
+
+.property-deed__fact dt {
+  color: var(--color-starlight-muted);
+  font-family: var(--font-sans);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.property-deed__fact dd {
+  margin-top: 0.3rem;
+  color: var(--color-brass-glow);
+  font-family: var(--font-currency);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.property-deed__status {
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.42rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--atlas-surface-accent) 24%, var(--color-ink-500));
+  border-radius: var(--radius-sharp);
+  background: color-mix(in srgb, var(--atlas-surface-accent) 5%, var(--color-ink-950));
+}
+
+.property-deed__owner {
+  display: grid;
+  grid-template-columns: 1.625rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.property-deed__owner-avatar {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--atlas-surface-accent) 9%, var(--color-ink-950));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--atlas-surface-accent) 55%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--atlas-surface-accent) 8%, transparent);
+}
+
+.property-deed__owner-copy {
+  min-width: 0;
+}
+
+.property-deed__owner-copy > span {
+  display: block;
+  color: var(--color-starlight-muted);
+  font-family: var(--font-sans);
+  font-size: 0.48rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.property-deed__owner-copy > strong {
+  display: block;
+  margin-top: 0.24rem;
+  overflow: hidden;
+  color: var(--color-starlight);
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 400;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deed-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid color-mix(in srgb, var(--atlas-surface-accent) 24%, var(--color-ink-500));
+}
+
+.deed-actions__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.deed-actions__note {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.4rem;
+  padding: 0.42rem 0.5rem;
+  color: var(--color-starlight);
+  border: 1px solid color-mix(in srgb, var(--color-brass) 34%, var(--color-ink-500));
+  border-radius: var(--radius-sharp);
+  background: color-mix(in srgb, var(--color-brass) 7%, var(--color-ink-950));
+  font-family: var(--font-sans);
+  font-size: 0.59rem;
+  line-height: 1.3;
+}
+
+.deed-actions__note > i {
+  width: 1rem;
+  height: 1rem;
+  display: grid;
+  place-items: center;
+  color: var(--color-ink-950);
+  border-radius: 50%;
+  background: var(--color-brass-glow);
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 850;
+  line-height: 1;
+}
+
+@media (max-width: 390px) {
+  .property-deed {
+    width: min(17.5rem, calc(100vw - 1rem));
+  }
+}

@@ -4,65 +4,80 @@
 // efeitos" e os ícones da linha de troca. Nenhum conhece store nem regra — quem decide
 // QUANDO cada um aparece é `shared.tsx`.
 
-// Casa (flat) — silhueta limpa: corpo cream, telhado dourado, porta coffee.
-// Legível a ~13px; várias enfileiram pra contar de relance.
-export function HouseBadgeIcon() {
+type BuildingBadgeProps = {
+  size?: number
+}
+
+// Família cartográfica das construções. Todos os níveis compartilham o mesmo
+// traço, contraste e proporção para funcionar tanto no tabuleiro quanto no título.
+export function PlotBadgeIcon({ size = 15 }: BuildingBadgeProps) {
   return (
-    <svg viewBox="0 0 14 13" width="11" height="10" aria-hidden="true">
-      <rect x="2.3" y="6" width="9.4" height="6.2" fill="var(--color-starlight)" stroke="var(--color-ink-950)" strokeWidth="1" strokeLinejoin="round" />
-      <path d="M1 6.5 L7 1.4 L13 6.5 Z" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="1" strokeLinejoin="round" />
-      <rect x="5.7" y="8.4" width="2.6" height="3.8" fill="var(--color-ink-400)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" aria-hidden="true">
+      <path
+        d="m12 4 9 5-9 5-9-5 9-5Z"
+        fill="var(--color-ink-950)"
+        fillOpacity="0.74"
+        stroke="currentColor"
+        strokeWidth="1.55"
+        strokeLinejoin="round"
+      />
+      <path d="m3 9 9 5 9-5v6l-9 5-9-5V9Z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" opacity="0.55" />
+      <path d="m8.2 9.1 3.8 2.1 3.8-2.1" stroke="var(--color-starlight)" strokeWidth="1.1" strokeLinecap="round" opacity="0.75" />
     </svg>
   )
 }
 
-// Hotel (flat) — bloco largo dourado com marquise cream, janelas escuras e
-// porta em arco. Mais largo/baixo que o arranha-céu (distinção por silhueta).
-export function HotelBadgeIcon() {
+export function HouseBadgeIcon({ size = 11 }: BuildingBadgeProps) {
   return (
-    <svg viewBox="0 0 20 16" width="22" height="18" aria-hidden="true">
-      {/* marquise cream no topo */}
-      <rect x="0.8" y="1.4" width="18.4" height="2.4" fill="var(--color-starlight)" stroke="var(--color-ink-950)" strokeWidth="1" strokeLinejoin="round" />
-      {/* corpo dourado */}
-      <rect x="2.2" y="3.8" width="15.6" height="11.4" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="1" strokeLinejoin="round" />
-      {/* janelas escuras */}
-      <g fill="var(--color-ink-900)">
-        <rect x="4" y="5.6" width="2.4" height="2.4" />
-        <rect x="8.8" y="5.6" width="2.4" height="2.4" />
-        <rect x="13.6" y="5.6" width="2.4" height="2.4" />
-        <rect x="4" y="9.2" width="2.4" height="2.4" />
-        <rect x="13.6" y="9.2" width="2.4" height="2.4" />
-      </g>
-      {/* porta em arco */}
-      <path d="M8 15.2 V12.4 Q10 10.8 12 12.4 V15.2 Z" fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" aria-hidden="true">
+      <path
+        d="M5.5 10.5V21h13V10.5L12 5l-6.5 5.5Z"
+        fill="var(--color-ink-950)"
+        fillOpacity="0.82"
+        stroke="currentColor"
+        strokeWidth="1.55"
+        strokeLinejoin="round"
+      />
+      <path d="m3.5 11.5 8.5-7 8.5 7" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 21v-5h4v5M7.7 13h2.1M14.2 13h2.1" stroke="var(--color-starlight)" strokeWidth="1.15" strokeLinecap="round" opacity="0.86" />
+      <path d="M4 21h16" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" opacity="0.7" />
     </svg>
   )
 }
 
-// Skyscraper (flat) — torre dourada estreita e alta, coroa + antena com luz
-// dourada, brilho lateral e janelas escuras. Silhueta vertical = nível máximo.
-export function SkyscraperBadgeIcon() {
+export function HotelBadgeIcon({ size = 18 }: BuildingBadgeProps) {
   return (
-    <svg viewBox="0 0 10 18" width="15" height="27" aria-hidden="true">
-      {/* antena + luz */}
-      <line x1="5" y1="0.3" x2="5" y2="2.3" stroke="var(--color-ink-950)" strokeWidth="0.7" />
-      <circle cx="5" cy="0.6" r="0.75" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.3">
-        <animate attributeName="opacity" values="0.45;1;0.45" dur="1.8s" repeatCount="indefinite" />
-      </circle>
-      {/* coroa */}
-      <rect x="3.4" y="2.2" width="3.2" height="1.3" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="0.6" strokeLinejoin="round" />
-      {/* corpo */}
-      <rect x="1.6" y="3.5" width="6.8" height="13.3" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="0.8" strokeLinejoin="round" />
-      {/* brilho lateral */}
-      <rect x="1.6" y="3.5" width="1.5" height="13.3" fill="var(--color-brass-glow)" opacity="0.45" />
-      {/* janelas escuras (2×5) */}
-      <g fill="var(--color-ink-900)">
-        <rect x="2.9" y="4.7" width="1.4" height="1.5" /><rect x="5.5" y="4.7" width="1.4" height="1.5" />
-        <rect x="2.9" y="7" width="1.4" height="1.5" /><rect x="5.5" y="7" width="1.4" height="1.5" />
-        <rect x="2.9" y="9.3" width="1.4" height="1.5" /><rect x="5.5" y="9.3" width="1.4" height="1.5" />
-        <rect x="2.9" y="11.6" width="1.4" height="1.5" /><rect x="5.5" y="11.6" width="1.4" height="1.5" />
-        <rect x="2.9" y="13.9" width="1.4" height="1.5" /><rect x="5.5" y="13.9" width="1.4" height="1.5" />
-      </g>
+    <svg viewBox="0 0 28 24" width={Math.round(size * 1.17)} height={size} fill="none" aria-hidden="true">
+      <path
+        d="M4 21V8h20v13H4Z"
+        fill="var(--color-ink-950)"
+        fillOpacity="0.82"
+        stroke="currentColor"
+        strokeWidth="1.55"
+        strokeLinejoin="round"
+      />
+      <path d="M2.5 8h23M7 5h14v3H7V5Z" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 11.5h2M13 11.5h2M18 11.5h2M8 15h2M18 15h2" stroke="var(--color-starlight)" strokeWidth="1.3" strokeLinecap="round" opacity="0.84" />
+      <path d="M12 21v-5h4v5M2.5 21h23" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function SkyscraperBadgeIcon({ size = 19 }: BuildingBadgeProps) {
+  return (
+    <svg viewBox="0 0 20 28" width={Math.round(size * 0.71)} height={size} fill="none" aria-hidden="true">
+      <path d="M10 2v3" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+      <path
+        d="M7 7V5h6v2h2v4h2v15H3V11h2V7h2Z"
+        fill="var(--color-ink-950)"
+        fillOpacity="0.82"
+        stroke="currentColor"
+        strokeWidth="1.45"
+        strokeLinejoin="round"
+      />
+      <path d="M7 11h1.5M11.5 11H13M7 15h1.5M11.5 15H13M7 19h1.5M11.5 19H13" stroke="var(--color-starlight)" strokeWidth="1.15" strokeLinecap="round" opacity="0.84" />
+      <path d="M8 26v-3h4v3M1.5 26h17" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+      <circle cx="10" cy="2" r="1" fill="currentColor" />
     </svg>
   )
 }
