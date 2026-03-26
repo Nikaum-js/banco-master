@@ -1,5 +1,5 @@
-// TEMA DO APP (skin inteira) — por dispositivo, persistido em localStorage, fora do
-// GameState. Aplica `data-board-theme` no <html> e o CSS resolve o resto: como TODA a UI
+// TEMA DO APP (skin inteira) — fora do GameState. Aplica `data-board-theme` no <html>
+// e o CSS resolve o resto: como TODA a UI
 // resolve cor por `var(--color-*)` e fonte por `var(--font-*)`, trocar o atributo troca
 // paleta, tipografia, fundo, cromo das casas e o miolo do tabuleiro sem re-render.
 //
@@ -10,7 +10,6 @@
 //   atlas — Atlas da Meia-Noite: carta náutica noturna, tinta azul, latão, Bebas condensada.
 //   neon  — Fliperama Neon: roxo/ciano/rosa, corpo em monoespaçada, varredura de tubo.
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
 
 export const BOARD_THEMES = ['atlas', 'neon'] as const
 export type BoardTheme = (typeof BOARD_THEMES)[number]
@@ -26,8 +25,6 @@ export const BOARD_THEME_HINT: Record<BoardTheme, string> = {
   neon: 'synthwave · pixel · tubo de imagem',
 }
 
-// Valor vindo do localStorage é dado de fora: `vault`/`cafe` (temas removidos) ou lixo
-// qualquer voltariam como tema inexistente e deixariam o <html> num estado sem CSS.
 function coerce(t: unknown): BoardTheme {
   return BOARD_THEMES.includes(t as BoardTheme) ? (t as BoardTheme) : 'atlas'
 }
@@ -47,29 +44,18 @@ export interface BoardThemeState {
 }
 
 export const useBoardTheme = create<BoardThemeState>()(
-  persist(
-    (set, get) => ({
-      theme: 'atlas',
-      setTheme: (t) => {
-        const theme = coerce(t)
-        set({ theme })
-        applyTheme(theme)
-      },
-      cycle: () => {
-        const i = BOARD_THEMES.indexOf(get().theme)
-        get().setTheme(BOARD_THEMES[(i + 1) % BOARD_THEMES.length])
-      },
-    }),
-    {
-      name: 'bm.board-theme',
-      storage: createJSONStorage(() => localStorage),
-      // Aplica (e sanea) o tema salvo assim que re-hidrata no boot.
-      onRehydrateStorage: () => (state) => {
-        if (!state) return
-        const theme = coerce(state.theme)
-        state.theme = theme
-        applyTheme(theme)
-      },
+  (set, get) => ({
+    // O tabuleiro publicado usa um único mapa/tema. Neon permanece disponível apenas
+    // como superfície de desenvolvimento e teste; não fica mais persistido no browser.
+    theme: 'atlas',
+    setTheme: (t) => {
+      const theme = coerce(t)
+      set({ theme })
+      applyTheme(theme)
     },
-  ),
+    cycle: () => {
+      const i = BOARD_THEMES.indexOf(get().theme)
+      get().setTheme(BOARD_THEMES[(i + 1) % BOARD_THEMES.length])
+    },
+  }),
 )

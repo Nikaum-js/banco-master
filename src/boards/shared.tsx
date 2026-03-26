@@ -1541,7 +1541,7 @@ function CenterLog() {
       {/* Cabeçalho: título + contador de lançamentos (primitivo padrão) */}
       <SectionHeader
         className="px-3 pt-2 pb-1.5 mb-0 shrink-0 border-b border-coffee-500/40"
-        title="Histórico"
+        title="Diário de bordo"
         meta={history.length > 0 ? (
           <span className="label text-cream-muted tabular-nums text-micro">
             {history.length} {history.length === 1 ? 'lançamento' : 'lançamentos'}
@@ -1549,11 +1549,23 @@ function CenterLog() {
         ) : undefined}
       />
       {history.length === 0 ? (
-        <EmptyState
-          className="center-log-empty flex-1 m-3"
-          icon={<DiceIcon size={20} />}
-          title="Nada registrado ainda"
-        />
+        <div className="center-log-empty flex-1 m-3" role="status">
+          <svg viewBox="0 0 280 86" aria-hidden="true">
+            <path className="center-log-empty__route" d="M18 66 78 28l55 25 58-35 71 43" />
+            {[18, 78, 133, 191, 262].map((x, index) => {
+              const y = [66, 28, 53, 18, 61][index]
+              return (
+                <g key={x}>
+                  <circle cx={x} cy={y} r={index === 0 ? 7 : 5} />
+                  <circle cx={x} cy={y} r="1.5" />
+                </g>
+              )
+            })}
+            <path className="center-log-empty__marker" d="m126 45 13 8-13 8 3-8Z" />
+          </svg>
+          <p>Rota ainda não traçada</p>
+          <span>O primeiro lançamento abre o diário.</span>
+        </div>
       ) : (
         <AccessoryErrorBoundary label="Histórico">
         <ol
@@ -1639,6 +1651,11 @@ export function CenterArena() {
 
       {boardTheme === 'atlas' ? (
         <>
+          <div className="board-center__brand" aria-hidden>
+            <span>Banco Master</span>
+            <i />
+            <span>Cidades do Mundo</span>
+          </div>
           {/* Molduras da prancheta + cantoneiras de latão */}
           <div className="absolute inset-3 border border-coffee-500/55 rounded-[var(--radius-sharp)] pointer-events-none" />
           <div className="absolute inset-[19px] border border-coffee-500/25 rounded-[var(--radius-sharp)] pointer-events-none" />

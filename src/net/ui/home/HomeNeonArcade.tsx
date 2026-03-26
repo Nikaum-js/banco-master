@@ -8,8 +8,7 @@
 //                    tabuleiro de verdade (`homeShared.CITIES`).
 //   do FLIPERAMA  →  letreiro em PIXEL (matriz 5×7 desenhada em retângulos) que BOOTA pixel
 //                    a pixel, o tubo de imagem por cima (varredura, barra de sincronia,
-//                    cantos escuros), o placar no topo, "insert coin" piscando e moedas
-//                    caindo em passos.
+//                    cantos escuros), o placar no topo e moedas caindo em passos.
 //
 // As duas coisas se somam num ponto específico: o letreiro de pixel ganhou o GLOW de tubo de
 // neon (franja ciano/rosa + halo violeta), que nenhum dos dois tinha sozinho.

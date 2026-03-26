@@ -11,11 +11,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/game/ui/primitives'
 import { EASE, MOTION } from '@/game/ui/motion'
-import {
-  BOARD_THEMES,
-  useBoardTheme,
-  type BoardTheme,
-} from '@/game/ui/theme/boardTheme'
+import type { BoardTheme } from '@/game/ui/theme/boardTheme'
 import { cn } from '@/lib/utils'
 import { EntryPanel } from '../entryShell'
 import {
@@ -161,8 +157,8 @@ export function HomeMapPanel({
   onChangeMap: (theme: BoardTheme) => void
   mapChanging: boolean
 }) {
-  const theme = useBoardTheme((state) => state.theme)
-  const nextTheme = BOARD_THEMES[(BOARD_THEMES.indexOf(theme) + 1) % BOARD_THEMES.length]
+  const theme: BoardTheme = skin
+  const nextTheme: BoardTheme = theme === 'atlas' ? 'neon' : 'atlas'
   const map = HOME_MAPS[theme]
   const nextMap = HOME_MAPS[nextTheme]
   const fieldId = `${skin}-home-invite`

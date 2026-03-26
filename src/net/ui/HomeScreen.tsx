@@ -19,10 +19,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { Map } from 'lucide-react'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
-import {
-  useBoardTheme,
-  type BoardTheme,
-} from '@/game/ui/theme/boardTheme'
+import type { BoardTheme } from '@/game/ui/theme/boardTheme'
 import { HomeAtlas } from './home/HomeAtlas'
 import { HomeNeonArcade } from './home/HomeNeonArcade'
 import { HOME_MAPS, useHomeForm, type HomeActions } from './home/homeShared'
@@ -34,7 +31,9 @@ const SCREEN = {
 
 export function HomeScreen(actions: HomeActions) {
   const { reduced } = useMotion()
-  const theme = useBoardTheme((s) => s.theme)
+  // A prévia de mapa pertence somente à home. O tema do jogo não muda junto:
+  // Metrópole Neon ainda não existe como tabuleiro jogável.
+  const [theme, setTheme] = useState<BoardTheme>('atlas')
   const Screen = SCREEN[theme]
   const [themeTransition, setThemeTransition] = useState<{
     target: BoardTheme
@@ -47,7 +46,7 @@ export function HomeScreen(actions: HomeActions) {
   function changeMap(target: BoardTheme): void {
     if (target === theme || themeTransition) return
     if (reduced) {
-      useBoardTheme.getState().setTheme(target)
+      setTheme(target)
       return
     }
     setThemeTransition({ target, phase: 'cover' })
@@ -56,9 +55,9 @@ export function HomeScreen(actions: HomeActions) {
   function advanceThemeTransition(): void {
     if (!themeTransition) return
     if (themeTransition.phase === 'cover') {
-      // O tema global só muda quando a cortina cobre tudo. Assim a fonte do
-      // mundo novo nunca recalcula a tela antiga diante da pessoa.
-      useBoardTheme.getState().setTheme(themeTransition.target)
+      // A prévia só muda quando a cortina cobre tudo. Assim a fonte do mundo
+      // novo nunca recalcula a tela antiga diante da pessoa.
+      setTheme(themeTransition.target)
       setThemeTransition({ ...themeTransition, phase: 'reveal' })
       return
     }

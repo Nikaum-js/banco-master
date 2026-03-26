@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { HomeScreen } from '@/net/ui/HomeScreen'
-import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 
 vi.mock('motion/react', async (importOriginal) => {
   const actual = await importOriginal<typeof import('motion/react')>()
@@ -12,12 +11,10 @@ vi.mock('motion/react', async (importOriginal) => {
 beforeEach(() => {
   localStorage.clear()
   window.history.replaceState(null, '', '/')
-  act(() => useBoardTheme.getState().setTheme('atlas'))
 })
 
 afterEach(() => {
   cleanup()
-  act(() => useBoardTheme.getState().setTheme('atlas'))
 })
 
 describe('seletor visual do mapa na home', () => {
@@ -40,7 +37,6 @@ describe('seletor visual do mapa na home', () => {
       name: 'Pré-visualizar o mapa Metrópole Neon',
     }))
 
-    expect(useBoardTheme.getState().theme).toBe('neon')
     await waitFor(() => {
       expect(document.querySelector('[data-entry-backdrop="neon"]')).toBeTruthy()
     })
@@ -56,7 +52,6 @@ describe('seletor visual do mapa na home', () => {
       name: 'Selecionar Cidades do Mundo',
     }))
 
-    expect(useBoardTheme.getState().theme).toBe('atlas')
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^Criar sala$/ })).toBeTruthy()
     })

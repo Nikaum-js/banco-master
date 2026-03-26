@@ -9,7 +9,6 @@ import { NoticeLayer } from '@/game/ui/NoticeLayer'
 import { LiveRegion } from '@/game/ui/a11y/LiveRegion'
 import { SoundLayer } from '@/game/ui/sound/SoundLayer'
 import { AudioControl } from '@/game/ui/sound/AudioControl'
-import { ThemeControl } from '@/game/ui/theme/ThemeControl'
 import { SoundBoard } from '@/game/ui/sound/SoundBoard'
 import { DebugLogger } from '@/game/ui/DebugLogger'
 import { OnlineGate } from '@/net/ui/OnlineGate'
@@ -59,9 +58,6 @@ export default function App() {
         <CommandFailureToast />
         <DebugLogger />
       </OnlineGate>
-      {/* Fora do `OnlineGate` para continuar disponível no lobby e na partida.
-          Na home, o próprio seletor de mapa assume essa ação e o CSS oculta este controle. */}
-      <ThemeControl />
     </>
   )
 }

@@ -106,95 +106,106 @@ export function IdentityForm({
   const [skin, setSkin] = useState<SkinId>('careca')
   const chosen = free.includes(color) ? color : (free[0] ?? '')
   const message = error && (error in JOIN_ERROR_TEXT ? JOIN_ERROR_TEXT[error as JoinError] : String(error))
+  const skinLabel = SKINS.find((s) => s.id === skin)?.label ?? 'Viajante'
 
   return (
-    <Frame title={title} subtitle={subtitle}>
-      {/* Preview vivo — o token REAL do tabuleiro com a cor escolhida, respirando. */}
-      <div className="identity-preview flex items-center gap-3.5 px-4 py-3 rounded-[var(--radius-card)]">
-        <PlayerFace color={chosen || 'var(--color-ink-400)'} size={46} active skin={skin} />
-        <div className="min-w-0 flex-1">
-          <p className={`font-semibold leading-tight truncate ${name.trim() ? 'text-starlight' : 'text-starlight-muted/70'}`}>
+    <Frame
+      title={title}
+      subtitle={subtitle}
+      className="identity-frame max-w-[54rem]"
+      bodyClassName="identity-layout"
+    >
+      {/* A identidade vira uma ficha de viajante: preview grande e controles lado a lado,
+          mesma composição mapa + ação da home. */}
+      <section className="identity-passport">
+        <div className="identity-passport__head">
+          <p className="home-map-panel__eyebrow">Seu marcador de viagem</p>
+          <span aria-hidden>BM · 01</span>
+        </div>
+        <div className="identity-passport__portrait">
+          <span className="identity-passport__orbit" aria-hidden />
+          <PlayerFace color={chosen || 'var(--color-ink-400)'} size={92} active skin={skin} />
+        </div>
+        <div className="identity-passport__name">
+          <p className={name.trim() ? 'text-starlight' : 'text-starlight-muted/70'}>
             {name.trim() || 'Viajante sem nome'}
           </p>
-          <p className="label text-starlight-muted mt-1">
-            {SKINS.find((s) => s.id === skin)?.label} · assim você aparece na mesa
-          </p>
+          <span>{skinLabel}</span>
         </div>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="player-name" className="label text-brass">
-          Seu nome
-        </label>
-        <input
-          id="player-name"
-          value={name}
-          onChange={(e) => setName(e.target.value.slice(0, NAME_MAX))}
-          placeholder="Ex.: Marco Polo"
-          maxLength={NAME_MAX}
-          autoFocus={name === ''}
-          className="entry-input"
-        />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <span className="label text-brass">Sua cor</span>
-        <div className="flex flex-wrap gap-2.5">
-          {free.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setColor(c)}
-              aria-label={`Cor ${c}`}
-              aria-pressed={c === chosen}
-              style={{ background: c }}
-              className={`w-11 h-11 rounded-full border border-ink-950/60 transition-all ${
-                c === chosen
-                  ? 'ring-2 ring-brass ring-offset-2 ring-offset-ink-800 scale-105'
-                  : 'opacity-80 hover:opacity-100 hover:scale-105'
-              }`}
-            />
-          ))}
+        <div className="identity-passport__route" aria-hidden>
+          <i />
+          <i />
+          <i />
         </div>
-      </div>
+        <p className="identity-passport__hint">Assim você aparece no tabuleiro</p>
+      </section>
 
-      <div className="flex flex-col gap-1.5">
-        <span className="label text-brass">Seu visual</span>
-        <div className="grid grid-cols-4 gap-2">
-          {SKINS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => setSkin(s.id)}
-              aria-label={`Visual ${s.label}`}
-              aria-pressed={s.id === skin}
-              title={s.label}
-              className={`min-h-16 py-1.5 rounded-[var(--radius-card)] border grid place-items-center gap-0.5 transition-all ${
-                s.id === skin
-                  ? 'border-brass/80 bg-brass/10 text-brass-glow shadow-[var(--shadow-glow)]'
-                  : 'border-ink-500 bg-ink-900/60 text-starlight-muted hover:text-starlight hover:border-ink-300'
-              }`}
-            >
-              <PlayerFace color={chosen || 'var(--color-ink-400)'} size={30} skin={s.id} />
-              <span className="text-[9px] uppercase tracking-wider leading-none">{s.label}</span>
-            </button>
-          ))}
+      <section className="identity-controls">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="player-name" className="label text-brass">
+            Seu nome
+          </label>
+          <input
+            id="player-name"
+            value={name}
+            onChange={(e) => setName(e.target.value.slice(0, NAME_MAX))}
+            placeholder="Ex.: Marco Polo"
+            maxLength={NAME_MAX}
+            autoFocus={name === ''}
+            className="entry-input"
+          />
         </div>
-      </div>
 
-      {message && <p className="text-signal-glow text-sm leading-snug">{message}</p>}
+        <div className="flex flex-col gap-1.5">
+          <span className="label text-brass">Sua cor</span>
+          <div className="identity-color-grid">
+            {free.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setColor(c)}
+                aria-label={`Cor ${c}`}
+                aria-pressed={c === chosen}
+                style={{ '--identity-color': c } as React.CSSProperties}
+                className="identity-color-swatch"
+              />
+            ))}
+          </div>
+        </div>
 
-      <Button
-        variant="ghost"
-        className="cta-embark py-3 text-sm"
-        disabled={!name.trim() || !chosen || busy}
-        onClick={() => {
-          rememberPlayerName(name)
-          onSubmit(name.trim(), chosen)
-        }}
-      >
-        {busy ? 'Conectando…' : cta}
-      </Button>
+        <div className="flex flex-col gap-1.5">
+          <span className="label text-brass">Seu visual</span>
+          <div className="identity-skin-grid">
+            {SKINS.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setSkin(s.id)}
+                aria-label={`Visual ${s.label}`}
+                aria-pressed={s.id === skin}
+                title={s.label}
+                className="identity-skin-option"
+              >
+                <PlayerFace color={chosen || 'var(--color-ink-400)'} size={32} skin={s.id} />
+                <span>{s.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {message && <p className="text-signal-glow text-sm leading-snug">{message}</p>}
+
+        <Button
+          className="identity-submit py-3 text-sm"
+          disabled={!name.trim() || !chosen || busy}
+          onClick={() => {
+            rememberPlayerName(name)
+            onSubmit(name.trim(), chosen)
+          }}
+        >
+          {busy ? 'Conectando…' : cta}
+        </Button>
+      </section>
     </Frame>
   )
 }
@@ -249,7 +260,10 @@ export function RoomLobby({
         : openingMode === 'sealed-bid'
           ? 'Ordem por Leilão secreto'
           : 'Ordem por Maior dado'}
+      className="lobby-frame max-w-[54rem]"
+      bodyClassName="lobby-layout"
     >
+      <section className="lobby-column">
       {/* 1. Convite — o PRIMEIRO bloco da tela. Numa sala recém-criada não há nada a fazer
           além de chamar gente; deixar o link abaixo da lista de assentos enterrava a única
           ação que importa naquele momento. */}
@@ -309,7 +323,9 @@ export function RoomLobby({
           </div>
         ))}
       </div>
+      </section>
 
+      <section className="lobby-column lobby-column--launch">
       <fieldset className="flex flex-col gap-1.5">
         <legend className="label text-brass mb-1">Ritual de Largada</legend>
         <div className="opening-mode-picker">
@@ -365,6 +381,7 @@ export function RoomLobby({
           <span className="text-starlight tracking-[0.2em] font-mono">{myReentryCode}</span>
         </p>
       )}
+      </section>
     </Frame>
   )
 }
