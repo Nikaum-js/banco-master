@@ -1,23 +1,21 @@
 // HUD de decisões (022.1 / redesign 035) — CARD de decisão flutuante e CENTRALIZADO,
 // com personalidade visual ("Café Coado + dourado"). Climas distintos:
-//   • Dívida     → "conta vencida": valor enorme com glow/pulso, eixo credor↔devedor
-//                  com o PlayerFace do credor (conecta com o tabuleiro). Falência só
-//                  habilita quando insolvente de verdade (§9.1).
 //   • Empréstimo → solicitação ao credor (§15.2): o credor define a taxa e aceita/recusa.
 //   • Reação     → "interrupção/alerta" sóbria e dourada (Diplomacia / Bunker Fiscal).
 //   • Fim        → celebração do vencedor (confete + coroa) — NÃO mexer.
-// NÃO usa backdrop bloqueante na dívida: o container é pointer-events-none e só o
-// card recebe cliques (pointer-events-auto), então o tabuleiro segue clicável pra
-// hipotecar/vender e juntar caixa antes de "Pagar". Demais climas podem ter leve dim.
 // Ações OPCIONAIS não moram aqui: Bus Ticket é canhoto na DiceArena; quitar
 // empréstimo vive no LoanPanel lateral. Sem nada pendente → não renderiza.
+//
+// 050/D-056: a DÍVIDA saiu daqui e virou faixa ancorada (`debt/DebtDock.tsx`). Ela era a
+// exceção deste arquivo — o único clima que não podia bloquear a tela, porque a decisão de
+// hipotecar ou vender se toma olhando o tabuleiro. Manter uma exceção como cartão não
+// resolvia o problema real: não adianta o tabuleiro estar clicável se ele está atrás.
 //
 // 044/T024 (US3/D-039): reação e empréstimo (`dim`) BLOQUEIAM a tela de verdade (o backdrop
 // cobre tudo e recebe clique) — viram diálogo de verdade (role="dialog", trap de foco,
 // restauração), via `useDialogA11y`/`ModalTitleContext` de `shell.tsx` (mesmo mecanismo do
 // `Overlay`, sem duplicar). SEM `dismissible`: são decisões (D-039 ponto 2 cita "reação"
-// nominalmente) — Esc não fecha. A dívida (`dim=false`) fica de fora de propósito: o
-// tabuleiro PRECISA continuar alcançável (hipotecar/vender), um trap ali quebraria isso.
+// nominalmente) — Esc não fecha.
 import { type ReactNode, useId, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { HandCoins, Landmark, ShieldAlert } from 'lucide-react'
@@ -25,13 +23,13 @@ import { PlayerFace } from '@/boards/PlayerFace'
 import { useGameStore } from '@/game/store'
 import { useLocalView, useRoomStore } from '@/net/roomStore'
 import { identityOf } from '@/net/identity'
-import { PlayerName } from '@/net/ui/PlayerName'
+import { getActiveSession } from '@/net/activeSession'
 import { WaitingBar } from '@/net/ui/WaitingBar'
-import { isBankrupt } from '@/game/falencia/falencia'
-import { eligibleLenders, interestOf, loanShortfall } from '@/game/emprestimos/emprestimos'
+import { interestOf } from '@/game/emprestimos/emprestimos'
+import { DebtDock } from '@/game/ui/debt/DebtDock'
 import { activeHudView } from '@/game/ui/panels/activeHudView'
 import { EndGameScreen } from '@/game/ui/EndGameScreen'
-import { Button, Chip, MoneyPulse } from '@/game/ui/primitives'
+import { Button, Chip } from '@/game/ui/primitives'
 import { useMoneyPulse } from '@/game/ui/useMoneyPulse'
 import { useMotion } from '@/game/ui/motion'
 import { useDialogA11y, ModalTitleContext } from '@/game/ui/a11y/dialog'
@@ -47,21 +45,8 @@ const GOLD_TEXT: React.CSSProperties = {
   filter: 'drop-shadow(0 3px 12px color-mix(in srgb, var(--color-brass) 60%, transparent))',
 }
 
-// Gradiente "signal quente" pro número da dívida — vermelho com brilho,
-// clima de fatura vencida (não dourado de prêmio).
-const SIGNAL_TEXT: React.CSSProperties = {
-  backgroundImage: 'var(--gradient-signal-shine)',
-  WebkitBackgroundClip: 'text',
-  backgroundClip: 'text',
-  color: 'transparent',
-  filter: 'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 55%, transparent))',
-}
-
-
-// Cor do jogador por id (mesma paleta de assento do tabuleiro/tokens). Mantém o
-// credor visualmente ligado à sua carinha no board.
 // Cascas de largura total sobre o primitivo Button — hierarquia do card de
-// decisão: primária, neutra (secondary) e destrutiva (danger).
+// decisão: primária e neutra (secondary).
 function PrimaryBtn({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: ReactNode }) {
   return (
     <Button onClick={onClick} disabled={disabled} className="w-full py-2.5">
@@ -76,14 +61,6 @@ function GhostBtn({ onClick, children }: { onClick: () => void; children: ReactN
     </Button>
   )
 }
-function DangerBtn({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: ReactNode }) {
-  return (
-    <Button variant="danger" onClick={onClick} disabled={disabled} className="w-full">
-      {children}
-    </Button>
-  )
-}
-
 // Casca do card de decisão CENTRALIZADO. `dim` liga um leve escurecedor de fundo
 // (reação/fim podem usar; dívida NÃO, pra não bloquear o tabuleiro). Sem `dim`, o
 // container é pointer-events-none e o tabuleiro segue clicável.
@@ -163,8 +140,7 @@ export function GameHUD() {
   const view = useLocalView() // spec 038: controles só do assento local (FR-002)
   const room = useRoomStore((s) => s.room)
   const online = room !== null
-  const { reduced } = useMotion()
-  // Feedback de caixa (044/T020 — FR-029): a tela de dívida mostra o caixa do devedor
+  // Feedback de caixa (044/T020 — FR-029): a faixa de cobrança mostra o caixa do devedor
   // mudando ao vivo (hipoteca/venda pra cobrir a fatura) sem NENHUM aviso; mesmo pulso que
   // `PlayerRow`/`PotCard` já usam (`primitives.tsx`), não um vocabulário novo.
   const cashPulse = useMoneyPulse(active.cash)
@@ -172,20 +148,21 @@ export function GameHUD() {
   // `return` abaixo. Adicionar uma sexta tela é editar a tabela, não adivinhar a posição.
   const hud = activeHudView(game)
 
-  const activeIdentity = identityOf(room, active.id)
-
   // ---- Fim de jogo — classificação completa (044, US2/D-038) ----
   // Substitui a antiga celebração isolada do vencedor: toda tela agora mostra a mesma
   // classificação, do 1º ao último (FR-001), derivada de `matchSummary(game)` dentro do
-  // próprio `EndGameScreen`. O botão de saída mantém o comportamento de sempre — online
-  // não tem revanche (spec 038, FR-027); local pode recomeçar.
+  // próprio `EndGameScreen`. Online volta à MESMA sala pela sessão ativa (049/D-052);
+  // local continua criando um jogo novo no store.
   if (hud?.kind === 'winner') {
     return (
       <AnimatePresence>
         <EndGameScreen
           game={game}
           online={online}
-          onExit={() => (online ? (window.location.search = '') : resetGame())}
+          onExit={() => {
+            if (online) void getActiveSession()?.returnToLobby()
+            else resetGame()
+          }}
         />
       </AnimatePresence>
     )
@@ -264,7 +241,11 @@ export function GameHUD() {
     )
   }
 
-  // ---- Dívida pendente — "conta vencida" ----
+  // ---- Dívida pendente — FAIXA ancorada, não cartão (050/D-056) ----
+  // O cartão centralizado saiu daqui de propósito: ele cobria o centro do tabuleiro e as
+  // casas em volta, que é exatamente onde a decisão de hipotecar/vender é tomada. A faixa
+  // reserva altura do palco (`:root:has(.debt-dock)` em index.css), então a mesa encolhe e
+  // continua inteira. Ela também não é modal — sem backdrop, sem trap, sem Esc (§12.6).
   if (hud?.kind === 'debt') {
     if (!view.mayAct('pay-debt')) {
       return (
@@ -273,166 +254,17 @@ export function GameHUD() {
         </AnimatePresence>
       )
     }
-    const shortfall = loanShortfall(game)
-    const canPay = active.cash >= hud.amount
-    // Elegibilidade vem do MOTOR (§15.2): antes esta lista refazia à mão 5 das 8 guardas
-    // de `proposeLoan`, e deixava `paused` de fora.
-    const lenders = eligibleLenders(game).map((id) => game.players.find((p) => p.id === id)!)
-    const creditor = hud.creditorId ? identityOf(room, hud.creditorId) : null
-    // % do valor já coberto pelo caixa atual — alimenta a barra credor↔devedor.
-    const covered = Math.max(0, Math.min(1, active.cash / hud.amount))
-    // §9.1: só pode declarar falência se nem liquidando tudo cobre a dívida.
-    const canFalir = isBankrupt(game, active.id, hud.amount)
-
     return (
       <AnimatePresence>
-        {/* SEM dim: tabuleiro precisa continuar clicável (hipotecar/vender). */}
-        <DecisionShell>
-          <CardFrame accent="var(--color-signal)" glow="color-mix(in srgb, var(--color-signal) 50%, transparent)" width={420}>
-            {/* Cabeçalho de fatura — faixa cobre/vermelho */}
-            <div
-              className="px-5 py-3 border-b-2 border-coffee-950"
-              style={{ background: 'var(--gradient-signal)' }}
-            >
-              <p className="label tracking-[var(--tracking-caps)]" style={{ color: 'color-mix(in srgb, var(--color-signal-glow) 35%, white)' }}>Conta vencida</p>
-              <h3 className="display text-2xl leading-none text-cream mt-0.5">Dívida</h3>
-            </div>
-
-            <div className="p-5">
-              {/* Eixo CREDOR ↔ DEVEDOR — carinhas dos dois lados (credor = PlayerFace
-                  na cor do assento; banco = ícone Landmark). Liga visualmente ao board. */}
-              <div className="flex items-center justify-between gap-3">
-                {/* Devedor (jogador da vez) */}
-                <div className="flex flex-col items-center gap-1 w-20">
-                  <PlayerFace color={activeIdentity.color} avatar={activeIdentity.avatar} skin={activeIdentity.skin} size={40} />
-                  <span className="label text-cream truncate max-w-full">
-                    <PlayerName playerId={active.id} />
-                  </span>
-                </div>
-
-                {/* Trilho de fluxo com seta animada do devedor → credor. Loop ambiente de
-                    1.1s, fora do vocabulário por design (D7 — coreografia de urgência da
-                    "conta vencida", mesma categoria da exceção do fim de jogo); some sob
-                    movimento reduzido — a seta parada ainda comunica o sentido do fluxo. */}
-                <div className="relative flex-1 h-px my-4">
-                  <div className="absolute inset-0 top-1/2 -translate-y-1/2 h-[2px] bg-coffee-500" />
-                  {!reduced && (
-                    <>
-                      <motion.div
-                        className="absolute top-1/2 -translate-y-1/2 h-[2px]"
-                        style={{ background: 'linear-gradient(90deg, transparent, var(--color-signal-glow))' }}
-                        initial={{ width: '0%' }}
-                        animate={{ width: '100%' }}
-                        transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                      <motion.span
-                        className="absolute top-1/2 -translate-y-1/2 text-signal-glow text-lg leading-none"
-                        initial={{ left: '0%', opacity: 0 }}
-                        animate={{ left: '92%', opacity: [0, 1, 1, 0] }}
-                        transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-                      >
-                        →
-                      </motion.span>
-                    </>
-                  )}
-                  {reduced && (
-                    <span className="absolute top-1/2 -translate-y-1/2 left-[92%] text-signal-glow text-lg leading-none">→</span>
-                  )}
-                </div>
-
-                {/* Credor — PlayerFace na cor do assento, ou banco */}
-                <div className="flex flex-col items-center gap-1 w-20">
-                  {creditor ? (
-                    <PlayerFace color={creditor.color} avatar={creditor.avatar} skin={creditor.skin} size={40} />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-coffee-900 border border-brass/50">
-                      <Landmark size={20} className="text-gold" />
-                    </div>
-                  )}
-                  <span className="label text-cream truncate max-w-full">{creditor?.name ?? 'Banco'}</span>
-                </div>
-              </div>
-
-              {/* Valor devido — número enorme em cobre, com pulso de glow contínuo. Outro
-                  loop ambiente fora do vocabulário (D7); sem ele sob movimento reduzido, o
-                  glow fica fixo no ponto médio — o valor (o FATO) nunca deixou de aparecer. */}
-              <motion.p
-                className="text-center currency leading-none mt-4"
-                style={{ fontSize: 46, ...SIGNAL_TEXT }}
-                animate={reduced ? {
-                  filter: 'drop-shadow(0 3px 17px color-mix(in srgb, var(--color-signal) 55%, transparent))',
-                } : {
-                  filter: [
-                    'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 40%, transparent))',
-                    'drop-shadow(0 3px 20px color-mix(in srgb, var(--color-signal) 70%, transparent))',
-                    'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 40%, transparent))',
-                  ],
-                }}
-                transition={reduced ? { duration: 0 } : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                {fmt(hud.amount)}
-              </motion.p>
-
-              {/* Barra de cobertura: quanto o caixa já cobre da dívida */}
-              <div className="mt-3">
-                <div className="h-2 rounded-full bg-coffee-950 overflow-hidden border border-coffee-600">
-                  <motion.div
-                    className="h-full rounded-full"
-                    style={{
-                      background: canPay
-                        ? 'linear-gradient(90deg, var(--color-brass-soft), var(--color-brass-glow))'
-                        : 'linear-gradient(90deg, var(--color-signal-deep), var(--color-signal-glow))',
-                    }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${covered * 100}%` }}
-                    transition={{ type: 'spring', stiffness: 120, damping: 22 }}
-                  />
-                </div>
-                <div className="flex items-center justify-between mt-1.5">
-                  <span className="label text-cream-muted relative inline-block">
-                    Caixa <span className="text-cream currency">{fmt(active.cash)}</span>
-                    <MoneyPulse pulse={cashPulse} className="left-1/2 -translate-x-1/2 -top-4" />
-                  </span>
-                  {shortfall > 0 && (
-                    <span className="label text-signal-glow">
-                      Falta <span className="currency">{fmt(shortfall)}</span>
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 mt-4">
-                <PrimaryBtn onClick={payDebt} disabled={!canPay}>Pagar {fmt(hud.amount)}</PrimaryBtn>
-                {lenders.map((p) => {
-                  const lender = identityOf(room, p.id)
-                  return (
-                    <Button
-                      key={p.id}
-                      variant="secondary"
-                      onClick={() => proposeLoan(p.id)}
-                      className="w-full justify-start gap-2"
-                    >
-                      <PlayerFace color={lender.color} avatar={lender.avatar} skin={lender.skin} size={22} />
-                      <span className="flex-1 text-left">
-                        Pedir {fmt(shortfall)} a <PlayerName playerId={p.id} />
-                      </span>
-                      <HandCoins size={15} className="text-gold-glow shrink-0" />
-                    </Button>
-                  )
-                })}
-                <DangerBtn onClick={declareBankruptcy} disabled={!canFalir}>Declarar falência</DangerBtn>
-              </div>
-
-              {!canPay && (
-                <p className="text-center label text-cream-muted mt-3 normal-case">
-                  {canFalir
-                    ? 'Hipoteque ou venda no tabuleiro pra cobrir o que falta.'
-                    : 'Hipoteque ou venda no tabuleiro: ainda dá pra pagar.'}
-                </p>
-              )}
-            </div>
-          </CardFrame>
-        </DecisionShell>
+        <DebtDock
+          game={game}
+          amount={hud.amount}
+          creditorId={hud.creditorId}
+          cashPulse={cashPulse}
+          onPay={payDebt}
+          onProposeLoan={proposeLoan}
+          onDeclareBankruptcy={declareBankruptcy}
+        />
       </AnimatePresence>
     )
   }

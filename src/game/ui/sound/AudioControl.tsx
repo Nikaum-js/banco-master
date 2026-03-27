@@ -7,8 +7,12 @@ export function AudioControl() {
   const muted = useAudioPrefs((s) => s.muted)
   const volume = useAudioPrefs((s) => s.volume)
 
+  // `audio-control` só carrega o posicionamento vertical (index.css): durante a cobrança de
+  // dívida ele sobe acima da faixa (050/D-056), que ocupa a base da tela — medido em
+  // 1440×900, ele caía em cima do "Você deve a …" e escondia a primeira informação da
+  // cobrança.
   return (
-    <div className="group fixed bottom-3 left-3 z-[80] flex items-center gap-2">
+    <div className="audio-control group fixed left-3 z-[80] flex items-center gap-2">
       <button
         type="button"
         aria-label={muted ? 'Ativar som' : 'Silenciar'}
