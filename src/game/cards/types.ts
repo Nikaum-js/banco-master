@@ -7,7 +7,10 @@ export type DeckId = 'acaso' | 'tesouro'
 // além daquele em que está (FR-027) — `null` é `null`.
 export type CardId = string
 export type CardSlot = CardId | null
-export type Rarity = 'lendaria' | 'rara' | 'comum'
+// Quatro níveis desde a D-075 (era três). A ordem aqui é a hierarquia: da mais rara para a
+// mais comum. `epica` entrou NO MEIO — não no topo —, empurrando os dois níveis de baixo para
+// cima: o que era rara virou épica, e o que era comum de 1 cópia virou rara.
+export type Rarity = 'lendaria' | 'epica' | 'rara' | 'comum'
 export type CardMode = 'imediato' | 'mao'
 export type Timing = 'proprio-turno' | 'reacao' | 'preso'
 export type EffectId = string // chave no registry de efeitos

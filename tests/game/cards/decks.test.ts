@@ -46,9 +46,11 @@ describe('Decks e saque (US1)', () => {
   })
 
   it('peso de saque segue estritamente a raridade, sem exceção por modo', () => {
-    expect(cardWeight('aquisicao-hostil-1')).toBe(9) // lendária de mão
-    expect(cardWeight('boom-economico-1')).toBe(10) // rara imediata — o modo não conta, só a raridade
-    expect(cardWeight('erro-banco-1')).toBe(11) // comum imediata
+    // Escala ×10 desde a D-075, para o quarto degrau (épica) caber entre lendária e rara.
+    expect(cardWeight('aquisicao-hostil-1')).toBe(90) // lendária de mão
+    expect(cardWeight('boom-economico-1')).toBe(104) // épica IMEDIATA — o modo não conta, só a raridade
+    expect(cardWeight('honorarios-1')).toBe(107) // rara imediata
+    expect(cardWeight('erro-banco-1')).toBe(109) // comum imediata
   })
 
   it('T018: GameState estendido (decks/mão/contadores) é serializável', () => {

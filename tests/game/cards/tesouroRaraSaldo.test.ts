@@ -6,9 +6,14 @@
  *
  * O que a reprodução mostrou, e que este arquivo trava:
  *
- *   • Nenhuma carta rara move o caixa para zero. As raras são `boicote` (Acaso, mão),
+ *   • Nenhuma carta rara move o caixa para zero. As raras do relato são `boicote` (Acaso, mão),
  *     `crise-imobiliaria` (Acaso, imediata, 5% do patrimônio), `saia-prisao`, `bunker-fiscal` e
  *     `boom-economico` (Tesouro). Quatro delas não tocam o caixa; a quinta cobra 5%.
+ *
+ *     Nota de vocabulário: a D-075 renomeou esse nível para ÉPICA (o nome "rara" passou a designar
+ *     o nível abaixo). O relato original diz "rara", e o texto acima o preserva como foi escrito;
+ *     as asserções abaixo falam a linguagem de hoje. Só o rótulo mudou — as mesmas cinco cartas,
+ *     o mesmo efeito, a mesma conclusão.
  *   • Saindo da prisão (pos 12) com 6+5, o jogador para na **pos 23**, que é uma casa de
  *     **Acaso** — o `resolution=card-reveal` do log é consistente com isso, e `card-reveal` só
  *     abre para carta de MÃO (`cardRevealResolve`), que por definição não move dinheiro.
@@ -34,7 +39,7 @@ import { rngFromDice } from '../turn/_helpers'
 import type { TurnCtx } from '@/game/turn/turnMachine'
 import type { GameState } from '@/game/turn/types'
 
-const CARTA_RARA_DE_MAO = 'boicote-1' // Acaso, rara, modo 'mao' — a que abre `card-reveal`
+const CARTA_DO_RELATO_DE_MAO = 'boicote-1' // Acaso, épica (ex-rara, D-075), modo 'mao'
 
 function ctxComDados(values: number[]): TurnCtx {
   return { rng: rngFromDice(values), ports: buildPorts(), resolve: buildResolve(), now: () => 0, speedDie: false }
@@ -46,15 +51,15 @@ function presoComCartaRaraNoTopo(): GameState {
   g.players[0].pos = jailPos()
   g.players[0].jail = { inJail: true, attempts: 0 }
   g.turn.state = 'prisao-decisao'
-  g.decks.acaso = [CARTA_RARA_DE_MAO, ...g.decks.acaso.filter((c) => c !== CARTA_RARA_DE_MAO)]
+  g.decks.acaso = [CARTA_DO_RELATO_DE_MAO, ...g.decks.acaso.filter((c) => c !== CARTA_DO_RELATO_DE_MAO)]
   return g
 }
 
 describe('CARD 01 — prisão → rolagem → carta rara não zera o saldo', () => {
-  it('a casa alcançada é de carta, e a carta do topo é RARA e de mão (a do relato)', () => {
+  it('a casa alcançada é de carta, e a carta do topo é do nível do relato e de mão', () => {
     expect(BOARD[jailPos() + 11].kind).toBe('acaso')
-    const carta = cardById(CARTA_RARA_DE_MAO)
-    expect(carta.rarity).toBe('rara')
+    const carta = cardById(CARTA_DO_RELATO_DE_MAO)
+    expect(carta.rarity).toBe('epica') // o nível que o relato chamava de "rara" (D-075)
     expect(carta.mode).toBe('mao')
   })
 
@@ -69,7 +74,7 @@ describe('CARD 01 — prisão → rolagem → carta rara não zera o saldo', () 
     expect(s.players[0].pos).toBe(23)
 
     s = resolvePending(s, ctxComDados([6, 5]))
-    expect(s.resolution).toEqual({ kind: 'card-reveal', deckId: 'acaso', cardId: CARTA_RARA_DE_MAO })
+    expect(s.resolution).toEqual({ kind: 'card-reveal', deckId: 'acaso', cardId: CARTA_DO_RELATO_DE_MAO })
 
     const depois = confirmCardReveal(s, buildPorts())
 
@@ -102,9 +107,9 @@ describe('CARD 01 — prisão → rolagem → carta rara não zera o saldo', () 
     s = resolvePending(s, ctxComDados([6, 5]))
     s = confirmCardReveal(s, buildPorts())
 
-    expect(s.players[0].hand).toEqual([CARTA_RARA_DE_MAO])
+    expect(s.players[0].hand).toEqual([CARTA_DO_RELATO_DE_MAO])
     expect(s.decks.acaso).toHaveLength(deckAntes - 1)
-    expect(s.decks.acaso).not.toContain(CARTA_RARA_DE_MAO) // não voltou ao fundo: está na mão
+    expect(s.decks.acaso).not.toContain(CARTA_DO_RELATO_DE_MAO) // não voltou ao fundo: está na mão
     expect(s.log.filter((e) => e.kind === 'card-draw')).toHaveLength(1)
   })
 
@@ -118,7 +123,7 @@ describe('CARD 01 — prisão → rolagem → carta rara não zera o saldo', () 
     const duas = confirmCardReveal(uma, buildPorts())
 
     expect(duas).toBe(uma) // identidade: nem clonou
-    expect(duas.players[0].hand).toEqual([CARTA_RARA_DE_MAO])
+    expect(duas.players[0].hand).toEqual([CARTA_DO_RELATO_DE_MAO])
   })
 
   it('replay do comando (host → cliente) converge byte a byte: o efeito não duplica', () => {
@@ -137,7 +142,7 @@ describe('CARD 01 — prisão → rolagem → carta rara não zera o saldo', () 
     const noCliente = resolvePending(rolado, replayCtx(ctxComDados([6, 5]), gravado))
 
     expect(noCliente).toEqual(noHost)
-    expect(gravado.draws).toEqual([CARTA_RARA_DE_MAO]) // UM saque, não dois
+    expect(gravado.draws).toEqual([CARTA_DO_RELATO_DE_MAO]) // UM saque, não dois
     expect(noHost.players.map((p) => p.cash)).toEqual(noCliente.players.map((p) => p.cash))
   })
 

@@ -5,7 +5,7 @@
 //
 //   1. a vitrine cobre o baralho INTEIRO — soma de cópias = tamanho do baralho;
 //   2. a ordem é crescente de chance, com desempate ESTÁVEL (senão a lista parece embaralhada
-//      entre renders, com 11 comuns empatadas em 1/21);
+//      entre renders, porque dentro de um mesmo nível todas as cartas empatam);
 //   3. a conta é INVARIANTE ao andamento da partida — é aqui que mora o requisito de
 //      privacidade (SRS §10.3/D-037), não numa camada de rede.
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -58,7 +58,7 @@ describe('deckOdds — ordenação (FR-004)', () => {
 
   it('empate desempata por raridade decrescente e depois por nome — e é estável', () => {
     const rows = deckOdds('acaso').rows
-    const order = { lendaria: 3, rara: 2, comum: 1 } as const
+    const order = { lendaria: 4, epica: 3, rara: 2, comum: 1 } as const
     for (let i = 1; i < rows.length; i++) {
       if (rows[i].probability !== rows[i - 1].probability) continue
       const [ant, atual] = [rows[i - 1], rows[i]]
@@ -74,14 +74,14 @@ describe('deckOdds — ordenação (FR-004)', () => {
   })
 
   it('a mais rara do Acaso vem primeiro e a mais provável por último', () => {
-    // Os números são PONDERADOS (peso lendária 9 · rara 10 · comum 11), não `copies / total`:
-    // o baralho é embaralhado por peso, então composição e chance de saque são coisas distintas.
-    // Soma de pesos do Acaso = 4×9 + 4×10 + 13×11 = 219.
+    // Os números são PONDERADOS (peso lendária 90 · épica 104 · rara 107 · comum 109, D-075), e
+    // não `copies / total`: o baralho é embaralhado por peso, então composição e chance de saque
+    // são coisas distintas. Soma de pesos do Acaso = 4×90 + 4×104 + 7×107 + 6×109 = 2179.
     const { rows } = deckOdds('acaso')
     expect(rows[0].rarity).toBe('lendaria')
-    expect(rows[0].probability).toBeCloseTo(9 / 219, 10)
+    expect(rows[0].probability).toBeCloseTo(90 / 2179, 10)
     expect(rows[rows.length - 1].rarity).toBe('comum')
-    expect(rows[rows.length - 1].probability).toBeCloseTo(22 / 219, 10)
+    expect(rows[rows.length - 1].probability).toBeCloseTo(218 / 2179, 10)
   })
 })
 
@@ -93,7 +93,7 @@ describe('deckOdds — cópias agrupadas (FR-003)', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].copies).toBe(2)
     expect(rows[0].rarity).toBe('comum')
-    expect(rows[0].probability).toBeCloseTo(22 / 219, 10) // 2 cópias × peso 11 / 219
+    expect(rows[0].probability).toBeCloseTo(218 / 2179, 10) // 2 cópias × peso 109 / 2179
   })
 
   it('nenhum efeito aparece duas vezes na vitrine', () => {
@@ -164,7 +164,7 @@ describe('raridade É probabilidade — a invariante da D-074', () => {
   // Fiscal (RARAS, 2 cópias) saíam a 11,1%, o dobro de Diplomacia e Imunidade (LENDÁRIAS, 1
   // cópia), e no Acaso a Aquisição Hostil era a carta MAIS provável do baralho. Rótulo de
   // raridade que não corresponde a chance é pior que rótulo nenhum — ensina errado.
-  const ORDEM = { lendaria: 3, rara: 2, comum: 1 } as const
+  const ORDEM = { lendaria: 4, epica: 3, rara: 2, comum: 1 } as const
 
   it.each(['acaso', 'tesouro'] as const)('em %s, nenhuma carta é mais provável que uma mais rara', (deck) => {
     const rows = deckOdds(deck).rows
@@ -181,13 +181,25 @@ describe('raridade É probabilidade — a invariante da D-074', () => {
     }
   })
 
-  it.each(['acaso', 'tesouro'] as const)('em %s, lendária e rara ficam em 1 cópia', (deck) => {
+  it.each(['acaso', 'tesouro'] as const)('em %s, todo nível acima de comum fica em 1 cópia', (deck) => {
     // É o que torna a ausência de inversão estrutural, e não coincidência de números: com
-    // ordenação estrita impossível nos tamanhos do SRS, manter os dois níveis raros no piso é
-    // a única forma de nenhuma comum duplicada passar por cima deles.
+    // ordenação estrita impossível nos tamanhos do SRS, manter os níveis raros no piso é a única
+    // forma de nenhuma comum duplicada passar por cima deles. Com a D-075 são três níveis acima
+    // da comum (lendária, épica, rara) em vez de dois — a regra é a mesma, o alcance é maior.
     for (const r of deckOdds(deck).rows) {
       if (r.rarity !== 'comum') expect(r.copies, `${r.title}`).toBe(1)
     }
+  })
+
+  it.each(['acaso', 'tesouro'] as const)('em %s, os quatro níveis saem com números DIFERENTES na tela (D-075)', (deck) => {
+    // A ordem tem de sobreviver ao ARREDONDAMENTO, não só à aritmética. `formatOdds` mostra uma
+    // casa decimal; dois níveis vizinhos com pesos colados saem com o mesmo texto, e a vitrine
+    // volta a exibir "épica e rara empatadas" — o defeito que a D-074 curou entre outros dois
+    // níveis. Este teste é o piso de espaçamento de `RARITY_WEIGHT`, e falha antes de o jogador ver.
+    const porNivel = new Map<string, string>()
+    for (const r of deckOdds(deck).rows) porNivel.set(r.rarity, formatOdds(r.probability))
+    expect(new Set(porNivel.values()).size, [...porNivel].map(([k, v]) => `${k}=${v}`).join(' '))
+      .toBe(porNivel.size)
   })
 
   it('os tamanhos de baralho do SRS não mudaram: Acaso 21, Tesouro 18', () => {

@@ -43,9 +43,9 @@ export interface DeckOdds {
   rows: DeckOddsRow[]
 }
 
-// Lendária > rara > comum. Usado só como desempate, para a ordem não depender da ordem de
-// declaração no catálogo: as 11 comuns do Acaso empatam todas em 1/21.
-const RARITY_ORDER: Record<Rarity, number> = { lendaria: 3, rara: 2, comum: 1 }
+// Lendária > épica > rara > comum. Usado só como desempate, para a ordem não depender da ordem
+// de declaração no catálogo: dentro de um nível todas as cartas empatam em chance.
+const RARITY_ORDER: Record<Rarity, number> = { lendaria: 4, epica: 3, rara: 2, comum: 1 }
 
 /**
  * Probabilidades de cada efeito de um baralho, da menor chance para a maior.

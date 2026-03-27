@@ -27,12 +27,26 @@ export function shuffle(ids: string[], rng: RNG): string[] {
 // O teto honesto: com 2 lendárias em 18 cartas, peso IGUAL para todas já dá 5,6% por lendária. Se
 // ela precisa ser a mais rara, fica necessariamente ABAIXO disso — não existe desenho em que
 // lendária tenha 6% E seja a mais improvável, porque são poucas lendárias e muitas comuns. Então o
-// alvo é encostar no valor de peso igual, não afundar: 9 · 10 · 11 mantém a ordem estrita com
-// diferença de ~10% entre níveis vizinhos, e deixa lendária em 4,1% (Acaso) e 4,7% (Tesouro).
+// alvo é encostar no valor de peso igual, não afundar: 9 · 10 · 11 manteve a ordem estrita com
+// diferença de ~10% entre níveis vizinhos, e deixou lendária em 4,1% (Acaso) e 4,7% (Tesouro) —
+// patamar que a escada de quatro degraus abaixo preserva.
 //
 // A intenção antiga ("evento é frequente, carta de mão é rara") sobrevive como CONSEQUÊNCIA, e não
 // como causa: no catálogo toda comum é imediata e toda lendária é de mão.
-export const RARITY_WEIGHT = { lendaria: 9, rara: 10, comum: 11 } as const
+//
+// 3. O QUARTO DEGRAU (D-075). Com a entrada da ÉPICA a escala foi multiplicada por 10 — 9·10·11
+//    viraria 9 · x · 10 · 11 e não há inteiro entre 9 e 10. Em escala de 100, os degraus antigos
+//    seriam 90 · 100 · 110; os novos são 90 · 104 · 107 · 109.
+//
+// O que essa escolha faz, e é exatamente o pedido: a ÉPICA sobe (5,3% → 5,5% no Tesouro), RARA e
+// COMUM cedem (5,8% → 5,6% e 11,6% → 11,5%), e a LENDÁRIA fica parada onde estava (4,7%).
+//
+// O ESPAÇAMENTO MÍNIMO É REQUISITO, não estética. A vitrine (spec 057) arredonda para UMA casa
+// decimal, então dois níveis a menos de ~2 unidades de peso um do outro saem com o MESMO número na
+// tela — e "épica e rara empatadas em 5,6%" é o mesmo defeito que a D-074 existe para curar, só
+// que com outros dois níveis. Daí o degrau de 3 e 2 entre os de cima, e não de 1: o piso não é a
+// ordem aritmética, é a ordem VISÍVEL.
+export const RARITY_WEIGHT = { lendaria: 90, epica: 104, rara: 107, comum: 109 } as const
 
 export function cardWeight(id: string): number {
   return RARITY_WEIGHT[cardById(id).rarity]

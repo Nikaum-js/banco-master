@@ -1,4 +1,4 @@
-// Catálogo das 39 cartas (dado estático). Composição segue SRS §10.4-10.5 (v1.26, D-064).
+// Catálogo das 39 cartas (dado estático). Composição segue SRS §10.4-10.5 (v1.35, D-064/D-075).
 //
 // RARIDADE É PROBABILIDADE, NÃO RÓTULO (D-074). Até esta revisão as `copies` contrariavam o
 // próprio sistema de raridade: Boom Econômico e Bunker Fiscal (RARAS, 2 cópias) saíam a 11,1%,
@@ -6,11 +6,22 @@
 // com 2 cópias, era a carta MAIS provável do baralho. O sistema da §10.2 prometia hierarquia e o
 // dado entregava o inverso — a vitrine de probabilidades (spec 057) só tornou visível.
 //
-// A regra agora: nenhuma carta pode ser mais provável que uma de nível MAIS RARO. Ordenação
-// estrita entre os três níveis é aritmeticamente impossível com os tamanhos fixos de baralho
-// (exigiria lendária 1 · rara 2 · comum 3 = 34 cartas no Tesouro, contra as 18 do SRS), então
-// lendárias e raras ficam todas em 1 cópia e o excedente vai para as COMUNS. Empate entre
-// lendária e rara é aceito; inversão, não.
+// A D-074 separou composição de chance: cópias inteiras sozinhas não comportavam uma escada
+// estrita nos tamanhos fixos dos baralhos, então a chance passou a combinar `copies` com o peso
+// canônico de raridade. Nenhuma carta pode ser tão ou mais provável que uma de nível inferior.
+//
+// QUATRO NÍVEIS DESDE A D-075. O nível novo entra no MEIO da escada, e ninguém muda de posição
+// relativa — o que muda é o NOME de cada degrau, porque `copies` já separava dois grupos que o
+// vocabulário chamava igual:
+//
+//   • comum com 2 cópias  → segue COMUM   (verde)
+//   • comum com 1 cópia   → vira RARA     (azul)
+//   • rara (1 cópia)      → vira ÉPICA    (roxa)
+//   • lendária            → segue LENDÁRIA (laranja)
+//
+// Por isso a coluna `copies` abaixo não muda uma linha: a D-075 é sobre rótulo e peso, não sobre
+// composição. Toda comum tem 2 cópias e todo nível acima dela tem 1; os pesos
+// 90/104/107/109 tornam a ordem estrita inclusive no percentual arredondado exibido ao jogador.
 //
 // As comuns duplicadas foram escolhidas entre as de menor peso decisório (movimento e caixa
 // pequeno) justamente para a duplicação não distorcer estratégia: Atalho, Avance 3 e Volte 3 no
@@ -35,18 +46,18 @@ const ACASO: CardDef[] = [
   { base: 'confisco-geral', copies: 1, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'confiscoGeral', status: 'implementado' },
   { base: 'imposto-federal', copies: 1, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'impostoFederal', status: 'implementado' },
   { base: 'permuta-forcada', copies: 1, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'permutaForcada', status: 'implementado' },
-  { base: 'boicote', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'mao', timing: 'proprio-turno', effect: 'boicote', status: 'implementado' },
-  { base: 'embargo-obras', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'mao', timing: 'proprio-turno', effect: 'embargoDeObras', status: 'implementado' },
-  { base: 'crise-imobiliaria', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'imediato', timing: null, effect: 'criseImobiliaria', status: 'implementado' },
-  { base: 'estatizacao', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'imediato', timing: null, effect: 'estatizacao', status: 'implementado' },
+  { base: 'boicote', copies: 1, deck: 'acaso', rarity: 'epica', mode: 'mao', timing: 'proprio-turno', effect: 'boicote', status: 'implementado' },
+  { base: 'embargo-obras', copies: 1, deck: 'acaso', rarity: 'epica', mode: 'mao', timing: 'proprio-turno', effect: 'embargoDeObras', status: 'implementado' },
+  { base: 'crise-imobiliaria', copies: 1, deck: 'acaso', rarity: 'epica', mode: 'imediato', timing: null, effect: 'criseImobiliaria', status: 'implementado' },
+  { base: 'estatizacao', copies: 1, deck: 'acaso', rarity: 'epica', mode: 'imediato', timing: null, effect: 'estatizacao', status: 'implementado' },
+  { base: 'greve', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'imediato', timing: null, effect: 'greve', status: 'implementado' },
+  { base: 'desvalorizacao-cambial', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'imediato', timing: null, effect: 'desvalorizacaoCambial', status: 'implementado' },
+  { base: 'obras-na-pista', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'imediato', timing: null, effect: 'obrasNaPista', status: 'implementado' },
+  { base: 'multa-ambiental', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'imediato', timing: null, effect: 'multaAmbiental', status: 'implementado' },
+  { base: 'va-prisao', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'imediato', timing: null, effect: 'vaPrisao', status: 'implementado' },
+  { base: 'volta-go', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'imediato', timing: null, effect: 'voltaGo', status: 'implementado' },
+  { base: 'conserto-imoveis', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'imediato', timing: null, effect: 'consertoImoveis', status: 'implementado' },
   { base: 'atalho', copies: 2, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'atalho', status: 'implementado' },
-  { base: 'greve', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'greve', status: 'implementado' },
-  { base: 'desvalorizacao-cambial', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'desvalorizacaoCambial', status: 'implementado' },
-  { base: 'obras-na-pista', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'obrasNaPista', status: 'implementado' },
-  { base: 'multa-ambiental', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'multaAmbiental', status: 'implementado' },
-  { base: 'va-prisao', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'vaPrisao', status: 'implementado' },
-  { base: 'volta-go', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'voltaGo', status: 'implementado' },
-  { base: 'conserto-imoveis', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'consertoImoveis', status: 'implementado' },
   { base: 'avance-3', copies: 2, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'avance3', status: 'implementado' },
   { base: 'volte-3', copies: 2, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'volte3', status: 'implementado' },
 ]
@@ -55,18 +66,18 @@ const ACASO: CardDef[] = [
 const TESOURO: CardDef[] = [
   { base: 'diplomacia', copies: 1, deck: 'tesouro', rarity: 'lendaria', mode: 'mao', timing: 'reacao', effect: 'diplomacia', status: 'implementado' },
   { base: 'imunidade', copies: 1, deck: 'tesouro', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'imunidade', status: 'implementado' },
-  { base: 'saia-prisao', copies: 1, deck: 'tesouro', rarity: 'rara', mode: 'mao', timing: 'preso', effect: 'saiaPrisao', status: 'implementado' },
-  { base: 'bunker-fiscal', copies: 1, deck: 'tesouro', rarity: 'rara', mode: 'mao', timing: 'reacao', effect: 'bunkerFiscal', status: 'implementado' },
-  { base: 'boom-economico', copies: 1, deck: 'tesouro', rarity: 'rara', mode: 'imediato', timing: null, effect: 'boomEconomico', status: 'implementado' },
-  { base: 'valorizacao', copies: 1, deck: 'tesouro', rarity: 'rara', mode: 'mao', timing: 'proprio-turno', effect: 'valorizacao', status: 'implementado' },
+  { base: 'saia-prisao', copies: 1, deck: 'tesouro', rarity: 'epica', mode: 'mao', timing: 'preso', effect: 'saiaPrisao', status: 'implementado' },
+  { base: 'bunker-fiscal', copies: 1, deck: 'tesouro', rarity: 'epica', mode: 'mao', timing: 'reacao', effect: 'bunkerFiscal', status: 'implementado' },
+  { base: 'boom-economico', copies: 1, deck: 'tesouro', rarity: 'epica', mode: 'imediato', timing: null, effect: 'boomEconomico', status: 'implementado' },
+  { base: 'valorizacao', copies: 1, deck: 'tesouro', rarity: 'epica', mode: 'mao', timing: 'proprio-turno', effect: 'valorizacao', status: 'implementado' },
+  { base: 'resgate-pote', copies: 1, deck: 'tesouro', rarity: 'rara', mode: 'imediato', timing: null, effect: 'resgateDoPote', status: 'implementado' },
+  { base: 'obra-relampago', copies: 1, deck: 'tesouro', rarity: 'rara', mode: 'imediato', timing: null, effect: 'obraRelampago', status: 'implementado' },
+  { base: 'incentivo-fiscal', copies: 1, deck: 'tesouro', rarity: 'rara', mode: 'imediato', timing: null, effect: 'incentivoFiscal', status: 'implementado' },
+  { base: 'honorarios', copies: 1, deck: 'tesouro', rarity: 'rara', mode: 'imediato', timing: null, effect: 'honorarios', status: 'implementado' },
   { base: 'investidor-anjo', copies: 2, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'investidorAnjo', status: 'implementado' },
   { base: 'passagem-onibus', copies: 2, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'passagemOnibus', status: 'implementado' },
-  { base: 'resgate-pote', copies: 1, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'resgateDoPote', status: 'implementado' },
-  { base: 'obra-relampago', copies: 1, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'obraRelampago', status: 'implementado' },
-  { base: 'incentivo-fiscal', copies: 1, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'incentivoFiscal', status: 'implementado' },
   { base: 'erro-banco', copies: 2, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'erroBanco', status: 'implementado' },
   { base: 'aniversario', copies: 2, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'aniversario', status: 'implementado' },
-  { base: 'honorarios', copies: 1, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'honorarios', status: 'implementado' },
 ]
 
 /** As DEFINIÇÕES do catálogo, antes de `expand()` desagregar as cópias (spec 057).
