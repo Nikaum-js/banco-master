@@ -82,14 +82,14 @@ export function HandCardLayer() {
                 const owner = ownerOf(game, pos)
                 return (
                   <TargetBtn key={`p${pos}`} onClick={() => play(pos)}>
-                    <span className="flex-1 min-w-0 truncate">🏠 {propName(pos)}</span>
+                    <span className="flex-1 min-w-0 truncate">{propName(pos)}</span>
                     {owner && owner !== activeId && <span className="text-cream-muted text-xs shrink-0">de {owner}</span>}
                   </TargetBtn>
                 )
               })}
               {(targets.players ?? []).map((pid) => (
                 <TargetBtn key={`j${pid}`} onClick={() => play(undefined, pid)}>
-                  <span className="flex-1 min-w-0 truncate">👤 {pid}</span>
+                  <span className="flex-1 min-w-0 truncate">{pid}</span>
                 </TargetBtn>
               ))}
             </div>

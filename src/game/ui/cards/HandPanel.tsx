@@ -41,18 +41,20 @@ export function HandPanel() {
                   <span className="display text-cream text-sm leading-none flex-1 min-w-0 truncate">{c.label}</span>
                 </div>
                 <p className="text-cream-muted text-xs leading-snug mt-1">{c.desc}</p>
-                <button
-                  type="button"
-                  disabled={!c.playable}
-                  title={c.reason}
-                  onClick={() => onUse(c.id, c.needsTarget)}
-                  className="mt-2 w-full px-3 py-1.5 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 font-bold text-sm hover:brightness-110 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                >
-                  Usar
-                </button>
-                {!c.playable && c.reason && (
-                  <p className="text-cream-muted text-[10px] leading-snug mt-1 text-center">{c.reason}</p>
-                )}
+                <div className="flex items-center justify-end gap-2 mt-2">
+                  {!c.playable && c.reason && (
+                    <span className="text-cream-muted text-[10px] leading-snug flex-1 min-w-0">{c.reason}</span>
+                  )}
+                  <button
+                    type="button"
+                    disabled={!c.playable}
+                    title={c.reason}
+                    onClick={() => onUse(c.id, c.needsTarget)}
+                    className="shrink-0 px-4 py-1 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 font-bold text-xs hover:brightness-110 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    Usar
+                  </button>
+                </div>
               </div>
             </li>
           ))}
