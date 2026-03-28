@@ -322,8 +322,8 @@ function TaxGlyph({ size = 24 }: GlyphProps) {
   )
 }
 
-// Surpresa (na casa) — losango vermelho com "!" branco.
-function SurpresaCellGlyph({ size = 24 }: GlyphProps) {
+// Acaso (na casa) — losango vermelho com "!" branco.
+function AcasoCellGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
       <polygon points="20,4 36,20 20,36 4,20" fill="#dc2626" stroke="#0f0c09" strokeWidth="1.6" strokeLinejoin="round" />
@@ -357,7 +357,7 @@ function TesouroCellGlyph({ size = 24 }: GlyphProps) {
 }
 
 // Carta na mão — silhueta de carta de baralho levemente inclinada, com
-// borda dupla e um pip "?" no centro (são cartas-evento de Surpresa/Tesouro,
+// borda dupla e um pip "?" no centro (são cartas-evento de Acaso/Tesouro,
 // não baralho comum — o "?" comunica melhor que um naipe). currentColor
 // pra herdar do contexto.
 function CardGlyph({ size = 13 }: GlyphProps) {
@@ -470,7 +470,7 @@ export function SquareIcon({ square, size = 18 }: { square: Square; size?: numbe
                                  : square.icon === 'bolt' ? <BoltGlyph size={size} />
                                  : <GasGlyph size={size} />
     case 'tax':             return <TaxGlyph        size={size} />
-    case 'surpresa':        return <SurpresaCellGlyph size={size} />
+    case 'acaso':           return <AcasoCellGlyph size={size} />
     case 'tesouro':         return <TesouroCellGlyph  size={size} />
     case 'bus-ticket':      return <BusGlyph        size={size} />
     case 'corner-go':       return <GoGlyph         size={size} />
@@ -575,10 +575,10 @@ export function ClassicSquare({
   const isAirport  = square.kind === 'airport'
   const isUtility  = square.kind === 'utility'
   const isTax      = square.kind === 'tax'
-  const isSurpresa = square.kind === 'surpresa'
+  const isAcaso    = square.kind === 'acaso'
   const isTesouro  = square.kind === 'tesouro'
   const isBus      = square.kind === 'bus-ticket'
-  const isCard     = isSurpresa || isTesouro
+  const isCard     = isAcaso || isTesouro
 
   // Dono atual da propriedade (mock) — cor da stripe sai daqui.
   const ownerName = isProperty ? MOCK_OWNERSHIP[square.pos] : undefined
@@ -773,9 +773,9 @@ export function ClassicSquare({
               </p>
             </>
           )}
-          {isSurpresa && (
+          {isAcaso && (
             <p className="display mt-1 text-cream leading-none" style={{ fontSize: '14px' }}>
-              Surpresa
+              Acaso
             </p>
           )}
           {isTesouro && (
@@ -1906,12 +1906,12 @@ function SpeedDie({ face, rollKey }: { face: SpeedFace; rollKey: number }) {
 }
 
 // ---------------------------------------------------------------------
-// CardDeck — pilha de cartas (Surpresa ou Tesouro) no centro do tabuleiro.
+// CardDeck — pilha de cartas (Acaso ou Tesouro) no centro do tabuleiro.
 // 3 cartas empilhadas com rotações sutis e sombras pra parecer monte real.
 // A faixa do topo mostra as 3 raridades — SRS §10.2 (laranja/azul/verde).
 // ---------------------------------------------------------------------
-// Glifo Surpresa — losango vermelho com "!" branco; corner-pip pequeno.
-function SurpresaGlyph() {
+// Glifo Acaso — losango vermelho com "!" branco; corner-pip pequeno.
+function AcasoGlyph() {
   return (
     <svg viewBox="0 0 80 80" className="w-full h-full" aria-hidden="true">
       {/* sombra do losango */}
@@ -1996,16 +1996,16 @@ export function CardDeck({
   tilt = -4,
   className,
 }: {
-  kind: 'surpresa' | 'tesouro'
+  kind: 'acaso' | 'tesouro'
   tilt?: number
   className?: string
 }) {
-  const isSurpresa = kind === 'surpresa'
-  const title = isSurpresa ? 'Surpresa' : 'Tesouro'
+  const isAcaso = kind === 'acaso'
+  const title = isAcaso ? 'Acaso' : 'Tesouro'
   // Cor accent em hex pra usar diretamente em gradientes/sombras (var()
   // dentro de gradiente CSS funciona, mas inline com hex é mais simples).
-  const accentHex = isSurpresa ? '#dc2626' /* logo */ : '#ffd97a' /* gold-glow */
-  const accentClass = isSurpresa ? 'text-logo' : 'text-gold-glow'
+  const accentHex = isAcaso ? '#dc2626' /* logo */ : '#ffd97a' /* gold-glow */
+  const accentClass = isAcaso ? 'text-logo' : 'text-gold-glow'
 
   return (
     <div
@@ -2070,7 +2070,7 @@ export function CardDeck({
 
         {/* Glifo central — agora ocupando o miolo da carta */}
         <div className="absolute inset-0 flex items-center justify-center px-[14%] pt-[22%] pb-[30%]">
-          {isSurpresa ? <SurpresaGlyph /> : <TesouroGlyph />}
+          {isAcaso ? <AcasoGlyph /> : <TesouroGlyph />}
         </div>
 
         {/* Faixa de título no rodapé — banda escura com gradiente, linha
@@ -2197,7 +2197,7 @@ export function CenterArena() {
           transformOrigin: 'center',
         }}
       >
-        <CardDeck kind="surpresa" tilt={3} />
+        <CardDeck kind="acaso" tilt={3} />
       </div>
 
       {/* TESOURO — extremidade inferior-esquerda, virado pra cima-direita */}
