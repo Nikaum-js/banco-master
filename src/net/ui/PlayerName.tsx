@@ -6,6 +6,7 @@
 import { cn } from '@/lib/utils'
 import { useIdentity } from '@/net/roomStore'
 import { pieceOf } from '@/net/room'
+import { PieceGlyph } from '@/net/ui/pieceGlyphs'
 
 // Nome exibível. `dot` acrescenta o disco da cor do jogador antes do nome.
 export function PlayerName({
@@ -32,18 +33,19 @@ export function PlayerName({
   )
 }
 
-// Peça do jogador (emblema + cor) — usada no tabuleiro e no lobby.
+// Peça do jogador (emblema + cor) — usada no tabuleiro e no lobby. Glifo SVG autoral
+// (`pieceGlyphs`), tinta sobre a cor do assento — nunca emoji.
 export function PlayerPiece({ playerId, size = 18 }: { playerId: string; size?: number }) {
   const id = useIdentity(playerId)
   const piece = pieceOf(id.piece)
   return (
     <span
-      className="inline-grid place-items-center rounded-full border-2 border-coffee-950/60 shrink-0"
-      style={{ background: id.color, width: size, height: size, fontSize: size * 0.55 }}
+      className="inline-grid place-items-center rounded-full border-2 border-coffee-950/60 shrink-0 text-coffee-950"
+      style={{ background: id.color, width: size, height: size }}
       title={`${id.name} · ${piece.label}`}
       aria-label={`${id.name} (${piece.label})`}
     >
-      {piece.glyph}
+      <PieceGlyph id={piece.id} size={size * 0.62} />
     </span>
   )
 }

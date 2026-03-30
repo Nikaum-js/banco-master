@@ -1,10 +1,15 @@
-// Tela mínima de sala (spec 037, T018) — nome + cor + assentos + iniciar. É a porta de
-// entrada do multiplayer; o lobby RICO (avatares, rolagem de ordem, chat) é do 038+.
-// Vocabulário visual: o mesmo dos modais do jogo (`shell`/`primitives`), sem dialeto novo.
+// Telas de sala (spec 037, T018; redesenho no lançamento) — nome + cor + peça + assentos +
+// iniciar. Vocabulário visual: a "sala de mapas" do `entryShell` (o mesmo mundo do
+// tabuleiro — graticule, latão, marcas de registro), peças em SVG autoral (`pieceGlyphs`)
+// e o PRÓPRIO token do tabuleiro (`PlayerFace`) como preview: a pergunta "como eu apareço
+// na mesa?" é respondida mostrando, não descrevendo.
 import { useState } from 'react'
 import { Button, Chip } from '@/game/ui/primitives'
-import { ModalShell, ModalHeader } from '@/game/ui/shell'
+import { PlayerFace } from '@/boards/shared'
 import { availableColors, availablePieces, MAX_SEATS, MIN_SEATS, PIECES, pieceOf, type JoinError, type PieceId, type Room } from '@/net/room'
+import { NAME_MAX, recallPlayerName, rememberPlayerName } from '@/net/session'
+import { EntryPanel, EntryStage, EntryHeader } from './entryShell'
+import { PieceGlyph } from './pieceGlyphs'
 
 const JOIN_ERROR_TEXT: Record<JoinError, string> = {
   'room-full': `Sala cheia — o limite é ${MAX_SEATS} jogadores.`,
@@ -16,15 +21,15 @@ const JOIN_ERROR_TEXT: Record<JoinError, string> = {
   'bad-code': 'Código de reentrada inválido.',
 }
 
-// Moldura comum das telas de sala (fundo do jogo + cartão central).
+// Moldura comum das telas de sala: palco da sala de mapas + prancha central.
 function Frame({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-coffee-950">
-      <ModalShell className="w-full max-w-md">
-        <ModalHeader title={title} subtitle={subtitle} center />
-        <div className="p-4 flex flex-col gap-4">{children}</div>
-      </ModalShell>
-    </div>
+    <EntryStage>
+      <EntryPanel className="max-w-md">
+        <EntryHeader title={title} subtitle={subtitle} />
+        <div className="p-5 pt-4 flex flex-col gap-4">{children}</div>
+      </EntryPanel>
+    </EntryStage>
   )
 }
 
@@ -50,7 +55,9 @@ export function IdentityForm({
   const salaVazia: Room = { id: '', status: 'lobby', seats: [] }
   const free = availableColors(room ?? salaVazia)
   const freePieces = availablePieces(room ?? salaVazia)
-  const [name, setName] = useState('')
+  // Já vem preenchido com o nome da home (`rememberPlayerName`): aqui a pergunta que
+  // sobra é a aparência — o nome só é redigitado por quem quiser trocá-lo.
+  const [name, setName] = useState(() => recallPlayerName())
   const [color, setColor] = useState(free[0] ?? '')
   const [piece, setPiece] = useState<PieceId>(freePieces[0])
   const chosen = free.includes(color) ? color : (free[0] ?? '')
@@ -59,21 +66,38 @@ export function IdentityForm({
 
   return (
     <Frame title={title} subtitle={subtitle}>
-      <label className="flex flex-col gap-1.5">
-        <span className="label text-gold">Seu nome</span>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value.slice(0, 16))}
-          placeholder="Como aparecer na mesa"
-          maxLength={16}
-          autoFocus
-          className="px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream placeholder:text-cream-muted/85 focus:border-gold/60"
-        />
-      </label>
+      {/* Preview vivo — o token REAL do tabuleiro com a cor escolhida, respirando. */}
+      <div className="flex items-center gap-3.5 px-4 py-3 rounded-[var(--radius-card)] bg-ink-950/50 border border-ink-500">
+        <PlayerFace color={chosen || 'var(--color-ink-400)'} size={46} active />
+        <div className="min-w-0 flex-1">
+          <p className={`font-semibold leading-tight truncate ${name.trim() ? 'text-starlight' : 'text-starlight-muted/70'}`}>
+            {name.trim() || 'Viajante sem nome'}
+          </p>
+          <p className="label text-starlight-muted mt-1 flex items-center gap-1.5">
+            <PieceGlyph id={chosenPiece} size={13} className="text-brass shrink-0" />
+            {pieceOf(chosenPiece).label} · assim você aparece na mesa
+          </p>
+        </div>
+      </div>
 
       <div className="flex flex-col gap-1.5">
-        <span className="label text-gold">Sua cor</span>
-        <div className="flex flex-wrap gap-2">
+        <label htmlFor="player-name" className="label text-brass">
+          Seu nome
+        </label>
+        <input
+          id="player-name"
+          value={name}
+          onChange={(e) => setName(e.target.value.slice(0, NAME_MAX))}
+          placeholder="Ex.: Marco Polo"
+          maxLength={NAME_MAX}
+          autoFocus={name === ''}
+          className="entry-input"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="label text-brass">Sua cor</span>
+        <div className="flex flex-wrap gap-2.5">
           {free.map((c) => (
             <button
               key={c}
@@ -82,8 +106,10 @@ export function IdentityForm({
               aria-label={`Cor ${c}`}
               aria-pressed={c === chosen}
               style={{ background: c }}
-              className={`w-9 h-9 rounded-full border-2 transition-transform ${
-                c === chosen ? 'border-gold scale-110' : 'border-coffee-950/60 hover:scale-105'
+              className={`w-8 h-8 rounded-full border border-ink-950/60 transition-all ${
+                c === chosen
+                  ? 'ring-2 ring-brass ring-offset-2 ring-offset-ink-800 scale-105'
+                  : 'opacity-80 hover:opacity-100 hover:scale-105'
               }`}
             />
           ))}
@@ -91,8 +117,8 @@ export function IdentityForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <span className="label text-gold">Sua peça</span>
-        <div className="flex flex-wrap gap-2">
+        <span className="label text-brass">Sua peça</span>
+        <div className="grid grid-cols-4 gap-2">
           {PIECES.filter((p) => freePieces.includes(p.id)).map((p) => (
             <button
               key={p.id}
@@ -101,11 +127,13 @@ export function IdentityForm({
               aria-label={p.label}
               aria-pressed={p.id === chosenPiece}
               title={p.label}
-              className={`w-10 h-10 rounded-[var(--radius-card)] border-2 grid place-items-center text-lg transition-transform ${
-                p.id === chosenPiece ? 'border-gold bg-gold/15 scale-110' : 'border-coffee-500 bg-coffee-900 hover:scale-105'
+              className={`h-12 rounded-[var(--radius-card)] border grid place-items-center transition-all ${
+                p.id === chosenPiece
+                  ? 'border-brass/80 bg-brass/10 text-brass-glow shadow-[var(--shadow-glow)]'
+                  : 'border-ink-500 bg-ink-900/60 text-starlight-muted hover:text-starlight hover:border-ink-300'
               }`}
             >
-              {p.glyph}
+              <PieceGlyph id={p.id} size={24} />
             </button>
           ))}
         </div>
@@ -113,15 +141,26 @@ export function IdentityForm({
 
       {message && <p className="text-signal-glow text-sm leading-snug">{message}</p>}
 
-      <Button disabled={!name.trim() || !chosen || !chosenPiece || busy} onClick={() => onSubmit(name.trim(), chosen, chosenPiece)}>
+      <Button
+        disabled={!name.trim() || !chosen || !chosenPiece || busy}
+        onClick={() => {
+          rememberPlayerName(name)
+          onSubmit(name.trim(), chosen, chosenPiece)
+        }}
+      >
         {busy ? 'Conectando…' : cta}
       </Button>
     </Frame>
   )
 }
 
-// Passo 2 — sala montada: assentos na ORDEM DE ENTRADA (= ordem de turno, FR-006), link
-// compartilhável e o botão de iniciar (só o host, com 2+ jogadores).
+// Passo 2 — sala montada: convite, assentos na ORDEM DE ENTRADA (= ordem de turno, FR-006)
+// e o botão de iniciar (só o host, com 2+ jogadores).
+//
+// Ordem da tela (revisão de UI, referência: richup.io): convite → jogadores → iniciar. O
+// texto do estado incompleto também mudou porque MENTIA: dizia "a partida começa com 2
+// jogadores", como se ela partisse sozinha ao chegar o segundo — quem começa é o anfitrião,
+// e 2 é o mínimo, não o número.
 export function RoomLobby({
   room,
   myUid,
@@ -152,33 +191,62 @@ export function RoomLobby({
     })
   }
 
+  const faltam = MIN_SEATS - room.seats.length
+
   return (
-    <Frame title="Sala aberta" subtitle={`${room.seats.length}/${MAX_SEATS} jogadores · ordem de entrada = ordem de turno`}>
-      <div className="flex flex-col gap-2">
-        {room.seats.map((s, i) => (
+    <Frame title="Sala aberta" subtitle={faltam > 0 ? 'Aguardando jogadores…' : 'A ordem da mesa é sorteada ao iniciar'}>
+      {/* 1. Convite — o PRIMEIRO bloco da tela. Numa sala recém-criada não há nada a fazer
+          além de chamar gente; deixar o link abaixo da lista de assentos enterrava a única
+          ação que importa naquele momento. */}
+      <div className="flex flex-col gap-1.5">
+        <span className="label text-brass">Convide seus amigos</span>
+        <div className="flex gap-2">
+          <input
+            readOnly
+            value={link}
+            aria-label="Link da sala"
+            onFocus={(e) => e.currentTarget.select()}
+            className="entry-input flex-1 min-w-0 text-sm text-starlight-muted"
+          />
+          <Button variant="secondary" onClick={copy}>
+            {copied ? 'Copiado' : 'Copiar'}
+          </Button>
+        </div>
+        {/* Frase, não rótulo: `.label` versaleta e alarga o espaçamento — bom para "Link da
+            sala", ilegível para uma linha inteira de texto. */}
+        <p className="text-[0.8rem] text-starlight-muted leading-snug">
+          {faltam > 0
+            ? `Pelo menos ${MIN_SEATS} jogadores para começar — falta${faltam > 1 ? 'm' : ''} ${faltam}.`
+            : `Cabem até ${MAX_SEATS} jogadores — o anfitrião começa quando quiser.`}
+        </p>
+      </div>
+
+      {/* 2. Quem já está na sala. Assento vazio não é informação: a capacidade está no
+          contador, e uma lista de oito placeholders faz uma sala de 1 parecer deserta. */}
+      <div className="flex flex-col gap-1.5">
+        <span className="label text-brass">
+          Jogadores ({room.seats.length}/{MAX_SEATS})
+        </span>
+        {room.seats.map((s) => (
           <div
             key={s.uid}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-card)] bg-coffee-800/60 border border-coffee-500"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-card)] bg-ink-800/70 border border-ink-500"
           >
-            <span
-              className="w-7 h-7 rounded-full border-2 border-coffee-950/60 shrink-0 grid place-items-center text-sm"
-              style={{ background: s.color }}
-              title={pieceLabel(s.piece)}
-            >
-              {pieceGlyph(s.piece)}
+            <PlayerFace color={s.color} size={30} />
+            <span className="text-starlight truncate flex-1 inline-flex items-center gap-2 min-w-0">
+              <span className="truncate">{s.name}</span>
+              <PieceGlyph id={s.piece} size={14} className="text-starlight-muted/80 shrink-0" />
             </span>
-            <span className="text-cream truncate flex-1">{s.name}</span>
             {s.uid === myUid && <Chip tone="gold">você</Chip>}
             {s.isHost && <Chip>anfitrião</Chip>}
             {!s.connected && <Chip tone="alert">offline</Chip>}
-            <span className="label text-cream-muted/85 tabular-nums">{i + 1}º</span>
             {isHost && !s.isHost && onKick && (
               <button
                 type="button"
                 onClick={() => onKick(s.uid)}
                 title={`Remover ${s.name} da sala`}
                 aria-label={`Remover ${s.name} da sala`}
-                className="shrink-0 w-6 h-6 rounded-full grid place-items-center text-cream-muted/60 hover:text-signal-glow hover:bg-signal/15 transition-colors"
+                className="shrink-0 w-6 h-6 rounded-full grid place-items-center text-starlight-muted/60 hover:text-signal-glow hover:bg-signal/15 transition-colors"
               >
                 <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden>
                   <path d="M18 6 6 18" />
@@ -190,64 +258,47 @@ export function RoomLobby({
         ))}
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <span className="label text-gold">Link da sala</span>
-        <div className="flex gap-2">
-          <input
-            readOnly
-            value={link}
-            onFocus={(e) => e.currentTarget.select()}
-            className="flex-1 min-w-0 px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream-muted text-sm"
-          />
-          <Button variant="secondary" onClick={copy}>
-            {copied ? 'Copiado' : 'Copiar'}
-          </Button>
-        </div>
-        {/* Código de reentrada do PRÓPRIO assento (041, D-033/FR-030): visível desde o lobby,
-            para quem nunca anotou conseguir ler antes de precisar. */}
-        {myReentryCode && (
-          <p className="label text-cream-muted/85">
-            Seu código de reentrada:{' '}
-            <span className="text-cream tracking-[0.2em] font-mono">{myReentryCode}</span>
-          </p>
-        )}
-      </div>
-
+      {/* 3. A ação da tela. O motivo de estar desabilitado fica no `title` — antes, o
+          botão apagado não dizia o que faltava. */}
       {isHost ? (
-        <Button disabled={room.seats.length < MIN_SEATS || starting} onClick={onStart}>
-          {starting ? 'Iniciando…' : `Iniciar partida (${room.seats.length}/${MAX_SEATS})`}
+        <Button
+          disabled={faltam > 0 || starting}
+          title={faltam > 0 ? `São necessários pelo menos ${MIN_SEATS} jogadores para começar` : undefined}
+          onClick={onStart}
+        >
+          {starting ? 'Iniciando…' : 'Iniciar partida'}
         </Button>
       ) : (
-        <p className="label text-cream-muted text-center">Aguardando o anfitrião iniciar a partida…</p>
+        <p className="label text-starlight-muted text-center">Aguardando o anfitrião iniciar a partida…</p>
+      )}
+
+      {/* 4. Código de reentrada do PRÓPRIO assento (041, D-033/FR-030): visível desde o
+          lobby, para quem nunca anotou conseguir ler antes de precisar. É seguro de
+          esquecer até a hora em que faz falta — daí o rodapé, atrás do filete. */}
+      {myReentryCode && (
+        <p className="label text-starlight-muted/85 text-center border-t border-ink-500/70 pt-3 -mt-0.5">
+          Seu código de reentrada:{' '}
+          <span className="text-starlight tracking-[0.2em] font-mono">{myReentryCode}</span>
+        </p>
       )}
     </Frame>
   )
 }
 
-// Emblema da peça escolhida — cai no ponto neutro em salas da 037 (sem peça).
-// Lookup e fallback vêm de `pieceOf` (net/room) — este arquivo tinha a terceira cópia,
-// com um fallback próprio ('●'), então a mesma peça saía diferente por tela.
-const pieceGlyph = (id?: string): string => pieceOf(id).glyph
-const pieceLabel = (id?: string): string => pieceOf(id).label
-
 // Ordem sorteada da mesa (FR-030): mostrada a todos antes do primeiro turno.
 export function TurnOrderReveal({ room, onDone }: { room: Room; onDone: () => void }) {
   return (
     <Frame title="Ordem da mesa" subtitle="Sorteada agora — vale para toda a partida">
-      <ol className="flex flex-col gap-2">
+      <ol className="flex flex-col gap-1.5">
         {room.seats.map((s, i) => (
           <li
             key={s.uid}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-card)] bg-coffee-800/60 border border-coffee-500"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-card)] bg-ink-800/70 border border-ink-500"
           >
-            <span className="display text-gold w-6 text-center tabular-nums">{i + 1}º</span>
-            <span
-              className="w-7 h-7 rounded-full border-2 border-coffee-950/60 shrink-0 grid place-items-center text-sm"
-              style={{ background: s.color }}
-            >
-              {pieceGlyph(s.piece)}
-            </span>
-            <span className="text-cream truncate flex-1">{s.name}</span>
+            <span className="display text-brass text-xl w-7 text-center tabular-nums">{i + 1}º</span>
+            <PlayerFace color={s.color} size={30} />
+            <span className="text-starlight truncate flex-1">{s.name}</span>
+            <PieceGlyph id={s.piece} size={14} className="text-starlight-muted/80 shrink-0" />
           </li>
         ))}
       </ol>
@@ -273,18 +324,21 @@ export function ReentryForm({
 
   return (
     <Frame title="Reentrar na sala" subtitle="A partida já começou — informe o código do seu assento">
-      <label className="flex flex-col gap-1.5">
-        <span className="label text-gold">Código de reentrada</span>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="reentry-code" className="label text-brass">
+          Código de reentrada
+        </label>
         <input
+          id="reentry-code"
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
           placeholder="Ex.: 7F3K9M"
           maxLength={6}
           autoFocus
-          className="px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream placeholder:text-cream-muted/85 tracking-[0.3em] uppercase focus:border-gold/60"
+          className="entry-input tracking-[0.3em] uppercase font-mono"
         />
-      </label>
-      <p className="label text-cream-muted/85 leading-snug">
+      </div>
+      <p className="label text-starlight-muted/85 leading-snug">
         O código fica ao lado do link da sala, no seu próprio assento — visível durante toda a partida.
       </p>
       {message && <p className="text-signal-glow text-sm leading-snug">{message}</p>}
@@ -299,7 +353,7 @@ export function ReentryForm({
 export function LobbyMessage({ title, message, action }: { title: string; message: string; action?: React.ReactNode }) {
   return (
     <Frame title={title}>
-      <p className="text-cream leading-snug">{message}</p>
+      <p className="text-starlight leading-snug">{message}</p>
       {action}
     </Frame>
   )

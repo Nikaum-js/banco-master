@@ -59,7 +59,7 @@ test('caminho de jogo não tem violação de acessibilidade serious/critical', a
   // (playwright.config.ts) só pra passar de "Multiplayer indisponível" pro formulário; o
   // roteiro NUNCA submete (sem rede real disponível no gate padrão, ver aviso da "pausa" abaixo).
   await page.goto('/?host=1')
-  await expect(page.getByPlaceholder('Como aparecer na mesa')).toBeVisible()
+  await expect(page.getByLabel('Seu nome')).toBeVisible()
   await auditStop(page, 'lobby', report)
 
   // — 3. Tabuleiro —

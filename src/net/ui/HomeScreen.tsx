@@ -2,73 +2,122 @@
 // multiplayer era digitar `?host=1` / `?room=<id>` na barra de endereços — inviável para
 // qualquer pessoa fora do desenvolvimento.
 //
-// Três saídas: criar sala, entrar por link, ou jogar local (o cliente único de sempre,
-// que segue existindo como andaime de demonstração).
+// Ordem da tela (revisão de UI, referência: richup.io): NOME primeiro, uma ação primária
+// grande logo abaixo, e as saídas de baixo peso (entrar por link, jogar local) numa fila
+// secundária. O nome perguntado aqui é lembrado (`rememberPlayerName`) e chega preenchido
+// na tela de identidade — no fluxo antigo, criar uma sala pedia o nome só no passo 2, e a
+// primeira coisa que a home mostrava era um botão sem nenhum contexto de quem você é.
+//
+// O campo de link some por padrão: quem recebe um convite clica no link, não cola. Deixá-lo
+// sempre aberto dava a duas ações de peso muito diferente o mesmo tamanho na tela.
+//
+// Visual: letreiro de pôster de viagem sobre a "sala de mapas" (entryShell) — o wordmark
+// vive FORA do painel, grande, com o filete de latão; o painel guarda só as ações.
 import { useState } from 'react'
 import { Button } from '@/game/ui/primitives'
-import { ModalShell, ModalHeader } from '@/game/ui/shell'
-import { extractRoomId } from '@/net/session'
+import { extractRoomId, rememberPlayerName, recallPlayerName, NAME_MAX } from '@/net/session'
+import { EntryPanel, EntryStage, OrnamentRule } from './entryShell'
 
 // Injetado pelo `vite.config.ts` a partir do sha do commit publicado (Vercel/Actions).
 const COMMIT_SHA = (import.meta.env.VITE_COMMIT_SHA as string | undefined) ?? ''
 
 export function HomeScreen({ onCreate, onJoin, onLocal }: { onCreate: () => void; onJoin: (roomId: string) => void; onLocal: () => void }) {
+  const [name, setName] = useState(() => recallPlayerName())
+  const [joinOpen, setJoinOpen] = useState(false)
   const [link, setLink] = useState('')
   const roomId = extractRoomId(link)
 
+  // O nome é opcional aqui — quem pular vai preenchê-lo no passo de identidade, que é
+  // onde ele é de fato exigido. O que a home faz é só adiantá-lo.
+  function go(action: () => void): void {
+    rememberPlayerName(name)
+    action()
+  }
+
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-coffee-950">
-      <ModalShell className="w-full max-w-md">
-        <ModalHeader title="Banco Master" subtitle="Clone multiplayer de Banco Imobiliário" center />
-        <div className="p-4 flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <Button onClick={onCreate} className="w-full py-3 text-base">
-              Criar sala
+    <EntryStage>
+      <header className="text-center">
+        <p className="label text-brass tracking-caps text-[0.7rem]">Cidades do Mundo</p>
+        <h1 className="display leading-[0.88] mt-2.5 text-[clamp(3.25rem,10vw,5.25rem)]">
+          Banco <span className="text-brass">Master</span>
+        </h1>
+        <OrnamentRule className="mt-3 mx-auto w-64 max-w-full" />
+        <p className="text-starlight-muted text-sm mt-3">Banco imobiliário multiplayer — até 8 jogadores, direto no navegador.</p>
+      </header>
+
+      <EntryPanel className="max-w-sm">
+        <div className="p-5 flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="home-name" className="label text-brass text-center">
+              Seu nome
+            </label>
+            <input
+              id="home-name"
+              value={name}
+              onChange={(e) => setName(e.target.value.slice(0, NAME_MAX))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') go(onCreate)
+              }}
+              placeholder="Ex.: Marco Polo"
+              maxLength={NAME_MAX}
+              autoFocus
+              className="entry-input text-center"
+            />
+          </div>
+
+          <Button onClick={() => go(onCreate)} className="w-full py-3.5 text-base">
+            Criar sala
+          </Button>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="secondary"
+              aria-expanded={joinOpen}
+              // Só referencia o campo quando ele existe: `aria-controls` apontando para um id
+              // ausente é violação de `aria-valid-attr-value` no axe (gate de a11y, 044).
+              aria-controls={joinOpen ? 'join-room-field' : undefined}
+              onClick={() => setJoinOpen((v) => !v)}
+            >
+              Entrar com link
             </Button>
-            <p className="label text-cream-muted text-center">Você vira o anfitrião e compartilha o link</p>
+            <Button variant="secondary" onClick={() => go(onLocal)}>
+              Jogar local
+            </Button>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="h-px flex-1 bg-coffee-500" />
-            <span className="label text-cream-muted/85">ou</span>
-            <span className="h-px flex-1 bg-coffee-500" />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <span className="label text-gold">Entrar com o link recebido</span>
-            <div className="flex gap-2">
-              <input
-                value={link}
-                onChange={(e) => setLink(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && roomId) onJoin(roomId)
-                }}
-                placeholder="Cole o link ou o código da sala"
-                className="flex-1 min-w-0 px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream placeholder:text-cream-muted/85 focus:border-gold/60"
-              />
-              <Button variant="secondary" disabled={!roomId} onClick={() => roomId && onJoin(roomId)}>
-                Entrar
-              </Button>
+          {joinOpen && (
+            <div id="join-room-field" className="flex flex-col gap-1.5">
+              <label htmlFor="join-room" className="label text-brass">
+                Link ou código recebido
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="join-room"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && roomId) go(() => onJoin(roomId))
+                  }}
+                  placeholder="Cole aqui o link da sala"
+                  autoFocus
+                  className="entry-input flex-1 min-w-0"
+                />
+                <Button disabled={!roomId} onClick={() => roomId && go(() => onJoin(roomId))}>
+                  Entrar
+                </Button>
+              </div>
             </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onLocal}
-            className="label text-cream-muted/85 hover:text-cream underline underline-offset-4 decoration-coffee-500 mx-auto"
-          >
-            Jogar local, neste dispositivo
-          </button>
-
-          {/* Versão publicada (044, FR-048): é o que transforma "deu erro" em um relato
-              que localiza a build. Vazio em desenvolvimento — aí não há o que identificar. */}
-          {COMMIT_SHA && (
-            <p className="label text-cream-muted/85 text-center text-[0.65rem] tracking-wider">
-              versão {COMMIT_SHA.slice(0, 7)}
-            </p>
           )}
         </div>
-      </ModalShell>
-    </div>
+      </EntryPanel>
+
+      {/* Versão publicada (044, FR-048): é o que transforma "deu erro" em um relato
+          que localiza a build. Vazio em desenvolvimento — aí não há o que identificar. */}
+      {COMMIT_SHA && (
+        <footer className="flex flex-col items-center">
+          <p className="label text-starlight-muted/70 text-[0.6rem] tracking-wider">versão {COMMIT_SHA.slice(0, 7)}</p>
+        </footer>
+      )}
+    </EntryStage>
   )
 }

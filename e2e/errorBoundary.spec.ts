@@ -15,9 +15,11 @@ const HOST_NAME = 'Anfitriao'
 const GUEST_NAME = 'Convidada'
 
 async function fillIdentity(page: Page, name: string, cta: RegExp): Promise<void> {
-  await page.getByPlaceholder('Como aparecer na mesa').fill(name)
+  await page.getByLabel('Seu nome').fill(name)
   await page.locator('button[aria-label^="Cor "]').first().click()
-  await page.locator('button[aria-pressed]').filter({ hasText: /^[^ ]$/ }).first().click().catch(() => {})
+  // Peça: qualquer botão de toggle que NÃO seja swatch de cor (as peças agora são SVG,
+  // sem texto — o filtro antigo por glifo de um caractere não as encontra mais).
+  await page.locator('button[aria-pressed]:not([aria-label^="Cor "])').first().click().catch(() => {})
   await page.getByRole('button', { name: cta }).click()
 }
 

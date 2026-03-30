@@ -73,7 +73,7 @@ async function fillIdentity(page: Page, name: string, cta: RegExp, free = SEAT_C
   const pieces = page.locator(PIECE_LABELS.map((l) => `button[aria-label="${l}"]`).join(', '))
   await expect(colors).toHaveCount(free, { timeout: 20_000 })
   await expect(pieces).toHaveCount(free, { timeout: 20_000 })
-  await page.getByPlaceholder('Como aparecer na mesa').fill(name)
+  await page.getByLabel('Seu nome').fill(name)
   await colors.first().click()
   await pieces.first().click()
   await page.getByRole('button', { name: cta }).click()
