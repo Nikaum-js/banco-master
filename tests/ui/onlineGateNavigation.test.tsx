@@ -42,6 +42,12 @@ describe('navegação da porta de entrada', () => {
     expect(pushState).toHaveBeenCalledOnce()
     expect(window.location.search).toBe('?host=1')
     expect(screen.getByRole('status').textContent).toBe('Preparando a mesa…')
-    expect(await screen.findByText('Multiplayer indisponível')).toBeTruthy()
+    // Teto de 15s, não o default de 1s da RTL: o que se espera aqui é o `import()` do
+    // `OnlineSessionGate`, e com ele o grafo inteiro que a 2d5e69e tirou do caminho crítico
+    // — Supabase, lobby, HUD, OrientationGate. Local isso resolve na hora porque o
+    // transform já está em cache; em runner frio passou de 1s e o teste reprovou com a
+    // fallback do Suspense ainda na tela (run 30668329508). É guarda contra trava, não
+    // medida de desempenho: o que se afirma é que a tela CHEGA, não em quanto tempo.
+    expect(await screen.findByText('Multiplayer indisponível', {}, { timeout: 15_000 })).toBeTruthy()
   })
 })
