@@ -67,7 +67,7 @@ function FlagAvatar({ iso2, side }: { iso2: string; side: Side }) {
     side === 'left' ? 90 : side === 'right' ? -90 : side === 'top' ? 180 : 0
   return (
     <div
-      className="absolute rounded-full border-2 border-coffee-950 bg-coffee-900 overflow-hidden pointer-events-none z-40"
+      className="board-flag-avatar absolute rounded-full border-2 border-coffee-950 bg-coffee-900 overflow-hidden pointer-events-none z-40"
       style={{
         ...position,
         width: size,
@@ -220,7 +220,7 @@ export function ClassicSquare({
                     dourado resolve pelo tema via var(). */}
                 {!ownerColor && (
                   <div
-                    className="absolute currency leading-none whitespace-nowrap"
+                    className="board-square-price absolute currency leading-none whitespace-nowrap"
                     style={{
                       ...moneyPos,
                       fontSize: '11px',
@@ -315,13 +315,13 @@ export function ClassicSquare({
           }}
         >
           {(isAirport || isUtility || isCard || isTax || isBus) && (
-            <div style={{ fontSize: 32 }} className="leading-none">
+            <div style={{ fontSize: 32 }} className="board-square-icon leading-none">
               <SquareIcon square={square} size="1em" />
             </div>
           )}
           {isAirport && (
             <p
-              className="display mt-1 text-cream leading-none tracking-wider"
+              className="board-square-label display mt-1 text-cream leading-none tracking-wider"
               style={{ fontSize: '14px' }}
             >
               {(square as AirportSquare).name}
@@ -329,7 +329,7 @@ export function ClassicSquare({
           )}
           {isUtility && (
             <p
-              className="display mt-1 text-cream leading-none tracking-wide"
+              className="board-square-label display mt-1 text-cream leading-none tracking-wide"
               style={{ fontSize: '14px' }}
             >
               {(() => {
@@ -340,27 +340,27 @@ export function ClassicSquare({
           )}
           {isTax && (
             <>
-              <p className="display mt-1 text-cream leading-none" style={{ fontSize: '14px' }}>
+              <p className="board-square-label display mt-1 text-cream leading-none" style={{ fontSize: '14px' }}>
                 Taxa
               </p>
-              <p className="currency text-logo leading-none" style={{ fontSize: '14px' }}>
+              <p className="board-square-label currency text-logo leading-none" style={{ fontSize: '14px' }}>
                 <span className="text-cream-muted text-[0.7em] mr-0.5">R$</span>
                 {(square as TaxSquare).amount}
               </p>
             </>
           )}
           {isAcaso && (
-            <p className="display mt-1 text-cream leading-none" style={{ fontSize: '14px' }}>
+            <p className="board-square-label display mt-1 text-cream leading-none" style={{ fontSize: '14px' }}>
               Acaso
             </p>
           )}
           {isTesouro && (
-            <p className="display mt-1 text-cream leading-none" style={{ fontSize: '14px' }}>
+            <p className="board-square-label display mt-1 text-cream leading-none" style={{ fontSize: '14px' }}>
               Tesouro
             </p>
           )}
           {isBus && (
-            <p className="display mt-1 text-cream leading-none tracking-wide text-center" style={{ fontSize: '14px' }}>
+            <p className="board-square-label display mt-1 text-cream leading-none tracking-wide text-center" style={{ fontSize: '14px' }}>
               Bus Ticket
             </p>
           )}
@@ -392,11 +392,11 @@ export function CornerSquare({ square, accent = 'cream' }:
         isGo && 'bg-coffee-700',
       )}
     >
-      <div className="leading-none" style={{ fontSize: 56 }}>
+      <div className="board-corner-icon leading-none" style={{ fontSize: 56 }}>
         <SquareIcon square={square} size="1em" />
       </div>
       <p
-        className="display mt-1 text-cream leading-none"
+        className="board-square-label display mt-1 text-cream leading-none"
         style={{ fontSize: '14px' }}
       >
         {label}

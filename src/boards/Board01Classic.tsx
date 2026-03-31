@@ -106,7 +106,7 @@ export default function Board01Classic() {
                       e.stopPropagation()
                       setSelectedPos((cur) => (cur === square.pos ? null : square.pos))
                     }}
-                    className="relative block w-full h-full text-left cursor-pointer"
+                    className="board-square-button relative block w-full h-full text-left cursor-pointer"
                   >
                     {squareContent}
                   </button>

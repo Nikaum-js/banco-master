@@ -157,6 +157,7 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
                   movimento reduzido: a chegada em si já está no `shown` (o FATO fica). */}
               <motion.div
                 key={`pop-${pop[p.id] ?? 0}`}
+                className="board-live-token"
                 initial={{ scale: 1 }}
                 animate={reduced ? { scale: 1 } : { scale: [1, 1.22, 1] }}
                 transition={{ duration: MOTION.base, ease: EASE.standard }}
