@@ -1,8 +1,9 @@
 // HUD mínimo funcional — barra de controle que dirige o store (motor 002–006).
 // Demo LOCAL de 1 cliente (multiplayer fica para M3). Mostra o estado do turno
 // e expõe os comandos conforme o estado da máquina (rolar/resolver/comprar/finalizar/prisão).
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useGameStore } from '@/game/store'
+import { sideOf } from '@/game/turn/turnMachine'
 import { BOARD } from '@/lib/boardData'
 
 function priceOf(pos: number): number {
@@ -36,22 +37,38 @@ export function GameHUD() {
   const passBid = useGameStore((s) => s.passBid)
   const payDebt = useGameStore((s) => s.payDebt)
   const declareBankruptcy = useGameStore((s) => s.declareBankruptcy)
+  const useBusTicket = useGameStore((s) => s.useBusTicket)
+  const grantLoan = useGameStore((s) => s.grantLoan)
+  const payOffLoan = useGameStore((s) => s.payOffLoan)
+  const [busArmed, setBusArmed] = useState(false)
 
   const active = game.players[game.turnOrder[game.activeSeat]]
   const turn = game.turn
   const roll = turn.lastRoll
   const res = game.resolution
   const here = BOARD[active.pos]
+  const loanOfActive = game.loans.find((l) => l.debtorId === active.id) // empréstimo do devedor (010)
+  const canPayOff = loanOfActive && active.cash >= loanOfActive.principal
 
   let actions: ReactNode = null
   if (game.phase === 'ended') {
     const winner = game.players.find((p) => !p.eliminated)
     actions = <span className="text-gold font-bold">🏆 Fim de jogo — vencedor: {winner?.id ?? '—'}</span>
   } else if (res?.kind === 'debt') {
+    const shortfall = res.amount - active.cash
+    // §15.2: pedir empréstimo (default principal = déficit, taxa 20%) a quem tiver caixa
+    const lenders = loanOfActive
+      ? []
+      : game.players.filter((p) => p.id !== active.id && !p.eliminated && p.cash >= shortfall && shortfall > 0)
     actions = (
       <>
-        <span>💸 Dívida ${res.amount} {res.creditorId ? `a ${res.creditorId}` : 'ao banco'} — venda/hipoteque e pague, ou faleça</span>
+        <span>💸 Dívida ${res.amount} {res.creditorId ? `a ${res.creditorId}` : 'ao banco'} — venda/hipoteque e pague, peça empréstimo, ou faleça</span>
         <Btn onClick={payDebt}>Pagar</Btn>
+        {lenders.map((p) => (
+          <Btn key={p.id} onClick={() => grantLoan(p.id, shortfall, 20)}>
+            🤝 Pedir ${shortfall} de {p.id} @20%
+          </Btn>
+        ))}
         <Btn onClick={declareBankruptcy}>Falir</Btn>
       </>
     )
@@ -105,11 +122,38 @@ export function GameHUD() {
       </>
     )
   } else if (turn.state === 'aguardando-rolagem') {
-    actions = <Btn onClick={rollDice}>🎲 Rolar Dados</Btn>
+    const canBus = active.busTickets >= 1 && sideOf(active.pos) !== null
+    if (busArmed && canBus) {
+      const dests = BOARD.filter((sq) => sideOf(sq.pos) === sideOf(active.pos) && sq.pos !== active.pos)
+      actions = (
+        <>
+          <span>🎫 Para onde? (lado atual):</span>
+          {dests.map((sq) => (
+            <Btn key={sq.pos} onClick={() => { useBusTicket(sq.pos); setBusArmed(false) }}>
+              {sq.name} ({sq.pos})
+            </Btn>
+          ))}
+          <Btn onClick={() => setBusArmed(false)}>Cancelar</Btn>
+        </>
+      )
+    } else {
+      actions = (
+        <>
+          <Btn onClick={rollDice}>🎲 Rolar Dados</Btn>
+          {canBus && <Btn onClick={() => setBusArmed(true)}>🎫 Usar Bus Ticket ({active.busTickets})</Btn>}
+          {canPayOff && <Btn onClick={payOffLoan}>🤝 Quitar empréstimo (${loanOfActive!.principal})</Btn>}
+        </>
+      )
+    }
   } else if (turn.state === 'casa-a-resolver') {
     actions = <Btn onClick={resolvePending}>Resolver: {here.name}</Btn>
   } else if (turn.state === 'aguardando-finalizacao') {
-    actions = <Btn onClick={finalizeTurn}>{turn.mayRollAgain ? 'Dupla → rolar de novo' : 'Finalizar Turno'}</Btn>
+    actions = (
+      <>
+        {canPayOff && <Btn onClick={payOffLoan}>🤝 Quitar empréstimo (${loanOfActive!.principal})</Btn>}
+        <Btn onClick={finalizeTurn}>{turn.mayRollAgain ? 'Dupla → rolar de novo' : 'Finalizar Turno'}</Btn>
+      </>
+    )
   }
 
   return (
@@ -122,6 +166,11 @@ export function GameHUD() {
       <span>🎲 {roll ? `${roll.white[0]}+${roll.white[1]}${typeof roll.speed === 'number' ? `+${roll.speed}` : roll.speed ? `+${roll.speed}` : ''}` : '—'}</span>
       <span className="text-cream-muted">🏦 {game.bank.houses}🏠 {game.bank.hotels}🏨</span>
       <span className="text-gold-glow">🅿️ ${game.centerPot}</span>
+      {game.loans.length > 0 && (
+        <span className="text-cream-muted text-xs">
+          🤝 {game.loans.map((l) => `${l.debtorId}→${l.creditorId} $${l.principal}@${l.ratePct}%`).join(' · ')}
+        </span>
+      )}
       <span className="ml-auto flex flex-wrap items-center gap-2">{actions}</span>
     </div>
   )
