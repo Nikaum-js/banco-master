@@ -797,7 +797,8 @@ function AuctionDeedPanel({ sq, deed }: { sq: AuctionSquare; deed: AuctionDeed }
   const facts = [
     { label: 'Preço', value: money(deed.price) },
     ...(deed.kind === 'property'
-      ? [{ label: 'Casa', value: money(deed.buildCost) }]
+      // D-081: a escada não é mais flat — o lance precisa contar com o topo, não só a 1ª casa.
+      ? [{ label: 'Construção', value: `${money(deed.buildLadder[0])} → ${money(deed.buildLadder[6])}` }]
       : deed.kind === 'airport'
         ? [{ label: activeLabels().hangar, value: money(deed.hangar.cost) }]
         : []),

@@ -1,6 +1,6 @@
 # Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.40
+**Versão:** 1.41
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -153,7 +153,7 @@ As 28 propriedades são divididas em **10 grupos de cores** (tema "Cidades do Mu
 
 > **Balanceamento:** grupos de 3 seguram o *runaway leader* e forçam negociação — dá pra construir 1 casa com 1 cidade (50% do aluguel) e até 2 casas por cidade com 2 cidades (75%), mas **completar o país libera toda a escada e leva o aluguel a 100%** (§5.1/§13.3). **Laranja/Vermelho** (meio do tabuleiro) são o *sweet spot* (casa barata, bom aluguel). Os duos do topo — **França** e **Emirados** — permitem 1 casa com 1 cidade e liberam toda a escada com as 2, e são caros: os **Emirados** (Abu Dhabi/Dubai) são o **super-luxo** (preços/aluguéis muito acima, armadilha de prestígio — ver §5 e D-025).
 
-> 📌 Preços ($60→$650), aluguéis-base e **custos de construção (tier por grupo)** vivem no tema (`theme.ts`) — fonte única tunável. Composição e calibração: [D-017](adr/README.md) (rev.) + [D-024](adr/README.md) + [D-025](adr/README.md) + [D-076](adr/D-076-rebalanceamento-economico-para-mesas-de-3-e-4.md).
+> 📌 Preços ($60→$650), aluguéis-base e **custos de construção (tier por grupo, escalando por nível — D-081)** vivem no tema (`theme.ts`) — fonte única tunável. Composição e calibração: [D-017](adr/README.md) (rev.) + [D-024](adr/README.md) + [D-025](adr/README.md) + [D-076](adr/D-076-rebalanceamento-economico-para-mesas-de-3-e-4.md).
 
 ### 2.4 Aeroportos
 
@@ -364,7 +364,7 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 | Com construção (escala por posse do país) | tabela de construção × **fator de posse**: 0,5 (1 cidade) → 1,0 (país completo). Trio: 1/3 = 50%, 2/3 = 75%, 3/3 = 100%; duo: 1/2 = 50%, 2/2 = 100% (034) |
 | 1, 2, 3, 4 casas, hotel, 2º hotel, arranha-céu | Tabela de construção = **aluguel-base × multiplicador do GRUPO** (D-024) |
 
-> **Modelo de aluguel (D-024/D-025):** a tabela de construção é **`aluguel-base × multiplicador do grupo`** — não um multiplicador único. Grupos baratos têm multiplicadores maiores e os caros, menores (curva clássica: hotel-topo ~$360 no marrom, ~$1.870 no navy/França, até ~**$2.300 nos Emirados / super-luxo**). O **2º hotel** cobra mais que o 1º (§14.4) e o **arranha-céu** é o topo (§13.7). **Custo de casa** = tier fixo por grupo ($40 marrom → $300 Emirados), não proporcional ao preço — cria o sweet spot laranja/vermelho; os **Emirados** são prestígio (ROI baixo, armadilha — D-025). Valores no tema (`theme.ts`), fonte única `rentLadder`.
+> **Modelo de aluguel (D-024/D-025):** a tabela de construção é **`aluguel-base × multiplicador do grupo`** — não um multiplicador único. Grupos baratos têm multiplicadores maiores e os caros, menores (curva clássica: hotel-topo ~$360 no marrom, ~$1.870 no navy/França, até ~**$2.300 nos Emirados / super-luxo**). O **2º hotel** cobra mais que o 1º (§14.4) e o **arranha-céu** é o topo (§13.7). **Custo de construção** = tier por grupo ($40 marrom → $300 Emirados) no nível 1, escalando por degrau até 3× no arranha-céu (§5.2, v1.41, [D-081](adr/D-081-custo-de-construcao-escala-por-nivel.md)); não proporcional ao preço — cria o sweet spot laranja/vermelho na **3ª casa**; os **Emirados** são prestígio (ROI baixo, armadilha — D-025). Valores no tema (`theme.ts`), fonte única `rentLadder`.
 
 > 📌 A regra do grupo parcial implementa a mecânica de balanceamento (Seção 13.3).
 
@@ -376,11 +376,11 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 - Sequência por propriedade: 0 → 1 → 2 → 3 → 4 casas → 1 hotel → 2 hotéis (Seção 14) → arranha-céu (Seção 13.7).
 - O hotel substitui as 4 casas; **2 hotéis** se transformam em 1 **arranha-céu** (máx. 1 por propriedade).
 - **Sem limite de estoque:** casas, hotéis e arranha-céus são **ilimitados** — construir nunca é travado por falta de peças no banco. Não há escassez de construção (D-017 rev.); o jogo descarta a "escassez-como-bloqueio" por contrariar o catch-up discreto (Princípio IV).
-- Custos de construção definidos na ficha de cada propriedade no tema.
+- **Custo por nível** (v1.41, [D-081](adr/D-081-custo-de-construcao-escala-por-nivel.md)): cada degrau da escada tem preço próprio, crescente. O tier do grupo (§5.1) é o custo do **nível 1**; os níveis 3 a 7 escalam sobre ele por `THEME.BUILD_LEVEL_MULT` = **1 · 1 · 1,25 · 1,5 · 2 · 2,5 · 3**, arredondado a múltiplos de 5. No laranja (tier $110): **110 · 110 · 140 · 165 · 220 · 275 · 330**. Era flat até a v1.40 — os sete degraus custavam o tier —, e com o aluguel superlinear isso fazia do topo da escada o melhor negócio do tabuleiro (arranha-céu por $110 acrescentando $286 de aluguel por batida). Valores no tema, fonte única `levelCost`.
 
 ### 5.3 Venda de Construções
 
-- Pode vender casas/hotéis ao banco por **metade** do preço de construção, a qualquer momento.
+- Pode vender casas/hotéis ao banco por **metade** do preço de construção, a qualquer momento. Com custo por nível (§5.2, v1.41), a metade é a do **degrau que está sendo demolido** — vender um arranha-céu devolve metade do nível 7, não metade do tier base.
 - Ao vender, desce um nível na escada: arranha-céu → 2º hotel → 1º hotel → 4 casas → casas. Vender o hotel devolve a propriedade a 4 casas.
 - A venda deve respeitar a regra de uniformidade.
 

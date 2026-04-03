@@ -8,7 +8,7 @@ import type { Square, PropertySquare } from '@/lib/boardData'
 import type { GameState, Player } from '../turn/types'
 import type { TurnPorts } from '../turn/resolution'
 import { advance } from '../turn/turnMachine'
-import { buildCost, cityLevel, HANGAR_COST } from '../economy/construction'
+import { investedCost, cityLevel, HANGAR_COST } from '../economy/construction'
 import { addTempEffect, isPlayerImmune } from '../economy/tempEffects'
 import { chargePlayer } from '../economy/obligation'
 import { logEvent } from '../log'
@@ -31,8 +31,8 @@ export function netWorth(state: GameState, playerId: string): number {
     if (!t || t.ownerId !== playerId) continue
     total += t.mortgaged ? Math.round(priceOf(sq) / 2) : priceOf(sq)
     if (sq.kind === 'property') {
-      const units = cityLevel(t) // 0–7: casas/hotel/2º hotel/Skyscraper, cada nível = buildCost (011)
-      total += units * buildCost(sq as PropertySquare)
+      // Soma da escada 1..nível (D-081): o custo por nível deixou `nível × tier` errado.
+      total += investedCost(sq as PropertySquare, cityLevel(t))
     }
     if (sq.kind === 'airport' && t.hangar) total += HANGAR_COST // Hangar (011)
   }

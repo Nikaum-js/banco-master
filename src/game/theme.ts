@@ -18,13 +18,33 @@ export const THEME = {
   // com 40 casas, recebe $44/turno, sustentando o prêmio de ~10% dentro de cada tier equivalente.
   GO_PASS: 250,
 
-  // Custo de construção de casa — TIER FIXO por grupo (032/D-024). Não proporcional ao preço.
+  // Custo BASE de construção — TIER por grupo (032/D-024). Não proporcional ao preço.
   // Sweet spot em orange/red: casa barata pro aluguel que rende.
+  // É o custo do NÍVEL 1; os demais escalam por `BUILD_LEVEL_MULT` (D-081).
   HOUSE_COST: {
     brown: 40, skyblue: 60, pink: 90, purple: 110, orange: 110,
     red: 130, yellow: 160, green: 200, navy: 240,
     platinum: 300, // Emirados (super-luxo) — tier mais caro (033)
   } satisfies Record<GroupKey, number>,
+
+  // Custo POR NÍVEL da escada, como multiplicador sobre HOUSE_COST (D-081). Índice 0 = 1ª casa,
+  // índice 6 = arranha-céu.
+  //
+  // Era FLAT: os sete níveis custavam o tier do grupo. Com a escada de 7 níveis (011) e o
+  // aluguel superlinear, isso invertia a curva de retorno — o topo virava o melhor negócio do
+  // tabuleiro. No laranja, o arranha-céu custava $110 e acrescentava $286 de aluguel por batida
+  // (ROI marginal 2,6x), enquanto a 1ª casa rendia 0,6x. Um país completo no topo se pagava em
+  // 1,9 visitas de adversário. A D-076 tinha piorado isso sem tocar aqui: subir o caixa inicial
+  // 2.000 → 3.000 barateou construir ~33% em termos reais, da noite pro dia.
+  //
+  // A curva agora tem retorno DECRESCENTE no topo, que é onde a decisão precisa doer:
+  //  - níveis 1–2 intactos — a entrada continua barata, ninguém trava fora do jogo;
+  //  - a 3ª casa segue o sweet spot do gênero (ROI ~2,7x no laranja), de propósito;
+  //  - hotel/2º hotel/arranha caem pra 0,5–1,0x de ROI imediato: viram investimento de longo
+  //    prazo, não lucro automático. O arranha-céu continua valendo muito porque triplica o
+  //    aluguel das outras cidades do país (§13.7) — bônus que não entra nessa conta.
+  // Efeito agregado: payback do país completo no topo vai de ~1,9 para ~3,3 visitas.
+  BUILD_LEVEL_MULT: [1, 1, 1.25, 1.5, 2, 2.5, 3] as const,
 
   // Multiplicadores de aluguel POR GRUPO (032/D-024) — base × mult. Curva clássica:
   // grupos baratos têm mult grande, caros pequeno (hotel-topo navy ~$1.800 vs brown ~$360).

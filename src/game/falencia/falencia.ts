@@ -4,7 +4,7 @@ import { BOARD } from '@/lib/boardData'
 import type { Square, PropertySquare } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
 import type { ResolutionSlice } from '../economy/types'
-import { buildCost, cityLevel, HANGAR_COST } from '../economy/construction'
+import { investedCost, cityLevel, HANGAR_COST } from '../economy/construction'
 import { activePlayer, completeResolution, advanceSeat, type TurnCtx } from '../turn/turnMachine'
 import { activeLoanFor } from '../emprestimos/emprestimos'
 import { openEstateAuction } from '../economy/landAuction'
@@ -25,8 +25,9 @@ export function liquidationValue(state: GameState, playerId: string): number {
     const t = state.titles[sq.pos]
     if (!t || t.ownerId !== playerId) continue
     if (sq.kind === 'property') {
-      const units = cityLevel(t) // 0–7: casas/hotel/2º hotel/Skyscraper, cada nível = buildCost
-      v += Math.round((units * buildCost(sq as PropertySquare)) / 2) // venda de construção (metade)
+      // Soma real da escada 1..nível (D-081), não `nível × tier`: com custo por nível, o
+      // atalho subestimava quem tinha construção alta e declarava falência quem tinha caixa.
+      v += Math.round(investedCost(sq as PropertySquare, cityLevel(t)) / 2) // venda (metade)
     }
     if (sq.kind === 'airport' && t.hangar) v += Math.round(HANGAR_COST / 2) // venda do Hangar
     if (!t.mortgaged) v += Math.round(priceOf(sq) / 2) // hipoteca das não-hipotecadas

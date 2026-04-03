@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { THEME } from '@/game/theme'
-import { buildHouse, sellBuilding, buildHangar, sellHangar, buildCost } from '@/game/economy/construction'
+import { buildHouse, sellBuilding, buildHangar, sellHangar, buildCost, levelCost } from '@/game/economy/construction'
 import { rentCity } from '@/game/economy/rent'
 import { economyResolve } from '@/game/economy/resolveRentable'
 import { createSeedState } from '@/game/setup'
@@ -28,7 +28,9 @@ function brown(level: number, owned: number[] = BROWN): GameState {
 }
 
 const AIRPORT = BOARD.find((s) => s.kind === 'airport')!.pos
-const COST1 = buildCost(BOARD[1] as PropertySquare) // round(60/2)=30
+const COST1 = buildCost(BOARD[1] as PropertySquare) // tier base do brown (nível 1)
+// D-081: o custo é POR NÍVEL. Subir ao 2º hotel (nível 6) custa o degrau 6, não o tier base.
+const COST_HOTEL2 = levelCost(BOARD[1] as PropertySquare, 6)
 
 describe('2º hotel (US1)', () => {
   it('D-050: snapshot parcial acima do teto é preservado e ainda pode vender', () => {
@@ -46,7 +48,8 @@ describe('2º hotel (US1)', () => {
     const g = brown(5)
     const out = buildHouse(g, 1)
     expect(out.titles[1].hotel2).toBe(true)
-    expect(out.players[0].cash).toBe(5000 - COST1)
+    expect(out.players[0].cash).toBe(5000 - COST_HOTEL2)
+    expect(COST_HOTEL2).toBeGreaterThan(COST1) // D-081: o topo custa mais que a 1ª casa
   })
 
   it('SC-001: aluguel do 2º hotel é MAIOR que o do 1º hotel (§14.4)', () => {
@@ -62,7 +65,8 @@ describe('2º hotel (US1)', () => {
     const out = sellBuilding(g, 1)
     expect(out.titles[1].hotel2).toBe(false)
     expect(out.titles[1].hotel).toBe(true)
-    expect(out.players[0].cash).toBe(5000 + Math.round(COST1 / 2))
+    // D-081: reembolsa metade do NÍVEL demolido (o 6), não metade do tier base.
+    expect(out.players[0].cash).toBe(5000 + Math.round(COST_HOTEL2 / 2))
   })
 
   it('uniformidade: não constrói 2º hotel se outra do grupo está só no hotel', () => {

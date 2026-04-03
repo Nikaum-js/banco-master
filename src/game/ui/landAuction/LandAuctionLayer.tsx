@@ -238,8 +238,11 @@ function LotDeed({ view }: { view: LotView }) {
         ))}
         <div className="lot-deed__stats">
           <DeedStat icon={<CoinIcon size={13} />} label="Preço" value={money(deed.price)} />
-          {deed.kind === 'property' && <DeedStat icon={<HouseIcon size={13} />} label="Casa" value={money(deed.buildCost)} />}
-          {deed.kind === 'property' && <DeedStat icon={<HotelIcon size={13} />} label="Hotel" value={money(deed.buildCost)} />}
+          {/* D-081: os dois liam o MESMO campo e imprimiam o mesmo número — o custo era flat.
+              Agora cada degrau tem preço próprio, e o lance precisa refletir isso: quem arremata
+              ainda vai gastar a escada inteira. */}
+          {deed.kind === 'property' && <DeedStat icon={<HouseIcon size={13} />} label="Casa" value={money(deed.buildLadder[0])} />}
+          {deed.kind === 'property' && <DeedStat icon={<HotelIcon size={13} />} label="Hotel" value={money(deed.buildLadder[4])} />}
           {deed.kind === 'airport' && <DeedStat icon={<HotelIcon size={13} />} label="Hangar" value={money(deed.hangar.cost)} />}
         </div>
       </div>

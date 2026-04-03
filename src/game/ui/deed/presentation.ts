@@ -1,7 +1,7 @@
 // Fatos canônicos de uma escritura. Os layouts escolhem como desenhar, mas nome,
 // subtítulo, cor, avatar, aluguéis e custos saem desta única projeção.
 import { GROUP_COLOR } from '@/boards/groupColors'
-import { buildCost } from '@/game/economy/construction'
+import { buildCost, buildLadderCost } from '@/game/economy/construction'
 import { mortgageValue } from '@/game/economy/mortgage'
 import { rentLadder } from '@/game/economy/rent'
 import { THEME } from '@/game/theme'
@@ -41,7 +41,10 @@ export interface PropertyDeedPresentation extends DeedPresentationBase {
   kind: 'property'
   /** Código de bandeira no mapa Cidades do Mundo; null nos mapas por ícone (055). */
   flagCode: string | null
+  /** Custo do NÍVEL 1 (a primeira casa). A escada inteira está em `buildLadder` (D-081). */
   buildCost: number
+  /** Custo de cada degrau, 1ª casa → arranha-céu. Sete valores, crescentes (D-081). */
+  buildLadder: number[]
   rents: {
     base: number
     house1: number
@@ -108,6 +111,7 @@ export function deedPresentation(square: Square): DeedPresentation | null {
       price: square.price,
       mortgage: mortgageValue(square),
       buildCost: buildCost(square),
+      buildLadder: buildLadderCost(square),
       rents,
       // Rótulos pelo catálogo do mapa ativo (055): casa/oficina, hotel/fábrica…
       rentRows: [

@@ -1967,7 +1967,8 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
   const presentation = deedPresentation(square)
   const buildings = dv.level // 0–7 real
   const rents = presentation.rents
-  const houseCost = dv.buildCost
+  const houseCost = dv.buildCost // nível 1; a escada inteira vem da presentation (D-081)
+  const topBuildCost = presentation.buildLadder[presentation.buildLadder.length - 1]
   const mortgage = dv.mortgageValue
   const stripeColor = presentation.accent
   // Rótulos do mapa ativo (055): casa/oficina, hotel/fábrica, arranha-céu/Torre de Ferro.
@@ -2050,11 +2051,11 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
             <dd>R$ {fmtMoney(square.price)}</dd>
           </div>
           <div className="property-deed__fact">
-            {/* D-070: o rótulo do nível 1 vem do mapa — "Casa" no Atlas, "Oficina" na
-                Fuligem. Era literal, então o título dizia Casa embaixo de uma escada
-                que dizia oficina/fábrica/Torre de Ferro. */}
-            <dt>{capLabel(activeLabels().house)}</dt>
-            <dd>R$ {fmtMoney(houseCost)}</dd>
+            {/* D-081: o custo deixou de ser flat, então um número só passou a mentir — ele
+                era o preço da 1ª casa, e o jogador lia como o preço de qualquer degrau.
+                Mostra a faixa: onde a escada começa e onde termina. */}
+            <dt>Construção</dt>
+            <dd>R$ {fmtMoney(houseCost)} → {fmtMoney(topBuildCost)}</dd>
           </div>
           <div className="property-deed__fact">
             <dt>Hipoteca</dt>

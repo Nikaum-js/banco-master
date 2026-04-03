@@ -19,21 +19,64 @@ function clone(state: GameState): GameState {
   return structuredClone(state)
 }
 
+/** Custo BASE do grupo — o preço do nível 1. Ponto de partida da escada, não o custo médio. */
 export function buildCost(square: PropertySquare): number {
-  return THEME.HOUSE_COST[square.group] // tier fixo por grupo (032); todos os níveis usam o mesmo custo
+  return THEME.HOUSE_COST[square.group] // tier por grupo (032)
 }
 
 /**
- * Custo de construção JÁ com o bônus da Mina de Ferro (D-071): quem tem o ferro da cidade
+ * Custo de UM nível da escada (1 = 1ª casa … 7 = arranha-céu), D-081.
+ *
+ * O custo deixou de ser flat: `THEME.BUILD_LEVEL_MULT` escala o tier do grupo por nível, para
+ * que o topo da escada seja uma decisão de caixa e não lucro garantido. Arredondado a múltiplos
+ * de 5 — o jogador lê o valor num botão, não numa planilha.
+ *
+ * Fora de 1..7 devolve o tier base: `cityLevel` nunca produz outra coisa, e um índice inválido
+ * cobrando zero abriria construção de graça.
+ */
+export function levelCost(square: PropertySquare, level: number): number {
+  const mult = THEME.BUILD_LEVEL_MULT[level - 1] ?? 1
+  return Math.round((THEME.HOUSE_COST[square.group] * mult) / 5) * 5
+}
+
+/** A escada de custos inteira, nível 1 → 7. Fonte única das UIs de escritura e pregão. */
+export function buildLadderCost(square: PropertySquare): number[] {
+  return THEME.BUILD_LEVEL_MULT.map((_, i) => levelCost(square, i + 1))
+}
+
+/**
+ * Quanto já foi GASTO em construção para chegar ao nível `level` — soma dos níveis 1..level.
+ *
+ * Existe porque, com custo por nível (D-081), `nível × custo` deixou de valer: patrimônio
+ * (`netWorth`), poder de liquidação (`liquidationValue`) e as cartas que taxam construção
+ * precisam da soma real, senão um arranha-céu vale o preço de sete primeiras casas.
+ */
+export function investedCost(square: PropertySquare, level: number): number {
+  let total = 0
+  for (let l = 1; l <= level; l++) total += levelCost(square, l)
+  return total
+}
+
+/**
+ * Custo do PRÓXIMO nível já com o bônus da Mina de Ferro (D-071): quem tem o ferro da cidade
  * constrói 25% mais barato. É o único dos quatro passivos que age no custo e não no
- * aluguel, e por isso precisa do estado (a posse) que `buildCost` puro não tem.
+ * aluguel, e por isso precisa do estado (a posse) que `levelCost` puro não tem.
+ *
+ * O nível é DERIVADO do estado por padrão (o próximo é sempre `cityLevel + 1`) — quem chama
+ * não precisa saber a escada. `level` explícito só para simular um degrau hipotético.
  *
  * Toda decisão de caixa — a guarda de `canBuildHouse` e o débito de `buildHouse` — usa
- * ESTA, nunca `buildCost` direto: se as duas divergirem, o botão libera uma construção que
+ * ESTA, nunca `levelCost` direto: se as duas divergirem, o botão libera uma construção que
  * o jogador não paga (ou cobra o que ele não devia).
  */
-export function buildCostFor(state: GameState, square: PropertySquare, ownerId: string): number {
-  const base = buildCost(square)
+export function buildCostFor(
+  state: GameState,
+  square: PropertySquare,
+  ownerId: string,
+  level?: number,
+): number {
+  const target = level ?? cityLevel(state.titles[square.pos]) + 1
+  const base = levelCost(square, target)
   return ownsMine(state, 'ferro', ownerId) ? Math.round(base * THEME.MINE_BONUS.ferro) : base
 }
 
@@ -208,7 +251,10 @@ export function sellBuilding(state: GameState, pos: number): GameState {
   const s = clone(state)
   const p = s.players.find((x) => x.id === liquidatorOf(s))! // o devedor, se houver dívida
   const t = s.titles[pos]
-  const amount = Math.round(buildCost(sq as PropertySquare) / 2)
+  // Metade do nível QUE ESTÁ SENDO DEMOLIDO, não do tier base (D-081). Com custo por nível,
+  // reembolsar sempre o tier faria o arranha-céu devolver o preço de meia primeira casa —
+  // e a escada viraria armadilha de mão única.
+  const amount = Math.round(levelCost(sq as PropertySquare, cur) / 2)
   p.cash += amount
 
   if (cur === 7) {

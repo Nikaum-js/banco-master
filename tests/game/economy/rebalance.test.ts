@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { rentLadder } from '@/game/economy/rent'
-import { buildCost } from '@/game/economy/construction'
+import { buildCost, buildLadderCost, investedCost } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
 import { BOARD, type GroupKey, type PropertySquare } from '@/lib/boardData'
 
@@ -63,6 +63,71 @@ describe('Rebalance 032 — tiers de casa e sweet spot (US2)', () => {
     const roi = (g: GroupKey) => topHotel(g) / THEME.HOUSE_COST[g]
     expect(roi('orange')).toBeGreaterThan(roi('green'))
     expect(roi('red')).toBeGreaterThan(roi('green'))
+  })
+})
+
+describe('D-081 — custo de construção por nível', () => {
+  const ladder = (g: GroupKey) => buildLadderCost(cities(g)[0])
+  // Aluguel que CADA degrau acrescenta, numa cidade de país completo.
+  const rentSteps = (g: GroupKey) => {
+    const l = rentLadder(g, topBase(g))
+    const rents = [topBase(g) * 2, ...l.house, l.hotel, l.hotel2, l.skyscraper]
+    return rents.slice(1).map((r, i) => r - rents[i])
+  }
+
+  it('a escada de custo nunca decresce e o topo custa 3× a primeira casa', () => {
+    for (const g of GROUPS) {
+      const cs = ladder(g)
+      expect(cs).toHaveLength(7)
+      for (let i = 1; i < cs.length; i++) expect(cs[i]).toBeGreaterThanOrEqual(cs[i - 1])
+      expect(cs[6]).toBe(cs[0] * 3)
+      expect(cs.every((c) => c % 5 === 0)).toBe(true) // valores legíveis num botão
+    }
+  })
+
+  it('a entrada continua barata: 1ª e 2ª casa mantêm o tier do grupo', () => {
+    for (const g of GROUPS) {
+      const cs = ladder(g)
+      expect(cs[0]).toBe(THEME.HOUSE_COST[g])
+      expect(cs[1]).toBe(THEME.HOUSE_COST[g])
+    }
+  })
+
+  it('a inversão foi consertada: o arranha-céu rende MENOS por real que a 3ª casa', () => {
+    // Era o furo do custo flat — o topo da escada era o melhor negócio do tabuleiro.
+    for (const g of GROUPS) {
+      const cs = ladder(g)
+      const steps = rentSteps(g)
+      const roiTerceira = steps[2] / cs[2]
+      const roiArranha = steps[6] / cs[6]
+      expect(roiArranha).toBeLessThan(roiTerceira)
+      expect(roiArranha).toBeLessThan(1.2) // topo não se paga numa batida só
+    }
+  })
+
+  it('a 3ª casa segue sendo o sweet spot do gênero', () => {
+    for (const g of GROUPS) {
+      const cs = ladder(g)
+      const steps = rentSteps(g)
+      const roi = steps.map((s, i) => s / cs[i])
+      expect(Math.max(...roi)).toBe(roi[2])
+    }
+  })
+
+  it('país completo no topo leva ≥ 2,4 visitas para se pagar', () => {
+    for (const g of GROUPS) {
+      const cs = cities(g)
+      const investido = cs.reduce((a, c) => a + c.price + investedCost(c, 7), 0)
+      const aluguelMedio = cs.reduce((a, c) => a + rentLadder(g, c.rent).skyscraper, 0) / cs.length
+      expect(investido / aluguelMedio).toBeGreaterThanOrEqual(2.4)
+    }
+  })
+
+  it('investedCost é a soma da escada, não nível × tier', () => {
+    const berlim = cities('orange')[0]
+    expect(investedCost(berlim, 7)).toBe(buildLadderCost(berlim).reduce((a, b) => a + b, 0))
+    expect(investedCost(berlim, 7)).toBeGreaterThan(7 * buildCost(berlim)) // o atalho antigo
+    expect(investedCost(berlim, 0)).toBe(0)
   })
 })
 

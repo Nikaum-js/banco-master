@@ -21,7 +21,7 @@ import { ownerOf, isMortgaged, groupOwnedCount, groupSize, countOwned, groupHasS
 import { hasImmunity } from '@/game/economy/imunidade'
 import { apagaoActive, greveActive, isBoycotted, isPlayerImmune, isValorizada, estatizacaoActive } from '@/game/economy/tempEffects'
 import { mortgageValue, unmortgageCost, transferKeepFee } from '@/game/economy/mortgage'
-import { buildCost, cityLevel, HANGAR_COST } from '@/game/economy/construction'
+import { levelCost, cityLevel, HANGAR_COST } from '@/game/economy/construction'
 import { netWorth } from '@/game/cards/effects'
 import { cardById } from '@/game/cards/catalog'
 import { activeLoanFor } from '@/game/emprestimos/emprestimos'
@@ -554,9 +554,11 @@ function checkDirectAction(prev: GameState, next: GameState, action: SimAction, 
       const sq = BOARD[action.pos]
       const actor = activePlayer(prev)
       if (sq.kind !== 'property' || prev.titles[action.pos]?.ownerId !== actor.id) return
+      // D-081: o degrau que está sendo construído é o próximo, e cada um tem preço próprio.
+      const alvo = cityLevel(prev.titles[action.pos]) + 1
       const buildAmount = actor.nextBuildFree
         ? 0
-        : Math.round(buildCost(sq) * (ownsMine(prev, 'ferro', actor.id) ? THEME.MINE_BONUS.ferro : 1))
+        : Math.round(levelCost(sq, alvo) * (ownsMine(prev, 'ferro', actor.id) ? THEME.MINE_BONUS.ferro : 1))
       addCash(ledger, actor.id, -buildAmount) // Obra Relâmpago (D-064) + Mina de Ferro
       mark(ledger, 'build-house')
       return
@@ -565,8 +567,9 @@ function checkDirectAction(prev: GameState, next: GameState, action: SimAction, 
       const sq = BOARD[action.pos]
       const who = liquidatorOf(prev)
       if (sq.kind !== 'property' || prev.titles[action.pos]?.ownerId !== who) return
-      if (cityLevel(prev.titles[action.pos]) === 0) return
-      addCash(ledger, who, Math.round(buildCost(sq) / 2))
+      const nivel = cityLevel(prev.titles[action.pos])
+      if (nivel === 0) return
+      addCash(ledger, who, Math.round(levelCost(sq, nivel) / 2)) // D-081: metade do degrau demolido
       mark(ledger, 'sell-building')
       return
     }
