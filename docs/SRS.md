@@ -700,7 +700,9 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 ### 11.2 Entrada na Sala
 
 - Qualquer pessoa com o link entra antes da partida iniciar.
-- Cada jogador escolhe **nome** e **token/peça** antes de entrar.
+- Cada jogador escolhe **nome** e **cor** antes de entrar. A cor é **única na sala** e é o que distingue os jogadores na mesa.
+
+> 📌 **A peça saiu** (v1.10, [D-044](adr/D-044-remocao-da-peca-do-jogador.md)): a escolha de **token/peça** (avião, navio, trem…) foi removida — nunca chegou ao tabuleiro, onde o token sempre foi o avatar pintado com a cor do assento. Com ela fora, a **cor** é o único distintivo, e por isso a paleta das oito passou a ser derivada e verificada sob dicromacia ([D-045](adr/D-045-paleta-de-assentos-derivada-em-oklch.md)) em vez de escolhida a olho.
 - Após início, não é possível adicionar novos jogadores.
 
 ### 11.3 Desconexão e Reconexão

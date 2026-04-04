@@ -54,6 +54,8 @@
 - [D-041](D-041-publicacao-em-vercel-com-gate-verde.md) — Publicação na Vercel: preview por PR, produção promovida só com gate verde (decisão técnica)
 - [D-042](D-042-identidade-de-transporte-atestada-pelo-servidor.md) — Identidade de transporte atestada pelo servidor (sessão anônima; refina D-019/D-020/D-033)
 - [D-043](D-043-o-codigo-de-reentrada-e-imutavel-e-a-autoridade-o-le.md) — O código de reentrada é imutável, e a autoridade o lê (refina D-033/D-036/D-037)
+- [D-044](D-044-remocao-da-peca-do-jogador.md) — Remoção da peça do jogador: identidade na mesa é nome + cor (revoga FR-022/023 da 038)
+- [D-045](D-045-paleta-de-assentos-derivada-em-oklch.md) — Paleta de assentos derivada em OKLCH, verificada sob dicromacia (refina D-044)
 
 > ℹ️ **Renumeração na integração da 043** (a colisão que este arquivo avisava): a worktree da 043
 > tinha escrito a identidade de transporte como `D-035` e o código de reentrada como `D-038`, e
