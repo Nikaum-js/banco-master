@@ -87,7 +87,6 @@ export function ModalLayer() {
   const chooseBusMove = useGameStore((s) => s.chooseBusMove)
   const chooseTripleDest = useGameStore((s) => s.chooseTripleDest)
   const confirmCardReveal = useGameStore((s) => s.confirmCardReveal)
-  const chooseBusRide = useGameStore((s) => s.chooseBusRide)
   const useBusTicketCmd = useGameStore((s) => s.useBusTicket)
   const busArmed = useBusTicketUI((s) => s.armed)
   const disarmBus = useBusTicketUI((s) => s.disarm)
@@ -95,8 +94,8 @@ export function ModalLayer() {
   const view = activeModal(game)
   const activeId = game.players[game.turnOrder[game.activeSeat]].id
   const activePlayer = game.players[game.turnOrder[game.activeSeat]]
-  // Seletor de uso de ticket GUARDADO (carta): aberto pelo HUD, só antes de rolar.
-  const showBusArmed = busArmed && game.turn.state === 'aguardando-rolagem' && activePlayer.busTickets >= 1 && sideOf(activePlayer.pos) !== null
+  // Seletor de uso de ticket GUARDADO: aberto pelo HUD. Usável antes de rolar OU no fim do turno (034).
+  const showBusArmed = busArmed && (game.turn.state === 'aguardando-rolagem' || game.turn.state === 'aguardando-finalizacao') && activePlayer.busTickets >= 1 && sideOf(activePlayer.pos) !== null
 
   return (
     <AnimatePresence>
@@ -127,15 +126,6 @@ export function ModalLayer() {
           transition={{ duration: 0.15 }}
           className="fixed inset-0 z-[60] flex items-center justify-center bg-coffee-950/70 backdrop-blur-[2px] p-4"
         >
-          {view.kind === 'bus-ride' && (
-            <BusPicker
-              fromPos={view.pos}
-              title="Bus Ticket"
-              subtitle="Você parou no ônibus — escolha aonde ir (mesmo lado)"
-              onPick={(pos) => chooseBusRide(pos)}
-            />
-          )}
-
           {view.kind === 'auction' && (
             <AuctionCard view={view} activeId={activeId} placeBid={placeBid} />
           )}
@@ -262,6 +252,7 @@ function SideRow({ fromPos, onPick }: { fromPos: number; onPick: (pos: number) =
   const players = useGameStore((s) => s.game.players)
   const turnOrder = useGameStore((s) => s.game.turnOrder)
   const activeSeat = useGameStore((s) => s.game.activeSeat)
+  const titles = useGameStore((s) => s.game.titles)
   const activeIdx = turnOrder[activeSeat] // índice em players do jogador da vez
   const side = sideOf(fromPos)
   const cells = BOARD.filter((sq) => sideOf(sq.pos) === side).reverse() // casas do lado, na ordem do tabuleiro (de trás pra frente)
@@ -279,6 +270,11 @@ function SideRow({ fromPos, onPick }: { fromPos: number; onPick: (pos: number) =
         const stripe = isProp ? GROUP_COLOR[(sq as PropertySquare).group]
           : sq.kind === 'airport' || sq.kind === 'utility' ? '#d4af37' : 'transparent'
         const price = 'price' in sq ? sq.price : null
+        // Posse (igual ao tabuleiro): casa com dono "veste" a cor dele (tint + moldura)
+        // e NÃO mostra preço — só casa livre exibe valor.
+        const ownerId = titles[sq.pos]?.ownerId
+        const oi = ownerId ? players.findIndex((p) => p.id === ownerId) : -1
+        const ownerColor = oi >= 0 ? PLAYER_COLORS[oi % PLAYER_COLORS.length] : undefined
         const faces = facesAt[sq.pos] ?? []
         return (
           <button
@@ -293,6 +289,13 @@ function SideRow({ fromPos, onPick }: { fromPos: number; onPick: (pos: number) =
             )}
           >
             <span className="h-2 w-full shrink-0" style={{ background: stripe }} />
+            {/* Posse — veste a cor do dono (tint + moldura), como na célula do tabuleiro */}
+            {ownerColor && !isFrom && (
+              <>
+                <span className="absolute inset-0 pointer-events-none" style={{ background: ownerColor, opacity: 0.16 }} aria-hidden />
+                <span className="absolute inset-0 pointer-events-none" style={{ boxShadow: `inset 0 0 0 2px ${ownerColor}` }} aria-hidden />
+              </>
+            )}
             <span className="flex-1 flex flex-col items-center justify-center gap-0.5 px-1 text-center min-h-0">
               {/* Propriedade = bandeira do país; demais tipos = glifo da casa (acaso/Tesouro/aeroporto/utilidade/taxa/cantos) */}
               {isProp ? (
@@ -311,7 +314,7 @@ function SideRow({ fromPos, onPick }: { fromPos: number; onPick: (pos: number) =
                 <span className="text-gold leading-none"><SquareIcon square={sq} size={20} /></span>
               )}
               <span className="text-cream leading-tight" style={{ fontSize: '9px' }}>{isFrom ? 'VOCÊ AQUI' : sq.name}</span>
-              {price != null && <span className="currency text-gold-glow leading-none" style={{ fontSize: '11px' }}>R$ {price}</span>}
+              {!ownerColor && price != null && <span className="currency text-gold-glow leading-none" style={{ fontSize: '11px' }}>R$ {price}</span>}
             </span>
             <span className="flex items-center justify-center gap-px flex-wrap shrink-0 pb-1 min-h-[16px]">
               {faces.slice(0, 4).map((f, j) => (
@@ -326,7 +329,7 @@ function SideRow({ fromPos, onPick }: { fromPos: number; onPick: (pos: number) =
 }
 
 // Seletor de destino do Bus Ticket — a FILEIRA (lado) como uma faixa de casas com
-// nome vertical. Usado pelo espaço (D-021, chooseBusRide) e pela carta (useBusTicket).
+// nome vertical. Usado pelo Bus Ticket guardado (carta ou espaço §2.7) via useBusTicket.
 function BusPicker({
   fromPos,
   title,
@@ -387,7 +390,7 @@ function DiscardRow({ card, onPick }: { card: HandCardView; onPick: () => void }
 type AuctionSquare = Extract<ModalView, { kind: 'auction' }>['square']
 function deedRows(sq: AuctionSquare): { label: string; value: string }[] {
   if (sq.kind === 'property') {
-    const r = computeRents((sq as PropertySquare).rent)
+    const r = computeRents((sq as PropertySquare).group, (sq as PropertySquare).rent)
     return [
       { label: 'Com aluguel', value: `R$ ${r.base}` },
       { label: '1 casa', value: `R$ ${r.house1}` },
@@ -395,6 +398,8 @@ function deedRows(sq: AuctionSquare): { label: string; value: string }[] {
       { label: '3 casas', value: `R$ ${r.house3}` },
       { label: '4 casas', value: `R$ ${r.house4}` },
       { label: 'Hotel', value: `R$ ${r.hotel}` },
+      { label: '2º hotel', value: `R$ ${r.hotel2}` },
+      { label: 'Arranha-céu', value: `R$ ${r.skyscraper}` },
     ]
   }
   if (sq.kind === 'airport') {
