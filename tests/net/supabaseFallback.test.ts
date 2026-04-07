@@ -46,7 +46,7 @@ describe('supabaseTransport — janela de deploy da retenção', () => {
 
     const roomWrites = calls.filter(({ fn }) => fn === 'write_room')
     const snapshotWrites = calls.filter(({ fn }) => fn === 'write_snapshot')
-    // Escada 0008 → 0007 → 0006 → 0005: o primeiro degrau carrega o board_id (055).
+    // Escada 0009 → 0007 → 0006 → 0005: o primeiro degrau carrega o board_id (055).
     expect(roomWrites).toHaveLength(4)
     expect(snapshotWrites).toHaveLength(4)
     expect(roomWrites[0].args).toHaveProperty('board_id', 'atlas')

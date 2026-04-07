@@ -94,7 +94,7 @@ export interface Room {
   /** D-067: até 10 resumos finais da própria sala. Opcional só no fio legado. */
   matchHistory?: RoomMatchHistoryEntry[]
   /** 055/D-069: mapa jogável da sala. Escolhido ANTES da criação e imutável (não existe
-   * mutador). Opcional apenas para absorver salas anteriores à migration 0008 — a
+   * mutador). Opcional apenas para absorver salas anteriores à migration 0009 — a
    * normalização resolve ausência/valor desconhecido para 'atlas'. */
   boardId?: BoardId
 }

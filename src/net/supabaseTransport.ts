@@ -607,7 +607,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         board_id: room.boardId ?? 'atlas',
       }
       let { error } = await supabase.rpc('write_room', args)
-      // Janela segura de deploy: 0008 pode chegar depois do frontend — a 0007 persiste tudo
+      // Janela segura de deploy: 0009 pode chegar depois do frontend — a 0007 persiste tudo
       // menos o mapa (que então só vive na difusão/snapshot em memória até a migration).
       if (isMissingRpcSignature(error)) {
         const { board_id: _boardId, ...withoutBoard } = args
@@ -689,7 +689,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         opening_mode: room.openingMode ?? 'sealed-bid',
         board_id: room.boardId ?? 'atlas',
       })
-      // Janela de deploy da 0008 — a coluna tem default e o mapa não muda na revanche.
+      // Janela de deploy da 0009 — a coluna tem default e o mapa não muda na revanche.
       if (isMissingRpcSignature(error)) {
         const previous = await supabase.rpc('reopen_room', {
           room_id: roomId,

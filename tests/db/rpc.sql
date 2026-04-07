@@ -345,7 +345,7 @@ end $$;
 delete from public.rooms where id = 'TEST01';
 
 -- ---------------------------------------------------------------------------------------------
--- 11. Mapa da sala (0008/D-069): gravado na criação, imutável no upsert, lido nas prévias.
+-- 11. Mapa da sala (0009/D-069): gravado na criação, imutável no upsert, lido nas prévias.
 -- ---------------------------------------------------------------------------------------------
 delete from public.rooms where id = 'TEST02';
 select pg_temp.act_as(:'host_uid');

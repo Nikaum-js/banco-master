@@ -410,7 +410,7 @@ export function fakeSupabase(): FakeSupabase {
               openingMode: args.opening_mode,
               openingAuction: args.opening_auction,
               matchHistory: mergeMatchHistory(existing?.matchHistory, args.match_history),
-              // Espelho da 0008: a coluna tem default 'atlas' e o valor gravado nunca muda
+              // Espelho da 0009: a coluna tem default 'atlas' e o valor gravado nunca muda
               // depois de existir (o CHECK real valida; aqui basta preservar/defaultar).
               boardId: existing?.boardId ?? args.board_id ?? 'atlas',
             })

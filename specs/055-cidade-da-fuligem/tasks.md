@@ -14,7 +14,7 @@
 - [ ] T005 `src/net/room.ts`: `boardId` em `Room`/`PublicRoom`/`toPublicRoom`/`normalizeRoom`/`createRoom`; `prepareRematch` preserva
 - [ ] T006 `src/net/roomSession.ts`: opção `initialBoardId` → `createRoom`
 - [ ] T007 Transportes: `supabaseTransport` (5 pontos + fallbacks de assinatura), `localTransport`, `tests/net/fakeSupabase.ts`
-- [ ] T008 `supabase/migrations/0008_room_board_id.sql`: coluna + CHECK, `room_preview`/`read_snapshot` recriadas, overloads `write_room`/`write_snapshot`/`reopen_room`; `tests/db/rpc.sql`
+- [ ] T008 `supabase/migrations/0009_room_board_id.sql`: coluna + CHECK, `room_preview`/`read_snapshot` recriadas, overloads `write_room`/`write_snapshot`/`reopen_room`; `tests/db/rpc.sql`
 - [ ] T009 Testes de rede: criação com `fuligem`, fallback `atlas` (sala legada/snapshot antigo), preservação em revanche, propagação a convidado/reload/reconexão, imutabilidade (sem mutador)
 
 ## Fase 3 — Eixo visual pelo mapa autoritativo (FR-005)

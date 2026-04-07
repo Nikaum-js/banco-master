@@ -27,7 +27,7 @@ Antes de a sala publicar, o paint inicial é `atlas` (fallback documentado na sp
 
 - `Room.boardId?: BoardId` (opcional para salas legadas) + `PublicRoom` + `toPublicRoom` + `normalizeRoom` (coage: `'fuligem'` só quando explícito, senão `'atlas'`) + `createRoom(id, host, {boardId})`. `prepareRematch` preserva (mapa pertence à sala). **Sem mutador** — imutável por construção (não existe `selectBoardId`).
 - Transportes: `supabaseTransport` (`saveRoom`/`loadRoom`/`reopenRoom`/`saveSnapshot`/`loadSnapshot` + fallbacks de assinatura para janela de deploy), `localTransport`, `tests/net/fakeSupabase.ts`.
-- **Migration `0008_room_board_id.sql`**: coluna `board_id text not null default 'atlas'` + CHECK `in ('atlas','fuligem')` (modelo: 0005), recriação de `room_preview`/`read_snapshot` com `'boardId'`, overloads aditivos de `write_room`/`write_snapshot`/`reopen_room` (assinaturas antigas permanecem — comentário do 0007). `tests/db/rpc.sql` cobre. **A migration NÃO é aplicada em produção nesta entrega** (RUNBOOK §1 é o procedimento; sem deploy autorizado).
+- **Migration `0009_room_board_id.sql`**: coluna `board_id text not null default 'atlas'` + CHECK `in ('atlas','fuligem')` (modelo: 0005), recriação de `room_preview`/`read_snapshot` com `'boardId'`, overloads aditivos de `write_room`/`write_snapshot`/`reopen_room` (assinaturas antigas permanecem — comentário do 0007). `tests/db/rpc.sql` cobre. **A migration NÃO é aplicada em produção nesta entrega** (RUNBOOK §1 é o procedimento; sem deploy autorizado).
 
 ### D4 — Remoção do Neon é substituição de eixo, não convivência
 
@@ -70,7 +70,7 @@ Home (nova), telas de entrada/lobby/erro/reentrada (EntryStage por tema), tabule
 ## Fases
 
 1. **Fundação de dados**: `BoardId` + catálogo + Fuligem board + testes de paridade.
-2. **Sala**: `Room.boardId` ponta a ponta (room → session → host → transportes → SQL 0008 → fakeSupabase) + testes de rede.
+2. **Sala**: `Room.boardId` ponta a ponta (room → session → host → transportes → SQL 0009 → fakeSupabase) + testes de rede.
 3. **Eixo visual**: boardTheme colapsado, aplicação pela sala, `?map=` local.
 4. **Remoção Neon + Fuligem visual**: componentes, CSS, fontes, home nova, lobby, palco, tabuleiro, cartas/labels.
 5. **Som**.

@@ -97,7 +97,7 @@ describe('boardId — sessão sobre o hub local', () => {
   })
 })
 
-describe('boardId — espelho das RPCs do Supabase (migration 0008)', () => {
+describe('boardId — espelho das RPCs do Supabase (migration 0009)', () => {
   it('write_room → room_preview faz o mapa sobreviver ao ciclo completo', async () => {
     const fake = fakeSupabase()
     const transport = supabaseTransport(fake.client('uid-host'), 'sala-rpc', 'uid-host')
