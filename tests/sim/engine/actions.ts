@@ -7,6 +7,7 @@ import { canBuildHouse, canSellBuilding, canBuildHangar, canSellHangar } from '@
 import { canMortgage, canUnmortgage } from '@/game/economy/mortgage'
 import { ownerOf } from '@/game/economy/titles'
 import { tradableProps, validateTrade, type Trade } from '@/game/economy/trade'
+import { tradeBalance } from '@/game/economy/appraisal'
 import { committedCash } from '@/game/economy/landAuction'
 import { activeLoanFor } from '@/game/emprestimos/emprestimos'
 import { cardById } from '@/game/cards/catalog'
@@ -63,8 +64,14 @@ function handCardActions(game: GameState, active: Player): SimAction[] {
   return out
 }
 
-// Propostas de troca sempre VÁLIDAS pelos gates (024) — trivial (vazia) e com 1 propriedade
-// negociável do proponente. Cobertura básica de US1 cenário de troca sob fuzzing.
+// Propostas de troca sempre VÁLIDAS pelos gates (024) — trivial (vazia), doação de 1
+// propriedade e a mesma propriedade PAGA no piso da §8.5. Cobertura básica de US1 sob fuzzing.
+//
+// A forma paga entrou com a 050 e não é enfeite: até então, a única troca do lote que MOVIA
+// propriedade era a doação, e a D-055 tornou doação inválida. Sem substituta, o fuzzing parou
+// de redistribuir tabuleiro e a convergência despencou — medido na seed 20860713 com 6
+// jogadores, a partida saltou de 486 para 4506 rodadas e estourou o teto do lote. O defeito
+// era do harness, não da regra: ele só sabia propor exatamente aquilo que passou a ser proibido.
 function candidateTrades(game: GameState): { fromId: string; trade: Trade }[] {
   const alive = game.players.filter((p) => !p.eliminated)
   const out: { fromId: string; trade: Trade }[] = []
@@ -77,6 +84,11 @@ function candidateTrades(game: GameState): { fromId: string; trade: Trade }[] {
       if (tradable.length > 0) {
         const withProp: Trade = { ...empty, fromProps: [tradable[0]] }
         if (validateTrade(game, withProp)) out.push({ fromId: from.id, trade: withProp })
+        // O preço vem do próprio motor (`tradeBalance`), não de uma fração escrita aqui: se o
+        // piso da §8.5 for recalibrado, o lote acompanha sem ninguém lembrar de vir editar.
+        const price = tradeBalance(game, withProp).from.missing
+        const paid: Trade = { ...withProp, toCash: price }
+        if (price > 0 && price <= to.cash && validateTrade(game, paid)) out.push({ fromId: from.id, trade: paid })
       }
     }
   }
