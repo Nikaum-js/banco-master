@@ -1376,13 +1376,24 @@ function SpeedFaceContent({ kind, transform }: { kind: SpeedFace; transform: str
 // Acumula 720° a cada roll (2 voltas) e termina na rotação de repouso da face
 // desejada — motion interpola monotonamente, então o cubo sempre gira "pra
 // frente" e pousa exatamente na face certa.
-function useDieAnimation(value: number, rollKey: number) {
+//
+// 044/T076 (FR-021): esta coreografia NUNCA consultou `prefers-reduced-motion` — rodava o
+// tombo inteiro (~1,05s) mesmo para quem pediu menos movimento, ficando mais visível depois
+// da T071 (o peão já sai andando com o gate zerado, enquanto o dado ainda tombava). Sob
+// movimento reduzido, `reduced` crava o cubo direto na rotação de repouso da face sorteada
+// com `duration: 0` — mesmo freio do D7 (o vocabulário de `motion.ts`): o FATO (a face) fica
+// legível na hora, só o chacoalho/quique somem.
+function useDieAnimation(value: number, rollKey: number, reduced: boolean) {
   const [scope, animate] = useAnimate()
 
   useEffect(() => {
     if (rollKey === 0 || !scope.current) return
     const el = scope.current
     const [rx, ry] = FACE_REST[value]
+    if (reduced) {
+      void animate(el, { y: 0, rotateX: rx, rotateY: ry }, { duration: 0 })
+      return
+    }
     const base = rollKey * 720
     const run = async () => {
       // Fase 1 — chacoalho: o dado sobe e gira solto no ar ("dentro do copo").
@@ -1408,13 +1419,14 @@ function useDieAnimation(value: number, rollKey: number) {
     }
     void run()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rollKey])
+  }, [rollKey, reduced])
 
   return scope
 }
 
 function Dice({ value, rollKey }: { value: number; rollKey: number }) {
-  const scope = useDieAnimation(value, rollKey)
+  const { reduced } = useMotion()
+  const scope = useDieAnimation(value, rollKey, reduced)
   const [initRx, initRy] = FACE_REST[value]
 
   return (
@@ -1422,8 +1434,8 @@ function Dice({ value, rollKey }: { value: number; rollKey: number }) {
       <motion.div
         aria-hidden="true"
         className="dice-shadow absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-10 h-1.5 rounded-full bg-black/60 blur-[3px]"
-        animate={rollKey > 0 ? { scaleX: [1, 0.4, 0.4, 1.15, 1, 1.08, 1], opacity: [0.55, 0.15, 0.15, 0.65, 0.5, 0.6, 0.55] } : { scaleX: 1, opacity: 0.55 }}
-        transition={{ duration: 1.05, times: [0, 0.08, 0.55, 0.6, 0.7, 0.85, 1] }}
+        animate={reduced ? { scaleX: 1, opacity: 0.55 } : rollKey > 0 ? { scaleX: [1, 0.4, 0.4, 1.15, 1, 1.08, 1], opacity: [0.55, 0.15, 0.15, 0.65, 0.5, 0.6, 0.55] } : { scaleX: 1, opacity: 0.55 }}
+        transition={{ duration: reduced ? 0 : 1.05, times: [0, 0.08, 0.55, 0.6, 0.7, 0.85, 1] }}
       />
       <motion.div
         ref={scope}
@@ -1449,7 +1461,8 @@ function SpeedDie({ face, rollKey }: { face: SpeedFace; rollKey: number }) {
     one: 1, two: 2, three: 3, mr: 4, bus: 5,
   }
   const value = FACE_INDEX[face]
-  const scope = useDieAnimation(value, rollKey)
+  const { reduced } = useMotion()
+  const scope = useDieAnimation(value, rollKey, reduced)
   const [initRx, initRy] = FACE_REST[value]
 
   return (
@@ -1457,8 +1470,8 @@ function SpeedDie({ face, rollKey }: { face: SpeedFace; rollKey: number }) {
       <motion.div
         aria-hidden="true"
         className="dice-shadow absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-10 h-1.5 rounded-full bg-black/60 blur-[3px]"
-        animate={rollKey > 0 ? { scaleX: [1, 0.4, 0.4, 1.15, 1, 1.08, 1], opacity: [0.55, 0.15, 0.15, 0.65, 0.5, 0.6, 0.55] } : { scaleX: 1, opacity: 0.55 }}
-        transition={{ duration: 1.05, times: [0, 0.08, 0.55, 0.6, 0.7, 0.85, 1] }}
+        animate={reduced ? { scaleX: 1, opacity: 0.55 } : rollKey > 0 ? { scaleX: [1, 0.4, 0.4, 1.15, 1, 1.08, 1], opacity: [0.55, 0.15, 0.15, 0.65, 0.5, 0.6, 0.55] } : { scaleX: 1, opacity: 0.55 }}
+        transition={{ duration: reduced ? 0 : 1.05, times: [0, 0.08, 0.55, 0.6, 0.7, 0.85, 1] }}
       />
       <motion.div
         ref={scope}
