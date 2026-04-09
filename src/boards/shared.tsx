@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils'
 import { Crown } from 'lucide-react'
 import { motion, AnimatePresence, useAnimate } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare } from '@/lib/boardData'
 import { BOARD } from '@/lib/boardData'
@@ -12,6 +12,8 @@ import { THEME } from '@/game/theme'
 import { deedView } from '@/game/ui/deed/deedView'
 import { useTradeUI } from '@/game/ui/trade/TradeLayer'
 import { HandPanel } from '@/game/ui/cards/HandPanel'
+import { useTokenAnim } from '@/game/ui/tokenAnim'
+import { ShopIcon, GavelIcon, DiceIcon } from '@/game/ui/icons'
 import { tradesView } from '@/game/ui/trade/tradesView'
 import type { GameState } from '@/game/turn/types'
 import type { TempEffect, Trade, ImmunityGrant } from '@/game/economy/types'
@@ -1368,23 +1370,26 @@ export function MortgageMark({ pos }: { pos: number }) {
 export function EffectMark({ pos }: { pos: number }) {
   const effects = useGameStore((s) => s.game.tempEffects)
   const sq = BOARD[pos]
-  let badge: { icon: string; title: string } | null = null
+  let badge: { tag: string; tone: 'logo' | 'gold'; title: string } | null = null
   for (const e of effects) {
-    if (e.kind === 'apagao' && sq.kind === 'airport') badge = { icon: '⚡', title: 'Apagão — hangar inativo' }
-    else if (e.kind === 'greve' && sq.kind === 'utility') badge = { icon: '⚡', title: 'Greve — utilidade sem aluguel' }
-    else if (e.kind === 'boicote' && e.pos === pos) badge = { icon: '🚫', title: 'Boicote — sem aluguel' }
-    else if (e.kind === 'imunidade-temp' && e.pos === pos) badge = { icon: '🛡️', title: 'Imunidade temporária' }
+    if (e.kind === 'apagao' && sq.kind === 'airport') badge = { tag: 'A', tone: 'logo', title: 'Apagão — hangar inativo' }
+    else if (e.kind === 'greve' && sq.kind === 'utility') badge = { tag: 'G', tone: 'logo', title: 'Greve — utilidade sem aluguel' }
+    else if (e.kind === 'boicote' && e.pos === pos) badge = { tag: 'B', tone: 'logo', title: 'Boicote — sem aluguel' }
+    else if (e.kind === 'imunidade-temp' && e.pos === pos) badge = { tag: 'I', tone: 'gold', title: 'Imunidade temporária' }
   }
   if (!badge) return null
   return (
     <motion.div
-      className="absolute top-0.5 right-0.5 z-[26] pointer-events-none leading-none"
-      style={{ fontSize: '11px', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.8))' }}
+      className={cn(
+        'absolute top-0.5 right-0.5 z-[26] pointer-events-none leading-none flex items-center justify-center rounded-full font-bold',
+        badge.tone === 'logo' ? 'bg-logo text-cream' : 'bg-gold text-coffee-950',
+      )}
+      style={{ width: 13, height: 13, fontSize: '9px', boxShadow: '0 1px 2px rgba(0,0,0,0.7)' }}
       title={badge.title}
-      animate={{ opacity: [0.55, 1, 0.55] }}
+      animate={{ opacity: [0.6, 1, 0.6] }}
       transition={{ duration: 1.6, repeat: Infinity }}
     >
-      {badge.icon}
+      {badge.tag}
     </motion.div>
   )
 }
@@ -1439,13 +1444,15 @@ function useLivePlayers(): Player[] {
 
 export function PlayersPanel() {
   const players = useLivePlayers()
-  const log = useGameStore((s) => s.game.log) // 021 — log real do jogo
-  const history = [...log].reverse() // mais recentes ao topo (recência = ordem no log)
   const effects = useGameStore((s) => s.game.tempEffects).map(effectRow) // 024.1 — efeitos reais
   const bankHouses = useGameStore((s) => s.game.bank.houses) // 026
   const auctionOpen = useGameStore((s) => s.game.houseAuction !== null)
   const openHouseAuction = useGameStore((s) => s.openHouseAuction)
-  const liveIds = useGameStore((s) => s.game.players.filter((p) => !p.eliminated).map((p) => p.id))
+  // Selecionar a lista ESTÁVEL e derivar no corpo: um seletor que faz .filter().map()
+  // devolve array novo a cada chamada → useSyncExternalStore entra em loop ("getSnapshot
+  // should be cached"). `s.game.players` é ref estável (só muda quando o estado muda).
+  const allPlayers = useGameStore((s) => s.game.players)
+  const liveIds = allPlayers.filter((p) => !p.eliminated).map((p) => p.id)
   const canAuctionHouses = bankHouses >= 1 && liveIds.length >= 2 && !auctionOpen
   return (
     <aside className="side-panel">
@@ -1463,7 +1470,7 @@ export function PlayersPanel() {
             onClick={() => useTradeUI.getState().show()}
             className="mt-3 w-full px-3 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-700 border border-coffee-500 text-cream text-sm font-bold hover:border-gold hover:bg-coffee-600 transition-colors"
           >
-            🤝 Negociar
+            Negociar
           </button>
         )}
         {canAuctionHouses && (
@@ -1472,40 +1479,11 @@ export function PlayersPanel() {
             onClick={() => openHouseAuction(bankHouses, liveIds)}
             className="mt-2 w-full px-3 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-700 border border-coffee-500 text-cream text-sm font-bold hover:border-gold hover:bg-coffee-600 transition-colors"
           >
-            🏘 Leilão de casas ({bankHouses})
+            Leilão de casas ({bankHouses})
           </button>
         )}
       </div>
 
-      <div className="side-panel-section">
-        <p className="label text-gold mb-3">Histórico</p>
-        {history.length === 0 ? (
-          <div className="flex items-center justify-center px-3 py-4 rounded-[var(--radius-card)] border border-dashed border-coffee-500 bg-coffee-800/40">
-            <p className="label text-cream-muted text-center leading-snug">
-              Nenhum evento ainda
-            </p>
-          </div>
-        ) : (
-          <ol className="flex flex-col gap-0">
-            {history.map((l, i) => (
-              <li
-                key={i}
-                className="flex items-baseline gap-2 px-1 py-2 border-b border-coffee-500/60 last:border-0"
-              >
-                <span className={cn(
-                  'display text-sm leading-none shrink-0',
-                  l.who === 'Banco' ? 'text-logo' : 'text-cream',
-                )}>
-                  {l.who}
-                </span>
-                <span className="text-cream-muted text-sm leading-tight flex-1">
-                  {l.what}
-                </span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
 
       <div className="side-panel-section">
         <p className="label text-gold mb-3">Efeitos ativos</p>
@@ -1586,7 +1564,7 @@ function PlayerRow({ player: p }: { player: Player }) {
         <div className="flex items-baseline gap-1.5">
           <p className="display text-cream text-[17px] leading-none truncate">{p.name}</p>
           {p.loanActive  && <span title="Empréstimo ativo" className="label !text-logo">$$</span>}
-          {p.immune      && <span title="Imunidade ativa"  className="label !text-gold">★</span>}
+          {p.immune      && <span title="Imunidade ativa"  className="label !text-gold">IMU</span>}
         </div>
         <div className="flex items-center gap-2 mt-1">
           {p.bankrupt ? (
@@ -1628,6 +1606,48 @@ function toUiSpeedFace(speed: number | 'mr-banco' | 'onibus'): SpeedFace {
 
 const ROLL_DURATION_MS = 1050
 
+// Botão único das ações do turno (Rolar / Comprar / Leilão / Finalizar) — UM padrão:
+// mesmo formato, fonte e tamanho. `primary` = dourado (texto+ícone escuros);
+// `secondary` = coffee (texto+ícone creme). Ícone herda a cor do texto (coerente).
+function TurnActionBtn({
+  variant = 'primary',
+  icon,
+  onClick,
+  disabled,
+  title,
+  className,
+  children,
+}: {
+  variant?: 'primary' | 'secondary'
+  icon?: ReactNode
+  onClick: () => void
+  disabled?: boolean
+  title?: string
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={cn(
+        'px-5 py-3 rounded-[var(--radius-sharp)] border display text-base leading-none tracking-wide',
+        'flex items-center justify-center gap-2 whitespace-nowrap transition-all active:translate-y-px',
+        'disabled:opacity-50 disabled:cursor-not-allowed',
+        variant === 'primary'
+          ? 'bg-gold text-coffee-950 border-gold-soft hover:bg-gold-glow hover:shadow-[var(--shadow-glow)] disabled:hover:bg-gold disabled:hover:shadow-none'
+          : 'bg-coffee-700 text-cream border-coffee-500 hover:bg-coffee-600 disabled:hover:bg-coffee-700',
+        className,
+      )}
+    >
+      {icon}
+      {children}
+    </button>
+  )
+}
+
 // DiceArena — área central de arremesso (dados + botão). Vive no miolo do
 // tabuleiro (CenterArena). Ligado ao motor (022.1): jogador da vez, faces e
 // gating de turno vêm do store; o botão dispara rollDice.
@@ -1639,6 +1659,15 @@ export function DiceArena() {
   const paused = useGameStore((s) => s.game.paused)
   const phase = useGameStore((s) => s.game.phase)
   const rollDiceCmd = useGameStore((s) => s.rollDice)
+  // Ações inline embaixo dos dados (sem modal de compra; finalizar manual)
+  const resolution = useGameStore((s) => s.game.resolution)
+  const consecutiveDoubles = useGameStore((s) => s.game.turn.consecutiveDoubles)
+  const buyProperty = useGameStore((s) => s.buyProperty)
+  const declineProperty = useGameStore((s) => s.declineProperty)
+  const finalizeTurn = useGameStore((s) => s.finalizeTurn)
+  const jailDecision = useGameStore((s) => s.jailDecision)
+  const activeCash = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.cash ?? 0)
+  const jailAttempts = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.jail.attempts ?? 0)
 
   const [rollKey, setRollKey] = useState(0)
   const [rolling, setRolling] = useState(false)
@@ -1655,31 +1684,56 @@ export function DiceArena() {
   const d2 = lastRoll ? lastRoll.white[1] : 1
   const sd: SpeedFace = lastRoll && lastRoll.speed != null ? toUiSpeedFace(lastRoll.speed) : 'one'
 
+  // Compra inline (sem modal): se a resolução pendente é 'purchase', mostra Comprar/Recusar.
+  const purchasePos = resolution?.kind === 'purchase' ? resolution.pos : null
+  const buySq = purchasePos != null ? BOARD[purchasePos] : null
+  const buyPrice = buySq && 'price' in buySq ? buySq.price : 0
+  const canFinalize = phase === 'playing' && !paused && turnState === 'aguardando-finalizacao'
+
   function handleRoll() {
     if (!canRoll) return
     setRolling(true)
+    useTokenAnim.getState().setRolling(true) // segura o peão até o dado parar
     rollDiceCmd() // motor: rola, move e abre a resolução da casa
     setRollKey((k) => k + 1)
-    timeoutRef.current = setTimeout(() => setRolling(false), ROLL_DURATION_MS)
+    timeoutRef.current = setTimeout(() => {
+      setRolling(false)
+      useTokenAnim.getState().setRolling(false) // dado caiu → peão pode andar
+    }, ROLL_DURATION_MS)
   }
 
+  // Tentar sair da prisão na dupla — anima o dado igual ao rolar normal.
+  function handleJailTry() {
+    if (rolling) return
+    setRolling(true)
+    useTokenAnim.getState().setRolling(true)
+    jailDecision('try') // rola 2 brancos; dupla = sai e move; senão passa a vez
+    setRollKey((k) => k + 1)
+    timeoutRef.current = setTimeout(() => {
+      setRolling(false)
+      useTokenAnim.getState().setRolling(false)
+    }, ROLL_DURATION_MS)
+  }
+
+  const isDoubleReroll = turnState === 'aguardando-rolagem' && consecutiveDoubles > 0
   const status =
     phase === 'ended' ? 'Fim de jogo'
+    : isDoubleReroll ? 'Dupla! Role de novo'
     : turnState === 'aguardando-rolagem' ? 'Sua vez'
-    : turnState === 'prisao-decisao' ? 'Preso — veja o HUD'
+    : turnState === 'prisao-decisao' ? `Preso · tentativa ${jailAttempts + 1}/3`
     : turnState === 'casa-a-resolver' ? 'Resolva a jogada'
     : 'Finalize o turno'
 
   return (
-    <div className="flex flex-col items-center gap-5">
+    <div className="flex flex-col items-center gap-3">
       {/* Jogador da vez — carinha + nome acima dos dados. Anel pisca quando é
           hora de rolar (turno ativo no demo local de 1 cliente). */}
       <div className="flex flex-col items-center gap-1.5">
-        <PlayerFace color={active.color} active={canRoll} size={88} />
+        <PlayerFace color={active.color} active={canRoll} size={72} />
         <p className="display text-cream text-xl leading-none tracking-wide">
           {active.name}
         </p>
-        <p className="label text-cream-muted">{status}</p>
+        <p className={cn('label', isDoubleReroll ? 'text-gold font-bold' : 'text-cream-muted')}>{status}</p>
       </div>
 
       <div className="flex items-center justify-center gap-4">
@@ -1687,23 +1741,60 @@ export function DiceArena() {
         <Dice value={d2} rollKey={rollKey} />
         {THEME.SPEED_DIE_ENABLED && active.speedDieReady && <SpeedDie face={sd} rollKey={rollKey} />}
       </div>
-      <p className="label text-cream-muted text-center">
-        {THEME.SPEED_DIE_ENABLED ? (active.speedDieReady ? '2 dados + Speed Die' : '2 dados (1ª volta)') : '2 dados'}
-      </p>
-      <button
-        onClick={handleRoll}
-        disabled={!canRoll}
-        className="
-          px-7 py-3 rounded-[var(--radius-sharp)]
-          bg-gold text-coffee-950 border border-gold-soft
-          display text-lg leading-none tracking-wider
-          hover:bg-gold-glow hover:shadow-[var(--shadow-glow)]
-          disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gold disabled:hover:shadow-none
-          transition-all
-        "
-      >
-        {rolling ? 'Rolando…' : 'Rolar dados'}
-      </button>
+      {/* Zona de ação contextual — embaixo dos dados (sem modal de compra) */}
+      <div className="flex flex-col items-center gap-2 w-full max-w-[280px]">
+        {buySq ? (
+            <div className="flex gap-2 w-full">
+              <TurnActionBtn
+                variant="primary"
+                className="flex-[3]"
+                disabled={activeCash < buyPrice}
+                icon={<ShopIcon size={17} className="shrink-0" />}
+                onClick={() => buyProperty()}
+              >
+                Comprar R$ {buyPrice}
+              </TurnActionBtn>
+              <TurnActionBtn
+                variant="secondary"
+                className="flex-1"
+                icon={<GavelIcon size={15} className="shrink-0" />}
+                onClick={() => declineProperty()}
+                title="Recusar e mandar a leilão"
+              >
+                Leilão
+              </TurnActionBtn>
+            </div>
+        ) : turnState === 'prisao-decisao' ? (
+          <div className="flex gap-2 w-full">
+            <TurnActionBtn
+              variant="primary"
+              className="flex-[2]"
+              disabled={rolling}
+              icon={<DiceIcon size={18} className="shrink-0" />}
+              onClick={handleJailTry}
+            >
+              {rolling ? 'Rolando…' : 'Tentar dupla'}
+            </TurnActionBtn>
+            <TurnActionBtn
+              variant="secondary"
+              className="flex-1"
+              disabled={activeCash < 50}
+              onClick={() => jailDecision('pay')}
+              title="Pagar a fiança e sair"
+            >
+              Pagar $50
+            </TurnActionBtn>
+          </div>
+        ) : canFinalize ? (
+          <TurnActionBtn variant="primary" onClick={() => finalizeTurn()}>
+            Finalizar turno
+          </TurnActionBtn>
+        ) : (
+          <TurnActionBtn variant="primary" disabled={!canRoll} icon={<DiceIcon size={18} className="shrink-0" />} onClick={handleRoll}>
+            {rolling ? 'Rolando…' : 'Rolar dados'}
+          </TurnActionBtn>
+        )}
+      </div>
     </div>
   )
 }
@@ -2250,6 +2341,60 @@ function CardSlab({
 // Layout simétrico: dados centralizados pra arremesso, decks nos cantos
 // inferiores, padrão de estrelas no fundo.
 // ---------------------------------------------------------------------
+// Pinta o texto do histórico: ganho = verde, perda = vermelho, neutro (compra/etc.) = dourado.
+const LOG_GAIN = /recebeu|ganhou|coletou|\+\$/i
+const LOG_LOSS = /\bpagou\b|perdeu/i
+function LogWhat({ what }: { what: string }) {
+  const color = LOG_GAIN.test(what) ? '#5fd68a' : LOG_LOSS.test(what) ? '#e8674f' : '#e8c66a'
+  return (
+    <>
+      {what.split(/(\+?\$\s?\d[\d.]*)/g).map((p, i) =>
+        /\$/.test(p)
+          ? <span key={i} className="currency font-bold" style={{ color }}>{p}</span>
+          : <span key={i}>{p}</span>,
+      )}
+    </>
+  )
+}
+
+// Histórico ao vivo no CENTRO do tabuleiro (substitui a seção no painel lateral).
+// Seletor estável (`s.game.log`) + reverse no corpo — recência ao topo (021).
+function CenterLog() {
+  const log = useGameStore((s) => s.game.log)
+  const players = useGameStore((s) => s.game.players)
+  const history = [...log].reverse()
+  const colorOf = (who: string): string => {
+    if (who === 'Banco') return '#c0392b'
+    const i = players.findIndex((p) => p.id === who)
+    return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : '#c0392b'
+  }
+  return (
+    <div className="flex-1 min-h-0 w-full max-w-[88%] flex flex-col rounded-[var(--radius-card)] border border-coffee-500/60 bg-coffee-900/55 backdrop-blur-[1px] overflow-hidden">
+      <p className="label text-gold px-3 pt-2 pb-1.5 shrink-0 border-b border-coffee-500/40">Histórico</p>
+      {history.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center px-3 py-4">
+          <p className="label text-cream-muted text-center leading-snug">Nenhum evento ainda</p>
+        </div>
+      ) : (
+        <ol className="flex-1 min-h-0 overflow-auto px-3 py-1">
+          {history.map((l, i) => {
+            const c = colorOf(l.who)
+            return (
+              <li key={i} className="flex items-baseline gap-2 py-1.5 border-b border-coffee-500/20 last:border-0">
+                <span className="flex items-center gap-1.5 shrink-0">
+                  <span className="w-2 h-2 rounded-full" style={{ background: c }} />
+                  <span className="display text-[13px] leading-none" style={{ color: c }}>{l.who}</span>
+                </span>
+                <span className="text-cream-muted text-[13px] leading-snug flex-1"><LogWhat what={l.what} /></span>
+              </li>
+            )
+          })}
+        </ol>
+      )}
+    </div>
+  )
+}
+
 export function CenterArena() {
   return (
     <div
@@ -2272,38 +2417,14 @@ export function CenterArena() {
       <div className="absolute inset-3 border border-coffee-500/50 rounded-[2px] pointer-events-none" />
       <div className="absolute inset-6 border border-coffee-500/25 rounded-[2px] pointer-events-none" />
 
-      {/* CENTRO — arena de arremesso de dados */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        <DiceArena />
+      {/* CENTRO — split: dados/boneco em cima, histórico embaixo */}
+      <div className="absolute inset-0 flex flex-col items-center justify-start pt-[6%] pb-[5%] px-[6%] gap-3">
+        <div className="shrink-0">
+          <DiceArena />
+        </div>
+        <CenterLog />
       </div>
 
-      {/* SURPRESA — extremidade superior-direita, virada pra baixo-esquerda */}
-      <div
-        className="absolute"
-        style={{
-          top: '9%',
-          right: '8%',
-          width: '17%',
-          transform: 'rotate(-135deg)',
-          transformOrigin: 'center',
-        }}
-      >
-        <CardDeck kind="acaso" tilt={3} />
-      </div>
-
-      {/* TESOURO — extremidade inferior-esquerda, virado pra cima-direita */}
-      <div
-        className="absolute"
-        style={{
-          bottom: '9%',
-          left: '8%',
-          width: '17%',
-          transform: 'rotate(45deg)',
-          transformOrigin: 'center',
-        }}
-      >
-        <CardDeck kind="tesouro" tilt={3} />
-      </div>
     </div>
   )
 }
@@ -2762,14 +2883,14 @@ function DeedActions({ pos }: { pos: number }) {
         {dv.kind === 'property' && (
           <>
             <DeedBtn disabled={!flags.podeConstruir} onClick={() => buildHouse(pos)} title={blockMsg}>
-              🏗 Construir (${dv.buildCost})
+              Construir (${dv.buildCost})
             </DeedBtn>
             <DeedBtn disabled={!flags.podeVender} onClick={() => sellBuilding(pos)}>Vender</DeedBtn>
           </>
         )}
         {dv.kind === 'airport' && (
           <>
-            <DeedBtn disabled={!flags.podeConstruirHangar} onClick={() => buildHangar(pos)}>🛩 Hangar</DeedBtn>
+            <DeedBtn disabled={!flags.podeConstruirHangar} onClick={() => buildHangar(pos)}>Hangar</DeedBtn>
             <DeedBtn disabled={!flags.podeVenderHangar} onClick={() => sellHangar(pos)}>Vender Hangar</DeedBtn>
           </>
         )}
