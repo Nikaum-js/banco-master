@@ -15,14 +15,14 @@ interface CardDef {
 
 // — Deck ACASO (16) —
 const ACASO: CardDef[] = [
-  { base: 'aquisicao-hostil', copies: 2, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'aquisicaoHostil', status: 'deferido' },
-  { base: 'despejo', copies: 1, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'despejo', status: 'deferido' },
-  { base: 'auditoria-fiscal', copies: 1, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'auditoriaFiscal', status: 'deferido' },
-  { base: 'boicote', copies: 2, deck: 'acaso', rarity: 'rara', mode: 'mao', timing: 'proprio-turno', effect: 'boicote', status: 'deferido' },
+  { base: 'aquisicao-hostil', copies: 2, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'aquisicaoHostil', status: 'implementado' },
+  { base: 'despejo', copies: 1, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'despejo', status: 'implementado' },
+  { base: 'auditoria-fiscal', copies: 1, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'auditoriaFiscal', status: 'implementado' },
+  { base: 'boicote', copies: 2, deck: 'acaso', rarity: 'rara', mode: 'mao', timing: 'proprio-turno', effect: 'boicote', status: 'implementado' },
   { base: 'crise-imobiliaria', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'imediato', timing: null, effect: 'criseImobiliaria', status: 'implementado' },
   { base: 'atalho', copies: 2, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'atalho', status: 'implementado' },
-  { base: 'apagao', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'apagao', status: 'deferido' },
-  { base: 'greve-utilidades', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'greveUtilidades', status: 'deferido' },
+  { base: 'apagao', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'apagao', status: 'implementado' },
+  { base: 'greve-utilidades', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'greveUtilidades', status: 'implementado' },
   { base: 'va-prisao', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'vaPrisao', status: 'implementado' },
   { base: 'volta-go', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'voltaGo', status: 'implementado' },
   { base: 'conserto-imoveis', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'consertoImoveis', status: 'implementado' },
@@ -32,10 +32,10 @@ const ACASO: CardDef[] = [
 
 // — Deck TESOURO (16) —
 const TESOURO: CardDef[] = [
-  { base: 'diplomacia', copies: 1, deck: 'tesouro', rarity: 'lendaria', mode: 'mao', timing: 'reacao', effect: 'diplomacia', status: 'deferido' },
-  { base: 'imunidade', copies: 1, deck: 'tesouro', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'imunidade', status: 'deferido' },
+  { base: 'diplomacia', copies: 1, deck: 'tesouro', rarity: 'lendaria', mode: 'mao', timing: 'reacao', effect: 'diplomacia', status: 'implementado' },
+  { base: 'imunidade', copies: 1, deck: 'tesouro', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'imunidade', status: 'implementado' },
   { base: 'saia-prisao', copies: 1, deck: 'tesouro', rarity: 'rara', mode: 'mao', timing: 'preso', effect: 'saiaPrisao', status: 'implementado' },
-  { base: 'bunker-fiscal', copies: 2, deck: 'tesouro', rarity: 'rara', mode: 'mao', timing: 'reacao', effect: 'bunkerFiscal', status: 'deferido' },
+  { base: 'bunker-fiscal', copies: 2, deck: 'tesouro', rarity: 'rara', mode: 'mao', timing: 'reacao', effect: 'bunkerFiscal', status: 'implementado' },
   { base: 'boom-economico', copies: 2, deck: 'tesouro', rarity: 'rara', mode: 'imediato', timing: null, effect: 'boomEconomico', status: 'implementado' },
   { base: 'investidor-anjo', copies: 2, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'investidorAnjo', status: 'implementado' },
   { base: 'refinanciamento', copies: 2, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'refinanciamento', status: 'implementado' },
