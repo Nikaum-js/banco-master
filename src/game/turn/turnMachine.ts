@@ -88,6 +88,7 @@ function land(turn: Turn, player: Player, roll: Roll | null): void {
 }
 
 export function advanceSeat(s: GameState, ctx: TurnCtx): void {
+  ctx.ports.taxMan?.(s, ctx.rng) // Fiscal move 1×/turno ao passar a vez (012, §13.8)
   const n = s.turnOrder.length
   let next = s.activeSeat
   for (let i = 0; i < n; i++) {
