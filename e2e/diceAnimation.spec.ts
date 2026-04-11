@@ -10,6 +10,11 @@ test('rolagem normal mantém o comando bloqueado durante a coreografia', async (
   const errors = trackRuntimeErrors(page)
   await page.goto('/play?players=2')
 
+  // Espera o TABULEIRO antes do botão, com o mesmo teto de 20s dos smokes. Sem isto o gate
+  // media o tempo de boot do servidor e do bundle no lugar da coreografia: passa na máquina
+  // com o dev server quente e reprova no runner frio, que foi o que aconteceu.
+  await expect(page.locator('.board-stage')).toBeVisible({ timeout: 20_000 })
+
   const roll = page.getByRole('button', { name: 'Rolar dados' })
   await expect(roll).toBeVisible()
   await roll.click()
