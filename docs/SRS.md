@@ -1,6 +1,6 @@
 # Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.38
+**Versão:** 1.39
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -86,7 +86,7 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Rastreabilidade de caixa | Toda mudança de caixa tem motivo registrado; nenhuma regra move dinheiro em silêncio (D-063, §12.3) |
 | Fim de jogo | Classificação completa por ordem inversa de eliminação, com patrimônio e duração; depois, retorno à mesma sala para revanche (D-038/D-052) |
 | Retenção da sala | Até 10 resumos de partidas finalizadas na mesma sala, com estatísticas derivadas e sem perfil global (D-067) |
-| Acessibilidade | WCAG 2.2 AA no caminho de jogo, verificada automaticamente; paisagem é a orientação de jogo (D-039) |
+| Acessibilidade | WCAG 2.2 AA no caminho de jogo, verificada automaticamente (D-039); **retrato e paisagem são ambos servidos**, cada um com seu layout (D-079) |
 | Telemetria | Mínima e anônima — contagem de partidas no próprio Supabase, exceção em monitoramento de erro (D-040) |
 | Ordem inicial | Host escolhe no lobby entre Leilão secreto e Maior dado; neste, cada jogador rola à vista da mesa (D-046/D-051) |
 
@@ -1103,7 +1103,13 @@ nomes de regiões nem divisórias decorativas.
 
 > 📌 **Exceção de contraste, medida e aceita** (2026-07-26, spec 044): as **bordas de superfície** (`--color-ink-500`, `--color-coffee-500` — borda de todo cartão, campo e botão) medem **~1,5–1,7:1** contra os fundos escuros, abaixo do 3:1 exigido para elemento de interface. Corrigir significaria clarear um token onipresente e mudar a aparência de toda borda do jogo; o autor decidiu **manter a identidade visual**. A exceção é **só da borda decorativa**: contraste de **texto** (≥4,5:1) e do **indicador de foco** (≥3:1) continuam obrigatórios e verificados. Nenhuma informação depende de enxergar a borda — ela separa superfícies que já se distinguem por preenchimento. Revisitar quando houver referência visual nova.
 
-**Orientação e tamanho:** o tabuleiro é servido em **paisagem**, a partir de 740 × 360 px (celular em paisagem) e 1024 × 768 px (tablet). Em **retrato**, o produto exibe um aviso para girar o aparelho em vez de servir a mesa ilegível — a sessão não é perdida na rotação, e a tela de aviso segue as mesmas regras acima. Nenhuma superfície do caminho de jogo exige rolagem horizontal; modal que não cabe rola por dentro.
+**Orientação e tamanho** (v1.39, [D-079](adr/D-079-retrato-de-celular-e-orientacao-servida.md)): **nenhuma orientação é recusada.** O tabuleiro é servido em **paisagem** a partir de 740 × 360 px (celular em paisagem) e 1024 × 768 px (tablet), e em **retrato** a partir de 320 × 568 px. Retrato de celular (largura ≤ 820 px) recebe um **layout próprio**, não o de paisagem encolhido:
+
+- O **tabuleiro é o herói**: ocupa a largura inteira, no topo, **inteiro na tela** — nunca abaixo da dobra, nunca cortado. Ele não rola.
+- Os painéis laterais viram uma **gaveta com abas** (Jogadores · Ações) abaixo do tabuleiro. Só a gaveta rola.
+- Um **cockpit fixo** mostra, sem exigir toque, o **caixa e a vez do assento deste dispositivo**. A ação principal segue no miolo do tabuleiro (§12.2), sempre visível.
+
+A sessão não é perdida na rotação, em nenhum sentido. Nenhuma superfície do caminho de jogo exige rolagem horizontal; modal que não cabe rola por dentro. Retrato é verificado pelo mesmo gate automatizado de §12.8: tabuleiro acima da dobra, alvos de 44 px e nenhuma violação séria.
 
 ### 12.7 Telemetria Mínima
 
