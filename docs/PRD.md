@@ -138,9 +138,12 @@ O engine e a UI single-player estão fechados, e a **fundação multiplayer saiu
 > **Decisão travada antes de specificar 037 — resolvida:** a autoridade de estado (item 17 da
 > auditoria / `store.ts:262`) foi fechada pela 037: todo comando carrega o `playerId` do remetente e
 > o host o confere contra o assento da conexão, descartando spoof (provado em `tests/net/antispoof.test.ts`).
-> Ressalva vigente: no transporte Supabase o token ainda é auto-declarado no broadcast — a **lógica**
-> do host rejeita spoof, mas a identidade de transporte pede endurecimento (Edge Function/segredo de
-> sessão) para paridade plena.
+> A ressalva que existia aqui — no transporte Supabase o remetente era auto-declarado no payload, então
+> a paridade dependia só da **lógica** do host — foi fechada pela **spec 043** ([D-035](adr/D-035-identidade-de-transporte-atestada-pelo-servidor.md)/[D-036](adr/D-036-acesso-a-sala-autorizado-no-servidor.md)/[D-037](adr/D-037-estado-por-perspectiva-a-mao-nao-trafega.md)/[D-038](adr/D-038-o-codigo-de-reentrada-e-imutavel-e-a-autoridade-o-le.md)): a identidade passou a ser
+> o `uid` da sessão anônima, atestado pelo servidor, e o **remetente vem do endereço do tópico**, não do
+> conteúdo. Não foi preciso Edge Function — a política de canal do Realtime compara o sufixo do tópico
+> com `auth.uid()`, e é isso que torna o remetente inforjável. A conferência do host continua onde
+> estava (`tests/net/antispoof.test.ts`), agora apoiada em dado que o remetente não escolhe.
 
 ### 5.1.1 Arquitetura frontend-first (D-020, refinada em 2026-07-24)
 

@@ -48,6 +48,7 @@
 - [D-035](D-035-identidade-de-transporte-atestada-pelo-servidor.md) — Identidade de transporte atestada pelo servidor (sessão anônima; refina D-019/D-020/D-033)
 - [D-036](D-036-acesso-a-sala-autorizado-no-servidor.md) — Acesso à sala autorizado no servidor; o link entra, não lê (refina D-019)
 - [D-037](D-037-estado-por-perspectiva-a-mao-nao-trafega.md) — Estado por perspectiva: a mão não trafega para quem não é o dono (revoga D-030; refina §10.3)
+- [D-038](D-038-o-codigo-de-reentrada-e-imutavel-e-a-autoridade-o-le.md) — O código de reentrada é imutável, e a autoridade o lê (refina D-033/D-036/D-037)
 
 ### Rejeitadas
 - [D-R01](D-R01-sistema-de-draft-rejeitada.md) — Sistema de draft de propriedades no início
