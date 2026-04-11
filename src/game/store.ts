@@ -23,6 +23,7 @@ import {
 import { economyResolve } from './economy/resolveRentable'
 import { buyProperty, declineProperty } from './economy/purchase'
 import { placeBid, passBid, closeAuction } from './economy/auction'
+import { maybeOpenLandAuction, placeLandBid, closeLandAuction, closeExpiredLandLots } from './economy/landAuction'
 import { buildHouse, sellBuilding, buildHangar, sellHangar } from './economy/construction'
 import { mortgageProperty, unmortgageProperty } from './economy/mortgage'
 import { goBonus, payToCenter, collectCenter } from './balancing/balancing'
@@ -98,6 +99,8 @@ export function createSeedState(playerIds: string[]): GameState {
     tempEffects: [], // 015 — efeitos temporários de carta
     log: [], // 021 — event log do jogo
     pendingTrade: null, // 024 — proposta de troca pendente
+    landAuction: null, // 031 — pregão de escassez de terrenos (evento autônomo)
+    landAuctionArmed: true, // 031 — trava de episódio: armado de início
     tradeHistory: [], // 027 — histórico de trocas aceitas
     notice: null, // 030 — notificação informativa (Free Parking / Aquisição Hostil)
   }
@@ -120,6 +123,8 @@ interface GameStore {
   declineProperty(): void
   placeBid(playerId: string, amount: number): void
   passBid(playerId: string): void
+  placeLandBid(playerId: string, pos: number, amount: number): void // 031 — pregão de escassez
+  closeLandAuction(): void
   buildHouse(pos: number): void
   sellBuilding(pos: number): void
   buildHangar(pos: number): void
@@ -152,6 +157,15 @@ function clearAuctionTimer(): void {
   }
 }
 
+// Timer do pregão de escassez de terrenos (031) — separado do leilão de propriedade.
+let landTimer: ReturnType<typeof setTimeout> | null = null
+function clearLandTimer(): void {
+  if (landTimer) {
+    clearTimeout(landTimer)
+    landTimer = null
+  }
+}
+
 export const useGameStore = create<GameStore>((set, get) => {
   // (Re)agenda o fechamento do leilão de PROPRIEDADE pelo deadline; respeita pausa.
   // (O leilão de casas — 026 — é evento autônomo de fecho manual, não usa este timer.)
@@ -164,7 +178,29 @@ export const useGameStore = create<GameStore>((set, get) => {
     auctionTimer = setTimeout(() => {
       set((st) => ({ game: closeAuction(st.game) }))
       clearAuctionTimer()
+      maybeOpenLand() // um terreno acabou de ser arrematado → checa escassez (031)
     }, ms)
+  }
+
+  // (Re)agenda o fechamento dos lotes do PREGÃO (031) pelo prazo PRÓPRIO de cada lote:
+  // dispara no lote que vence primeiro, fecha os expirados e reagenda p/ os demais. Respeita pausa.
+  function rearmLandAuction(): void {
+    clearLandTimer()
+    const g = get().game
+    if (g.paused || !g.landAuction || g.landAuction.lots.length === 0) return
+    const soonest = Math.min(...g.landAuction.lots.map((l) => l.deadline))
+    const ms = Math.max(0, soonest - Date.now())
+    landTimer = setTimeout(() => {
+      set((st) => ({ game: closeExpiredLandLots(st.game, Date.now()) }))
+      clearLandTimer()
+      maybeOpenLand() // reagenda p/ os lotes restantes (ou re-arma o episódio se acabou)
+    }, ms)
+  }
+
+  // Checa o gatilho de escassez (após eventos que mudam posse) e (re)agenda o timer.
+  function maybeOpenLand(): void {
+    set((st) => ({ game: maybeOpenLandAuction(st.game, st.ctx.now!()) }))
+    rearmLandAuction()
   }
 
   return {
@@ -186,13 +222,19 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
     rollDice: () => set((st) => ({ game: rollDice(st.game, st.ctx) })),
     resolvePending: () => set((st) => ({ game: resolvePending(st.game, st.ctx) })),
-    finalizeTurn: () => set((st) => ({ game: finalizeTurn(st.game, st.ctx) })),
+    finalizeTurn: () => {
+      set((st) => ({ game: finalizeTurn(st.game, st.ctx) }))
+      maybeOpenLand() // 031 — falência/posse pode ter mudado a contagem de terrenos livres
+    },
     jailDecision: (d) => set((st) => ({ game: jailDecision(st.game, d, st.ctx) })),
     chooseBusMove: (opt) => set((st) => ({ game: chooseBusMove(st.game, opt, st.ctx) })),
     chooseTripleDest: (pos) => set((st) => ({ game: chooseTripleDest(st.game, pos, st.ctx) })),
     useBusTicket: (dest) => set((st) => ({ game: useBusTicket(st.game, dest, st.ctx) })),
     chooseBusRide: (dest) => set((st) => ({ game: chooseBusRide(st.game, dest, st.ctx) })),
-    buyProperty: () => set((st) => ({ game: buyProperty(st.game) })),
+    buyProperty: () => {
+      set((st) => ({ game: buyProperty(st.game) }))
+      maybeOpenLand() // 031 — comprar tirou um terreno de circulação → checa escassez
+    },
     declineProperty: () => {
       set((st) => ({ game: declineProperty(st.game, st.ctx.now!()) }))
       rearmAuction()
@@ -202,6 +244,15 @@ export const useGameStore = create<GameStore>((set, get) => {
       rearmAuction()
     },
     passBid: (playerId) => set((st) => ({ game: passBid(st.game, playerId) })),
+    placeLandBid: (playerId, pos, amount) => {
+      set((st) => ({ game: placeLandBid(st.game, playerId, pos, amount, st.ctx.now!()) }))
+      rearmLandAuction() // lance reinicia o cronômetro compartilhado (soft-close)
+    },
+    closeLandAuction: () => {
+      set((st) => ({ game: closeLandAuction(st.game) }))
+      clearLandTimer()
+      maybeOpenLand()
+    },
     buildHouse: (pos) => set((st) => ({ game: buildHouse(st.game, pos) })),
     sellBuilding: (pos) => set((st) => ({ game: sellBuilding(st.game, pos) })),
     buildHangar: (pos) => set((st) => ({ game: buildHangar(st.game, pos) })),
@@ -227,6 +278,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     setPaused: (p) => {
       set((st) => ({ game: { ...st.game, paused: p } }))
       rearmAuction()
+      rearmLandAuction() // 031 — pausa também congela/retoma o cronômetro do pregão
     },
   }
 })
