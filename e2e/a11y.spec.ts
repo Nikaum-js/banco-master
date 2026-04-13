@@ -51,19 +51,19 @@ test('caminho de jogo não tem violação de acessibilidade serious/critical', a
   const report: Record<string, ViolationRow[]> = {}
 
   // — 1. Home —
-  await page.goto('/jogar')
+  await page.goto('/play')
   await expect(page.getByRole('button', { name: /^Criar sala$/ })).toBeVisible()
   await auditStop(page, 'home', report)
 
   // — 2. Lobby ("Criar sala") — o projeto `built` sobe com credenciais Supabase FALSAS
   // (playwright.config.ts) só pra passar de "Multiplayer indisponível" pro formulário; o
   // roteiro NUNCA submete (sem rede real disponível no gate padrão, ver aviso da "pausa" abaixo).
-  await page.goto('/jogar?host=1')
+  await page.goto('/play?host=1')
   await expect(page.getByLabel('Seu nome')).toBeVisible()
   await auditStop(page, 'lobby', report)
 
   // — 3. Tabuleiro —
-  await page.goto('/jogar?players=2')
+  await page.goto('/play?players=2')
   await expect(page.locator('.board-stage')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Rolar dados' })).toBeVisible()
   await auditStop(page, 'tabuleiro', report)
@@ -124,9 +124,9 @@ test('páginas de marketing não têm violação de acessibilidade serious/criti
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   await auditStop(page, 'landing', report)
 
-  await page.goto('/como-jogar')
+  await page.goto('/how-to-play')
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-  await auditStop(page, 'como-jogar', report)
+  await auditStop(page, 'how-to-play', report)
 
   await page.goto('/faq')
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()

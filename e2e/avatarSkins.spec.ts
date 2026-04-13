@@ -30,7 +30,7 @@ async function expectNoBlockingA11y(page: Page): Promise<void> {
 
 async function openIdentity(page: Page): Promise<void> {
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/jogar?host=1')
+  await page.goto('/play?host=1')
   await expect(page.getByLabel('Seu nome')).toBeVisible()
   await expect(page.getByRole('button', { name: /^Escolher avatar / })).toHaveCount(5)
   await expect(page.getByRole('button', { name: /^Escolher skin / })).toHaveCount(7)
@@ -82,7 +82,7 @@ test('o seletor inteiro permanece legível e sem rolagem em 390px', async ({ pag
 test('a identidade composta chega aos tokens reais do tabuleiro', async ({ page }, testInfo: TestInfo) => {
   await page.setViewportSize({ width: 1440, height: 820 })
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/jogar?players=2&scenario=avatar-skin')
+  await page.goto('/play?players=2&scenario=avatar-skin')
   await expect(page.locator('.board-stage')).toBeVisible()
 
   await expect(page.locator('.board-live-token [data-avatar="prism-face"][data-skin="cartola"]')).toBeVisible()

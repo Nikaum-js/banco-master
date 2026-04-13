@@ -181,8 +181,8 @@ describe('perspectiva de carta (043, US5) — a mão para de trafegar', () => {
     const bystander = net.players.find((p) => p.playerId !== activeId)!
     const actor = net.players.find((p) => p.playerId === activeId)!
 
-    active.hand = ['boicote-1', 'boicote-2', 'despejo-1', 'auditoria-fiscal-1']
-    g.resolution = { kind: 'card-discard', deckId: 'acaso', drawnId: 'auditoria-fiscal-1' }
+    active.hand = ['boicote-1', 'boicote-2', 'confisco-geral-1', 'imposto-federal-1']
+    g.resolution = { kind: 'card-discard', deckId: 'acaso', drawnId: 'imposto-federal-1' }
 
     const seenByBystander: unknown[] = []
     bystander.transport.onBroadcast((cmd) => {

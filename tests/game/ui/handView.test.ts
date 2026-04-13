@@ -62,19 +62,20 @@ describe('handCardsView — jogável por timing (US1)', () => {
   })
 
   it('SC-003: carta de alvo sem nenhum alvo válido → "Sem alvo válido"', () => {
-    const g = handOf(setup(), 'despejo-1') // ninguém tem casa para demolir
-    const v = find(g, 'p1', 'despejo-1')
+    const g = handOf(setup(), 'confisco-geral-1') // ninguém tem construção para confiscar
+    const v = find(g, 'p1', 'confisco-geral-1')
     expect(v.playable).toBe(false)
     expect(v.reason).toBe('Sem alvo válido')
   })
 })
 
 describe('cardTargets — alvos válidos por carta (US2)', () => {
-  it('SC-003: Imunidade Temporária → só propriedades próprias', () => {
+  it('SC-003: Imunidade Total (D-064) → sem alvo; Valorização → só propriedades próprias', () => {
     const g = setup()
     g.titles[1].ownerId = 'p1'
     g.titles[7].ownerId = 'p2'
-    const t = cardTargets(g, 'p1', 'imunidade-1')!
+    expect(cardTargets(g, 'p1', 'imunidade-1')).toBeNull() // Imunidade Total protege o jogador
+    const t = cardTargets(g, 'p1', 'valorizacao-1')!
     expect(t.positions).toContain(1)
     expect(t.positions).not.toContain(7)
   })
@@ -91,12 +92,27 @@ describe('cardTargets — alvos válidos por carta (US2)', () => {
     expect(cardTargets(g, 'p1', 'aquisicao-hostil-1')!.positions).not.toContain(7)
   })
 
-  it('SC-003: Despejo → só cidade de outro com ≥1 casa (não hotel)', () => {
+  it('SC-003: Confisco Geral (D-064) → só propriedade de outro COM construção', () => {
     const g = setup()
     g.titles[7].ownerId = 'p2'
-    expect(cardTargets(g, 'p1', 'despejo-1')!.positions).not.toContain(7) // sem casa
+    expect(cardTargets(g, 'p1', 'confisco-geral-1')!.positions).not.toContain(7) // sem construção
     g.titles[7].houses = 1
-    expect(cardTargets(g, 'p1', 'despejo-1')!.positions).toContain(7)
+    expect(cardTargets(g, 'p1', 'confisco-geral-1')!.positions).toContain(7)
+    g.titles[7].houses = 0
+    g.titles[7].hotel = true // hotel também é confiscável (diferente do Despejo antigo)
+    expect(cardTargets(g, 'p1', 'confisco-geral-1')!.positions).toContain(7)
+  })
+
+  it('SC-003: Permuta Forçada (D-064) → par própria × adversária, ambas sem construção', () => {
+    const g = setup()
+    g.titles[1].ownerId = 'p1'
+    g.titles[7].ownerId = 'p2'
+    const t = cardTargets(g, 'p1', 'permuta-forcada-1')!
+    expect(t.positionsOwn).toContain(1)
+    expect(t.positions).toContain(7)
+    g.titles[7].houses = 1 // construção invalida o alvo
+    const t2 = cardTargets(g, 'p1', 'permuta-forcada-1')!
+    expect(t2.positions ?? []).not.toContain(7)
   })
 
   it('SC-003: Boicote → propriedade de outro jogador (não a própria)', () => {
@@ -108,10 +124,18 @@ describe('cardTargets — alvos válidos por carta (US2)', () => {
     expect(t.positions).not.toContain(1)
   })
 
-  it('SC-003: Auditoria Fiscal → adversários não eliminados', () => {
-    const t = cardTargets(setup(), 'p1', 'auditoria-fiscal-1')!
+  it('SC-003: Imposto Federal → adversários não eliminados', () => {
+    const t = cardTargets(setup(), 'p1', 'imposto-federal-1')!
     expect(t.players).toEqual(expect.arrayContaining(['p2', 'p3']))
     expect(t.players).not.toContain('p1')
+  })
+
+  it('SC-003: Embargo de Obras (D-064) → adversários não embargados', () => {
+    const g = setup()
+    const t = cardTargets(g, 'p1', 'embargo-obras-1')!
+    expect(t.players).toEqual(expect.arrayContaining(['p2', 'p3']))
+    g.tempEffects.push({ kind: 'embargo', ownerId: 'p1', pos: null, lapsRemaining: 2, targetId: 'p2' })
+    expect(cardTargets(g, 'p1', 'embargo-obras-1')!.players).not.toContain('p2')
   })
 
   it('carta sem alvo → null', () => {

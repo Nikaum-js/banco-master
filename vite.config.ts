@@ -48,7 +48,7 @@ function requireEnv(): Plugin {
 const SITE_URL = (process.env.VITE_SITE_URL ?? 'https://magnata-imobiliario.vercel.app').replace(/\/+$/, '')
 
 // Params que sempre significaram "estou indo pro jogo" quando apareciam na raiz.
-// `/` agora é a landing: quem chega com um deles é redirecionado pra `/jogar` com a
+// `/` agora é a landing: quem chega com um deles é redirecionado pra `/play` com a
 // query intacta — é o mesmo contrato dos redirects do vercel.json, valendo em dev e
 // preview (o E2E roda nos dois). A lista cobre convite (`room`), criação (`host`),
 // andaime local (`local`/`players`), e os hooks de dev/E2E.
@@ -60,8 +60,8 @@ const CLEAN_ROUTES: Record<string, string> = {
   // Com appType 'mpa' o preview perde o fallback que servia a raiz — o mapeamento
   // explícito devolve o index sem reabrir o catch-all de SPA.
   '/': '/index.html',
-  '/jogar': '/jogar.html',
-  '/como-jogar': '/como-jogar.html',
+  '/play': '/play.html',
+  '/how-to-play': '/how-to-play.html',
   '/faq': '/faq.html',
 }
 
@@ -74,7 +74,7 @@ function marketingRoutes(): Plugin {
     const url = new URL(req.url ?? '/', 'http://local.test')
     if (url.pathname === '/' && GAME_QUERY_PARAMS.some((p) => url.searchParams.has(p))) {
       res.statusCode = 307
-      res.setHeader('Location', `/jogar${url.search}`)
+      res.setHeader('Location', `/play${url.search}`)
       res.end()
       return
     }
@@ -110,7 +110,7 @@ function marketingRoutes(): Plugin {
  * gerados aqui para nunca divergirem do domínio configurado.
  */
 function siteMeta(): Plugin {
-  const routes = ['/', '/como-jogar', '/faq', '/jogar']
+  const routes = ['/', '/how-to-play', '/faq', '/play']
   return {
     name: 'magnata-imobiliario:site-meta',
     transformIndexHtml(html) {
@@ -165,8 +165,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         landing: path.resolve(__dirname, 'index.html'),
-        jogar: path.resolve(__dirname, 'jogar.html'),
-        comoJogar: path.resolve(__dirname, 'como-jogar.html'),
+        play: path.resolve(__dirname, 'play.html'),
+        howToPlay: path.resolve(__dirname, 'how-to-play.html'),
         faq: path.resolve(__dirname, 'faq.html'),
         notFound: path.resolve(__dirname, '404.html'),
       },

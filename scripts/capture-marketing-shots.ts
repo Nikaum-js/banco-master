@@ -30,7 +30,7 @@ async function settle(page: Page, ms = 1800): Promise<void> {
 async function boardMidMatch(page: Page): Promise<void> {
   // `?players=` só aceita 3 ou 6 (src/game/store.ts, gancho do smoke E2E) — 6 dá a mesa
   // mais parecida com a promessa da landing ("2 a 8 jogadores").
-  await page.goto(`${BASE}/jogar?players=6`)
+  await page.goto(`${BASE}/play?players=6`)
   await page.locator('.board-stage').waitFor({ timeout: 30_000 })
   await driveTurns(page, 30)
   // Fecha o que tiver ficado aberto resolvendo mais alguns passos e espera acomodar.
@@ -113,7 +113,7 @@ async function captureLobby(browser: Browser): Promise<void> {
     reducedMotion: 'reduce',
   })
   const host = await hostCtx.newPage()
-  await host.goto(`${BASE}/jogar?host=1`)
+  await host.goto(`${BASE}/play?host=1`)
   await fillIdentity(host, LOBBY_SEATS[0], /^Criar sala$/, 8)
   await host.getByText('Sala aberta').waitFor({ timeout: 30_000 })
   const roomUrl = host.url()

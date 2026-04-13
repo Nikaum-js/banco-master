@@ -72,7 +72,7 @@ describe('recuperação de chunk lazy entre deploys', () => {
 
 describe('roteamento de assets na Vercel', () => {
   // Desde a 051 não existe mais catch-all de SPA: a raiz é a landing estática e o app
-  // vive em /jogar (rewrites explícitos). A invariante que protegia o importWithReload
+  // vive em /play (rewrites explícitos). A invariante que protegia o importWithReload
   // continua a mesma — um asset hasheado INEXISTENTE precisa responder 404, nunca ser
   // reescrito para uma página HTML (o que mascararia o deploy novo e quebraria a
   // detecção de release velho).

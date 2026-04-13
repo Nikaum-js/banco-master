@@ -24,7 +24,7 @@ Negociação sem trilhos: propostas com propriedades, dinheiro, Bus Tickets e **
 
 ## Superfícies
 
-- `/` landing pública (Persuade) · `/como-jogar` guia (Read) · `/faq` (Read) · `/jogar` o produto (Operate, React).
+- `/` landing pública (Persuade) · `/como-jogar` guia (Read) · `/faq` (Read) · `/play` o produto (Operate, React).
 
 ## Plataforma
 

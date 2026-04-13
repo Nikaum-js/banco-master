@@ -3,7 +3,7 @@
 // 1. As páginas de marketing construídas (dist/*.html) não referenciam NENHUM arquivo
 //    JavaScript — o único JS delas é o fallback de redirect, inline e de ~10 linhas.
 //    Sem <script src>, não há como Supabase/engine/Zustand/Motion chegarem ao visitante.
-// 2. O manifest confirma que todo o grafo do jogo pende de jogar.html, e informa os
+// 2. O manifest confirma que todo o grafo do jogo pende de play.html, e informa os
 //    tamanhos dos dois lados.
 //
 // Uso: bun run build && bun run scripts/audit-marketing-bundle.ts (exit 1 se vazar).
@@ -20,7 +20,7 @@ interface ManifestChunk {
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const DIST = path.join(ROOT, 'dist')
-const MARKETING_PAGES = ['index.html', 'como-jogar.html', 'faq.html', '404.html']
+const MARKETING_PAGES = ['index.html', 'how-to-play.html', 'faq.html', '404.html']
 
 function kb(bytes: number): string {
   return `${(bytes / 1024).toFixed(1)} KB`
@@ -60,7 +60,7 @@ const manifest = JSON.parse(readFileSync(path.join(DIST, '.vite/manifest.json'),
   ManifestChunk
 >
 const seen = new Set<string>()
-const queue = ['jogar.html']
+const queue = ['play.html']
 while (queue.length > 0) {
   const key = queue.pop()!
   if (seen.has(key) || !manifest[key]) continue
@@ -75,7 +75,7 @@ for (const key of seen) {
 const gameJs = [...gameFiles].filter((f) => f.endsWith('.js'))
 const gameCss = [...gameFiles].filter((f) => f.endsWith('.css'))
 console.log(
-  `  jogar.html: ${gameJs.length} js (${kb(gameJs.reduce((t, f) => t + sizeOf(f), 0))}), ` +
+  `  play.html: ${gameJs.length} js (${kb(gameJs.reduce((t, f) => t + sizeOf(f), 0))}), ` +
     `${gameCss.length} css (${kb(gameCss.reduce((t, f) => t + sizeOf(f), 0))})`,
 )
 
@@ -86,7 +86,7 @@ const gameHasSupabase = gameJs.some((file) =>
   readFileSync(path.join(DIST, file), 'utf-8').includes('supabase'),
 )
 if (!gameHasSupabase) {
-  console.error('✗ sanidade: o grafo de jogar.html não contém Supabase — auditoria inválida.')
+  console.error('✗ sanidade: o grafo de play.html não contém Supabase — auditoria inválida.')
   failed = true
 }
 
@@ -94,4 +94,4 @@ if (failed) {
   console.error('\nAUDITORIA FALHOU.')
   process.exit(1)
 }
-console.log('\nAuditoria ok: marketing sem nenhum JS externo; jogo isolado em jogar.html.')
+console.log('\nAuditoria ok: marketing sem nenhum JS externo; jogo isolado em play.html.')

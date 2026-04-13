@@ -7,23 +7,25 @@
     "deploymentEnabled": { "main": false }
   },
   "redirects": [
-    { "source": "/", "has": [{ "type": "query", "key": "room" }], "destination": "/jogar", "permanent": false },
-    { "source": "/", "has": [{ "type": "query", "key": "host" }], "destination": "/jogar", "permanent": false },
-    { "source": "/", "has": [{ "type": "query", "key": "local" }], "destination": "/jogar", "permanent": false },
-    { "source": "/", "has": [{ "type": "query", "key": "players" }], "destination": "/jogar", "permanent": false }
+    { "source": "/jogar", "destination": "/play", "permanent": true },
+    { "source": "/como-jogar", "destination": "/how-to-play", "permanent": true },
+    { "source": "/", "has": [{ "type": "query", "key": "room" }], "destination": "/play", "permanent": false },
+    { "source": "/", "has": [{ "type": "query", "key": "host" }], "destination": "/play", "permanent": false },
+    { "source": "/", "has": [{ "type": "query", "key": "local" }], "destination": "/play", "permanent": false },
+    { "source": "/", "has": [{ "type": "query", "key": "players" }], "destination": "/play", "permanent": false }
   ],
   "rewrites": [
-    { "source": "/jogar", "destination": "/jogar.html" },
-    { "source": "/como-jogar", "destination": "/como-jogar.html" },
+    { "source": "/play", "destination": "/play.html" },
+    { "source": "/how-to-play", "destination": "/how-to-play.html" },
     { "source": "/faq", "destination": "/faq.html" }
   ],
   "headers": [
     {
-      "source": "/(index|jogar|como-jogar|faq|404)\\.html",
+      "source": "/(index|play|how-to-play|faq|404)\\.html",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     },
     {
-      "source": "/(jogar|como-jogar|faq)",
+      "source": "/(play|how-to-play|faq)",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     },
     {

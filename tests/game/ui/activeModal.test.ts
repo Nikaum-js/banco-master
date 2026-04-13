@@ -62,7 +62,7 @@ describe('activeModal — decisões de carta (US3)', () => {
   it('SC-003: card-discard → mão do jogador DA VEZ (ids/rarity/effect), nunca a do adversário', () => {
     const g = base()
     g.players[0].hand = ['boicote-1', 'atalho-1', 'aquisicao-hostil-1', 'imunidade-1'] // p1 (da vez)
-    g.players[1].hand = ['despejo-1'] // p2 — não pode aparecer
+    g.players[1].hand = ['confisco-geral-1'] // p2 — não pode aparecer
     g.resolution = { kind: 'card-discard', deckId: 'acaso', drawnId: 'imunidade-1' }
     const view = activeModal(g)
     expect(view).toEqual({
@@ -76,7 +76,7 @@ describe('activeModal — decisões de carta (US3)', () => {
       ],
     })
     // privacidade: nenhuma carta de p2 vaza
-    expect(view?.kind === 'card-discard' && view.cards.some((c) => c.id === 'despejo-1')).toBe(false)
+    expect(view?.kind === 'card-discard' && view.cards.some((c) => c.id === 'confisco-geral-1')).toBe(false)
   })
 
   it('card-shortcut → { kind: card-shortcut }', () => {

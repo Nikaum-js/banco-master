@@ -3,7 +3,7 @@
 ## Como funciona
 
 As páginas públicas (`/`, `/como-jogar`, `/faq`) são HTML autoral prerenderizado no build
-MPA do Vite; o app interativo vive em `/jogar`. Canonical, Open Graph, `robots.txt` e
+MPA do Vite; o app interativo vive em `/play`. Canonical, Open Graph, `robots.txt` e
 `sitemap.xml` são gerados pelo plugin `siteMeta()` em `vite.config.ts` a partir de uma
 única variável — nada de domínio hardcoded nas páginas (`%SITE_URL%` é substituído no build).
 

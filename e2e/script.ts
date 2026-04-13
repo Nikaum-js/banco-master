@@ -134,5 +134,5 @@ export async function driveTurns(page: Page, minTurns: number): Promise<void> {
 // `fullMatch.spec.ts` e `a11y.spec.ts` (tela de fim de jogo) — nenhum dos dois joga uma
 // partida do zero; isso é o que o `sim:batch` prova, em lote, no motor.
 export async function gotoEndgameScenario(page: Page): Promise<void> {
-  await page.goto('/jogar?players=2&scenario=endgame')
+  await page.goto('/play?players=2&scenario=endgame')
 }

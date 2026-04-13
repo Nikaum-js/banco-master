@@ -51,6 +51,7 @@ function sampleFor(kind: LogKind): LogEntry {
     case 'audit': return { kind, who: 'p1', targetId: 'p2', amount: 120 }
     case 'evict': return { kind, who: 'p1', pos: 1, victimId: 'p2' }
     case 'card-collect': return { kind, who: 'p2', name: 'Aniversario', delta: -50, counterpartId: 'p1' }
+    case 'swap': return { kind, who: 'p1', posGiven: 1, posTaken: 3, victimId: 'p2' }
     case 'legacy': return { kind, who: 'p1', what: 'evento antigo' }
   }
 }
@@ -75,7 +76,7 @@ describe('LogEntry — forma do evento (040, FR-001..006)', () => {
       const sample = sampleFor(kind)
       expect(sample.kind).toBe(kind)
     }
-    expect(ALL_LOG_KINDS.length).toBe(36)
+    expect(ALL_LOG_KINDS.length).toBe(37)
   })
 
   it('round-trip JSON é idêntico — nenhum campo perde tipo/valor (invariante 4)', () => {
