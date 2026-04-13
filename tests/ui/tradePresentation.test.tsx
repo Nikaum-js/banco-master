@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { ActionsPanel, PlayersPanel } from '@/boards/shared'
 import { createSeedState } from '@/game/setup'
 import { useGameStore } from '@/game/store'
+import { THEME } from '@/game/theme'
 import { TradeDeedItem } from '@/game/ui/trade/TradeDeedItem'
 import { useTradeUI } from '@/game/ui/trade/tradeUI'
 import { TradeLayer } from '@/game/ui/trade/TradeLayer'
@@ -265,6 +266,26 @@ describe('apresentação da negociação', () => {
     expect(within(youSide as HTMLElement).queryByRole('button', { name: 'Incluir o título Rio de Janeiro' })).toBeNull()
     expect(screen.getByText('Ana oferece')).toBeTruthy()
     expect(screen.queryByText('Nikolas oferece')).toBeNull()
+  })
+
+  it('oferece qualquer valor inteiro pelo trilho, até o caixa disponível', () => {
+    const game = createSeedState(['p1', 'p2'])
+    act(() => useGameStore.setState({ game }))
+
+    render(<><ActionsPanel /><TradeLayer /></>)
+    fireEvent.click(screen.getByRole('button', { name: 'Nova negociação' }))
+
+    const ranges = screen.getAllByRole('slider', { name: 'Dinheiro na oferta' }) as HTMLInputElement[]
+    expect(ranges[0].step).toBe('1')
+    expect(ranges[0].max).toBe(String(THEME.INITIAL_CASH))
+
+    fireEvent.change(ranges[0], { target: { value: '1' } })
+    expect(ranges[0].value).toBe('1')
+    expect(ranges[0].getAttribute('aria-valuetext')).toBe(`R$ 1 de R$ ${THEME.INITIAL_CASH.toLocaleString('pt-BR')}`)
+
+    const tudo = screen.getAllByRole('button', { name: 'TUDO' })
+    fireEvent.click(tudo[0])
+    expect(ranges[0].value).toBe(String(THEME.INITIAL_CASH))
   })
 
   it('oferece título ou imunidade no mesmo item da propriedade', () => {

@@ -264,32 +264,50 @@ function ImmunitySide({
   )
 }
 
-// Campo de dinheiro — moeda + input tabular + "tudo".
+// Campo de dinheiro — ARRASTO, não digitação.
+//
+// Era um `input[type=number]`, e digitar é a interação errada aqui: o jogador não chega à mesa com
+// uma cifra em mente, ele procura uma — "quanto eu consigo pôr sem ficar sem caixa?". Digitar
+// obriga a converter essa pergunta num número antes de ver o efeito; arrastar responde enquanto se
+// move, com a balança do topo reagindo a cada passo. O teto é o próprio fim do trilho, então o
+// caixa disponível deixa de ser uma regra a lembrar e vira o limite físico do controle.
 function CashField({ value, max, onChange }: { value: number; max: number; onChange: (n: number) => void }) {
+  const vazio = max <= 0
+  const pct = vazio ? 0 : (value / max) * 100
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-1.5">
-        <span className="flex-1 flex items-center gap-1.5 px-2 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-950/50 border border-coffee-500 focus-within:border-gold transition-colors">
-          <CoinIcon size={14} className="text-gold shrink-0" />
-          <input
-            type="number"
-            min={0}
-            max={max}
-            value={value || ''}
-            placeholder="0"
-            onChange={(e) => onChange(clamp(Number(e.target.value) || 0, 0, max))}
-            className="w-full bg-transparent outline-none currency tabular-nums text-gold-glow text-sm placeholder:text-cream-muted/85 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-          />
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <CoinIcon size={14} className="text-gold shrink-0" />
+        <span className={cn('flex-1 currency tabular-nums text-sm', value > 0 ? 'text-gold-glow' : 'text-cream-muted/85')}>
+          {money(value)}
         </span>
         <button
           type="button"
           onClick={() => onChange(max)}
-          disabled={max <= 0}
-          className="shrink-0 label text-micro px-2 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-700 border border-coffee-500 text-cream-muted hover:text-gold hover:border-gold/60 disabled:opacity-40 transition-colors"
+          disabled={vazio}
+          className="shrink-0 label text-micro px-2 py-1 rounded-[var(--radius-sharp)] bg-coffee-700 border border-coffee-500 text-cream-muted hover:text-gold hover:border-gold/60 disabled:opacity-40 transition-colors"
         >
           TUDO
         </button>
       </div>
+      <input
+        type="range"
+        className="trade-cash-range"
+        style={{ '--fill': `${pct}%` } as React.CSSProperties}
+        min={0}
+        max={Math.max(max, 0)}
+        // §8.2 permite dinheiro em QUALQUER valor inteiro. O ponteiro aproxima rapidamente e as
+        // setas do range refinam de $1 em $1 sem inventar uma regra de múltiplos de $25 na UI.
+        step={1}
+        value={clamp(value, 0, max)}
+        disabled={vazio}
+        // O range nativo já dá teclado (setas, Home/End) e arrasto de toque de graça — reimplementar
+        // com div e ponteiro custaria os dois. O que falta é a leitura: o leitor de tela anunciaria
+        // "1250" cru, então `aria-valuetext` devolve a cifra em dinheiro (§12.6).
+        aria-label="Dinheiro na oferta"
+        aria-valuetext={`${money(value)} de ${money(max)}`}
+        onChange={(e) => onChange(clamp(Number(e.target.value) || 0, 0, max))}
+      />
       <p className="label text-cream-muted leading-none text-nano">de {money(max)} em caixa</p>
     </div>
   )
@@ -715,7 +733,7 @@ function Composer({ onClose, proposerId }: { onClose: () => void; proposerId: st
             color={themIdentity?.color ?? 'var(--color-starlight-muted)'}
             avatar={themIdentity?.avatar ?? 'classic-alive'}
             skin={themIdentity?.skin ?? 'careca'}
-            name={themIdentity?.name ?? '—'}
+            name={themIdentity?.name ?? '·'}
             active={!!recipient}
           />
         </div>
@@ -770,7 +788,7 @@ function Composer({ onClose, proposerId }: { onClose: () => void; proposerId: st
           }
         />
         <Side
-          title={`${themIdentity?.name ?? '—'} oferece`}
+          title={`${themIdentity?.name ?? '·'} oferece`}
           color={themIdentity?.color ?? 'var(--color-starlight-muted)'}
           avatar={themIdentity?.avatar ?? 'classic-alive'}
           skin={themIdentity?.skin ?? 'careca'}
@@ -805,12 +823,12 @@ function Composer({ onClose, proposerId }: { onClose: () => void; proposerId: st
           {counterpart.fromMissing > 0 && counterpart.toMissing > 0
             ? `Essa troca esvaziaria os dois lados: faltam ${money(counterpart.fromMissing)} para você e ${money(counterpart.toMissing)} para ${themIdentity?.name ?? 'o outro lado'}.`
             : counterpart.fromMissing > 0
-              ? `Essa troca esvaziaria você — quem entrega quase tudo precisa receber valor real: faltam ${money(counterpart.fromMissing)}.`
+              ? `Essa troca esvaziaria você. Quem entrega quase tudo precisa receber valor real: faltam ${money(counterpart.fromMissing)}.`
               : counterpart.toMissing > 0
-                ? `Essa troca esvaziaria ${themIdentity?.name ?? 'o outro lado'} — quem entrega quase tudo precisa receber valor real: faltam ${money(counterpart.toMissing)}.`
+                ? `Essa troca esvaziaria ${themIdentity?.name ?? 'o outro lado'} . Quem entrega quase tudo precisa receber valor real: faltam ${money(counterpart.toMissing)}.`
                 : counterpart.fromDonation
-                  ? 'Você está entregando sem receber nada em troca — inclua qualquer contrapartida.'
-                  : `${themIdentity?.name ?? 'O outro lado'} entrega sem receber nada em troca — inclua qualquer contrapartida.`}
+                  ? 'Você está entregando sem receber nada em troca. Inclua qualquer contrapartida.'
+                  : `${themIdentity?.name ?? 'O outro lado'} entrega sem receber nada em troca. Inclua qualquer contrapartida.`}
         </p>
       )}
 

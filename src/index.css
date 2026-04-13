@@ -137,6 +137,67 @@
   --text-nano: 0.5rem;     /* 8px — legendas mínimas (stat de deed) */
 }
 
+/* Trilho de dinheiro da negociação — arrasto no lugar do campo numérico.
+   O `input[type=range]` nativo carrega teclado, toque e acessibilidade; o que ele não carrega é
+   um visual que pertença à mesa. Daí o trilho pintado à mão em duas paradas duras (latão até o
+   valor, tinta depois), com o mesmo `--fill` alimentando WebKit e Firefox — as duas engines
+   estilizam trilho e polegar por pseudo-elementos DIFERENTES e nenhuma aceita a regra da outra. */
+.trade-cash-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+}
+.trade-cash-range:disabled { cursor: default; opacity: 0.4; }
+
+.trade-cash-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(to right, var(--color-brass) var(--fill, 0%), var(--color-ink-700) var(--fill, 0%));
+}
+.trade-cash-range::-moz-range-track {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(to right, var(--color-brass) var(--fill, 0%), var(--color-ink-700) var(--fill, 0%));
+}
+
+/* O polegar precisa de contraste PRÓPRIO contra a tinta: um disco de latão com anel escuro, e não
+   um ponto da mesma cor do trilho preenchido — senão a posição some justamente no fim do curso. */
+.trade-cash-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-brass-glow);
+  border: 2px solid var(--color-ink-950);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-brass-glow) 55%, transparent);
+  transition: transform 120ms var(--ease-snap);
+}
+.trade-cash-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-pill);
+  background: var(--color-brass-glow);
+  border: 2px solid var(--color-ink-950);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-brass-glow) 55%, transparent);
+}
+.trade-cash-range:not(:disabled):hover::-webkit-slider-thumb,
+.trade-cash-range:not(:disabled):active::-webkit-slider-thumb { transform: scale(1.25); }
+
+.trade-cash-range:focus-visible { outline: none; }
+.trade-cash-range:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--color-brass-glow);
+  outline-offset: 2px;
+}
+.trade-cash-range:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--color-brass-glow);
+  outline-offset: 2px;
+}
+
 /* Em celular paisagem, os dois cabeçalhos das colunas já identificam as partes.
    A balança é o resumo visual redundante: ela cede espaço para os termos roláveis,
    preservando a operação completa da troca em 740×360 (044/055). */
