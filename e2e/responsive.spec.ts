@@ -275,8 +275,14 @@ test('controle de áudio não cobre o conteúdo da gaveta, e é alcançável por
     await page.waitForTimeout(500)
 
     const verdict = await page.evaluate(() => {
-      const audio = document.querySelector('.audio-control')!.getBoundingClientRect()
       const panel = document.querySelectorAll('.side-panel')[0]
+      // A GAVETA ROLA (058): as seções deixaram de encolher — item flex espremido com
+      // `overflow: hidden` cortava o próprio conteúdo, e com oito jogadores três ficavam
+      // inalcançáveis. O que a reserva de rodapé garante, então, é que ao chegar ao FIM
+      // da rolagem o conteúdo termina acima do controle. Medir sem rolar responderia
+      // sobre uma seção que ainda está abaixo da dobra, não sobre sobreposição.
+      panel.scrollTop = panel.scrollHeight
+      const audio = document.querySelector('.audio-control')!.getBoundingClientRect()
       const sections = Array.from(panel.querySelectorAll('section, .side-panel-section'))
       const last = sections[sections.length - 1]?.getBoundingClientRect()
       const button = document.querySelector('.audio-control button')!
@@ -875,5 +881,182 @@ test.describe('desktop (ponteiro fino)', () => {
     await expect(name).toBeVisible()
     const box = await name.boundingBox()
     expect(box!.width, 'desktop: largura do nome').toBeGreaterThan(40)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// ESTADOS VISÍVEIS (058) — empréstimos, imunidades, efeitos e posse de títulos.
+//
+// Cada bloco abaixo nasceu de um defeito RELATADO numa jogatina em celular:
+//   · o empréstimo entre adversários sumia até chegar a vez do devedor
+//     (`loans.find(debtorId === jogadorDaVez)` — uma lista lida como se fosse um item)
+//   · "Imunidade ativa" num `title`, que no toque não existe
+//   · efeitos sem alvo ("Alvo sem construir") porque a função nem recebia a sala
+//   · aeroporto e utilidade nunca disseram quem era o dono
+//
+// E um quinto, achado ao medir esta spec: a coluna de jogadores NUNCA rolava — as
+// seções encolhiam por serem itens flex e cortavam o próprio conteúdo, então com oito
+// jogadores três ficavam invisíveis e inalcançáveis.
+// ---------------------------------------------------------------------------
+
+const ESTADOS = '/play?players=8&scenario=estados'
+
+async function abrirEstados(page: Page): Promise<void> {
+  await page.goto(ESTADOS)
+  await page.waitForSelector('.player-row')
+  await page.waitForTimeout(500)
+}
+
+test.describe('estados visíveis (058)', () => {
+  for (const size of [PHONE_SMALL_PORTRAIT, PHONE_PORTRAIT, PHONE_LANDSCAPE, PLAY_MIN, TABLET_LANDSCAPE, DESKTOP]) {
+    test(`${size.width}×${size.height}: painel de estados sem transbordo e com alvos de toque`, async ({ page }) => {
+      const errors = trackRuntimeErrors(page)
+      await page.setViewportSize(size)
+      await abrirEstados(page)
+
+      await expectNoHorizontalScroll(page, `estados @ ${size.width}×${size.height}`)
+
+      // O resumo de empréstimos existe mesmo com a vez de quem não deve nada.
+      const resumo = page.locator('.loan-summary')
+      await expect(resumo).toHaveCount(1)
+      await expectTouchTarget(resumo, `resumo de empréstimo @ ${size.width}`)
+
+      // O selo de imunidade é BOTÃO, não `title`.
+      const selo = page.locator('.player-row__signal--action').first()
+      await expect(selo).toBeVisible()
+      await expectTouchTarget(selo, `selo de imunidade @ ${size.width}`)
+
+      expect(errors, `estados @ ${size.width}: erros de runtime`).toEqual([])
+    })
+  }
+
+  test('a coluna de jogadores ROLA em vez de espremer as seções', async ({ page }) => {
+    await page.setViewportSize(DESKTOP)
+    await abrirEstados(page)
+
+    const medida = await page.evaluate(() => {
+      const panel = document.querySelector('.side-panel')!
+      const secoes = Array.from(panel.querySelectorAll(':scope > .side-panel-section')).map((e) => ({
+        alturaVisivel: Math.round(e.getBoundingClientRect().height),
+        alturaReal: e.scrollHeight,
+      }))
+      return { rola: panel.scrollHeight > panel.clientHeight + 1, secoes }
+    })
+
+    // Nenhuma seção corta o próprio conteúdo…
+    for (const [i, s] of medida.secoes.entries()) {
+      expect(s.alturaVisivel, `seção ${i}: conteúdo cortado`).toBeGreaterThanOrEqual(s.alturaReal - 2)
+    }
+    // …e o excedente vira ROLAGEM, que é o que devolve os jogadores inalcançáveis.
+    expect(medida.rola, 'a coluna deveria rolar com oito jogadores e três seções').toBe(true)
+  })
+
+  test('todos os oito jogadores são alcançáveis por rolagem', async ({ page }) => {
+    await page.setViewportSize(DESKTOP)
+    await abrirEstados(page)
+    await expect(page.locator('.player-row')).toHaveCount(8)
+  })
+
+  test('o detalhe de empréstimo abre, tem os fatos do §15, e Esc devolve o foco', async ({ page }) => {
+    await page.setViewportSize(PHONE_PORTRAIT)
+    await abrirEstados(page)
+
+    const resumo = page.locator('.loan-summary')
+    await resumo.click()
+
+    const modal = page.locator('.state-detail')
+    await expect(modal).toBeVisible()
+    for (const fato of ['Principal fixo', 'Cobrança por GO', 'Voltas restantes', 'Quitação agora']) {
+      await expect(modal.getByText(fato).first()).toBeVisible()
+    }
+    // Dois contratos no cenário — o painel mostra os DOIS, não só o do jogador da vez.
+    await expect(modal.locator('.loan-detail')).toHaveCount(2)
+
+    // Rola por dentro; o documento não ganha rolagem horizontal por causa dele.
+    await expectNoHorizontalScroll(page, 'detalhe de empréstimo @ retrato')
+
+    await page.keyboard.press('Escape')
+    await expect(modal).toHaveCount(0)
+    await expect(resumo).toBeFocused()
+  })
+
+  test('o detalhe de imunidade distingue total de por-propriedade', async ({ page }) => {
+    await page.setViewportSize(PHONE_PORTRAIT)
+    await abrirEstados(page)
+
+    await page.locator('.player-row__signal--action').first().click()
+    const modal = page.locator('.state-detail')
+    await expect(modal).toBeVisible()
+    await expect(modal.getByText(/Imunidade total/i).first()).toBeVisible()
+    await expect(modal.getByText(/Imunidade de aluguel/i).first()).toBeVisible()
+    // Permanente é um ESTADO, não um prazo vazio.
+    await expect(modal.getByText('Permanente').first()).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(modal).toHaveCount(0)
+  })
+
+  test('efeitos ativos nomeiam alvo e alcance', async ({ page }) => {
+    await page.setViewportSize(DESKTOP)
+    await abrirEstados(page)
+
+    const efeitos = page.locator('.effect-row')
+    await expect(efeitos).toHaveCount(4)
+    // Estatização: mesa inteira, uma volta (D-080), lida do estado.
+    await expect(page.getByText('Mesa inteira').first()).toBeVisible()
+    // Embargo: o nome do alvo, que era exatamente o que faltava.
+    await expect(page.getByText(/não pode construir/).first()).toBeVisible()
+    const consequencias = await efeitos.locator('.effect-row__consequence').allTextContents()
+    for (const texto of consequencias) {
+      expect(texto, 'id técnico vazando na interface').not.toMatch(/\bp\d+\b/)
+    }
+  })
+
+  // O cenário `estados` deixa aeroporto e utilidade nos TRÊS estados de posse, em casas
+  // nomeadas — abrir por nome é determinístico, varrer o tabuleiro não é.
+  const POSSE: { casa: string; espera: 'free' | 'owned'; hipotecada: boolean }[] = [
+    { casa: 'JFK', espera: 'owned', hipotecada: false },
+    { casa: 'Londres', espera: 'owned', hipotecada: true },
+    { casa: 'Narita', espera: 'free', hipotecada: false },
+    { casa: 'Petro Corp', espera: 'owned', hipotecada: false },
+    { casa: 'Eletro Corp', espera: 'owned', hipotecada: true },
+    { casa: 'Gas Corp', espera: 'free', hipotecada: false },
+  ]
+
+  for (const { casa, espera, hipotecada } of POSSE) {
+    test(`${casa}: a escritura diz a posse (${espera}${hipotecada ? ' + hipotecada' : ''})`, async ({ page }) => {
+      await page.setViewportSize(DESKTOP)
+      await abrirEstados(page)
+
+      await page.getByRole('button', { name: `${casa}: ver detalhes` }).click()
+      const popover = page.locator('.deed-popover')
+      await expect(popover).toBeVisible()
+
+      const posse = popover.locator('[data-ownership]')
+      await expect(posse).toHaveCount(1)
+      await expect(posse).toHaveAttribute('data-ownership', espera)
+
+      if (espera === 'free') {
+        await expect(posse.getByText(/sem dono/i)).toBeVisible()
+      } else {
+        // O nome do dono é texto de verdade, não um `title` — num celular não há ponteiro.
+        await expect(posse.locator('strong')).not.toBeEmpty()
+      }
+      if (hipotecada) await expect(popover.getByText('Hipotecada')).toBeVisible()
+    })
+  }
+
+  test('axe não acha violação bloqueante nos estados visíveis', async ({ page }) => {
+    for (const size of [PHONE_PORTRAIT, DESKTOP]) {
+      await page.setViewportSize(size)
+      await abrirEstados(page)
+      await expectNoBlockingA11yViolations(page, `estados @ ${size.width}×${size.height}`)
+
+      // E com os detalhes ABERTOS, que é onde o foco e a semântica de diálogo vivem.
+      await page.locator('.loan-summary').click()
+      await expect(page.locator('.state-detail')).toBeVisible()
+      await expectNoBlockingA11yViolations(page, `detalhe de empréstimo @ ${size.width}`)
+      await page.keyboard.press('Escape')
+    }
   })
 })

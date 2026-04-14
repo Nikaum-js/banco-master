@@ -37,10 +37,10 @@ describe('apresentação da negociação', () => {
     expect(screen.getByText('Empréstimo ativo').closest('.loan-panel-section')).toBeTruthy()
   })
 
-  it('mostra o empréstimo ao credor sem oferecer quitação em nome do devedor', () => {
-    const game = createSeedState(['p1', 'p2'])
-    game.loans = [{ debtorId: 'p1', creditorId: 'p2', principal: 26, ratePct: 50 }]
-    const room: Room = {
+  // 058/US3 — o painel virou RESUMO + detalhe sob demanda: o que cabe na coluna estreita
+  // da gaveta fica na linha, e os fatos do §15 abrem num modal informativo.
+  function salaDeDois(): Room {
+    return {
       id: 'loan-room',
       status: 'playing',
       seats: [
@@ -54,15 +54,27 @@ describe('apresentação da negociação', () => {
         },
       ],
     }
+  }
+
+  function abrirDetalheDeEmprestimos(): void {
+    fireEvent.click(screen.getByRole('button', { name: /Ver detalhes de/ }))
+  }
+
+  it('mostra o empréstimo ao credor sem oferecer quitação em nome do devedor', () => {
+    const game = createSeedState(['p1', 'p2'])
+    game.loans = [{ debtorId: 'p1', creditorId: 'p2', principal: 26, ratePct: 50 }]
     act(() => {
       useGameStore.setState({ game })
-      useRoomStore.setState({ room, myUid: 'ana-uid' })
+      useRoomStore.setState({ room: salaDeDois(), myUid: 'ana-uid' })
     })
 
     render(<PlayersPanel />)
 
-    expect(screen.getByText('Nikolas deve a você')).toBeTruthy()
+    expect(screen.getByText('Nikolas deve a Ana')).toBeTruthy()
+    abrirDetalheDeEmprestimos()
+
     expect(screen.queryByRole('button', { name: /Quitar/ })).toBeNull()
+    expect(screen.getByText('Só Nikolas pode quitar')).toBeTruthy()
     expect(screen.getByText('Principal fixo')).toBeTruthy()
     expect(screen.getByText('Cobrança por GO')).toBeTruthy()
   })
@@ -70,29 +82,49 @@ describe('apresentação da negociação', () => {
   it('oferece quitação somente ao devedor local', () => {
     const game = createSeedState(['p1', 'p2'])
     game.loans = [{ debtorId: 'p1', creditorId: 'p2', principal: 26, ratePct: 50 }]
-    const room: Room = {
-      id: 'loan-room',
-      status: 'playing',
-      seats: [
-        {
-          playerId: 'p1', uid: 'nikolas-uid', name: 'Nikolas', color: '#3b8bd0',
-          isHost: true, connected: true, reentryCode: 'NIK111',
-        },
-        {
-          playerId: 'p2', uid: 'ana-uid', name: 'Ana', color: '#b665a2',
-          isHost: false, connected: true, reentryCode: 'ANA222',
-        },
-      ],
-    }
     act(() => {
       useGameStore.setState({ game })
-      useRoomStore.setState({ room, myUid: 'nikolas-uid' })
+      useRoomStore.setState({ room: salaDeDois(), myUid: 'nikolas-uid' })
     })
 
     render(<PlayersPanel />)
+    abrirDetalheDeEmprestimos()
 
-    expect(screen.getByText('Você deve a Ana')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Quitar R$ 26' })).toBeTruthy()
+  })
+
+  // O DEFEITO da jogatina: o painel lia `loans.find(debtorId === jogadorDaVez)`, então uma
+  // dívida entre dois adversários sumia da tela até chegar a vez do devedor. O prazo
+  // restante é informação pública (§15.6) e não depende de quem está jogando.
+  it('mostra empréstimo entre adversários mesmo quando a vez é de um terceiro', () => {
+    const game = createSeedState(['p1', 'p2', 'p3'])
+    game.loans = [{ debtorId: 'p2', creditorId: 'p3', principal: 300, ratePct: 20 }]
+    game.activeSeat = 0 // a vez é de p1, que não é parte nenhuma do contrato
+    act(() => useGameStore.setState({ game }))
+
+    render(<PlayersPanel />)
+
+    expect(screen.getByText(/deve a/)).toBeTruthy()
+    abrirDetalheDeEmprestimos()
+    expect(screen.getByText('Principal fixo')).toBeTruthy()
+  })
+
+  it('conta e detalha VÁRIOS empréstimos simultâneos entre pares distintos', () => {
+    const game = createSeedState(['p1', 'p2', 'p3', 'p4'])
+    game.loans = [
+      { debtorId: 'p1', creditorId: 'p2', principal: 200, ratePct: 10, lapsElapsed: 0 },
+      { debtorId: 'p3', creditorId: 'p4', principal: 500, ratePct: 30, lapsElapsed: 2 },
+    ]
+    act(() => useGameStore.setState({ game }))
+
+    render(<PlayersPanel />)
+
+    // O resumo destaca o de prazo MAIS PRÓXIMO (p3, com 1 volta restante).
+    expect(screen.getByText('Empréstimos ativos')).toBeTruthy()
+    expect(screen.getByText(/vence no próximo GO/)).toBeTruthy()
+
+    abrirDetalheDeEmprestimos()
+    expect(screen.getAllByText('Principal fixo')).toHaveLength(2)
   })
 
   it('mostra o nome completo e os fatos canônicos de uma propriedade', () => {
