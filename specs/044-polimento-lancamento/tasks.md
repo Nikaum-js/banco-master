@@ -193,3 +193,9 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 
 - [x] **T075** `src/game/ui/OrientationGate.tsx`: o aviso de girar hoje dispara em **qualquer** retrato, sem limiar — desvio do [D6 do plan](./plan.md#d6--retrato-é-uma-tela-acima-da-árvore-não-um-layout-alternativo), que previa "retrato **abaixo do limiar**". Do jeito atual, um monitor vertical ou um tablet em retrato (onde a mesa cabe, porque o breakpoint de 1100px já empilha os painéis) recebe "gire o aparelho" sem motivo. Aplicar o limiar: o aviso vale quando a largura é insuficiente para servir a mesa, não quando a orientação é retrato. Cobrir com teste nos dois lados do limiar.
 - [x] **T076** `src/boards/shared.tsx` (`useDieAnimation`, `Dice`, `SpeedDie`): a coreografia do cubo 3D **nunca** consultou `prefers-reduced-motion` — ela roda o tombo completo (~1,05 s) mesmo para quem pediu menos movimento (FR-021). Ficou mais visível depois da T071: com o gate zerado, o peão sai andando enquanto o dado ainda tomba. Sob movimento reduzido, o dado deve **mostrar o resultado imediatamente**, sem tombo — o fato (a face sorteada) continua legível, que é o contrato do D7.
+
+---
+
+## Achados para outras specs (não desta)
+
+- **Pausa transitória no boot do host** (descoberto pela telemetria, Fase 6): `host.ts` conecta o anfitrião antes do segundo jogador entrar, então por um instante o assento dele parece desconectado — dispara `pause` e resolve sozinho quando o `join` conclui. Nunca foi visível porque nenhum teste contava eventos; a telemetria da 044 o expôs ao registrar cada `accept(pause)`/`accept(resume)`. **Consequência prática**: a métrica `match_paused` vai contar pausas que nunca existiram para os jogadores, e a mesa pode piscar "pausada" no boot. É comportamento das specs 037/041 — corrige-se lá, não aqui.
