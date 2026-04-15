@@ -74,13 +74,11 @@ describe('Aquisição Hostil (US1)', () => {
 })
 
 describe('Despejo (US2)', () => {
-  it('SC-002: demole 1 casa; banco recupera; dono não recebe', () => {
+  it('SC-002: demole 1 casa; dono não recebe', () => {
     const g = setup('despejo-1')
     g.titles[1].houses = 3
-    const banco = g.bank.houses
     const out = playHandCard(g, 'p1', 'despejo-1', defaultPorts, 1)
     expect(out.titles[1].houses).toBe(2)
-    expect(out.bank.houses).toBe(banco + 1)
     expect(out.players[1].cash).toBe(2000) // dono não recebe nada
   })
 

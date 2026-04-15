@@ -30,34 +30,26 @@ const AIRPORT = BOARD.find((s) => s.kind === 'airport')!.pos
 const COST1 = buildCost(BOARD[1] as PropertySquare) // round(60/2)=30
 
 describe('2º hotel (US1)', () => {
-  it('SC-001: sobe hotel→2º hotel, consome 1 hotel do estoque, custo do hotel', () => {
+  it('SC-001: sobe hotel→2º hotel, custo do hotel (sem estoque — ilimitado)', () => {
     const g = brown(5)
-    const hotelsBefore = g.bank.hotels
     const out = buildHouse(g, 1)
     expect(out.titles[1].hotel2).toBe(true)
-    expect(out.bank.hotels).toBe(hotelsBefore - 1)
     expect(out.players[0].cash).toBe(5000 - COST1)
   })
 
-  it('SC-001: aluguel do 2º hotel é igual ao do hotel (§14.4)', () => {
-    const semHotel2 = rentCity(100, 3, 3, { houses: 0, hotel: true, hotel2: false })
-    const comHotel2 = rentCity(100, 3, 3, { houses: 0, hotel: true, hotel2: true })
-    expect(comHotel2).toBe(semHotel2)
+  it('SC-001: aluguel do 2º hotel é MAIOR que o do 1º hotel (§14.4)', () => {
+    const hotel = rentCity(100, 3, 3, { houses: 0, hotel: true, hotel2: false })
+    const hotel2 = rentCity(100, 3, 3, { houses: 0, hotel: true, hotel2: true })
+    expect(hotel2).toBeGreaterThan(hotel)
+    expect(hotel).toBe(100 * 100) // HOTEL_RENT_MULT
+    expect(hotel2).toBe(100 * 175) // HOTEL2_RENT_MULT
   })
 
-  it('SC-001: sem estoque de hotéis → no-op', () => {
-    const g = brown(5)
-    g.bank.hotels = 0
-    expect(buildHouse(g, 1)).toBe(g)
-  })
-
-  it('SC-004: vende 2º hotel → metade + 1 hotel ao estoque', () => {
+  it('SC-004: vende 2º hotel → metade, volta ao 1º hotel', () => {
     const g = brown(6)
-    const hotelsBefore = g.bank.hotels
     const out = sellBuilding(g, 1)
     expect(out.titles[1].hotel2).toBe(false)
     expect(out.titles[1].hotel).toBe(true)
-    expect(out.bank.hotels).toBe(hotelsBefore + 1)
     expect(out.players[0].cash).toBe(5000 + Math.round(COST1 / 2))
   })
 
@@ -107,14 +99,10 @@ describe('Hangar (US2)', () => {
 })
 
 describe('Skyscraper (US3)', () => {
-  it('SC-003: ergue Skyscraper em grupo completo no 2º hotel; consome só Skyscraper', () => {
+  it('SC-003: 2 hotéis viram arranha-céu em grupo completo', () => {
     const g = brown(6) // grupo completo (1/3/5) todo no 2º hotel
-    const hotelsBefore = g.bank.hotels
-    const skyBefore = g.bank.skyscrapers
     const out = buildHouse(g, 1)
     expect(out.titles[1].skyscraper).toBe(true)
-    expect(out.bank.skyscrapers).toBe(skyBefore - 1)
-    expect(out.bank.hotels).toBe(hotelsBefore) // nada de hotéis volta (clarify)
   })
 
   it('SC-003: só maioria (grupo incompleto) → no-op', () => {
@@ -131,20 +119,10 @@ describe('Skyscraper (US3)', () => {
     expect(semSkyNoGrupo).toBe(base * 3) // demais do grupo triplicam
   })
 
-  it('SC-004: vende Skyscraper → volta ao 2º hotel, devolve 1 Skyscraper, hotéis inalterados', () => {
+  it('SC-004: vende Skyscraper → volta ao 2º hotel', () => {
     const g = brown(7) // todas no Skyscraper
-    const skyBefore = g.bank.skyscrapers
-    const hotelsBefore = g.bank.hotels
     const out = sellBuilding(g, 1)
     expect(out.titles[1].skyscraper).toBe(false)
     expect(out.titles[1].hotel2).toBe(true)
-    expect(out.bank.skyscrapers).toBe(skyBefore + 1)
-    expect(out.bank.hotels).toBe(hotelsBefore)
-  })
-
-  it('SC-005: sem estoque de Skyscraper → no-op', () => {
-    const g = brown(6)
-    g.bank.skyscrapers = 0
-    expect(buildHouse(g, 1)).toBe(g)
   })
 })

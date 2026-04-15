@@ -50,16 +50,14 @@ describe('Falência (US1)', () => {
     expect(after.resolution).toBeNull()
   })
 
-  it('SC-002: falir devendo ao banco → propriedades voltam ao banco; construção ao estoque', () => {
+  it('SC-002: falir devendo ao banco → propriedades voltam ao banco; construção desfeita', () => {
     const g = withDebt(null, 500)
     g.titles[1].ownerId = 'p1'
     g.titles[1].hotel = true
-    const hotelsBefore = g.bank.hotels
     const after = declareBankruptcy(g, ctx)
     expect(after.players[0].eliminated).toBe(true)
     expect(after.titles[1].ownerId).toBeNull()
     expect(after.titles[1].hotel).toBe(false)
-    expect(after.bank.hotels).toBe(hotelsBefore + 1)
   })
 
   it('SC-003: turno pula o eliminado', () => {

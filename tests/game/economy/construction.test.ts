@@ -18,7 +18,6 @@ describe('Construir (US1)', () => {
     let g = withBrownMajority()
     g = buildHouse(g, 1)
     expect(g.titles[1].houses).toBe(1)
-    expect(g.bank.houses).toBe(39)
     expect(buildHouse(g, 1)).toBe(g) // uniformidade: pos3 ainda 0 → no-op
     g = buildHouse(g, 3)
     g = buildHouse(g, 1)
@@ -26,7 +25,7 @@ describe('Construir (US1)', () => {
     expect(g.titles[3].houses).toBe(1)
   })
 
-  it('SC-002: bloqueia sem maioria / hipoteca / caixa / estoque', () => {
+  it('SC-002: bloqueia sem maioria / hipoteca / caixa', () => {
     const g1 = createSeedState(['p1', 'p2'])
     g1.titles[1].ownerId = 'p1' // 1 de 3 < maioria
     expect(buildHouse(g1, 1)).toBe(g1)
@@ -38,26 +37,18 @@ describe('Construir (US1)', () => {
     const g3 = withBrownMajority()
     g3.players[0].cash = 0
     expect(buildHouse(g3, 1)).toBe(g3)
-
-    const g4 = withBrownMajority()
-    g4.bank.houses = 0
-    expect(buildHouse(g4, 1)).toBe(g4)
   })
 
-  it('SC-005: hotel substitui 4 casas e consome 1 hotel do estoque', () => {
+  it('SC-005: 4 casas viram hotel (sem estoque — ilimitado)', () => {
     let g = withBrownMajority()
     for (let i = 0; i < 4; i++) {
       g = buildHouse(g, 1)
       g = buildHouse(g, 3)
     }
     expect(g.titles[1].houses).toBe(4)
-    const housesBefore = g.bank.houses
-    const hotelsBefore = g.bank.hotels
     g = buildHouse(g, 1) // vira hotel
     expect(g.titles[1].hotel).toBe(true)
     expect(g.titles[1].houses).toBe(0)
-    expect(g.bank.houses).toBe(housesBefore + 4) // 4 casas voltam ao estoque
-    expect(g.bank.hotels).toBe(hotelsBefore - 1)
   })
 
   it('T017: GameState com construção é serializável (round-trip JSON)', () => {
@@ -68,20 +59,18 @@ describe('Construir (US1)', () => {
 })
 
 describe('Vender construções (US3)', () => {
-  it('SC-004: vender casa credita metade e devolve ao estoque', () => {
+  it('SC-004: vender casa credita metade', () => {
     let g = withBrownMajority()
     g = buildHouse(g, 1)
     g = buildHouse(g, 3)
     g = buildHouse(g, 1) // pos1 = 2 casas
     const cashBefore = g.players[0].cash
-    const housesBefore = g.bank.houses
     g = sellBuilding(g, 1) // vende da de maior nível (pos1)
     expect(g.titles[1].houses).toBe(1)
     expect(g.players[0].cash).toBe(cashBefore + Math.round(buildCost(BOARD[1] as PropertySquare) / 2))
-    expect(g.bank.houses).toBe(housesBefore + 1)
   })
 
-  it('SC-004: vender hotel sem 4 casas no banco força desmonte do grupo (§5.5)', () => {
+  it('SC-004: vender hotel volta para 4 casas (sem desmonte forçado — ilimitado)', () => {
     let g = withBrownMajority()
     for (let i = 0; i < 4; i++) {
       g = buildHouse(g, 1)
@@ -89,11 +78,9 @@ describe('Vender construções (US3)', () => {
     }
     g = buildHouse(g, 1) // hotel pos1
     g = buildHouse(g, 3) // hotel pos3
-    g.bank.houses = 2 // < 4
-    g = sellBuilding(g, 1)
+    g = sellBuilding(g, 1) // vende da de maior nível
     expect(g.titles[1].hotel).toBe(false)
-    expect(g.titles[3].hotel).toBe(false)
-    expect(g.titles[1].houses).toBe(0)
-    expect(g.titles[3].houses).toBe(0)
+    expect(g.titles[1].houses).toBe(4) // hotel → 4 casas
+    expect(g.titles[3].hotel).toBe(true) // os outros do grupo permanecem
   })
 })

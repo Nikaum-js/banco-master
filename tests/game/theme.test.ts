@@ -22,7 +22,6 @@ describe('Tema Cidades do Mundo (018)', () => {
   it('SC-002: o seed reflete o THEME (fonte única)', () => {
     const g = createSeedState(['p1', 'p2'])
     expect(g.players[0].cash).toBe(THEME.INITIAL_CASH)
-    expect(g.bank).toEqual(THEME.BANK)
     expect(g.centerPot).toBe(THEME.PARKING_SEED)
   })
 })

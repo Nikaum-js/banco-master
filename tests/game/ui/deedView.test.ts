@@ -29,16 +29,6 @@ describe('deedView — construir/vender (US1)', () => {
     expect(v.buildBlock).toBe('uniformidade')
   })
 
-  it('SC-005: banco sem casas → bloqueado por estoque', () => {
-    const s = base()
-    s.titles[1].ownerId = 'p1'
-    s.titles[3].ownerId = 'p1'
-    s.bank.houses = 0
-    const v = deedView(s, 1)!
-    expect(v.flags.podeConstruir).toBe(false)
-    expect(v.buildBlock).toBe('estoque')
-  })
-
   it('SC-005: alvo arranha-céu sem grupo completo → bloqueado por grupo-incompleto', () => {
     const s = base()
     s.titles[1].ownerId = 'p1'
