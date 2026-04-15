@@ -10,7 +10,8 @@ O personagem do Speed Die **Mr. Banco Master** (SRS §13.2, FR-024) passa a se c
 
 **Como aplicar:**
 - Nome de exibição: **Magnata Imobiliário** (com acento, em prosa/documentação).
-- Slug técnico: `magnata-imobiliario` (sem acento — `package.json`, título HTML, prefixos de log/plugin, salt de build).
+- Slug técnico: `magnata-imobiliario` (sem acento — `package.json`, URLs, prefixos de log/plugin, salt de build).
+- Título público no navegador e metadados: **Magnata Imobiliário — Jogo de tabuleiro online**.
 - Forma toda em maiúsculas (títulos ASCII, letreiro de pixel do arcade): `MAGNATA IMOBILIARIO`.
 - Personagem do Speed Die: **Mr. Magnata** (prosa) / `'mr-magnata'` (literal interno).
 - Tema do tabuleiro ("Cidades do Mundo") e todas as regras de jogo permanecem inalteradas — a mudança é só de nome do produto e do personagem que carregava o nome antigo.
