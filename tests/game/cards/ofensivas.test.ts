@@ -18,19 +18,19 @@ function setup(card: string): GameState {
 }
 
 describe('Aquisição Hostil (US1)', () => {
-  it('SC-001: força a venda de cidade pelo preço de tabela', () => {
+  it('SC-001: força a venda de cidade pela METADE do preço de tabela (D-064)', () => {
     const g = setup('aquisicao-hostil-1')
-    const out = playHandCard(g, 'p1', 'aquisicao-hostil-1', defaultPorts, 1) // Roma, price 60
+    const out = playHandCard(g, 'p1', 'aquisicao-hostil-1', defaultPorts, 1) // Roma, price 60 → paga 30
     expect(out.titles[1].ownerId).toBe('p1')
-    expect(out.players[0].cash).toBe(2000 - 60)
-    expect(out.players[1].cash).toBe(2000 + 60)
+    expect(out.players[0].cash).toBe(2000 - 30)
+    expect(out.players[1].cash).toBe(2000 + 30)
     expect(out.players[0].hand).not.toContain('aquisicao-hostil-1')
   })
 
-  it('SC-001: aeroporto/utilidade pagam 1,5×', () => {
+  it('SC-001: aeroporto/utilidade pagam 1,5× sobre a metade (D-064)', () => {
     const g = setup('aquisicao-hostil-1')
     g.titles[AIRPORT].ownerId = 'p2' // p2 agora tem 3 não-hipotecadas
-    const esperado = Math.round(AIRPORT_PRICE * 1.5)
+    const esperado = Math.round(AIRPORT_PRICE * 0.5 * 1.5)
     const out = playHandCard(g, 'p1', 'aquisicao-hostil-1', defaultPorts, AIRPORT)
     expect(out.titles[AIRPORT].ownerId).toBe('p1')
     expect(out.players[0].cash).toBe(2000 - esperado)
@@ -45,8 +45,8 @@ describe('Aquisição Hostil (US1)', () => {
     const out = playHandCard(g, 'p1', 'aquisicao-hostil-1', defaultPorts, 1)
     expect(out.titles[1].ownerId).toBe('p1')
     expect(out.titles[1].mortgaged).toBe(true)
-    expect(out.players[0].cash).toBe(2000 - 60 - fee) // preço + taxa
-    expect(out.players[1].cash).toBe(2000 + 60) // dono recebe só o preço
+    expect(out.players[0].cash).toBe(2000 - 30 - fee) // metade do preço + taxa (D-064)
+    expect(out.players[1].cash).toBe(2000 + 30) // dono recebe só a metade
   })
 
   it('SC-004: gates → no-op (própria, construção, <2 não-hipotecadas, imune, sem caixa)', () => {
@@ -73,50 +73,63 @@ describe('Aquisição Hostil (US1)', () => {
   })
 })
 
-describe('Despejo (US2)', () => {
-  it('SC-002: demole 1 casa; dono não recebe', () => {
-    const g = setup('despejo-1')
+describe('Confisco Geral (US2, D-064)', () => {
+  it('SC-002: demole TODAS as construções; dono mantém o terreno e não recebe', () => {
+    const g = setup('confisco-geral-1')
     g.titles[1].houses = 3
-    const out = playHandCard(g, 'p1', 'despejo-1', defaultPorts, 1)
-    expect(out.titles[1].houses).toBe(2)
+    const out = playHandCard(g, 'p1', 'confisco-geral-1', defaultPorts, 1)
+    expect(out.titles[1].houses).toBe(0)
+    expect(out.titles[1].ownerId).toBe('p2') // terreno fica com o dono
     expect(out.players[1].cash).toBe(2000) // dono não recebe nada
   })
 
-  it('SC-002: sem casa / com hotel / própria / imune → no-op', () => {
-    const semCasa = setup('despejo-1')
-    expect(playHandCard(semCasa, 'p1', 'despejo-1', defaultPorts, 1)).toBe(semCasa)
+  it('SC-002: derruba hotel, 2º hotel e arranha-céu de uma vez', () => {
+    const g = setup('confisco-geral-1')
+    g.titles[1].hotel = true
+    g.titles[1].hotel2 = true
+    g.titles[1].skyscraper = true
+    const out = playHandCard(g, 'p1', 'confisco-geral-1', defaultPorts, 1)
+    expect(out.titles[1].hotel).toBe(false)
+    expect(out.titles[1].hotel2).toBe(false)
+    expect(out.titles[1].skyscraper).toBe(false)
+  })
 
-    const comHotel = setup('despejo-1')
-    comHotel.titles[1].hotel = true
-    expect(playHandCard(comHotel, 'p1', 'despejo-1', defaultPorts, 1)).toBe(comHotel)
+  it('SC-002: sem construção / própria / imune → no-op', () => {
+    const semCasa = setup('confisco-geral-1')
+    expect(playHandCard(semCasa, 'p1', 'confisco-geral-1', defaultPorts, 1)).toBe(semCasa)
 
-    const imune = setup('despejo-1')
+    const propria = setup('confisco-geral-1')
+    propria.titles[1].ownerId = 'p1'
+    propria.titles[1].houses = 2
+    expect(playHandCard(propria, 'p1', 'confisco-geral-1', defaultPorts, 1)).toBe(propria)
+
+    const imune = setup('confisco-geral-1')
     imune.titles[1].houses = 2
     imune.tempEffects.push({ kind: 'imunidade-temp', ownerId: 'p2', pos: 1, lapsRemaining: 2 })
-    expect(playHandCard(imune, 'p1', 'despejo-1', defaultPorts, 1)).toBe(imune)
+    expect(playHandCard(imune, 'p1', 'confisco-geral-1', defaultPorts, 1)).toBe(imune)
   })
 })
 
-describe('Auditoria Fiscal (US3)', () => {
-  it('SC-003: alvo paga 10% do patrimônio ao pote', () => {
+describe('Imposto Federal (US3, D-064)', () => {
+  it('SC-003: alvo paga 25% do patrimônio ao pote', () => {
     const g = createSeedState(['p1', 'p2'])
-    g.players[0].hand.push('auditoria-fiscal-1') // p2 só caixa → netWorth 2000
+    g.players[0].hand.push('imposto-federal-1') // p2 só caixa → netWorth 2000
     const potAntes = g.centerPot
-    const out = playHandCard(g, 'p1', 'auditoria-fiscal-1', defaultPorts, undefined, 'p2')
-    expect(out.players[1].cash).toBe(2000 - 200) // 10% de 2000
-    expect(out.centerPot).toBe(potAntes + 200)
+    const out = playHandCard(g, 'p1', 'imposto-federal-1', defaultPorts, undefined, 'p2')
+    expect(out.players[1].cash).toBe(2000 - 500) // 25% de 2000
+    expect(out.centerPot).toBe(potAntes + 500)
   })
 
   it('SC-003: alvo sem caixa paga o que tem; self → no-op', () => {
     const g = createSeedState(['p1', 'p2'])
-    g.players[0].hand.push('auditoria-fiscal-1')
+    g.players[0].hand.push('imposto-federal-1')
     g.players[1].cash = 5
-    g.titles[1].ownerId = 'p2' // netWorth = 5 + 60 = 65 → owed 7 > 5
-    const out = playHandCard(g, 'p1', 'auditoria-fiscal-1', defaultPorts, undefined, 'p2')
+    g.titles[1].ownerId = 'p2' // netWorth = 5 + 60 = 65 → owed 16 > 5
+    const out = playHandCard(g, 'p1', 'imposto-federal-1', defaultPorts, undefined, 'p2')
     expect(out.players[1].cash).toBe(0) // pagou o que tinha
 
     const self = createSeedState(['p1', 'p2'])
-    self.players[0].hand.push('auditoria-fiscal-1')
-    expect(playHandCard(self, 'p1', 'auditoria-fiscal-1', defaultPorts, undefined, 'p1')).toBe(self)
+    self.players[0].hand.push('imposto-federal-1')
+    expect(playHandCard(self, 'p1', 'imposto-federal-1', defaultPorts, undefined, 'p1')).toBe(self)
   })
 })

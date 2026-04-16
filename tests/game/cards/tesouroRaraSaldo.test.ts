@@ -151,12 +151,17 @@ describe('CARD 01 — prisão → rolagem → carta rara não zera o saldo', () 
     expect(s.players[0].cash).toBe(inicial)
   })
 
-  it('a carta rara IMEDIATA do mesmo deck cobra 5% do patrimônio — e nunca zera quem tem caixa', () => {
-    // `crise-imobiliaria` é a única rara de Acaso que move dinheiro. Fica aqui para o card ter
-    // a alternativa auditada, não só a hipótese que passou.
+  it('a carta rara IMEDIATA do mesmo deck não cobra de quem a sacou (D-064)', () => {
+    // `crise-imobiliaria` é a única rara de Acaso que move dinheiro. Fica aqui para o card ter a
+    // alternativa auditada, não só a hipótese que passou.
+    //
+    // A D-064 mudou a carta: antes cobrava 5% de TODOS (inclusive de quem sacou), agora cobra 10%
+    // só dos ADVERSÁRIOS. Isso fortalece a conclusão do CARD 01 em vez de enfraquecê-la — quem
+    // saca a carta no caminho prisão→Acaso não perde nada por ela, nem 5%.
     const g = presoComCartaRaraNoTopo()
     g.decks.acaso = ['crise-imobiliaria-1', ...g.decks.acaso]
     g.players[0].cash = 1_000
+    g.players[1].cash = 1_000
 
     let s = jailDecision(g, 'pay', ctxComDados([6, 5]))
     s = rollDice(s, ctxComDados([6, 5]))
@@ -165,8 +170,10 @@ describe('CARD 01 — prisão → rolagem → carta rara não zera o saldo', () 
     // Imediata NÃO abre `card-reveal` (`cardRevealResolve` aplica direto) — o log do relato
     // mostrava `card-reveal`, o que já a descartava como a carta do incidente.
     expect(s.resolution).toBeNull()
-    const cobrado = (1_000 - THEME.JAIL_FINE) - s.players[0].cash
-    expect(cobrado).toBe(Math.round((1_000 - THEME.JAIL_FINE) * 0.05))
-    expect(s.players[0].cash).toBeGreaterThan(0)
+    // Quem sacou: só a fiança saiu do caixa dele. Nada da carta.
+    expect(s.players[0].cash).toBe(1_000 - THEME.JAIL_FINE)
+    // O adversário paga 10% do patrimônio dele — e o débito é NARRADO (D-063).
+    expect(1_000 - s.players[1].cash).toBe(Math.round(1_000 * 0.1))
+    expect(s.log.some((e) => e.kind === 'card-collect' && e.who === 'p2')).toBe(true)
   })
 })

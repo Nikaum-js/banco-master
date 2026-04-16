@@ -88,9 +88,9 @@ export function cardResolve(rctx: ResolveCtx, predrawn?: CardSlot): ResolutionOu
   applyEffect(card.effect, state, playerId, ports)
   state.decks[deckId].push(id) // volta ao fundo
   logEvent(state, { kind: 'card-immediate', who: playerId, deck: deckId, name, delta: player.cash - cashBefore })
-  // Cartas de MOVIMENTO (Avance/Volte 3) resolvem a casa de destino como um pouso
-  // normal (comprar/pagar aluguel/etc.). gotojail no destino → 'encerrado' (resolvePending trata).
-  if (card.effect === 'avance3' || card.effect === 'volte3') {
+  // Cartas de MOVIMENTO (Avance/Volte 3, Obras na Pista) resolvem a casa de destino como um
+  // pouso normal (comprar/pagar aluguel/etc.). gotojail no destino → 'encerrado' (resolvePending trata).
+  if (card.effect === 'avance3' || card.effect === 'volte3' || card.effect === 'obrasNaPista') {
     landAfterCardMovement(state, player)
     return { done: false }
   }
@@ -141,7 +141,8 @@ export function confirmCardReveal(state: GameState, ports: TurnPorts): GameState
 }
 
 // Jogar carta de mão respeitando a janela de timing. Puro; no-op fora da janela.
-// `target` (posição) é exigido pelas cartas de mão com alvo: Boicote / Imunidade Temporária (015).
+// `target` (posição) é exigido pelas cartas de mão com alvo (Boicote, Valorização, ofensivas);
+// `target2` (D-064) só pela Permuta Forçada — a posição da propriedade PRÓPRIA entregue.
 export function playHandCard(
   state: GameState,
   playerId: string,
@@ -149,6 +150,7 @@ export function playHandCard(
   ports: TurnPorts,
   target?: number,
   targetPlayer?: string,
+  target2?: number,
 ): GameState {
   const player = state.players.find((p) => p.id === playerId)
   // 043, D7: quem replica o comando (host.ts já validou e aceitou) pode ver a própria mão de
@@ -164,17 +166,26 @@ export function playHandCard(
   if (card.timing === 'preso' && !player.jail.inJail) return state
   if (card.timing === 'reacao') return state // reação deferida (FR-013)
 
-  // Imunidade Temporária (015, §10.6) — proteção de alvo sobre propriedade PRÓPRIA.
+  // Imunidade Total (D-064, ex-Imunidade Temporária) — sem alvo: protege o PRÓPRIO jogador
+  // por 1 volta (sem aluguel, sem imposto, sem ser alvo de efeito negativo).
   if (card.effect === 'imunidade') {
-    if (target == null || ownerOf(state, target) !== playerId) return state
     const s = structuredClone(state)
-    addTempEffect(s, { kind: 'imunidade-temp', ownerId: playerId, pos: target, lapsRemaining: 2 })
+    addTempEffect(s, { kind: 'imunidade-total', ownerId: playerId, pos: null, lapsRemaining: 1 })
     return discardPlayed(s, playerId, cardId, card.deck)
   }
-  // Ofensivas com alvo (015 Boicote / 016 Aquisição/Despejo/Auditoria). Se o alvo tem Diplomacia,
-  // abre uma reação (017) em vez de aplicar; senão aplica direto. No-op se a jogada for inválida.
-  if (card.effect === 'boicote' || card.effect === 'aquisicaoHostil' || card.effect === 'despejo' || card.effect === 'auditoriaFiscal') {
-    const reactor = reactorFor(state, card.effect, playerId, target ?? null, targetPlayer ?? null)
+  // Valorização (D-064) — propriedade PRÓPRIA cobra aluguel em dobro por 1 volta.
+  if (card.effect === 'valorizacao') {
+    if (target == null || ownerOf(state, target) !== playerId) return state
+    const s = structuredClone(state)
+    addTempEffect(s, { kind: 'valorizacao', ownerId: playerId, pos: target, lapsRemaining: 1 })
+    return discardPlayed(s, playerId, cardId, card.deck)
+  }
+  // Ofensivas com alvo (015 Boicote / 016 Aquisição / D-064 Confisco, Imposto Federal, Permuta,
+  // Embargo). Se o alvo tem Diplomacia, abre uma reação (017) em vez de aplicar; senão aplica
+  // direto. No-op se a jogada for inválida.
+  const OFENSIVAS = ['boicote', 'aquisicaoHostil', 'confiscoGeral', 'impostoFederal', 'permutaForcada', 'embargoDeObras']
+  if (OFENSIVAS.includes(card.effect)) {
+    const reactor = reactorFor(state, card.effect, playerId, target ?? null, targetPlayer ?? null, target2 ?? null)
     if (!reactor) return state // jogada inválida → no-op
     // 043: `ports.hasReaction` (gravado/reproduzido, D11) — quem ataca não vê a mão de quem
     // defende, e esta decisão vira `state.resolution` PÚBLICA e estrutural (mesmo motivo de
@@ -192,11 +203,12 @@ export function playHandCard(
         deck: card.deck,
         targetPos: target ?? null,
         targetPlayer: targetPlayer ?? null,
+        targetPos2: target2 ?? null,
       }
       return s
     }
     const s = structuredClone(state)
-    applyOffensive(s, card.effect, playerId, target ?? null, targetPlayer ?? null, ports)
+    applyOffensive(s, card.effect, playerId, target ?? null, targetPlayer ?? null, ports, target2 ?? null)
     return discardPlayed(s, playerId, cardId, card.deck)
   }
 

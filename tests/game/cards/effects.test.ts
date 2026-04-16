@@ -24,16 +24,49 @@ describe('Efeitos de carta (US1)', () => {
     expect(g.players[2].cash).toBe(1950 + 200)
   })
 
-  it('SC-004: Honorários e Crise pagam ao centro', () => {
+  it('SC-004: Honorários e Crise pagam ao centro (Crise poupa quem sacou, D-064)', () => {
     let center = 0
     const p = ports({ onPayToCenter: (_s, a) => { center += a } })
     const g = createSeedState(['p1', 'p2'])
     applyEffect('honorarios', g, 'p1', p)
     expect(g.players[0].cash).toBe(1950)
-    applyEffect('criseImobiliaria', g, 'p1', p) // 5% de 1950 e de 2000
-    expect(g.players[0].cash).toBe(1950 - Math.round(1950 * 0.05))
-    expect(g.players[1].cash).toBe(2000 - 100)
-    expect(center).toBe(50 + Math.round(1950 * 0.05) + 100)
+    applyEffect('criseImobiliaria', g, 'p1', p) // 10% SÓ dos adversários (D-064)
+    expect(g.players[0].cash).toBe(1950) // quem sacou não paga
+    expect(g.players[1].cash).toBe(2000 - 200) // 10% de 2000
+    expect(center).toBe(50 + 200)
+  })
+
+  it('SC-004: novas imediatas do Tesouro/Acaso (D-064)', () => {
+    let center = 0
+    const p = ports({ onPayToCenter: (_s, a) => { center += a } })
+    const g = createSeedState(['p1', 'p2'])
+
+    g.centerPot = 501
+    applyEffect('resgateDoPote', g, 'p1', p) // metade (piso) do pote
+    expect(g.players[0].cash).toBe(2000 + 250)
+    expect(g.centerPot).toBe(251)
+
+    applyEffect('desvalorizacaoCambial', g, 'p1', p) // 10% do caixa
+    expect(g.players[0].cash).toBe(2250 - 225)
+    expect(center).toBe(225)
+
+    g.titles[1].ownerId = 'p2'
+    g.titles[1].mortgaged = true
+    applyEffect('incentivoFiscal', g, 'p2', p) // $50 por hipotecada
+    expect(g.players[1].cash).toBe(2000 + 50)
+
+    applyEffect('obraRelampago', g, 'p1', p)
+    expect(g.players[0].nextBuildFree).toBe(true)
+
+    g.titles[3].ownerId = 'p1'
+    g.titles[3].hotel = true
+    g.titles[3].hotel2 = true
+    const antes = g.players[0].cash
+    applyEffect('multaAmbiental', g, 'p1', p) // $50 base + $50×2 hotéis
+    expect(g.players[0].cash).toBe(antes - 150)
+
+    applyEffect('estatizacao', g, 'p1', p)
+    expect(g.tempEffects.some((e) => e.kind === 'estatizacao')).toBe(true)
   })
 
   it('SC-004: Investidor Anjo marca desconto; Passagem de Ônibus +ticket', () => {

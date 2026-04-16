@@ -2,11 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { executeTrade } from '@/game/economy/trade'
 import { hasImmunity, tickImmunities } from '@/game/economy/imunidade'
 import { economyResolve } from '@/game/economy/resolveRentable'
-import { rollTaxMan } from '@/game/balancing/taxMan'
 import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import { BOARD } from '@/lib/boardData'
-import { mockPorts, rngFromDice } from '../turn/_helpers'
+import { mockPorts } from '../turn/_helpers'
 
 // p1 dono de Roma (pos 1).
 function withRoma(ids: string[] = ['p1', 'p2']): GameState {
@@ -75,14 +74,20 @@ describe('Imunidade — expiração por voltas (US2)', () => {
   })
 })
 
-describe('Imunidade — não afeta o Tax Man (US2)', () => {
-  it('SC-004: o Fiscal cobra o dono mesmo havendo imunidade na propriedade', () => {
-    const g = createSeedState(['p1', 'p2'])
+describe('Imunidade — é do BENEFICIÁRIO, não da propriedade (US2)', () => {
+  // Este bloco existia como "imunidade não afeta o Tax Man" e provava o ponto pelo Fiscal, que
+  // saiu do jogo na D-065. A afirmação que importa é a mesma e sobrevive sem ele: a imunidade
+  // isenta QUEM a recebeu de pagar, e não torna a propriedade isenta para os demais.
+  it('SC-004: imunidade de p1 não impede p3 de pagar aluguel na mesma propriedade', () => {
+    const g = createSeedState(['p1', 'p2', 'p3'])
     g.titles[3].ownerId = 'p2' // Veneza de p2
-    g.immunities.push({ beneficiaryId: 'p1', pos: 3, lapsRemaining: 3 }) // imunidade de p1 (irrelevante p/ Fiscal)
-    g.taxManPos = 0
-    rollTaxMan(g, rngFromDice([1, 2])) // move 3 → cai na pos 3
+    g.immunities.push({ beneficiaryId: 'p1', pos: 3, lapsRemaining: 3 }) // imunidade é de p1
+    g.players[2].pos = 3
     const rent = (BOARD[3] as { rent: number }).rent // p2 possui 1 brown → base
-    expect(g.players[1].cash).toBe(2000 - rent) // dono p2 é cobrado, imunidade não bloqueia
+
+    economyResolve({ playerId: 'p3', square: BOARD[3], roll: null, ports: mockPorts(), state: g })
+
+    expect(g.players[2].cash).toBe(2000 - rent) // p3 paga: a imunidade não é dele
+    expect(g.players[1].cash).toBe(2000 + rent) // e o dono p2 recebe normalmente
   })
 })

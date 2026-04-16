@@ -1,4 +1,4 @@
-// Catálogo das 32 cartas (dado estático). Composição segue SRS §10.4-10.5.
+// Catálogo das 39 cartas (dado estático). Composição segue SRS §10.4-10.5 (v1.26, D-064).
 // Cópias geram ids com sufixo. `effect` é a chave no registry de effects.ts.
 import type { Card, DeckId, Rarity, CardMode, Timing } from './types'
 
@@ -13,16 +13,21 @@ interface CardDef {
   status: 'implementado' | 'deferido'
 }
 
-// — Deck ACASO (16) —
+// — Deck ACASO (21) —
 const ACASO: CardDef[] = [
   { base: 'aquisicao-hostil', copies: 2, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'aquisicaoHostil', status: 'implementado' },
-  { base: 'despejo', copies: 1, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'despejo', status: 'implementado' },
-  { base: 'auditoria-fiscal', copies: 1, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'auditoriaFiscal', status: 'implementado' },
+  { base: 'confisco-geral', copies: 1, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'confiscoGeral', status: 'implementado' },
+  { base: 'imposto-federal', copies: 1, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'impostoFederal', status: 'implementado' },
+  { base: 'permuta-forcada', copies: 1, deck: 'acaso', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'permutaForcada', status: 'implementado' },
   { base: 'boicote', copies: 2, deck: 'acaso', rarity: 'rara', mode: 'mao', timing: 'proprio-turno', effect: 'boicote', status: 'implementado' },
+  { base: 'embargo-obras', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'mao', timing: 'proprio-turno', effect: 'embargoDeObras', status: 'implementado' },
   { base: 'crise-imobiliaria', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'imediato', timing: null, effect: 'criseImobiliaria', status: 'implementado' },
+  { base: 'estatizacao', copies: 1, deck: 'acaso', rarity: 'rara', mode: 'imediato', timing: null, effect: 'estatizacao', status: 'implementado' },
   { base: 'atalho', copies: 2, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'atalho', status: 'implementado' },
-  { base: 'apagao', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'apagao', status: 'implementado' },
-  { base: 'greve-utilidades', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'greveUtilidades', status: 'implementado' },
+  { base: 'greve', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'greve', status: 'implementado' },
+  { base: 'desvalorizacao-cambial', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'desvalorizacaoCambial', status: 'implementado' },
+  { base: 'obras-na-pista', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'obrasNaPista', status: 'implementado' },
+  { base: 'multa-ambiental', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'multaAmbiental', status: 'implementado' },
   { base: 'va-prisao', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'vaPrisao', status: 'implementado' },
   { base: 'volta-go', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'voltaGo', status: 'implementado' },
   { base: 'conserto-imoveis', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'consertoImoveis', status: 'implementado' },
@@ -30,16 +35,19 @@ const ACASO: CardDef[] = [
   { base: 'volte-3', copies: 1, deck: 'acaso', rarity: 'comum', mode: 'imediato', timing: null, effect: 'volte3', status: 'implementado' },
 ]
 
-// — Deck TESOURO (16) —
+// — Deck TESOURO (18) —
 const TESOURO: CardDef[] = [
   { base: 'diplomacia', copies: 1, deck: 'tesouro', rarity: 'lendaria', mode: 'mao', timing: 'reacao', effect: 'diplomacia', status: 'implementado' },
   { base: 'imunidade', copies: 1, deck: 'tesouro', rarity: 'lendaria', mode: 'mao', timing: 'proprio-turno', effect: 'imunidade', status: 'implementado' },
   { base: 'saia-prisao', copies: 1, deck: 'tesouro', rarity: 'rara', mode: 'mao', timing: 'preso', effect: 'saiaPrisao', status: 'implementado' },
   { base: 'bunker-fiscal', copies: 2, deck: 'tesouro', rarity: 'rara', mode: 'mao', timing: 'reacao', effect: 'bunkerFiscal', status: 'implementado' },
   { base: 'boom-economico', copies: 2, deck: 'tesouro', rarity: 'rara', mode: 'imediato', timing: null, effect: 'boomEconomico', status: 'implementado' },
+  { base: 'valorizacao', copies: 1, deck: 'tesouro', rarity: 'rara', mode: 'mao', timing: 'proprio-turno', effect: 'valorizacao', status: 'implementado' },
   { base: 'investidor-anjo', copies: 2, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'investidorAnjo', status: 'implementado' },
-  { base: 'refinanciamento', copies: 2, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'refinanciamento', status: 'implementado' },
   { base: 'passagem-onibus', copies: 2, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'passagemOnibus', status: 'implementado' },
+  { base: 'resgate-pote', copies: 1, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'resgateDoPote', status: 'implementado' },
+  { base: 'obra-relampago', copies: 1, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'obraRelampago', status: 'implementado' },
+  { base: 'incentivo-fiscal', copies: 1, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'incentivoFiscal', status: 'implementado' },
   { base: 'erro-banco', copies: 1, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'erroBanco', status: 'implementado' },
   { base: 'aniversario', copies: 1, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'aniversario', status: 'implementado' },
   { base: 'honorarios', copies: 1, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'honorarios', status: 'implementado' },

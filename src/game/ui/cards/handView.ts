@@ -6,13 +6,16 @@ import type { Timing } from '@/game/cards/types'
 import { BOARD } from '@/lib/boardData'
 import { cardById } from '@/game/cards/catalog'
 import { reactorFor } from '@/game/cards/reacao'
-import { canAudit } from '@/game/cards/ofensivas'
+import { canAudit, canEmbargo, canSwap } from '@/game/cards/ofensivas'
 import { ownerOf } from '@/game/economy/titles'
 import { cardLabel, CARD_DESC, RARITY_COLOR, RARITY_LABEL } from './cardMeta'
 
 export interface CardTargets {
   positions?: number[] // propriedades-alvo válidas
   players?: string[] // jogadores-alvo válidos
+  // Permuta Forçada (D-064): propriedades PRÓPRIAS elegíveis (1º passo do seletor). Quando
+  // presente, o seletor roda em duas etapas: própria → adversária.
+  positionsOwn?: number[]
 }
 
 export interface HandCard {
@@ -42,16 +45,27 @@ export function cardTargets(game: GameState, playerId: string, cardId: string): 
   switch (card.effect) {
     case 'aquisicaoHostil':
       return { positions: PROP_POSITIONS.filter((pos) => reactorFor(game, 'aquisicaoHostil', playerId, pos, null) !== null) }
-    case 'despejo':
-      return { positions: PROP_POSITIONS.filter((pos) => reactorFor(game, 'despejo', playerId, pos, null) !== null) }
+    case 'confiscoGeral':
+      return { positions: PROP_POSITIONS.filter((pos) => reactorFor(game, 'confiscoGeral', playerId, pos, null) !== null) }
     case 'boicote':
       return { positions: PROP_POSITIONS.filter((pos) => reactorFor(game, 'boicote', playerId, pos, null) !== null) }
-    case 'auditoriaFiscal':
+    case 'impostoFederal':
       return { players: game.players.filter((p) => canAudit(game, playerId, p.id)).map((p) => p.id) }
-    case 'imunidade':
+    case 'embargoDeObras':
+      return { players: game.players.filter((p) => canEmbargo(game, playerId, p.id)).map((p) => p.id) }
+    case 'valorizacao':
       return { positions: PROP_POSITIONS.filter((pos) => ownerOf(game, pos) === playerId) }
+    case 'permutaForcada': {
+      // Duas etapas (D-064): própria entregue × adversária tomada. Uma própria é elegível se
+      // existe AO MENOS uma adversária com a qual a troca passa nos gates do motor (canSwap).
+      const own = PROP_POSITIONS.filter((myPos) =>
+        ownerOf(game, myPos) === playerId && PROP_POSITIONS.some((t) => canSwap(game, playerId, myPos, t)),
+      )
+      const theirs = PROP_POSITIONS.filter((t) => own.some((myPos) => canSwap(game, playerId, myPos, t)))
+      return { positionsOwn: own, positions: theirs }
+    }
     default:
-      return null // carta sem alvo
+      return null // carta sem alvo (inclui Imunidade Total, D-064 — protege o próprio jogador)
   }
 }
 

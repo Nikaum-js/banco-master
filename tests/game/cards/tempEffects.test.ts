@@ -1,37 +1,38 @@
 import { describe, it, expect } from 'vitest'
 import { applyEffect } from '@/game/cards/effects'
 import { playHandCard } from '@/game/cards/draw'
-import { tickTempEffects, isBoycotted, isTempImmune } from '@/game/economy/tempEffects'
+import { tickTempEffects, isBoycotted, isPlayerImmune } from '@/game/economy/tempEffects'
 import { economyResolve } from '@/game/economy/resolveRentable'
-import { rollTaxMan } from '@/game/balancing/taxMan'
 import { createSeedState, defaultPorts } from '@/game/setup'
 import type { GameState, Roll } from '@/game/turn/types'
 import { BOARD } from '@/lib/boardData'
-import { mockPorts, rngFromDice } from '../turn/_helpers'
+import { mockPorts } from '../turn/_helpers'
 
 const AIRPORT = BOARD.find((s) => s.kind === 'airport')!.pos
 const UTILITY = BOARD.find((s) => s.kind === 'utility')!.pos
 const diceRoll: Roll = { white: [3, 2], speed: null, isDouble: false, move: 5, special: null } // diceValue=5
 
-describe('Apagão e Greve — imediatas (US1)', () => {
-  it('SC-001: Apagão desliga a dobra do Hangar; expira no GO do sacador', () => {
+describe('Greve — imediata unificada (US1, D-064)', () => {
+  it('SC-001: desliga a dobra do Hangar; expira no GO do sacador', () => {
     const g = createSeedState(['p1', 'p2', 'p3'])
     g.titles[AIRPORT].ownerId = 'p2'
     g.titles[AIRPORT].hangar = true
-    applyEffect('apagao', g, 'p1', mockPorts())
+    applyEffect('greve', g, 'p1', mockPorts())
     expect(g.tempEffects.some((e) => e.kind === 'apagao')).toBe(true)
+    expect(g.tempEffects.some((e) => e.kind === 'greve')).toBe(true) // os DOIS efeitos, numa carta
 
     economyResolve({ playerId: 'p3', square: BOARD[AIRPORT], roll: null, ports: mockPorts(), state: g })
     expect(g.players[2].cash).toBe(2000 - 25) // base (1 aeroporto), SEM a dobra
 
     tickTempEffects(g, 'p1') // sacador passa pelo GO (1 volta)
     expect(g.tempEffects.some((e) => e.kind === 'apagao')).toBe(false) // expirou
+    expect(g.tempEffects.some((e) => e.kind === 'greve')).toBe(false)
   })
 
-  it('SC-001: Greve zera o aluguel das utilidades', () => {
+  it('SC-001: zera o aluguel das utilidades', () => {
     const comGreve = createSeedState(['p1', 'p2', 'p3'])
     comGreve.titles[UTILITY].ownerId = 'p2'
-    applyEffect('greveUtilidades', comGreve, 'p1', mockPorts())
+    applyEffect('greve', comGreve, 'p1', mockPorts())
     economyResolve({ playerId: 'p3', square: BOARD[UTILITY], roll: diceRoll, ports: mockPorts(), state: comGreve })
     expect(comGreve.players[2].cash).toBe(2000) // $0 (greve)
 
@@ -78,41 +79,36 @@ describe('Boicote (US2)', () => {
     expect(playHandCard(imune, 'p1', 'boicote-1', defaultPorts, 1)).toBe(imune) // protegida
   })
 
-  it('SC-005: Tax Man não cobra propriedade boicotada', () => {
-    const g = createSeedState(['p1', 'p2'])
-    g.titles[3].ownerId = 'p2'
-    g.tempEffects.push({ kind: 'boicote', ownerId: 'p1', pos: 3, lapsRemaining: 2 })
-    g.taxManPos = 0
-    rollTaxMan(g, rngFromDice([1, 2])) // move 3 → pos 3 (boicotada)
-    expect(g.players[1].cash).toBe(2000) // dono não é cobrado
-  })
 })
 
-describe('Imunidade Temporária (US3)', () => {
-  it('SC-003: registra só sobre propriedade própria e bloqueia Boicote', () => {
+describe('Imunidade Total (US3, D-064)', () => {
+  it('SC-003: protege o PRÓPRIO jogador por 1 volta — sem alvo', () => {
     const g = createSeedState(['p1', 'p2'])
     g.players[0].hand.push('imunidade-1')
-    g.titles[1].ownerId = 'p1' // própria
-
-    const naoPropria = structuredCloneState(g)
-    naoPropria.titles[1].ownerId = 'p2'
-    expect(playHandCard(naoPropria, 'p1', 'imunidade-1', defaultPorts, 1)).toBe(naoPropria) // não é própria → no-op
-
-    const out = playHandCard(g, 'p1', 'imunidade-1', defaultPorts, 1)
-    expect(isTempImmune(out, 1)).toBe(true)
+    const out = playHandCard(g, 'p1', 'imunidade-1', defaultPorts)
+    expect(isPlayerImmune(out, 'p1')).toBe(true)
     expect(out.players[0].hand).not.toContain('imunidade-1')
+
+    tickTempEffects(out, 'p1')
+    expect(isPlayerImmune(out, 'p1')).toBe(false) // 1 volta
   })
 
-  it('SC-004: expira em 2 voltas do originador', () => {
+  it('SC-003: imune não paga aluguel nem é alvo de ofensiva', () => {
     const g = createSeedState(['p1', 'p2'])
-    g.tempEffects.push({ kind: 'imunidade-temp', ownerId: 'p1', pos: 1, lapsRemaining: 2 })
-    tickTempEffects(g, 'p1')
-    expect(isTempImmune(g, 1)).toBe(true)
-    tickTempEffects(g, 'p1')
-    expect(isTempImmune(g, 1)).toBe(false)
-  })
-})
+    g.titles[1].ownerId = 'p2'
+    g.tempEffects.push({ kind: 'imunidade-total', ownerId: 'p1', pos: null, lapsRemaining: 1 })
+    economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports: mockPorts(), state: g })
+    expect(g.players[0].cash).toBe(2000) // sem aluguel
 
-function structuredCloneState(g: GameState): GameState {
-  return structuredClone(g)
-}
+    // p2 (imune) não pode ser alvo de Boicote de p1
+    const alvoImune = createSeedState(['p1', 'p2'])
+    alvoImune.players[0].hand.push('boicote-1')
+    alvoImune.titles[1].ownerId = 'p2'
+    alvoImune.tempEffects.push({ kind: 'imunidade-total', ownerId: 'p2', pos: null, lapsRemaining: 1 })
+    expect(playHandCard(alvoImune, 'p1', 'boicote-1', defaultPorts, 1)).toBe(alvoImune)
+  })
+
+  // SC-005 ("Tax Man não cobra dono imune") saiu com a D-065: o Fiscal foi removido do jogo, e
+  // o cenário perdeu o sujeito. A isenção de imposto da Imunidade Total continua coberta pelos
+  // casos de imposto de CASA e de cobrança de carta, que são os que sobraram.
+})

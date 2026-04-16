@@ -7,8 +7,8 @@ import { completeResolution } from '../turn/turnMachine'
 import { cardById } from './catalog'
 import { removeFromHand } from './hand'
 import { ownerOf } from '../economy/titles'
-import { isTempImmune, addTempEffect } from '../economy/tempEffects'
-import { acquire, evict, audit, canAcquire, canEvict, canAudit } from './ofensivas'
+import { isTempImmune, isPlayerImmune, addTempEffect } from '../economy/tempEffects'
+import { acquire, confiscate, audit, swap, embargo, canAcquire, canConfiscate, canAudit, canSwap, canEmbargo } from './ofensivas'
 import { logEvent } from '../log'
 
 // id da carta na mão do jogador cujo efeito é a reação procurada (privado: não revela ao
@@ -28,20 +28,25 @@ export function findReactionCard(
 }
 
 // Quem pode reagir (Diplomacia) a esta ofensiva, SE ela for válida; senão null.
+// `targetPos2` (D-064): só a Permuta Forçada usa — a propriedade PRÓPRIA do atacante.
 export function reactorFor(
   state: GameState,
   effect: string,
   attackerId: string,
   targetPos: number | null,
   targetPlayer: string | null,
+  targetPos2?: number | null,
 ): string | null {
   if (effect === 'aquisicaoHostil') return targetPos != null && canAcquire(state, attackerId, targetPos) ? ownerOf(state, targetPos) : null
-  if (effect === 'despejo') return targetPos != null && canEvict(state, attackerId, targetPos) ? ownerOf(state, targetPos) : null
-  if (effect === 'auditoriaFiscal') return targetPlayer != null && canAudit(state, attackerId, targetPlayer) ? targetPlayer : null
+  if (effect === 'confiscoGeral') return targetPos != null && canConfiscate(state, attackerId, targetPos) ? ownerOf(state, targetPos) : null
+  if (effect === 'impostoFederal') return targetPlayer != null && canAudit(state, attackerId, targetPlayer) ? targetPlayer : null
+  if (effect === 'permutaForcada')
+    return targetPos != null && targetPos2 != null && canSwap(state, attackerId, targetPos2, targetPos) ? ownerOf(state, targetPos) : null
+  if (effect === 'embargoDeObras') return targetPlayer != null && canEmbargo(state, attackerId, targetPlayer) ? targetPlayer : null
   if (effect === 'boicote') {
     if (targetPos == null) return null
     const owner = ownerOf(state, targetPos)
-    if (owner === null || owner === attackerId || isTempImmune(state, targetPos)) return null // gate do Boicote (015)
+    if (owner === null || owner === attackerId || isTempImmune(state, targetPos) || isPlayerImmune(state, owner)) return null // gate do Boicote (015) / Imunidade Total (D-064)
     return owner
   }
   return null
@@ -55,10 +60,13 @@ export function applyOffensive(
   targetPos: number | null,
   targetPlayer: string | null,
   ports: TurnPorts,
+  targetPos2?: number | null,
 ): void {
   if (effect === 'aquisicaoHostil' && targetPos != null) acquire(state, attackerId, targetPos)
-  else if (effect === 'despejo' && targetPos != null) evict(state, attackerId, targetPos)
-  else if (effect === 'auditoriaFiscal' && targetPlayer != null) audit(state, attackerId, targetPlayer, ports)
+  else if (effect === 'confiscoGeral' && targetPos != null) confiscate(state, attackerId, targetPos)
+  else if (effect === 'impostoFederal' && targetPlayer != null) audit(state, attackerId, targetPlayer, ports)
+  else if (effect === 'permutaForcada' && targetPos != null && targetPos2 != null) swap(state, attackerId, targetPos2, targetPos)
+  else if (effect === 'embargoDeObras' && targetPlayer != null) embargo(state, attackerId, targetPlayer)
   else if (effect === 'boicote' && targetPos != null) addTempEffect(state, { kind: 'boicote', ownerId: attackerId, pos: targetPos, lapsRemaining: 2 })
 }
 
@@ -71,6 +79,7 @@ export function applyOffensive(
 export function taxBunkerResolve(rctx: ResolveCtx): ResolutionOutcome | null {
   const { square, state, playerId, ports } = rctx
   if (square.kind !== 'tax') return null
+  if (isPlayerImmune(state, playerId)) return null // Imunidade Total (D-064): o imposto nem será cobrado — não gaste o Bunker
   if (ports.hasReaction(state, playerId, 'bunkerFiscal') === null) return null
   state.resolution = { kind: 'reaction-bunker', reactorId: playerId, amount: square.amount }
   return { done: false }
@@ -98,7 +107,7 @@ export function respondReaction(state: GameState, use: boolean, ports: TurnPorts
         s.decks.tesouro.push(dip)
       }
     } else {
-      applyOffensive(s, r.effect, r.attackerId, r.targetPos, r.targetPlayer, ports) // recusa: aplica
+      applyOffensive(s, r.effect, r.attackerId, r.targetPos, r.targetPlayer, ports, r.targetPos2) // recusa: aplica
     }
     s.decks[r.deck].push(r.cardId) // a ofensiva é gasta sempre (volta ao fundo)
     s.resolution = null // aberta fora do fluxo de resolução: preserva o estado do turno

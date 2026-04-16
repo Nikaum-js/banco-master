@@ -45,8 +45,8 @@ describe('Diplomacia — reação a ofensiva (US1)', () => {
     const out = respondReaction(g, false, defaultPorts)
     expect(out.resolution).toBeNull()
     expect(out.titles[1].ownerId).toBe('p1') // adquirida
-    expect(out.players[0].cash).toBe(2000 - 60)
-    expect(out.players[1].cash).toBe(2000 + 60)
+    expect(out.players[0].cash).toBe(2000 - 30) // metade do preço (D-064)
+    expect(out.players[1].cash).toBe(2000 + 30)
   })
 
   it('SC-001: alvo sem Diplomacia → ofensiva aplica direto', () => {

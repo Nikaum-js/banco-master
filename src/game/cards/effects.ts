@@ -9,7 +9,7 @@ import type { GameState, Player } from '../turn/types'
 import type { TurnPorts } from '../turn/resolution'
 import { advance, JAIL_POS } from '../turn/turnMachine'
 import { buildCost, cityLevel, HANGAR_COST } from '../economy/construction'
-import { addTempEffect } from '../economy/tempEffects'
+import { addTempEffect, isPlayerImmune } from '../economy/tempEffects'
 import { chargePlayer } from '../economy/obligation'
 import { logEvent } from '../log'
 
@@ -63,11 +63,13 @@ const handlers: Record<string, Handler> = {
   aniversario: (s, id) => {
     for (const p of s.players) {
       if (p.id === id || p.eliminated) continue
+      if (isPlayerImmune(s, p.id)) continue // Imunidade Total (D-064): não é alvo de cobrança de carta alheia
       const paid = chargePlayer(s, p.id, id, 50, 'obligation')
       if (paid > 0) logEvent(s, { kind: 'card-collect', who: p.id, name: 'Aniversario', delta: -paid, counterpartId: id })
     }
   },
   honorarios: (s, id, ports) => {
+    if (isPlayerImmune(s, id)) return // Imunidade Total (D-064): imposto algum
     const p = pl(s, id)
     const paid = Math.min(50, p.cash)
     p.cash -= paid
@@ -77,19 +79,21 @@ const handlers: Record<string, Handler> = {
   // ninguém é privado de receita a que a regra lhe deu direito, e cobrança incondicional que
   // pode falir transforma azar em eliminação. O que mudou é que os OUTROS jogadores deixam de
   // pagar em silêncio (D-063).
+  //
+  // D-064: quem SACOU não paga (o azar já foi dele) e a alíquota subiu de 5% para 10%.
   criseImobiliaria: (s, id, ports) => {
     for (const p of s.players) {
-      if (p.eliminated) continue
-      const owed = Math.round(netWorth(s, p.id) * 0.05)
+      if (p.id === id || p.eliminated) continue
+      if (isPlayerImmune(s, p.id)) continue // Imunidade Total (D-064)
+      const owed = Math.round(netWorth(s, p.id) * 0.1)
       const paid = Math.min(owed, p.cash)
       p.cash -= paid
       ports.onPayToCenter(s, paid)
-      if (p.id !== id && paid > 0) {
-        logEvent(s, { kind: 'card-collect', who: p.id, name: 'Crise Imobiliaria', delta: -paid, counterpartId: 'bank' })
-      }
+      if (paid > 0) logEvent(s, { kind: 'card-collect', who: p.id, name: 'Crise Imobiliaria', delta: -paid, counterpartId: 'bank' })
     }
   },
   consertoImoveis: (s, id, ports) => {
+    if (isPlayerImmune(s, id)) return // Imunidade Total (D-064)
     let total = 0
     for (const sq of BOARD) {
       const t = s.titles[sq.pos]
@@ -101,6 +105,54 @@ const handlers: Record<string, Handler> = {
       p.cash -= paid
       ports.onPayToCenter(s, paid)
     }
+  },
+  // D-064 — Desvalorização Cambial: 10% do CAIXA (não do patrimônio) à Loteria.
+  desvalorizacaoCambial: (s, id, ports) => {
+    if (isPlayerImmune(s, id)) return
+    const p = pl(s, id)
+    const paid = Math.round(p.cash * 0.1)
+    p.cash -= paid
+    ports.onPayToCenter(s, paid)
+  },
+  // D-064 — Multa Ambiental: $50 + $50 por hotel/2º hotel/arranha-céu, à Loteria.
+  multaAmbiental: (s, id, ports) => {
+    if (isPlayerImmune(s, id)) return
+    let units = 0
+    for (const sq of BOARD) {
+      const t = s.titles[sq.pos]
+      if (sq.kind !== 'property' || t?.ownerId !== id) continue
+      units += (t.hotel ? 1 : 0) + (t.hotel2 ? 1 : 0) + (t.skyscraper ? 1 : 0)
+    }
+    const p = pl(s, id)
+    const paid = Math.min(50 + units * 50, p.cash)
+    p.cash -= paid
+    ports.onPayToCenter(s, paid)
+  },
+  // D-064 — Resgate do Pote: metade da Loteria (piso), o resto permanece.
+  resgateDoPote: (s, id) => {
+    const half = Math.floor(s.centerPot / 2)
+    s.centerPot -= half
+    pl(s, id).cash += half
+  },
+  // D-064 — Incentivo Fiscal: $50 por propriedade hipotecada (alívio de quem está mal).
+  incentivoFiscal: (s, id) => {
+    const n = BOARD.filter((sq) => 'price' in sq && s.titles[sq.pos]?.ownerId === id && s.titles[sq.pos]?.mortgaged).length
+    pl(s, id).cash += n * 50
+  },
+  // D-064 — Obra Relâmpago: a próxima construção (casa/hotel/arranha-céu/Hangar) sai grátis.
+  obraRelampago: (s, id) => {
+    pl(s, id).nextBuildFree = true
+  },
+  // D-064 — Obras na Pista: vai ao aeroporto mais próximo à frente (credita GO ao cruzar);
+  // o pouso resolve como movimento de carta (cardResolve) e o aluguel, se houver, é DOBRADO.
+  obrasNaPista: (s, id, ports) => {
+    const p = pl(s, id)
+    const steps = BOARD.filter((sq) => sq.kind === 'airport')
+      .map((sq) => (sq.pos - p.pos + BOARD.length) % BOARD.length)
+      .filter((d) => d > 0)
+      .reduce((a, b) => Math.min(a, b))
+    p.doubleRentOnce = true // consumido (ou descartado) na resolução do pouso
+    advance(s, p, steps, ports)
   },
   voltaGo: (s, id, ports) => {
     const p = pl(s, id)
@@ -127,20 +179,15 @@ const handlers: Record<string, Handler> = {
   passagemOnibus: (s, id) => {
     pl(s, id).busTickets += 1
   },
-  apagao: (s, id) => {
-    addTempEffect(s, { kind: 'apagao', ownerId: id, pos: null, lapsRemaining: 1 }) // Hangares inativos 1 volta (§10.6)
+  // D-064 — Greve (funde Apagão + Greve nas Utilidades): os DOIS efeitos por 1 volta.
+  // Registra os dois kinds existentes — consumidores (resolveRentable/taxMan) inalterados.
+  greve: (s, id) => {
+    addTempEffect(s, { kind: 'apagao', ownerId: id, pos: null, lapsRemaining: 1 }) // Hangares inativos (§10.6)
+    addTempEffect(s, { kind: 'greve', ownerId: id, pos: null, lapsRemaining: 1 }) // utilidades sem aluguel
   },
-  greveUtilidades: (s, id) => {
-    addTempEffect(s, { kind: 'greve', ownerId: id, pos: null, lapsRemaining: 1 }) // utilidades sem aluguel 1 volta
-  },
-  refinanciamento: (s, id) => {
-    const p = pl(s, id)
-    const sq = BOARD.find((b) => 'price' in b && s.titles[b.pos]?.ownerId === id && s.titles[b.pos]?.mortgaged)
-    if (!sq) return // sem hipoteca → no-op (§10.6 nota)
-    const cost = Math.round(Math.round(priceOf(sq) / 2) * 1.05) // deshipoteca a 5% (em vez de 10%)
-    if (p.cash < cost) return
-    p.cash -= cost
-    s.titles[sq.pos].mortgaged = false
+  // D-064 — Estatização: por 2 voltas, todo aluguel da mesa vai à Loteria (resolveRentable).
+  estatizacao: (s, id) => {
+    addTempEffect(s, { kind: 'estatizacao', ownerId: id, pos: null, lapsRemaining: 2 })
   },
 }
 
