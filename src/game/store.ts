@@ -14,7 +14,6 @@ import {
   chooseBusMove,
   chooseTripleDest,
   useBusTicket,
-  chooseBusRide,
   startTurn,
   activePlayer,
   dismissNotice,
@@ -28,7 +27,7 @@ import { buildHouse, sellBuilding, buildHangar, sellHangar } from './economy/con
 import { mortgageProperty, unmortgageProperty } from './economy/mortgage'
 import { goBonus, payToCenter, collectCenter } from './balancing/balancing'
 import { payDebt, declareBankruptcy } from './falencia/falencia'
-import { grantLoan, payOffLoan, chargeLoanInterest } from './emprestimos/emprestimos'
+import { grantLoan, proposeLoan, respondLoan, payOffLoan, chargeLoanInterest } from './emprestimos/emprestimos'
 import { rollTaxMan } from './balancing/taxMan'
 import { executeTrade, proposeTrade, acceptTrade, rejectTrade, type Trade } from './economy/trade'
 import { tickImmunities } from './economy/imunidade'
@@ -94,6 +93,7 @@ export function createSeedState(playerIds: string[]): GameState {
     decks: { acaso: deckCardIds('acaso'), tesouro: deckCardIds('tesouro') }, // 006 — embaralhar no store
     centerPot: THEME.PARKING_SEED, // 007 — Free Parking (tema)
     loans: [], // 010 — empréstimos ativos
+    pendingLoan: null, // 010 — solicitação de empréstimo aguardando resposta do credor (§15.2)
     taxManPos: 0, // 012 — Fiscal começa em GO
     immunities: [], // 014 — imunidades de aluguel ativas
     tempEffects: [], // 015 — efeitos temporários de carta
@@ -108,17 +108,27 @@ export function createSeedState(playerIds: string[]): GameState {
   return state
 }
 
+// Jogo novo pronto pra jogar: seed + baralhos embaralhados (FR-001). Usado no
+// boot e no "Novo jogo" (reset ao fim da partida).
+export function freshGame(ids: string[]): GameState {
+  const g = createSeedState(ids)
+  const rng = (): number => Math.random()
+  g.decks.acaso = weightedShuffle(g.decks.acaso, rng)
+  g.decks.tesouro = weightedShuffle(g.decks.tesouro, rng)
+  return g
+}
+
 interface GameStore {
   game: GameState
   ctx: TurnCtx
   rollDice(): void
   resolvePending(): void
   finalizeTurn(): void
+  resetGame(): void // reinicia a partida (fim de jogo → "Novo jogo")
   jailDecision(d: 'pay' | 'card' | 'try'): void
   chooseBusMove(opt: 'die0' | 'die1' | 'sum'): void
   chooseTripleDest(pos: number): void
   useBusTicket(dest: number): void
-  chooseBusRide(dest: number): void
   buyProperty(): void
   declineProperty(): void
   placeBid(playerId: string, amount: number): void
@@ -138,6 +148,8 @@ interface GameStore {
   payDebt(): void
   declareBankruptcy(): void
   grantLoan(creditorId: string, principal: number, ratePct: number): void
+  proposeLoan(creditorId: string): void
+  respondLoan(accept: boolean, ratePct: number): void
   payOffLoan(): void
   executeTrade(trade: Trade): void
   proposeTrade(trade: Trade): void
@@ -204,13 +216,7 @@ export const useGameStore = create<GameStore>((set, get) => {
   }
 
   return {
-    game: (() => {
-      const g = createSeedState(['p1', 'p2'])
-      const rng = (): number => Math.random()
-      g.decks.acaso = weightedShuffle(g.decks.acaso, rng) // embaralha (FR-001): eventos comuns, cartas raras
-      g.decks.tesouro = weightedShuffle(g.decks.tesouro, rng)
-      return g
-    })(),
+    game: freshGame(['p1', 'p2']),
     ctx: {
       rng: () => Math.random(),
       // Fiscal injetado só aqui (jogo real); defaultPorts segue sem ele p/ não afetar os testes (012)
@@ -226,11 +232,15 @@ export const useGameStore = create<GameStore>((set, get) => {
       set((st) => ({ game: finalizeTurn(st.game, st.ctx) }))
       maybeOpenLand() // 031 — falência/posse pode ter mudado a contagem de terrenos livres
     },
+    resetGame: () => {
+      clearAuctionTimer()
+      clearLandTimer()
+      set((st) => ({ game: freshGame(st.game.players.map((p) => p.id)) })) // mesmos jogadores, baralho novo
+    },
     jailDecision: (d) => set((st) => ({ game: jailDecision(st.game, d, st.ctx) })),
     chooseBusMove: (opt) => set((st) => ({ game: chooseBusMove(st.game, opt, st.ctx) })),
     chooseTripleDest: (pos) => set((st) => ({ game: chooseTripleDest(st.game, pos, st.ctx) })),
     useBusTicket: (dest) => set((st) => ({ game: useBusTicket(st.game, dest, st.ctx) })),
-    chooseBusRide: (dest) => set((st) => ({ game: chooseBusRide(st.game, dest, st.ctx) })),
     buyProperty: () => {
       set((st) => ({ game: buyProperty(st.game) }))
       maybeOpenLand() // 031 — comprar tirou um terreno de circulação → checa escassez
@@ -268,6 +278,9 @@ export const useGameStore = create<GameStore>((set, get) => {
     declareBankruptcy: () => set((st) => ({ game: declareBankruptcy(st.game, st.ctx) })),
     grantLoan: (creditorId, principal, ratePct) =>
       set((st) => ({ game: grantLoan(st.game, activePlayer(st.game).id, creditorId, principal, ratePct) })),
+    proposeLoan: (creditorId) =>
+      set((st) => ({ game: proposeLoan(st.game, activePlayer(st.game).id, creditorId) })), // §15.2
+    respondLoan: (accept, ratePct) => set((st) => ({ game: respondLoan(st.game, accept, ratePct) })), // §15.3
     payOffLoan: () => set((st) => ({ game: payOffLoan(st.game, activePlayer(st.game).id) })),
     executeTrade: (trade) => set((st) => ({ game: executeTrade(st.game, trade) })), // não gated por turno (§8.1)
     proposeTrade: (trade) => set((st) => ({ game: proposeTrade(st.game, trade) })), // 024
