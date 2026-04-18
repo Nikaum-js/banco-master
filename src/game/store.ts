@@ -20,12 +20,13 @@ import {
 import { economyResolve } from './economy/resolveRentable'
 import { buyProperty, declineProperty } from './economy/purchase'
 import { placeBid, passBid, closeAuction } from './economy/auction'
-import { buildHouse, sellBuilding } from './economy/construction'
+import { buildHouse, sellBuilding, buildHangar, sellHangar } from './economy/construction'
 import { openHouseAuction, declareBuildInterest, placeHouseBid, closeHouseAuction } from './economy/houseAuction'
 import { mortgageProperty, unmortgageProperty } from './economy/mortgage'
 import { goBonus, payToCenter, collectCenter } from './balancing/balancing'
 import { payDebt, declareBankruptcy } from './falencia/falencia'
 import { grantLoan, payOffLoan, chargeLoanInterest } from './emprestimos/emprestimos'
+import { rollTaxMan } from './balancing/taxMan'
 import { deckCardIds } from './cards/catalog'
 import { shuffle } from './cards/decks'
 import { cardResolve, playHandCard, resolveCardDiscard, resolveCardShortcut } from './cards/draw'
@@ -44,7 +45,7 @@ function seedTitles(): Record<number, Title> {
   const titles: Record<number, Title> = {}
   for (const sq of BOARD) {
     if (sq.kind === 'property' || sq.kind === 'airport' || sq.kind === 'utility') {
-      titles[sq.pos] = { ownerId: null, mortgaged: false, houses: 0, hotel: false }
+      titles[sq.pos] = { ownerId: null, mortgaged: false, houses: 0, hotel: false, hotel2: false, skyscraper: false, hangar: false }
     }
   }
   return titles
@@ -79,10 +80,11 @@ export function createSeedState(playerIds: string[]): GameState {
     phase: 'playing',
     titles: seedTitles(),
     resolution: null,
-    bank: { houses: 40, hotels: 16 }, // D-017
+    bank: { houses: 40, hotels: 16, skyscrapers: 4 }, // D-017 + estoque de Skyscrapers (011, provisório)
     decks: { acaso: deckCardIds('acaso'), tesouro: deckCardIds('tesouro') }, // 006 — embaralhar no store
     centerPot: 500, // 007 — Free Parking
     loans: [], // 010 — empréstimos ativos
+    taxManPos: 0, // 012 — Fiscal começa em GO
   }
   startTurn(state)
   return state
@@ -104,6 +106,8 @@ interface GameStore {
   passBid(playerId: string): void
   buildHouse(pos: number): void
   sellBuilding(pos: number): void
+  buildHangar(pos: number): void
+  sellHangar(pos: number): void
   openHouseAuction(housesAvailable: number, bidders: string[]): void
   declareBuildInterest(playerId: string): void
   placeHouseBid(playerId: string, amount: number): void
@@ -154,7 +158,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     })(),
     ctx: {
       rng: () => Math.random(),
-      ports: defaultPorts,
+      // Fiscal injetado só aqui (jogo real); defaultPorts segue sem ele p/ não afetar os testes (012)
+      ports: { ...defaultPorts, taxMan: (s, rng) => rollTaxMan(s, rng) },
       resolve: (r) => economyResolve(r) ?? cardResolve(r), // economy trata propriedade; cartas tratam acaso/tesouro
       now: () => Date.now(),
     },
@@ -177,6 +182,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     passBid: (playerId) => set((st) => ({ game: passBid(st.game, playerId) })),
     buildHouse: (pos) => set((st) => ({ game: buildHouse(st.game, pos) })),
     sellBuilding: (pos) => set((st) => ({ game: sellBuilding(st.game, pos) })),
+    buildHangar: (pos) => set((st) => ({ game: buildHangar(st.game, pos) })),
+    sellHangar: (pos) => set((st) => ({ game: sellHangar(st.game, pos) })),
     openHouseAuction: (housesAvailable, bidders) => {
       set((st) => ({ game: openHouseAuction(st.game, housesAvailable, bidders, st.ctx.now!()) }))
       rearmAuction()
