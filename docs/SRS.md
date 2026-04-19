@@ -1,6 +1,6 @@
 # Banco Master — Software Requirements Specification (SRS)
 
-**Versão:** 1.15
+**Versão:** 1.17
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -69,7 +69,7 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Timer de turno | Não há — o jogador controla quando finaliza |
 | Desconexão mid-game | Partida pausa; propriedades não vão ao banco; aguarda reconexão |
 | Speed Die | Presente — ativado após primeira volta completa do jogador |
-| Construção com país parcial | Permitida com 1+ cidade do país; aluguel construído escala pela posse (50%→100%, §13.3); sem construção mantém 150%/200% |
+| Construção com país parcial | Permitida com 1+ cidade; enquanto o país estiver incompleto, o nível máximo por cidade é igual ao número de cidades possuídas; aluguel construído escala pela posse (50%→100%, §13.3) |
 | Free Parking com prêmio acumulado | Presente — impostos/multas vão para o centro, prêmio inicial $500 |
 | Bônus de GO | Fixo — $200 ao passar; $400 ao parar exatamente no GO (revisão D-007, 2026-05-24) |
 | Segundo hotel por propriedade | Presente — sequencial, cobra **mais** aluguel que o 1º; 2 hotéis viram arranha-céu |
@@ -135,7 +135,7 @@ As 28 propriedades são divididas em **10 grupos de cores** (tema "Cidades do Mu
 | Azul-marinho (navy) | **2** | França | Cannes, Paris |
 | **Emirados (platinum)** | **2** | Emirados Árabes (super-luxo) | **Abu Dhabi, Dubai** |
 
-> **Balanceamento:** grupos de 3 seguram o *runaway leader* e forçam negociação — dá pra construir com 1 cidade (50% do aluguel), mas **completar o país leva a 100%** e dobra o set bonus sem construção (§5.1/§13.3). **Laranja/Vermelho** (meio do tabuleiro) são o *sweet spot* (casa barata, bom aluguel). Os duos do topo — **França** e **Emirados** — rendem 50% com 1 cidade e 100% com as 2, e são caros: os **Emirados** (Abu Dhabi/Dubai) são o **super-luxo** (preços/aluguéis muito acima, armadilha de prestígio — ver §5 e D-025).
+> **Balanceamento:** grupos de 3 seguram o *runaway leader* e forçam negociação — dá pra construir 1 casa com 1 cidade (50% do aluguel) e até 2 casas por cidade com 2 cidades (75%), mas **completar o país libera toda a escada e leva o aluguel a 100%** (§5.1/§13.3). **Laranja/Vermelho** (meio do tabuleiro) são o *sweet spot* (casa barata, bom aluguel). Os duos do topo — **França** e **Emirados** — permitem 1 casa com 1 cidade e liberam toda a escada com as 2, e são caros: os **Emirados** (Abu Dhabi/Dubai) são o **super-luxo** (preços/aluguéis muito acima, armadilha de prestígio — ver §5 e D-025).
 
 > 📌 Preços ($60→$650), aluguéis-base e **custos de construção (tier por grupo)** vivem no tema (`theme.ts`) — fonte única tunável. Composição e calibração: [D-017](adr/README.md) (rev.) + [D-024](adr/README.md) + [D-025](adr/README.md).
 
@@ -308,7 +308,7 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 
 ### 5.2 Regras de Construção
 
-- O jogador pode construir possuindo **qualquer** quantidade de cidades do país (≥1) — não exige maioria (034); o aluguel construído escala pela posse (§5.1/§13.3). **Arranha-céu** é exceção: exige o país completo (§13.7).
+- O jogador pode iniciar construção possuindo **qualquer** quantidade de cidades do país (≥1) — não exige maioria. Enquanto o país estiver incompleto, o **nível máximo de construção em cada cidade é igual ao número de cidades daquele país que o jogador possui**: 1 de 3 permite até 1 casa; 2 de 3 permitem até 2 casas por cidade; 1 de 2 permite até 1 casa. O país completo libera toda a escada (§13.3).
 - Nenhuma propriedade do grupo pode estar hipotecada para iniciar construção.
 - **Uniformidade:** não pode haver diferença maior que 1 casa entre propriedades do mesmo grupo possuídas pelo jogador.
 - Sequência por propriedade: 0 → 1 → 2 → 3 → 4 casas → 1 hotel → 2 hotéis (Seção 14) → arranha-céu (Seção 13.7).
@@ -405,6 +405,10 @@ De cada lado (proponente e destinatário), qualquer combinação de:
 3. Destinatário **ACEITA** ou **RECUSA**.
 4. Se aceita: a troca é processada automaticamente.
 5. Se recusa: a proposta é descartada. O proponente pode fazer nova oferta.
+
+Várias propostas podem permanecer ativas ao mesmo tempo, inclusive do mesmo proponente ou entre o mesmo par de jogadores. Uma proposta ativa **não reserva ativos** e não impede nenhum jogador de criar outra. Cada proposta é respondida separadamente pelo destinatário; aceitar ou recusar uma delas não altera as demais.
+
+No momento da aceitação, todos os ativos e valores são revalidados contra o estado atual. Se a composição deixou de ser válida, a troca não é processada e a proposta permanece disponível para recusa.
 
 > 📌 Seguir o fluxo de UX do Richup.io para a interface de negociação.
 
@@ -907,6 +911,7 @@ Terceiro dado especial baseado na mecânica oficial do Monopoly (edição 2006+)
 
 Jogadores podem construir possuindo **qualquer** quantidade de cidades do país (≥1) — **não** é exigida a maioria (revisado 034). O aluguel construído escala pela posse:
 
+- **Teto de construção por posse:** enquanto o país estiver incompleto, cada cidade pode alcançar no máximo o nível correspondente à quantidade de cidades daquele país que o jogador possui. Em país de 3 cidades: 1/3 libera até 1 casa; 2/3 libera até 2 casas por cidade; 3/3 libera toda a escada. Em país de 2 cidades: 1/2 libera até 1 casa; 2/2 libera toda a escada.
 - **Fator de posse** sobre a tabela de construção: `0,5 + 0,5 × (cidades que possui − 1) / (tamanho do país − 1)`.
 - País de 3 cidades: 1/3 = **50%**, 2/3 = **75%**, 3/3 = **100%**. Duo (2 cidades): 1/2 = **50%**, 2/2 = **100%**.
 - País completo = 100% da tabela; o fator nunca fica abaixo de 50%.
@@ -914,7 +919,7 @@ Jogadores podem construir possuindo **qualquer** quantidade de cidades do país 
 - **Arranha-céu** continua exigindo o país completo (§13.7); o fator não se aplica a ele (sempre 100%).
 - Aluguéis **sem** construção mantêm o set bonus (§5.1: base → 150% maioria → 200% país completo).
 
-> 📌 Construir cedo (com 1 cidade) já vale a pena; **completar o país dobra** o aluguel — o incentivo de fechar o grupo via trade se mantém forte, sem cooperação obrigatória.
+> 📌 Construir cedo (com 1 cidade) já vale a pena, mas possuir menos cidades nunca libera uma escada maior que possuir mais. **Completar o país libera casas, hotéis e arranha-céu e leva o aluguel a 100%** — o incentivo de fechar o grupo via trade se mantém forte, sem cooperação obrigatória.
 
 ### 13.4 Free Parking com Prêmio Acumulado
 
@@ -1080,4 +1085,4 @@ sendo a fonte de verdade da **regra**, o `CONTEXT.md` é a fonte dos **nomes**.
 
 ---
 
-**Banco Master — SRS v1.15 | Julho 2026 | Documento de fonte de verdade absoluta**
+**Banco Master — SRS v1.17 | Julho 2026 | Documento de fonte de verdade absoluta**

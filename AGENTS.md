@@ -101,5 +101,5 @@ Detalhe em [`docs/adr/README.md`](docs/adr/README.md).
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-[`specs/046-avatares-finais/plan.md`](./specs/046-avatares-finais/plan.md)
+[`specs/048-progressao-construcao-posse/plan.md`](./specs/048-progressao-construcao-posse/plan.md)
 <!-- SPECKIT END -->

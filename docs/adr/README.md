@@ -58,7 +58,9 @@
 - [D-045](D-045-paleta-de-assentos-derivada-em-oklch.md) — Paleta de assentos derivada em OKLCH, verificada sob dicromacia (refina D-044)
 - [D-046](D-046-leilao-da-largada-financia-a-loteria.md) — Host escolhe o Ritual de Largada: Leilão secreto financia a Loteria; Maior dado é gratuito (refina D-006 e a ordem inicial da 038)
 - [D-047](D-047-avatares-escolhiveis-e-persistentes.md) — Cinco avatares e oito skins combináveis persistem do lobby à partida (revoga parcialmente D-044; refina D-045)
+- [D-048](D-048-propostas-de-negociacao-simultaneas.md) — Propostas de negociação simultâneas, identificadas e apresentadas por rota
 - [D-049](D-049-construcao-deve-ser-vendida-antes-da-hipoteca.md) — Toda construção deve ser vendida antes da hipoteca, inclusive Hangar
+- [D-050](D-050-limite-de-construcao-por-posse.md) — País incompleto limita o nível de construção pela quantidade de cidades possuídas (refina D-026)
 
 > ℹ️ **Renumeração na integração da 043** (a colisão que este arquivo avisava): a worktree da 043
 > tinha escrito a identidade de transporte como `D-035` e o código de reentrada como `D-038`, e

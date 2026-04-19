@@ -121,6 +121,10 @@ Carta Lendária de reação que cancela uma carta ofensiva contra você.
 
 ### Economia entre jogadores
 
+**Proposta de negociação**:
+Oferta persistente enviada por um jogador a outro. Várias podem coexistir; cada uma é respondida separadamente e só movimenta ativos após ser aceita e revalidada ([D-048](./docs/adr/D-048-propostas-de-negociacao-simultaneas.md)).
+_Avoid_: pendingTrade, proposta global
+
 **Empréstimo**:
 Transferência de dinheiro entre jogadores, com juros de 10–50% cobrados a cada passagem do devedor pelo GO ([D-009](./docs/adr/D-009-emprestimos-entre-jogadores.md)).
 
