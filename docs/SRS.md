@@ -645,7 +645,7 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 
 As cópias respeitam a hierarquia de raridade (v1.34,
 [D-074](adr/D-074-raridade-de-carta-nao-inverte-probabilidade.md)): o embaralhamento
-ponderado usa pesos **Lendária 1 / Rara 4 / Comum 14**, sem exceção por modo. Assim,
+ponderado usa pesos **Lendária 9 / Rara 10 / Comum 11**, sem exceção por modo. Assim,
 toda carta é estritamente menos provável que uma de tier inferior. Lendárias e raras têm
 1 cópia por efeito; o excedente necessário para manter os baralhos em 21/18 cartas fica
 nas comuns.

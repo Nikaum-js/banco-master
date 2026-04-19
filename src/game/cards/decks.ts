@@ -13,18 +13,26 @@ export function shuffle(ids: string[], rng: RNG): string[] {
   return a
 }
 
-// PESO DE SAQUE POR CARTA — regido pela RARIDADE, e é isso que faz o rótulo valer.
+// PESO DE SAQUE POR CARTA — regido pela RARIDADE, com hierarquia SUAVE.
 //
-// Antes o peso era regido pelo `mode`: `imediato` valia 14, e carta de mão valia 1 (lendária) ou
-// 3. Consequência: Boom Econômico, que é RARA mas é evento imediato, pesava 14 — igual a uma
-// comum. O sistema de raridade da §10.2 promete hierarquia de chance e o peso entregava outra
-// coisa, então "Rara" e "Comum" apareciam com a mesma probabilidade.
+// Duas correções em cima do desenho original, e a segunda é sobre magnitude.
 //
-// Agora a raridade é o eixo único: lendária sai menos que rara, que sai menos que comum, para
-// TODA carta, sem exceção por modo. O efeito prático de "evento é comum, carta de mão é rara"
-// continua valendo, porque no catálogo todas as comuns são imediatas e todas as lendárias são de
-// mão — a intenção antiga sobrevive como consequência, em vez de ser a causa.
-export const RARITY_WEIGHT = { lendaria: 1, rara: 4, comum: 14 } as const
+// 1. O EIXO. Antes o peso vinha do `mode`: `imediato` valia 14, carta de mão 1 ou 3. Boom
+//    Econômico, que é RARA mas é evento imediato, pesava 14 — igual a uma comum. O sistema de
+//    raridade da §10.2 promete hierarquia de chance e o peso entregava outra coisa.
+//
+// 2. A MAGNITUDE. A primeira tentativa usou 1 · 4 · 14, e isso é mão pesada demais: punha lendária
+//    em 0,5%, ou seja 1 em 200 saques. Hierarquia não pede abismo, pede ORDEM.
+//
+// O teto honesto: com 2 lendárias em 18 cartas, peso IGUAL para todas já dá 5,6% por lendária. Se
+// ela precisa ser a mais rara, fica necessariamente ABAIXO disso — não existe desenho em que
+// lendária tenha 6% E seja a mais improvável, porque são poucas lendárias e muitas comuns. Então o
+// alvo é encostar no valor de peso igual, não afundar: 9 · 10 · 11 mantém a ordem estrita com
+// diferença de ~10% entre níveis vizinhos, e deixa lendária em 4,1% (Acaso) e 4,7% (Tesouro).
+//
+// A intenção antiga ("evento é frequente, carta de mão é rara") sobrevive como CONSEQUÊNCIA, e não
+// como causa: no catálogo toda comum é imediata e toda lendária é de mão.
+export const RARITY_WEIGHT = { lendaria: 9, rara: 10, comum: 11 } as const
 
 export function cardWeight(id: string): number {
   return RARITY_WEIGHT[cardById(id).rarity]

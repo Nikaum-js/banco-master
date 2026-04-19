@@ -74,14 +74,14 @@ describe('deckOdds — ordenação (FR-004)', () => {
   })
 
   it('a mais rara do Acaso vem primeiro e a mais provável por último', () => {
-    // Os números são PONDERADOS (peso lendária 1 · rara 4 · comum 14), não `copies / total`:
+    // Os números são PONDERADOS (peso lendária 9 · rara 10 · comum 11), não `copies / total`:
     // o baralho é embaralhado por peso, então composição e chance de saque são coisas distintas.
-    // Soma de pesos do Acaso = 4×1 + 4×4 + 13×14 = 202.
+    // Soma de pesos do Acaso = 4×9 + 4×10 + 13×11 = 219.
     const { rows } = deckOdds('acaso')
     expect(rows[0].rarity).toBe('lendaria')
-    expect(rows[0].probability).toBeCloseTo(1 / 202, 10)
+    expect(rows[0].probability).toBeCloseTo(9 / 219, 10)
     expect(rows[rows.length - 1].rarity).toBe('comum')
-    expect(rows[rows.length - 1].probability).toBeCloseTo(28 / 202, 10)
+    expect(rows[rows.length - 1].probability).toBeCloseTo(22 / 219, 10)
   })
 })
 
@@ -93,7 +93,7 @@ describe('deckOdds — cópias agrupadas (FR-003)', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].copies).toBe(2)
     expect(rows[0].rarity).toBe('comum')
-    expect(rows[0].probability).toBeCloseTo(28 / 202, 10) // 2 cópias × peso 14 / 202
+    expect(rows[0].probability).toBeCloseTo(22 / 219, 10) // 2 cópias × peso 11 / 219
   })
 
   it('nenhum efeito aparece duas vezes na vitrine', () => {
