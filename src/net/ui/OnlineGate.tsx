@@ -26,6 +26,7 @@ import { IdentityForm, LobbyMessage, OpeningAuction, ReentryForm, RoomLobby, Tur
 import { HomeScreen } from './HomeScreen'
 import { SessionBadge } from './SessionBadge'
 import { Button } from '@/game/ui/primitives'
+import { OrientationGate } from '@/game/ui/OrientationGate'
 
 const TICK_MS = 250 // o host fecha prazos vencidos (soft-close de leilão, janela de reação)
 
@@ -41,7 +42,13 @@ export function OnlineGate({ children }: { children: ReactNode }) {
     return q.has('local') || q.has('players')
   })
 
-  if (local) return <MatchErrorBoundary roomId={null}>{children}</MatchErrorBoundary>
+  if (local) {
+    return (
+      <OrientationGate>
+        <MatchErrorBoundary roomId={null}>{children}</MatchErrorBoundary>
+      </OrientationGate>
+    )
+  }
   if (!link.roomId && !link.createHost) {
     // Porta de entrada de verdade (FR-021): ninguém precisa saber o que é `?host=1`.
     return (
@@ -129,7 +136,9 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
   if (phase === 'playing') {
     return (
       <>
-        <MatchErrorBoundary roomId={room?.id ?? null}>{children}</MatchErrorBoundary>
+        <OrientationGate>
+          <MatchErrorBoundary roomId={room?.id ?? null}>{children}</MatchErrorBoundary>
+        </OrientationGate>
         {room && <SessionBadge link={roomLink(room.id, window.location.origin)} />}
       </>
     )
