@@ -120,14 +120,14 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 
 **Meta**: o que as fases 1–6 conquistaram para de regredir sozinho.
 
-- [ ] **T049** `e2e/script.ts`: hook de cenário semeado `?scenario=endgame` — estado **legal** perto do fim, passando pelos mesmos reducers ([D10 do plan](./plan.md#d10--partida-completa-no-gate-é-partida-semeada-e-isso-é-honesto)). Mesmo tipo de andaime que `?players=N` (036).
-- [ ] **T050** [US7] `e2e/fullMatch.spec.ts`: conduz pela interface real até a última falência, confere `phase: ended`, a classificação, a ordem, o patrimônio e a duração (FR-050).
-- [ ] **T051** [US3] `e2e/a11y.spec.ts`: `@axe-core/playwright` em cada parada do caminho de jogo — home, lobby, tabuleiro, modal de compra, modal de leilão, pausa, fim de jogo. Falha em `serious`/`critical`; reporta `moderate`/`minor` sem quebrar ([D9 do plan](./plan.md#d9--auditoria-de-acessibilidade-precisa-de-partida-em-curso-então-mora-no-playwright)).
-- [ ] **T052** `playwright.config.ts`: projeto que roda contra a **versão construída** (`vite preview`), não só o dev server (FR-051).
-- [ ] **T053** `e2e/multiplayer.spec.ts`: entra no gate quando há credenciais; sem segredo disponível, é **pulado com aviso visível**, nunca em silêncio (FR-052 + Assumptions).
-- [ ] **T054** `e2e/`: limpeza das salas criadas pelos roteiros ao final (FR-054).
-- [ ] **T055** `.github/workflows/ci.yml`: jobs novos `a11y` e `full-match` (sobre o build), com `upload-artifact` em falha (FR-053), no mesmo padrão do job `e2e` existente.
-- [ ] **T056** `package.json`: `@axe-core/playwright` e `@sentry/react` como dependências; **respeitar o `bun.lock`** (nada de segundo lockfile).
+- [x] **T049** `e2e/script.ts`: hook de cenário semeado `?scenario=endgame` — estado **legal** perto do fim, passando pelos mesmos reducers ([D10 do plan](./plan.md#d10--partida-completa-no-gate-é-partida-semeada-e-isso-é-honesto)). Mesmo tipo de andaime que `?players=N` (036).
+- [x] **T050** [US7] `e2e/fullMatch.spec.ts`: conduz pela interface real até a última falência, confere `phase: ended`, a classificação, a ordem, o patrimônio e a duração (FR-050).
+- [x] **T051** [US3] `e2e/a11y.spec.ts`: `@axe-core/playwright` em cada parada do caminho de jogo — home, lobby, tabuleiro, modal de compra, modal de leilão, pausa, fim de jogo. Falha em `serious`/`critical`; reporta `moderate`/`minor` sem quebrar ([D9 do plan](./plan.md#d9--auditoria-de-acessibilidade-precisa-de-partida-em-curso-então-mora-no-playwright)).
+- [x] **T052** `playwright.config.ts`: projeto que roda contra a **versão construída** (`vite preview`), não só o dev server (FR-051).
+- [x] **T053** `e2e/multiplayer.spec.ts`: entra no gate quando há credenciais; sem segredo disponível, é **pulado com aviso visível**, nunca em silêncio (FR-052 + Assumptions).
+- [x] **T054** `e2e/`: limpeza das salas criadas pelos roteiros ao final (FR-054).
+- [x] **T055** `.github/workflows/ci.yml`: jobs novos `a11y` e `full-match` (sobre o build), com `upload-artifact` em falha (FR-053), no mesmo padrão do job `e2e` existente.
+- [x] **T056** `package.json`: `@axe-core/playwright` e `@sentry/react` como dependências; **respeitar o `bun.lock`** (nada de segundo lockfile).
 
 **Checkpoint**: **SC-008** e **SC-014** provados. O CI agora reprova o que esta spec conserta.
 

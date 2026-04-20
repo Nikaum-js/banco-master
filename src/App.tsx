@@ -18,6 +18,10 @@ import { PauseBanner } from '@/net/ui/PauseBanner'
 import { ConnectionBanner } from '@/net/ui/ConnectionBanner'
 import { CommandFailureToast } from '@/net/ui/CommandFailureToast'
 import { AccessoryErrorBoundary } from '@/app/AccessoryErrorBoundary'
+// Import por efeito colateral (044/T049, D10 do plan): aplica `?scenario=endgame` na
+// avaliação do módulo, antes do primeiro render — mesmo timing de `freshGame(initialPlayerIds())`
+// em `game/store.ts`. Sem o parâmetro, não faz nada.
+import '@/game/ui/e2eScenario'
 
 // O tabuleiro Clássico É a tela inicial. A rolagem é o DiceArena central; o
 // GameDriver faz o turno "ir sozinho" (resolve/finaliza); o ModalLayer (022) traz
