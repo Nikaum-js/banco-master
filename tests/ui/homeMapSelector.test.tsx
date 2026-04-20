@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { HomeScreen } from '@/net/ui/HomeScreen'
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
+import { useGameStore } from '@/game/store'
 
 vi.mock('motion/react', async (importOriginal) => {
   const actual = await importOriginal<typeof import('motion/react')>()
@@ -53,6 +54,9 @@ describe('seletor visual do mapa na home', () => {
 
     await waitFor(() => {
       expect(document.querySelector('[data-entry-backdrop="fuligem"]')).toBeTruthy()
+      // A troca visual também precisa realinhar o estado do motor: na Fuligem a pos 4
+      // é a Mina de Ferro e, portanto, obrigatoriamente possui um título comprável.
+      expect(useGameStore.getState().game.titles[4]).toBeTruthy()
     })
 
     // O segundo mapa é JOGÁVEL (055/D-069): o formulário de criar sala continua
@@ -73,6 +77,8 @@ describe('seletor visual do mapa na home', () => {
 
     await waitFor(() => {
       expect(useBoardTheme.getState().theme).toBe('atlas')
+      // No Atlas a mesma posição é imposto e não pode conservar o título da Mina.
+      expect(useGameStore.getState().game.titles[4]).toBeUndefined()
     })
     // As duas homes ficam montadas (<Activity>); o valor preservado é o do palco do Atlas.
     const atlasInput = screen

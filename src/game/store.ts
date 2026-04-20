@@ -16,6 +16,9 @@ import type { TurnCtx } from './turn/turnMachine'
 import { applyCommand, type GameAction } from './commands'
 import { buildGameCtx, buildInitialGame } from './setup'
 import { deadlinePlan } from './deadlines'
+import { isRentableKind } from './economy/titles'
+import type { Title } from './economy/types'
+import { BOARD, registerActiveBoardChangeHandler } from '@/lib/boardData'
 
 // Jogo novo pronto pra jogar: seed + baralhos embaralhados (FR-001). Usado no
 // boot e no "Novo jogo" (reset ao fim da partida). A composição vive em `setup.ts`.
@@ -92,4 +95,27 @@ export const useGameStore = create<GameStore>((set, get) => {
       set((st) => ({ game: freshGame(st.game.players.map((p) => p.id)) })) // mesmos jogadores, baralho novo
     },
   }
+})
+
+// O tabuleiro pode mudar na home antes de uma sala/partida começar. O estado precisa ganhar
+// a mesma forma imediatamente: uma Mina na pos 4 da Fuligem não pode encontrar o `titles[4]`
+// ausente que o Atlas semeou para sua casa de imposto. Reconciliar só a FORMA preserva o estado
+// que já existe nas posições ainda rentáveis (inclusive snapshots e previews de UI), sem
+// transformar uma troca de apresentação em "Novo jogo".
+registerActiveBoardChangeHandler(() => {
+  const current = useGameStore.getState().game
+  const titles: Record<number, Title> = {}
+  for (const sq of BOARD) {
+    if (!isRentableKind(sq.kind)) continue
+    titles[sq.pos] = current.titles[sq.pos] ?? {
+      ownerId: null,
+      mortgaged: false,
+      houses: 0,
+      hotel: false,
+      hotel2: false,
+      skyscraper: false,
+      hangar: false,
+    }
+  }
+  useGameStore.setState({ game: { ...current, titles } })
 })

@@ -218,9 +218,21 @@ const ATLAS_BOARD: readonly Square[] = [
 // ---------------------------------------------------------------------
 export let BOARD: readonly Square[] = ATLAS_BOARD
 
+// O store registra uma única reação síncrona depois de ser carregado. No boot com `?map=`,
+// este handler ainda não existe — e isso é correto: o store nascerá logo depois já lendo o
+// tabuleiro escolhido. Em trocas posteriores, os títulos precisam ser realinhados no mesmo tick
+// para nunca haver uma janela com casas de um mapa e `titles` de outro.
+let onActiveBoardChange: (() => void) | null = null
+
+export function registerActiveBoardChangeHandler(handler: () => void): void {
+  onActiveBoardChange = handler
+}
+
 /** Troca o tabuleiro ativo. Chamado só por `boardTheme.setTheme` (fonte: a sala). */
 export function setActiveBoard(board: readonly Square[]): void {
+  if (BOARD === board) return
   BOARD = board
+  onActiveBoardChange?.()
 }
 
 /** O tabuleiro do Atlas, para quem precisa dele nominalmente (catálogo, testes). */

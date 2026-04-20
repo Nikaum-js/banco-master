@@ -81,3 +81,17 @@ export function capLabel(label: string): string {
 export function useMapCatalog(): MapCatalog {
   return catalogOf(useBoardTheme((s) => s.theme))
 }
+
+/**
+ * Aplica `?map=` ANTES de qualquer estado de partida existir. Chamado de `main.tsx`, que roda
+ * antes do módulo do store carregar (`App` importa `GameSurface` de forma lazy).
+ *
+ * Existe separado do `OnlineGate` porque lá a aplicação era num `useEffect`, e efeito roda
+ * depois do filho montar — tarde demais para o `seedTitles()`, que já correu com o mapa errado.
+ */
+export function applyMapFromUrl(): void {
+  if (typeof window === 'undefined') return
+  const raw = new URLSearchParams(window.location.search).get('map')
+  if (raw === null) return
+  useBoardTheme.getState().setTheme(coerceBoardId(raw))
+}
