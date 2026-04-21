@@ -49,8 +49,8 @@ test('partida semeada roda até a última falência e mostra a classificação f
   await expect(eliminatedRow).toContainText('Jogador 1')
 
   // Contas novas da v1.27 (caixa, países, construções, maior aluguel): o eliminado zera em todas,
-  // e é o travessão que prova que a coluna existe e está preenchida em vez de vazia.
-  await expect(eliminatedRow).toContainText('—')
+  // e é o ponto médio que prova que a coluna existe e está preenchida em vez de vazia.
+  await expect(eliminatedRow).toContainText('·')
 
   // Patrimônio: o vencedor herdou caixa + as 4 propriedades (§9.2 — sem empréstimo ativo, o
   // credor herda tudo); o eliminado fica em 0, por definição de falência.
