@@ -48,6 +48,34 @@ jobs:
       - name: Build
         run: bun run build
 
+  database:
+    name: contrato do banco (RPCs sobre Postgres real)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # `supabase start` sobe o stack local (Postgres + auth + realtime) e aplica as
+      # migrations. O stack inteiro, e não um `postgres:17` pelado, porque a 0003 escreve
+      # políticas sobre `realtime.messages` — o motivo longo está em `supabase/config.toml`.
+      - name: Subir o Supabase local
+        run: supabase start
+
+      # Do zero e em ordem, sem estado herdado do `start`: é a única forma de provar que a
+      # sequência 0001→0006 aplica limpa num banco novo.
+      - name: Reaplicar as migrations do zero
+        run: supabase db reset
+
+      # Executa as funções, não só as cria: `create function` não valida o corpo de uma
+      # função plpgsql, então um job que apenas aplicasse as migrations passaria verde com
+      # `reopen_room` quebrada. O cabeçalho de `tests/db/rpc.sql` conta a história inteira.
+      - name: Contrato das RPCs
+        run: psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f tests/db/rpc.sql
+
   simulation:
     name: simulação seedada
     runs-on: ubuntu-latest

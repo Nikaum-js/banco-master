@@ -1,0 +1,56 @@
+# Stack local do Supabase — existe para o job `database` do CI (`.github/workflows/ci.yml`)
+# poder executar as migrations contra um Postgres DE VERDADE, e para dar `supabase start` na
+# máquina de quem desenvolve.
+#
+# Por que o stack inteiro, e não um `postgres:17` pelado com um shim de `auth.uid()`: as
+# migrations não dependem só do `auth`. A 0003 escreve políticas sobre `realtime.messages` e
+# chama `realtime.topic()`, e a 0001 publica `public.rooms` em `supabase_realtime`. Emular isso
+# à mão seria construir um SEGUNDO espelho para conferir o primeiro — que é exatamente a
+# armadilha que este job existe para desarmar (ver o cabeçalho de `tests/db/rpc.sql`).
+project_id = "magnata-imobiliario"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# Espelha produção: `select current_setting('server_version')` devolve 17.6 lá.
+major_version = 17
+
+# Necessário: a 0003 cria políticas sobre `realtime.messages`.
+[realtime]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:5173"
+additional_redirect_urls = ["http://127.0.0.1:5173"]
+jwt_expiry = 3600
+enable_signup = true
+# 043/D-042: a identidade dos assentos é atestada pelo servidor por sessão anônima.
+enable_anonymous_sign_ins = true
+
+[auth.email]
+enable_signup = false
+enable_confirmations = false
+
+# Nada abaixo participa do jogo — desligado para o `supabase start` do CI subir mais rápido.
+[studio]
+enabled = false
+
+[storage]
+enabled = false
+
+[inbucket]
+enabled = false
+
+[analytics]
+enabled = false
+
+[edge_runtime]
+enabled = false
