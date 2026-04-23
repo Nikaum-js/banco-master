@@ -1,9 +1,18 @@
 import { cn } from '@/lib/utils'
 import { Crown } from 'lucide-react'
-import { motion, useAnimate } from 'motion/react'
+import { motion, AnimatePresence, useAnimate } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare } from '@/lib/boardData'
+import { BOARD } from '@/lib/boardData'
+import { useGameStore } from '@/game/store'
+import { goBonus } from '@/game/balancing/balancing'
+import { cityLevel } from '@/game/economy/construction'
+import { THEME } from '@/game/theme'
+import { deedView } from '@/game/ui/deed/deedView'
+import { useTradeUI } from '@/game/ui/trade/TradeLayer'
+import type { GameState } from '@/game/turn/types'
+import type { TempEffect } from '@/game/economy/types'
 
 // ---------------------------------------------------------------------
 // Glifos SVG próprios para casas especiais — substituem ícones lucide
@@ -402,6 +411,7 @@ export const GROUP_COLOR: Record<string, string> = {
   yellow:  '#facc15',
   green:   '#22c55e',
   navy:    '#3b82f6',
+  purple:  '#a855f7',
 }
 
 // Custo de casa por grupo (mock, SRS §13.7) — grupos mais caros = casas
@@ -411,6 +421,7 @@ export const HOUSE_COST: Record<string, number> = {
   pink:    100, orange:  100,
   red:     150, yellow:  150,
   green:   200, navy:    200,
+  purple:  200,
 }
 
 // Gás (3ª utilidade, SRS §2.5) — botijão com chama. Mesmo estilo de aro
@@ -567,9 +578,13 @@ export function ClassicSquare({
   const isBus      = square.kind === 'bus-ticket'
   const isCard     = isAcaso || isTesouro
 
-  // Dono atual da propriedade (mock) — cor da stripe sai daqui.
-  const ownerName = isProperty ? MOCK_OWNERSHIP[square.pos] : undefined
-  const owner = ownerName ? playerByName(ownerName) : undefined
+  // Dono atual (real, do store) — cor por assento; comunica a posse na célula (023.1).
+  const ownerColor = useGameStore((s) => {
+    const t = s.game.titles[square.pos]
+    if (!t?.ownerId) return undefined
+    const i = s.game.players.findIndex((p) => p.id === t.ownerId)
+    return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : undefined
+  })
   // Propriedade COMPRADA não exibe valor — a posse é comunicada pela stripe
   // colorida do jogador. Só propriedade À VENDA (sem dono) mostra o preço.
 
@@ -584,18 +599,18 @@ export function ClassicSquare({
             3) pílula arredondada da cor do dono, centralizada na borda
                externa — substitui a faixa chapada antiga (que lia como
                adesivo solto). Vertical nas laterais, horizontal em cima/baixo. */}
-      {isProperty && owner && (
+      {ownerColor && (
         <>
           {/* 1) Tint do corpo */}
           <div
             className="absolute inset-0 pointer-events-none"
-            style={{ background: owner.color, opacity: 0.14 }}
+            style={{ background: ownerColor, opacity: 0.14 }}
           />
           {/* 2) Moldura na cor do dono */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              boxShadow: `inset 0 0 0 2px ${owner.color}, inset 0 0 0 3px rgba(15,12,9,0.55)`,
+              boxShadow: `inset 0 0 0 2px ${ownerColor}, inset 0 0 0 3px rgba(15,12,9,0.55)`,
             }}
           />
           {/* 3) Pílula removida — stripe exclusiva de aeroportos/utilidades */}
@@ -612,6 +627,7 @@ export function ClassicSquare({
           da stripe externa; bandeira na interna carrega identidade do país. */}
       {isProperty && <BuildingMark pos={square.pos} />}
       <MortgageMark pos={square.pos} />
+      <EffectMark pos={square.pos} />
 
       {/* Conteúdo da PROPRIEDADE — posicionado em valores absolutos pra
           separar valor (junto da stripe externa) do nome (centro).
@@ -663,7 +679,7 @@ export function ClassicSquare({
                 {/* Preço como CHIP (pílula) — só em propriedade À VENDA (sem
                     dono). Comprada não mostra valor: a stripe colorida do
                     jogador já comunica a posse. */}
-                {!owner && (
+                {!ownerColor && (
                   <div
                     className="absolute currency leading-none whitespace-nowrap"
                     style={{
@@ -1092,13 +1108,14 @@ function playerByName(name: string) {
 //  - casa no leste (stripe à esquerda)        → buildings à direita
 // Cada construção é um glifo independente — pra 4 casas, dá pra contar.
 export function BuildingMark({ pos }: { pos: number }) {
-  const n = MOCK_BUILDINGS[pos]
+  const title = useGameStore((s) => s.game.titles[pos])
+  const n = title ? cityLevel(title) : 0 // 0–7 real (023)
   if (!n) return null
 
   const side = sideOf(pos)
-  const isSkyscraper = n === 6
-  const isHotel = n === 5
-  const houseCount = isHotel || isSkyscraper ? 0 : n
+  const isSkyscraper = n === 7
+  const isHotel = n === 5 || n === 6 // hotel ou 2º hotel
+  const houseCount = n >= 1 && n <= 4 ? n : 0
 
   // Centro do ícone fica exatamente em cima da stripe (que tem 22% da
   // dimensão menor da célula no lado externo). Em sul/norte os ícones
@@ -1334,7 +1351,8 @@ function SkyscraperBadgeIcon() {
 // Marca de hipoteca — apenas SOMBREAMENTO: a célula escurece e ganha uma
 // sombra interna, parecendo "bloqueada / fora de jogo". Sem selo nem texto.
 export function MortgageMark({ pos }: { pos: number }) {
-  if (!MOCK_MORTGAGED.has(pos)) return null
+  const mortgaged = useGameStore((s) => s.game.titles[pos]?.mortgaged)
+  if (!mortgaged) return null
   return (
     <div
       className="absolute inset-0 pointer-events-none z-[25]"
@@ -1347,15 +1365,43 @@ export function MortgageMark({ pos }: { pos: number }) {
   )
 }
 
-// GO Progressivo do turno ativo — SRS §13.6.
-const ACTIVE_GO_VALUE = 250
+// Marca de efeito temporário ativo na casa (024.1): apagão (aeroportos), greve
+// (utilidades), boicote/imunidade-temp (casa específica). Pulsa pra chamar atenção.
+export function EffectMark({ pos }: { pos: number }) {
+  const effects = useGameStore((s) => s.game.tempEffects)
+  const sq = BOARD[pos]
+  let badge: { icon: string; title: string } | null = null
+  for (const e of effects) {
+    if (e.kind === 'apagao' && sq.kind === 'airport') badge = { icon: '⚡', title: 'Apagão — hangar inativo' }
+    else if (e.kind === 'greve' && sq.kind === 'utility') badge = { icon: '⚡', title: 'Greve — utilidade sem aluguel' }
+    else if (e.kind === 'boicote' && e.pos === pos) badge = { icon: '🚫', title: 'Boicote — sem aluguel' }
+    else if (e.kind === 'imunidade-temp' && e.pos === pos) badge = { icon: '🛡️', title: 'Imunidade temporária' }
+  }
+  if (!badge) return null
+  return (
+    <motion.div
+      className="absolute top-0.5 right-0.5 z-[26] pointer-events-none leading-none"
+      style={{ fontSize: '11px', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.8))' }}
+      title={badge.title}
+      animate={{ opacity: [0.55, 1, 0.55] }}
+      transition={{ duration: 1.6, repeat: Infinity }}
+    >
+      {badge.icon}
+    </motion.div>
+  )
+}
 
-// Efeitos ativos no tabuleiro — SRS §12.3.
-const ACTIVE_EFFECTS = [
-  { label: 'Apagão',     desc: 'Hangares inativos · 1 volta',  tone: 'logo' as const },
-  { label: 'Boicote',    desc: 'PE sem aluguel · 2 voltas',    tone: 'logo' as const },
-  { label: 'Imunidade',  desc: 'Beatriz · SP por 2 voltas',    tone: 'gold' as const },
-]
+
+// Efeitos ativos no tabuleiro — SRS §12.3. Derivado do estado real (`tempEffects`).
+function effectRow(e: TempEffect, i: number): { key: string; label: string; desc: string; tone: 'logo' | 'gold' } {
+  const laps = `${e.lapsRemaining}v`
+  switch (e.kind) {
+    case 'apagao': return { key: `a${i}`, label: 'Apagão', desc: `Hangares inativos · ${laps}`, tone: 'logo' }
+    case 'greve': return { key: `g${i}`, label: 'Greve', desc: `Utilidades sem aluguel · ${laps}`, tone: 'logo' }
+    case 'boicote': return { key: `b${i}`, label: 'Boicote', desc: `${BOARD[e.pos ?? 0]?.name ?? '—'} sem aluguel · ${laps}`, tone: 'logo' }
+    case 'imunidade-temp': return { key: `i${i}`, label: 'Imunidade temp.', desc: `${BOARD[e.pos ?? 0]?.name ?? '—'} · ${laps}`, tone: 'gold' }
+  }
+}
 
 // Trades em aberto + concluídas recentes — SRS §11.
 type TradeStatus = 'incoming' | 'outgoing' | 'completed'
@@ -1373,45 +1419,92 @@ const MOCK_TRADES: Trade[] = [
   { from: 'Beatriz', to: 'Júlia',   offer: 'PE',         request: 'GO + R$300', status: 'completed', age: '4m'    },
 ]
 
+// --- Ponte com o motor (020): estado reativo dos painéis ---------------------
+// Paleta de token por assento (disjunta das cores de grupo). Nome/token reais
+// virão do Lobby (M3); por ora nome = id e cor = assento.
+export const PLAYER_COLORS = ['#d4af37', '#a855f7', '#06b6d4', '#14b8a6', '#d946ef', '#f97316', '#22c55e', '#3b82f6']
+
+// Mapeia o GameState real → view-model `Player` dos painéis. PURO (testável).
+export function playersView(game: GameState): Player[] {
+  const activeId = game.players[game.turnOrder[game.activeSeat]]?.id
+  return game.players.map((p, seat) => ({
+    name: p.id,
+    color: PLAYER_COLORS[seat % PLAYER_COLORS.length],
+    money: p.cash,
+    pos: p.pos,
+    cardsInHand: p.hand.length, // só o contador é público (privacidade §10.3)
+    busTickets: p.busTickets,
+    speedDieReady: p.completouPrimeiraVolta,
+    active: p.id === activeId,
+    bankrupt: p.eliminated,
+    loanActive: game.loans.some((l) => l.debtorId === p.id),
+    immune: game.immunities.some((i) => i.beneficiaryId === p.id),
+  }))
+}
+
+function useLivePlayers(): Player[] {
+  return playersView(useGameStore((s) => s.game))
+}
+
 export function PlayersPanel() {
+  const players = useLivePlayers()
+  const log = useGameStore((s) => s.game.log) // 021 — log real do jogo
+  const history = [...log].reverse() // mais recentes ao topo (recência = ordem no log)
+  const effects = useGameStore((s) => s.game.tempEffects).map(effectRow) // 024.1 — efeitos reais
   return (
     <aside className="side-panel">
       <div className="side-panel-section">
         <div className="flex items-baseline justify-between mb-3">
           <p className="label text-gold">Jogadores</p>
-          <p className="label text-cream-muted">{MOCK_PLAYERS.filter(p=>!p.bankrupt).length} / 8</p>
+          <p className="label text-cream-muted">{players.filter((p) => !p.bankrupt).length} / 8</p>
         </div>
         <div className="flex flex-col gap-2">
-          {MOCK_PLAYERS.map((p) => <PlayerRow key={p.name} player={p} />)}
+          {players.map((p) => <PlayerRow key={p.name} player={p} />)}
         </div>
+        {players.filter((p) => !p.bankrupt).length >= 2 && (
+          <button
+            type="button"
+            onClick={() => useTradeUI.getState().show()}
+            className="mt-3 w-full px-3 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-700 border border-coffee-500 text-cream text-sm font-bold hover:border-gold hover:bg-coffee-600 transition-colors"
+          >
+            🤝 Negociar
+          </button>
+        )}
       </div>
 
       <div className="side-panel-section">
         <p className="label text-gold mb-3">Histórico</p>
-        <ol className="flex flex-col gap-0">
-          {MOCK_LOG.map((l, i) => (
-            <li
-              key={i}
-              className="flex items-baseline gap-2 px-1 py-2 border-b border-coffee-500/60 last:border-0"
-            >
-              <span className={cn(
-                'display text-sm leading-none shrink-0',
-                l.who === 'Banco' ? 'text-logo' : 'text-cream',
-              )}>
-                {l.who}
-              </span>
-              <span className="text-cream-muted text-sm leading-tight flex-1">
-                {l.what}
-              </span>
-              <span className="label text-cream-muted shrink-0">{l.when}</span>
-            </li>
-          ))}
-        </ol>
+        {history.length === 0 ? (
+          <div className="flex items-center justify-center px-3 py-4 rounded-[var(--radius-card)] border border-dashed border-coffee-500 bg-coffee-800/40">
+            <p className="label text-cream-muted text-center leading-snug">
+              Nenhum evento ainda
+            </p>
+          </div>
+        ) : (
+          <ol className="flex flex-col gap-0">
+            {history.map((l, i) => (
+              <li
+                key={i}
+                className="flex items-baseline gap-2 px-1 py-2 border-b border-coffee-500/60 last:border-0"
+              >
+                <span className={cn(
+                  'display text-sm leading-none shrink-0',
+                  l.who === 'Banco' ? 'text-logo' : 'text-cream',
+                )}>
+                  {l.who}
+                </span>
+                <span className="text-cream-muted text-sm leading-tight flex-1">
+                  {l.what}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
 
       <div className="side-panel-section">
         <p className="label text-gold mb-3">Efeitos ativos</p>
-        {ACTIVE_EFFECTS.length === 0 ? (
+        {effects.length === 0 ? (
           <div className="flex items-center justify-center px-3 py-4 rounded-[var(--radius-card)] border border-dashed border-coffee-500 bg-coffee-800/40">
             <p className="label text-cream-muted text-center leading-snug">
               Nenhum efeito ativo no momento
@@ -1419,8 +1512,8 @@ export function PlayersPanel() {
           </div>
         ) : (
           <ul className="flex flex-col gap-1.5">
-            {ACTIVE_EFFECTS.map((e) => (
-              <li key={e.label} className="flex items-baseline gap-2">
+            {effects.map((e) => (
+              <li key={e.key} className="flex items-baseline gap-2">
                 <span className={cn(
                   'inline-block w-1.5 h-1.5 rounded-full shrink-0 translate-y-[-2px]',
                   e.tone === 'logo' ? 'bg-logo' : 'bg-gold',
@@ -1439,6 +1532,21 @@ export function PlayersPanel() {
 }
 
 function PlayerRow({ player: p }: { player: Player }) {
+  // Feedback de caixa (024.1): delta flutuante quando o saldo muda.
+  const [pulse, setPulse] = useState<{ id: number; d: number } | null>(null)
+  const prevMoney = useRef(p.money)
+  const pulseId = useRef(0)
+  useEffect(() => {
+    if (p.money !== prevMoney.current) {
+      const d = p.money - prevMoney.current
+      prevMoney.current = p.money
+      pulseId.current += 1
+      setPulse({ id: pulseId.current, d })
+      const t = setTimeout(() => setPulse(null), 1200)
+      return () => clearTimeout(t)
+    }
+  }, [p.money])
+
   return (
     <div
       className={cn(
@@ -1450,6 +1558,24 @@ function PlayerRow({ player: p }: { player: Player }) {
         p.bankrupt && 'opacity-50',
       )}
     >
+      <AnimatePresence>
+        {pulse && pulse.d !== 0 && (
+          <motion.span
+            key={pulse.id}
+            initial={{ opacity: 0, y: 2 }}
+            animate={{ opacity: 1, y: -16 }}
+            exit={{ opacity: 0, y: -26 }}
+            transition={{ duration: 0.45 }}
+            className={cn(
+              'absolute right-3 top-1.5 currency text-sm font-bold pointer-events-none z-10',
+              pulse.d > 0 ? 'text-green-400' : 'text-logo',
+            )}
+            style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
+          >
+            {pulse.d > 0 ? '+' : '−'}R${Math.abs(pulse.d).toLocaleString('pt-BR')}
+          </motion.span>
+        )}
+      </AnimatePresence>
       <PlayerFace color={p.color} active={p.active} asleep={p.bankrupt} size={40} />
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-1.5">
@@ -1483,32 +1609,32 @@ function PlayerRow({ player: p }: { player: Player }) {
 }
 
 // Log de eventos — SRS §12.3, alimentado pelas ações do turno.
-const MOCK_LOG = [
-  { who: 'Nikolas', what: 'comprou Amazonas (AM) por R$160', when: 'agora' },
-  { who: 'Júlia',   what: 'pagou R$240 de aluguel a Caio',   when: '12s'  },
-  { who: 'Caio',    what: 'rolou 8 (4+4) — vai rolar de novo', when: '34s' },
-  { who: 'Beatriz', what: 'recebeu R$250 ao passar pelo GO', when: '1m'   },
-  { who: 'Banco',   what: 'Apagão sorteado — Hangares inativos', when: '1m' },
-  { who: 'Léo',     what: 'declarou falência',                when: '2m'   },
-  { who: 'Rafa',    what: 'hipotecou Sergipe por R$90',       when: '3m'   },
-]
-
 const SPEED_FACES = ['one', 'two', 'three', 'mr', 'bus'] as const
 type SpeedFace = (typeof SPEED_FACES)[number]
-const randDie = () => 1 + Math.floor(Math.random() * 6)
-const randSpeedFace = () => SPEED_FACES[Math.floor(Math.random() * SPEED_FACES.length)]
+
+// Face do Speed Die do motor (1|2|3|'mr-banco'|'onibus') → face visual.
+function toUiSpeedFace(speed: number | 'mr-banco' | 'onibus'): SpeedFace {
+  if (speed === 1) return 'one'
+  if (speed === 2) return 'two'
+  if (speed === 3) return 'three'
+  if (speed === 'mr-banco') return 'mr'
+  return 'bus' // 'onibus'
+}
 
 const ROLL_DURATION_MS = 1050
 
-// DiceArena — área central de arremesso (dados + botão). Vive no miolo
-// do tabuleiro (CenterArena), não mais na lateral. Estado dos dados aqui
-// dentro, isolado do resto da UI.
+// DiceArena — área central de arremesso (dados + botão). Vive no miolo do
+// tabuleiro (CenterArena). Ligado ao motor (022.1): jogador da vez, faces e
+// gating de turno vêm do store; o botão dispara rollDice.
 export function DiceArena() {
-  const active = MOCK_PLAYERS.find((p) => p.active)!
-  const isYourTurn = active.name === LOCAL_PLAYER_NAME
-  const [d1, setD1] = useState(5)
-  const [d2, setD2] = useState(3)
-  const [sd, setSd] = useState<SpeedFace>('bus')
+  const players = useLivePlayers()
+  const active = players.find((p) => p.active) ?? players[0]
+  const turnState = useGameStore((s) => s.game.turn.state)
+  const lastRoll = useGameStore((s) => s.game.turn.lastRoll)
+  const paused = useGameStore((s) => s.game.paused)
+  const phase = useGameStore((s) => s.game.phase)
+  const rollDiceCmd = useGameStore((s) => s.rollDice)
+
   const [rollKey, setRollKey] = useState(0)
   const [rolling, setRolling] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1519,48 +1645,55 @@ export function DiceArena() {
     }
   }, [])
 
-  function roll() {
-    if (rolling) return
+  const canRoll = phase === 'playing' && !paused && turnState === 'aguardando-rolagem' && !rolling
+  const d1 = lastRoll ? lastRoll.white[0] : 1
+  const d2 = lastRoll ? lastRoll.white[1] : 1
+  const sd: SpeedFace = lastRoll && lastRoll.speed != null ? toUiSpeedFace(lastRoll.speed) : 'one'
+
+  function handleRoll() {
+    if (!canRoll) return
     setRolling(true)
-    setD1(randDie())
-    setD2(randDie())
-    setSd(randSpeedFace())
+    rollDiceCmd() // motor: rola, move e abre a resolução da casa
     setRollKey((k) => k + 1)
     timeoutRef.current = setTimeout(() => setRolling(false), ROLL_DURATION_MS)
   }
 
+  const status =
+    phase === 'ended' ? 'Fim de jogo'
+    : turnState === 'aguardando-rolagem' ? 'Sua vez'
+    : turnState === 'prisao-decisao' ? 'Preso — veja o HUD'
+    : turnState === 'casa-a-resolver' ? 'Resolva a jogada'
+    : 'Finalize o turno'
+
   return (
     <div className="flex flex-col items-center gap-5">
-      {/* Jogador da vez — carinha + nome acima dos dados. Anel rodando
-          só pisca quando o ativo é você (LOCAL_PLAYER_NAME); turno dos
-          outros mostra a carinha sem o anel. */}
+      {/* Jogador da vez — carinha + nome acima dos dados. Anel pisca quando é
+          hora de rolar (turno ativo no demo local de 1 cliente). */}
       <div className="flex flex-col items-center gap-1.5">
-        <PlayerFace color={active.color} active={isYourTurn} size={88} />
+        <PlayerFace color={active.color} active={canRoll} size={88} />
         <p className="display text-cream text-xl leading-none tracking-wide">
           {active.name}
         </p>
-        <p className="label text-cream-muted">
-          {isYourTurn ? 'Sua vez' : 'Jogador da vez'}
-        </p>
+        <p className="label text-cream-muted">{status}</p>
       </div>
 
       <div className="flex items-center justify-center gap-4">
         <Dice value={d1} rollKey={rollKey} />
         <Dice value={d2} rollKey={rollKey} />
-        {active.speedDieReady && <SpeedDie face={sd} rollKey={rollKey} />}
+        {THEME.SPEED_DIE_ENABLED && active.speedDieReady && <SpeedDie face={sd} rollKey={rollKey} />}
       </div>
       <p className="label text-cream-muted text-center">
-        {active.speedDieReady ? '2 dados + Speed Die' : '2 dados (1ª volta)'}
+        {THEME.SPEED_DIE_ENABLED ? (active.speedDieReady ? '2 dados + Speed Die' : '2 dados (1ª volta)') : '2 dados'}
       </p>
       <button
-        onClick={roll}
-        disabled={rolling}
+        onClick={handleRoll}
+        disabled={!canRoll}
         className="
           px-7 py-3 rounded-[var(--radius-sharp)]
           bg-gold text-coffee-950 border border-gold-soft
           display text-lg leading-none tracking-wider
           hover:bg-gold-glow hover:shadow-[var(--shadow-glow)]
-          disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-gold disabled:hover:shadow-none
+          disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gold disabled:hover:shadow-none
           transition-all
         "
       >
@@ -1571,7 +1704,12 @@ export function DiceArena() {
 }
 
 export function ActionsPanel() {
-  const active = MOCK_PLAYERS.find((p) => p.active)!
+  const game = useGameStore((s) => s.game)
+  const players = playersView(game)
+  const active = players.find((p) => p.active) ?? players[0]
+  const activeId = game.players[game.turnOrder[game.activeSeat]]?.id
+  const goNext = activeId ? goBonus(game, activeId) : 0
+  const pot = game.centerPot
 
   return (
     <aside className="side-panel">
@@ -1589,7 +1727,7 @@ export function ActionsPanel() {
               <p className="label text-cream-muted">Próx. GO</p>
               <p className="currency text-gold-glow text-base leading-none mt-1">
                 <span className="text-gold-soft text-[10px] mr-0.5">R$</span>
-                {ACTIVE_GO_VALUE}
+                {goNext}
               </p>
             </div>
           </div>
@@ -1604,7 +1742,7 @@ export function ActionsPanel() {
             </div>
             <span className="currency text-gold-glow text-2xl leading-none">
               <span className="text-gold-soft text-sm mr-0.5">R$</span>
-              {MOCK_PARKING_POT.toLocaleString('pt-BR')}
+              {pot.toLocaleString('pt-BR')}
             </span>
           </div>
 
@@ -2485,7 +2623,7 @@ export function CenterPlate({
 // aluguéis (base / 1-4 casas / hotel / skyscraper), preço, custo de
 // casa, hipoteca e dono se houver. Fecha clicando no backdrop ou Esc.
 // =====================================================================
-function computeRents(rent: number) {
+export function computeRents(rent: number) {
   return {
     base:       rent,
     house1:     rent * 5,
@@ -2498,6 +2636,7 @@ function computeRents(rent: number) {
 }
 
 function fmtMoney(n: number) {
+  if (n == null || Number.isNaN(n)) return '—' // blindagem: nunca quebra por valor ausente
   return n.toLocaleString('pt-BR')
 }
 
@@ -2592,20 +2731,92 @@ export function PropertyPopover({
   )
 }
 
-function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onClose: () => void }) {
-  const owner = MOCK_OWNERSHIP[square.pos]
-  const ownerPlayer = owner ? playerByName(owner) : undefined
-  const buildings = MOCK_BUILDINGS[square.pos] ?? 0
-  const rents = computeRents(square.rent)
-  const houseCost = HOUSE_COST[square.group]
-  const mortgage = Math.floor(square.price / 2)
-  const stripeColor = ownerPlayer?.color ?? GROUP_COLOR[square.group]
-  const isMortgaged = MOCK_MORTGAGED.has(square.pos)
+// Botão de ação do deed (dourado; desabilita conforme as flags).
+function DeedBtn({ onClick, disabled, title, children }: { onClick: () => void; disabled?: boolean; title?: string; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className="px-2 py-1 rounded-[var(--radius-sharp)] text-xs font-bold bg-gold text-coffee-900 hover:brightness-110 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:brightness-100"
+    >
+      {children}
+    </button>
+  )
+}
 
-  // Identificar a linha de aluguel ATIVA (highlight) baseado nas construções
+const BUILD_BLOCK_MSG: Record<string, string> = {
+  maioria: 'Precisa da maioria do grupo',
+  'hipoteca-no-grupo': 'Há propriedade hipotecada no grupo',
+  topo: 'Já está no nível máximo',
+  uniformidade: 'Construa primeiro na cidade de menor nível',
+  'grupo-incompleto': 'Arranha-céu exige o grupo completo',
+  estoque: 'Banco sem estoque',
+  caixa: 'Caixa insuficiente',
+}
+
+// Ações de gestão (023) — só para o dono da vez. Reusado pelos 3 popovers.
+function DeedActions({ pos }: { pos: number }) {
+  const game = useGameStore((s) => s.game)
+  const buildHouse = useGameStore((s) => s.buildHouse)
+  const sellBuilding = useGameStore((s) => s.sellBuilding)
+  const buildHangar = useGameStore((s) => s.buildHangar)
+  const sellHangar = useGameStore((s) => s.sellHangar)
+  const mortgageProperty = useGameStore((s) => s.mortgageProperty)
+  const unmortgageProperty = useGameStore((s) => s.unmortgageProperty)
+
+  const dv = deedView(game, pos)
+  if (!dv || !dv.ownedByActive) return null
+  const { flags } = dv
+  const blockMsg = dv.buildBlock ? BUILD_BLOCK_MSG[dv.buildBlock] : undefined
+
+  return (
+    <div className="mt-3 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-1.5">
+      <p className="label text-gold" style={{ fontSize: '9px' }}>Gerenciar</p>
+      <div className="flex flex-wrap gap-1.5">
+        {dv.kind === 'property' && (
+          <>
+            <DeedBtn disabled={!flags.podeConstruir} onClick={() => buildHouse(pos)} title={blockMsg}>
+              🏗 Construir (${dv.buildCost})
+            </DeedBtn>
+            <DeedBtn disabled={!flags.podeVender} onClick={() => sellBuilding(pos)}>Vender</DeedBtn>
+          </>
+        )}
+        {dv.kind === 'airport' && (
+          <>
+            <DeedBtn disabled={!flags.podeConstruirHangar} onClick={() => buildHangar(pos)}>🛩 Hangar</DeedBtn>
+            <DeedBtn disabled={!flags.podeVenderHangar} onClick={() => sellHangar(pos)}>Vender Hangar</DeedBtn>
+          </>
+        )}
+        {!dv.mortgaged ? (
+          <DeedBtn disabled={!flags.podeHipotecar} onClick={() => mortgageProperty(pos)}>Hipotecar (+${dv.mortgageValue})</DeedBtn>
+        ) : (
+          <DeedBtn disabled={!flags.podeDeshipotecar} onClick={() => unmortgageProperty(pos)}>Deshipotecar (−${dv.unmortgageCost})</DeedBtn>
+        )}
+      </div>
+      {dv.kind === 'property' && !flags.podeConstruir && blockMsg && (
+        <p className="text-cream-muted" style={{ fontSize: '9px' }}>{blockMsg}</p>
+      )}
+    </div>
+  )
+}
+
+function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onClose: () => void }) {
+  const game = useGameStore((s) => s.game)
+  const dv = deedView(game, square.pos)!
+  const owner = dv.owner
+  const buildings = dv.level // 0–7 real
+  const rents = computeRents(square.rent)
+  const houseCost = dv.buildCost
+  const mortgage = dv.mortgageValue
+  const stripeColor = GROUP_COLOR[square.group]
+  const isMortgaged = dv.mortgaged
+
+  // Linha de aluguel ATIVA (highlight) pelo nível real
   const activeRow: keyof typeof rents =
-    buildings === 6 ? 'skyscraper' :
-    buildings === 5 ? 'hotel' :
+    buildings === 7 ? 'skyscraper' :
+    buildings >= 5 ? 'hotel' :
     buildings === 4 ? 'house4' :
     buildings === 3 ? 'house3' :
     buildings === 2 ? 'house2' :
@@ -2681,18 +2892,13 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
         </div>
 
         {/* Rodapé: dono + status */}
-        {(ownerPlayer || isMortgaged) && (
+        {(owner || isMortgaged) && (
           <div className="mt-3 pt-2.5 border-t border-coffee-500/60 flex items-center gap-2">
-            {ownerPlayer && (
-              <>
-                <PlayerFace color={ownerPlayer.color} size={22} />
-                <div className="flex-1 min-w-0">
-                  <p className="label text-cream-muted" style={{ fontSize: '8px' }}>Dono</p>
-                  <p className="display text-cream text-xs leading-none mt-0.5 truncate">
-                    {ownerPlayer.name}
-                  </p>
-                </div>
-              </>
+            {owner && (
+              <div className="flex-1 min-w-0">
+                <p className="label text-cream-muted" style={{ fontSize: '8px' }}>Dono</p>
+                <p className="display text-cream text-xs leading-none mt-0.5 truncate">{owner}</p>
+              </div>
             )}
             {isMortgaged && (
               <span className="
@@ -2705,6 +2911,8 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
             )}
           </div>
         )}
+
+        <DeedActions pos={square.pos} />
       </div>
     </>
   )
@@ -2787,6 +2995,7 @@ export function AirportPopover({
               <CompactRent label="Preço"    value={square.price}                 muted />
               <CompactRent label="Hipoteca" value={Math.floor(square.price / 2)} muted />
             </div>
+            <DeedActions pos={square.pos} />
           </div>
         </div>
         <div style={tailStyle} />
@@ -2872,6 +3081,7 @@ export function UtilityPopover({
               <CompactRent label="Preço"    value={square.price}                 muted />
               <CompactRent label="Hipoteca" value={Math.floor(square.price / 2)} muted />
             </div>
+            <DeedActions pos={square.pos} />
           </div>
         </div>
         <div style={tailStyle} />
@@ -2881,7 +3091,7 @@ export function UtilityPopover({
 }
 
 // Linha compacta com valor textual (não monetário) — para utilidades.
-function CompactRentText({
+export function CompactRentText({
   label,
   value,
   accent = false,
@@ -2899,7 +3109,7 @@ function CompactRentText({
 }
 
 // Linha compacta da tabela de aluguel — versão menor pra caber no popover.
-function CompactRent({
+export function CompactRent({
   label,
   value,
   active = false,

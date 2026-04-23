@@ -9,6 +9,7 @@ import type { PropertySquare, GroupKey } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
 import { activePlayer } from '../turn/turnMachine'
 import { groupSize } from './titles'
+import { THEME } from '../theme'
 
 function clone(state: GameState): GameState {
   return structuredClone(state)
@@ -20,10 +21,10 @@ function majority(size: number): number {
 }
 
 export function buildCost(square: PropertySquare): number {
-  return Math.round(square.price / 2) // provisório (tema); Skyscraper usa o mesmo (≥ 2º hotel, §13.7)
+  return Math.round(square.price * THEME.BUILD_COST_RATIO) // tema; Skyscraper usa o mesmo (≥ 2º hotel, §13.7)
 }
 
-export const HANGAR_COST = 100 // §13.6 (provisório de tema); venda = metade ($50)
+export const HANGAR_COST = THEME.HANGAR_COST // §13.6; venda = metade ($50)
 
 // Nível de construção da cidade (ladder estendido — 011): casas 0–4, hotel 5, 2º hotel 6, Skyscraper 7.
 export function cityLevel(title: { houses: number; hotel: boolean; hotel2: boolean; skyscraper: boolean }): number {
@@ -63,38 +64,36 @@ export function nextBuildTarget(state: GameState, group: GroupKey, ownerId: stri
   return target ? target.pos : null
 }
 
+// Pode construir 1 nível NESTA cidade? Encapsula a guarda de buildHouse (023):
+// canBuild + nível<7 + uniformidade (menor nível do grupo) + caixa + estoque +
+// (arranha-céu exige grupo completo). Não considera `paused` (o comando trata).
+export function canBuildHouse(state: GameState, pos: number): boolean {
+  if (!canBuild(state, pos)) return false
+  const sq = BOARD[pos]
+  if (sq.kind !== 'property') return false
+  const player = activePlayer(state)
+  const cur = cityLevel(state.titles[pos])
+  if (cur >= 7) return false // já é Skyscraper (máximo)
+  const cities = ownedGroupCities(state, sq.group, player.id)
+  const min = Math.min(...cities.map((c) => cityLevel(state.titles[c.pos])))
+  if (cur !== min) return false // uniformidade
+  if (player.cash < buildCost(sq)) return false
+  if (cur === 4 || cur === 5) return state.bank.hotels >= 1 // → hotel / 2º hotel (mesmo estoque, §14)
+  if (cur === 6) return state.bank.skyscrapers >= 1 && cities.length === groupSize(sq.group) // → Skyscraper (grupo completo §13.7)
+  return state.bank.houses >= 1 // → casa
+}
+
 // Constrói 1 nível na cidade subindo o ladder (casa → hotel → 2º hotel → Skyscraper).
 // No-op se inválido. Uniformidade: constrói na cidade de menor nível do grupo (004).
 export function buildHouse(state: GameState, pos: number): GameState {
   if (state.paused) return state
-  if (!canBuild(state, pos)) return state
+  if (!canBuildHouse(state, pos)) return state
   const sq = BOARD[pos] as PropertySquare
-  const player = activePlayer(state)
-  const title = state.titles[pos]
-  const cur = cityLevel(title)
-  if (cur >= 7) return state // já é Skyscraper (máximo)
-  const cities = ownedGroupCities(state, sq.group, player.id)
-  const min = Math.min(...cities.map((c) => cityLevel(state.titles[c.pos])))
-  if (cur !== min) return state // uniformidade
-  const cost = buildCost(sq)
-  if (player.cash < cost) return state
-
-  // estoque + gates por nível alvo
-  if (cur === 4) {
-    if (state.bank.hotels < 1) return state // → hotel
-  } else if (cur === 5) {
-    if (state.bank.hotels < 1) return state // → 2º hotel (mesmo estoque, §14)
-  } else if (cur === 6) {
-    if (state.bank.skyscrapers < 1) return state // → Skyscraper
-    if (cities.length !== groupSize(sq.group)) return state // exige GRUPO COMPLETO (§13.7)
-  } else {
-    if (state.bank.houses < 1) return state // → casa
-  }
-
+  const cur = cityLevel(state.titles[pos])
   const s = clone(state)
   const p = activePlayer(s)
   const t = s.titles[pos]
-  p.cash -= cost
+  p.cash -= buildCost(sq)
   if (cur === 4) {
     t.houses = 0
     t.hotel = true
@@ -113,15 +112,29 @@ export function buildHouse(state: GameState, pos: number): GameState {
   return s
 }
 
+// Pode construir Hangar? (aeroporto próprio, não-hipotecado, sem Hangar, com caixa) — 023.
+export function canBuildHangar(state: GameState, pos: number): boolean {
+  const sq = BOARD[pos]
+  if (sq.kind !== 'airport') return false
+  const player = activePlayer(state)
+  const t = state.titles[pos]
+  if (!t || t.ownerId !== player.id || t.mortgaged || t.hangar) return false
+  return player.cash >= HANGAR_COST
+}
+
+// Pode vender Hangar? (aeroporto próprio com Hangar) — 023.
+export function canSellHangar(state: GameState, pos: number): boolean {
+  const sq = BOARD[pos]
+  if (sq.kind !== 'airport') return false
+  const player = activePlayer(state)
+  const t = state.titles[pos]
+  return !!t && t.ownerId === player.id && t.hangar
+}
+
 // Hangar (§13.6): melhoria de aeroporto que dobra o aluguel daquele aeroporto. No-op se inválido.
 export function buildHangar(state: GameState, pos: number): GameState {
   if (state.paused) return state
-  const sq = BOARD[pos]
-  if (sq.kind !== 'airport') return state
-  const player = activePlayer(state)
-  const t = state.titles[pos]
-  if (!t || t.ownerId !== player.id || t.mortgaged || t.hangar) return state // dono, não hipotecado, sem Hangar
-  if (player.cash < HANGAR_COST) return state
+  if (!canBuildHangar(state, pos)) return state
   const s = clone(state)
   activePlayer(s).cash -= HANGAR_COST
   s.titles[pos].hangar = true
@@ -130,32 +143,36 @@ export function buildHangar(state: GameState, pos: number): GameState {
 
 export function sellHangar(state: GameState, pos: number): GameState {
   if (state.paused) return state
-  const sq = BOARD[pos]
-  if (sq.kind !== 'airport') return state
-  const player = activePlayer(state)
-  const t = state.titles[pos]
-  if (!t || t.ownerId !== player.id || !t.hangar) return state
+  if (!canSellHangar(state, pos)) return state
   const s = clone(state)
   activePlayer(s).cash += Math.round(HANGAR_COST / 2) // metade ($50)
   s.titles[pos].hangar = false
   return s
 }
 
+// Pode vender 1 nível NESTA cidade? (property própria, nível>0, uniformidade: maior nível do grupo) — 023.
+export function canSellBuilding(state: GameState, pos: number): boolean {
+  const sq = BOARD[pos]
+  if (sq.kind !== 'property') return false
+  const player = activePlayer(state)
+  const title = state.titles[pos]
+  if (!title || title.ownerId !== player.id) return false
+  const cur = cityLevel(title)
+  if (cur === 0) return false // nada para vender
+  const cities = ownedGroupCities(state, sq.group, player.id)
+  const max = Math.max(...cities.map((c) => cityLevel(state.titles[c.pos])))
+  return cur === max // só vende da de maior nível do grupo
+}
+
 // Vende 1 nível ao banco por metade. No-op se inválido. Desce o ladder: Skyscraper → 2º hotel
 // → hotel → 4 casas (ou desmonte forçado §5.5) → casas.
 export function sellBuilding(state: GameState, pos: number): GameState {
   if (state.paused) return state
+  if (!canSellBuilding(state, pos)) return state
   const sq = BOARD[pos]
-  if (sq.kind !== 'property') return state
   const player = activePlayer(state)
-  const title = state.titles[pos]
-  if (!title || title.ownerId !== player.id) return state
-  const cur = cityLevel(title)
-  if (cur === 0) return state // nada para vender
-  // uniformidade: só vende da de maior nível do grupo
-  const cities = ownedGroupCities(state, sq.group, player.id)
-  const max = Math.max(...cities.map((c) => cityLevel(state.titles[c.pos])))
-  if (cur !== max) return state
+  const cur = cityLevel(state.titles[pos])
+  const cities = ownedGroupCities(state, (sq as PropertySquare).group, player.id)
 
   const s = clone(state)
   const p = activePlayer(s)
