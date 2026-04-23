@@ -59,7 +59,19 @@ describe('RootErrorBoundary (T013)', () => {
         </RootErrorBoundary>,
       ),
     ).not.toThrow()
-    expect(screen.getByText(/recomeçar/i)).toBeTruthy()
+    expect(screen.getByText(/voltar ao início/i)).toBeTruthy()
+    expect(screen.queryByText(/partida local não pode ser recuperada/i)).toBeNull()
+  })
+
+  it('criação de sala (?host=1) nunca cai no fallback de partida local', () => {
+    setSearch('?host=1')
+    render(
+      <RootErrorBoundary>
+        <Bomb />
+      </RootErrorBoundary>,
+    )
+    expect(screen.getByText(/voltar ao início/i)).toBeTruthy()
+    expect(screen.queryByText(/partida local não pode ser recuperada/i)).toBeNull()
   })
 
   it('modo local (?local=1) mostra a variante sem oferta de recuperação (FR-014)', () => {

@@ -23,7 +23,7 @@ function readMode(): { mode: FailureMode; roomId: string | null } {
   if (q.has('local') || q.has('players')) return { mode: 'local', roomId: null }
   const link = parseRoomLink(window.location.search)
   if (link.roomId) return { mode: 'room', roomId: link.roomId }
-  return { mode: 'local', roomId: null } // boot/home: sem sala ainda — mesmo caminho de "recomeçar"
+  return { mode: 'entry', roomId: null }
 }
 
 export class RootErrorBoundary extends Component<{ children: ReactNode }, RootBoundaryState> {
