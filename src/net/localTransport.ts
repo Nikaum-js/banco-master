@@ -175,15 +175,42 @@ export class LocalHub {
     for (const cb of this.joinReqCbs) cb(who, fromUid)
   }
 
+  // Autoridade da sala = dono do assento `isHost` na ÚLTIMA sala persistida (043, D2/D3 —
+  // espelha a política SQL "update só o uid do assento de anfitrião"). Por `isHost`, não por
+  // posição: `shuffleSeatOrder` reordena o array para a ordem de turno e não garante que o
+  // anfitrião fique em `seats[0]`. `null` antes de qualquer `saveRoom`/`saveSnapshot` — nesse
+  // instante NINGUÉM é autoridade, e a checagem abaixo recusa por padrão (fail-closed).
+  private currentHostUid(): string | null {
+    const room = this.storedRoom ?? this.lastRoom
+    return room?.seats.find((s) => s.isHost)?.uid ?? null
+  }
+
   // Rejeição é dirigida ao uid pedinte, mas trafega no mesmo canal (todos podem ver; nada
-  // sensível). Cada conexão filtra o que é seu.
-  rejectJoin(uid: string, reason: JoinError): void {
+  // sensível). Cada conexão filtra o que é seu. Paridade de recusa (043, D12/T013): só a
+  // autoridade consegue — o que a política de `room:<id>:lobby` faria no Supabase.
+  rejectJoin(uid: string, reason: JoinError, fromUid: string): void {
+    if (fromUid !== this.currentHostUid()) return
     for (const conn of this.conns.values()) for (const cb of conn.onJoinRejected) cb(uid, reason)
   }
 
-  broadcast(cmd: AcceptedCommand): void {
+  // Paridade de recusa: só a autoridade difunde (043, T013) — espelha a política de
+  // `room:<id>:play`, escrevível só pelo uid do assento de anfitrião.
+  broadcast(cmd: AcceptedCommand, fromUid: string): void {
+    if (fromUid !== this.currentHostUid()) return
     for (const conn of this.conns.values()) {
       if (this.dropped.has(conn.uid)) continue // simula lacuna na sequência (FR-012)
+      for (const cb of conn.onBroadcast) cb(cmd)
+    }
+  }
+
+  // Parte PRIVADA do aceito (043, D9/D10) — alcança só o(s) conexão(ões) do assento alvo, e
+  // só quando quem chama é a autoridade (mesma regra de `broadcast`). Alimenta o MESMO
+  // `onBroadcast` do destinatário — o cliente não distingue pública de privada, aplica as
+  // duas (o guard de `seq` absorve a duplicata).
+  broadcastPrivate(targetUid: string, cmd: AcceptedCommand, fromUid: string): void {
+    if (fromUid !== this.currentHostUid()) return
+    for (const conn of this.conns.values()) {
+      if (conn.uid !== targetUid || this.dropped.has(conn.uid)) continue
       for (const cb of conn.onBroadcast) cb(cmd)
     }
   }
@@ -195,7 +222,9 @@ export class LocalHub {
     else this.dropped.delete(uid)
   }
 
-  publishRoom(room: Room): void {
+  // Paridade de recusa: só a autoridade publica (043, T013) — espelha `room:<id>:lobby`.
+  publishRoom(room: Room, fromUid: string): void {
+    if (fromUid !== this.currentHostUid()) return
     this.lastRoom = room
     for (const conn of this.conns.values()) for (const cb of conn.onRoom) cb(room)
   }
@@ -246,6 +275,11 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
   // Vivem no facade, não na `Connection` — assináveis ANTES de `connect()` (ver `register`).
   const statusCbs: StatusCb[] = []
   const presenceSyncCbs: PresenceSyncCb[] = []
+  // Paridade com os três tópicos do Supabase (043, D2/T013): o hub é UM barramento só, mas
+  // cada facade só "ouve" submit/presença do PRÓPRIO uid e de quem `watchSeat` observa — o
+  // mesmo recorte que um canal `s:<uid>` impõe de verdade. Começa com o próprio, como o canal
+  // `own` do adapter real.
+  const watched = new Set<string>([uid])
 
   return {
     uid,
@@ -265,17 +299,36 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
     },
 
     onSubmit(cb): Unsubscribe {
-      return hub.addSubmit(cb)
+      return hub.addSubmit((cmd, fromUid) => { if (watched.has(fromUid)) cb(cmd, fromUid) })
     },
 
     broadcast(cmd: AcceptedCommand): void {
-      hub.broadcast(cmd)
+      hub.broadcast(cmd, uid)
     },
 
     onBroadcast(cb): Unsubscribe {
       if (!conn) return () => {}
       conn.onBroadcast.push(cb)
       return detach(conn.onBroadcast, cb)
+    },
+
+    broadcastPrivate(targetUid: string, cmd: AcceptedCommand): void {
+      hub.broadcastPrivate(targetUid, cmd, uid)
+    },
+
+    // Assina/dessassina o recorte de submit/presença de outro assento (043, D2/D3) — é o que
+    // permite à autoridade observar cada assento sem um canal único compartilhado. O PRÓPRIO
+    // uid nunca sai (equivalente ao canal `own`, sempre assinado). Muda o recorte AGORA, então
+    // reemite `onPresenceSync` — sem isto, quem já assinou só veria o efeito na PRÓXIMA
+    // mudança de presença do hub, não nesta chamada (o `supabaseTransport` reemite igual).
+    watchSeat(seatUid: string): void {
+      watched.add(seatUid)
+      for (const cb of presenceSyncCbs) cb(hub.presentUids())
+    },
+    unwatchSeat(seatUid: string): void {
+      if (seatUid === uid) return
+      watched.delete(seatUid)
+      for (const cb of presenceSyncCbs) cb(hub.presentUids())
     },
 
     requestJoin(who): void {
@@ -287,7 +340,7 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
     },
 
     rejectJoin(target, reason): void {
-      hub.rejectJoin(target, reason)
+      hub.rejectJoin(target, reason, uid)
     },
 
     onJoinRejected(cb): Unsubscribe {
@@ -297,7 +350,7 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
     },
 
     publishRoom(room: Room): void {
-      hub.publishRoom(room)
+      hub.publishRoom(room, uid)
     },
 
     saveRoom(room: Room): Promise<void> {
@@ -317,7 +370,7 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
     },
 
     onPresence(cb): Unsubscribe {
-      return hub.addPresence(cb)
+      return hub.addPresence((change) => { if (watched.has(change.uid)) cb(change) })
     },
 
     onStatus(cb): Unsubscribe {
@@ -327,10 +380,14 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
       return detach(statusCbs, cb)
     },
 
+    // Recorte pelo `watched` (043) — o conjunto "completo" é completo PARA QUEM OBSERVA
+    // (a autoridade, via `watchSeat`); quem não observa mais ninguém só se vê a si mesmo,
+    // como um canal `s:<uid>` sozinho.
     onPresenceSync(cb): Unsubscribe {
-      presenceSyncCbs.push(cb)
-      cb(hub.presentUids()) // conveniência local: estado inicial logo após assinar (contrato §2.2)
-      return detach(presenceSyncCbs, cb)
+      const wrapped = (uids: ReadonlySet<string>): void => cb(new Set([...uids].filter((u) => watched.has(u))))
+      presenceSyncCbs.push(wrapped)
+      wrapped(hub.presentUids()) // conveniência local: estado inicial logo após assinar (contrato §2.2)
+      return detach(presenceSyncCbs, wrapped)
     },
 
     saveSnapshot(snap: PersistedSnapshot): Promise<void> {

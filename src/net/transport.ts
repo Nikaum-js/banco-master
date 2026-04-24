@@ -79,11 +79,25 @@ export interface Transport {
 
   // guest/host → host
   submit(cmd: CommandEnvelope): void
+  // `fromUid` vem do CANAL por onde a mensagem chegou (043, D3) — nunca do conteúdo do
+  // payload. "A identidade não viaja, ela é o endereço": nenhum campo de identidade
+  // sobrevive no `CommandEnvelope`, e nenhuma assinatura é necessária.
   onSubmit(cb: (cmd: CommandEnvelope, fromUid: string) => void): Unsubscribe
 
   // host → todos
   broadcast(cmd: AcceptedCommand): void
   onBroadcast(cb: (cmd: AcceptedCommand) => void): Unsubscribe
+  // host → UM assento (043, D9/D10) — o dono recebe as DUAS cópias (esta e a de `broadcast`)
+  // e aplica a privada; o guard de `seq` existente absorve a duplicata. Só tem efeito quando
+  // chamada pela autoridade (contrato §3.2) — silenciosa para qualquer outra sessão.
+  broadcastPrivate(uid: string, cmd: AcceptedCommand): void
+
+  // host → assina/dessassina o tópico PRIVADO de um assento (043, D2/D3) — é o que permite
+  // à autoridade observar `onSubmit`/`onPresence`/receber `broadcastPrivate` de CADA assento
+  // sem um canal único compartilhado. Chamado ao aceitar entrada/reanexar e no kick (host.ts).
+  // Sem efeito garantido para quem não é a autoridade daquela sala.
+  watchSeat(uid: string): void
+  unwatchSeat(uid: string): void
 
   // lobby: convidado pede assento → host responde publicando a sala (aceito) ou rejeitando
   requestJoin(who: JoinRequest): void

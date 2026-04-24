@@ -1,17 +1,20 @@
 // Fake in-memory do subconjunto do supabase-js que `supabaseTransport` usa.
 //
 // Card 6 do review de arquitetura: `supabaseTransport.ts` era o maior `.ts` sem teste do
-// repositório (196 linhas) — e é o adapter que roda em PRODUÇÃO. O único caminho que o
-// exercitava era `scripts/net-smoke.ts`, manual, contra infra viva e fora da suíte.
+// repositório — e é o adapter que roda em PRODUÇÃO. `SupabaseLike`/`SupabaseChannelLike`
+// (supabaseTransport.ts) já foram desenhadas como interfaces ESTRUTURAIS, justamente para o
+// build não depender do pacote. O mesmo desenho torna o adapter testável sem rede.
 //
-// Nada disso era necessário: `SupabaseLike`/`SupabaseChannelLike` (supabaseTransport.ts:24-39)
-// já foram desenhadas como interfaces ESTRUTURAIS, justamente para o build não depender do
-// pacote. O mesmo desenho torna o adapter testável sem rede — só faltava o fake.
+// 041 (D14): ganhou faltas injetáveis — queda/restauração de CANAL, recusa de gravação/leitura
+// e a guarda monotônica que o trigger SQL também aplica em produção.
 //
-// 041 (D14): ganhou faltas injetáveis — queda/restauração de CANAL (sem takeover, o cenário
-// do defeito 1), recusa de gravação/leitura e a guarda monotônica que o trigger SQL também
-// aplica em produção. Sem os equivalentes aqui, a conformidade prova uma garantia que o
-// adapter real não tem — exatamente como `takeover` divergiu uma vez entre os dois adapters.
+// 043 (D2/D3, T014): ganhou ROTEAMENTO POR TÓPICO — antes um `send()`/`track()` alcançava
+// TODO canal já assinado no broker, porque só existia um canal por sala. Com três classes de
+// tópico (`:lobby`, `:play`, `:s:<uid>`) coexistindo na MESMA sala, isso vazaria mensagem de
+// um tópico para outro. Agora cada `FakeChannel` roteia só para quem está no MESMO tópico, e
+// simula a POLÍTICA de escrita (policies.md §2): `lobby`/`play` só a autoridade escreve; um
+// tópico de assento só o dono ou a autoridade. NÃO é a prova real — é o caminho do código
+// exercitado headless; quem prova a política de verdade é `scripts/attack.ts` na Fase 6.
 import type { SupabaseChannelLike, SupabaseLike } from '@/net/supabaseTransport'
 
 type BroadcastCb = (msg: { payload: unknown }) => void
@@ -25,6 +28,35 @@ interface Broker {
   readFails: boolean
 }
 
+// Deriva quem é a autoridade (`isHost`) da ÚLTIMA linha upada de `rooms` — espelha a política
+// SQL real "update/insert só o uid do assento de anfitrião" (D2). Antes de qualquer upsert,
+// `undefined`: nada além de escrita no PRÓPRIO tópico de assento é permitido nesse instante
+// (fail-closed), o que basta porque nenhum caminho de produção escreve em `lobby`/`play`
+// antes do primeiro `saveRoom` (host.ts `ensureOpen()`).
+function hostUidOf(broker: Broker, roomId: string): string | undefined {
+  const row = broker.rows.get(`rooms:${roomId}`)
+  const seats = row?.seats as { uid: string; isHost: boolean }[] | undefined
+  return seats?.find((s) => s.isHost)?.uid
+}
+
+// `room:<id>:lobby` | `room:<id>:play` | `room:<id>:s:<uid>` → { roomId, class, seatUid? }
+function parseTopic(topic: string): { roomId: string; cls: 'lobby' | 'play' | 'seat'; seatUid?: string } | null {
+  const m = /^room:(.+):(lobby|play|s)(?::(.+))?$/.exec(topic)
+  if (!m) return null
+  const [, roomId, cls, seatUid] = m
+  if (cls === 's') return seatUid ? { roomId, cls: 'seat', seatUid } : null
+  return { roomId, cls: cls as 'lobby' | 'play' }
+}
+
+// Pode `authUid` ESCREVER (send/track) neste tópico? (policies.md §2 — a leitura/`subscribe`
+// não é modelada aqui: nenhum caso de T011 depende dela, e a prova real fica para a Fase 6.)
+function canWrite(broker: Broker, topic: string, authUid: string): boolean {
+  const parsed = parseTopic(topic)
+  if (!parsed) return false
+  if (parsed.cls === 'seat') return authUid === parsed.seatUid || authUid === hostUidOf(broker, parsed.roomId)
+  return authUid === hostUidOf(broker, parsed.roomId) // lobby/play: só a autoridade
+}
+
 class FakeChannel implements SupabaseChannelLike {
   private broadcastCbs = new Map<string, BroadcastCb[]>()
   private joinCbs: PresenceCb[] = []
@@ -35,16 +67,20 @@ class FakeChannel implements SupabaseChannelLike {
   private tracked = false
 
   private readonly broker: Broker
-  readonly key: string
+  readonly topic: string // nome do canal — o roteamento é por ele, NUNCA pela identidade de quem criou
+  readonly authUid: string // identidade AUTENTICADA do cliente dono deste objeto — base da política
   /** `broadcast.self` — o Realtime só ecoa o próprio envio quando ligado. */
   private readonly selfEcho: boolean
 
-  // Campos declarados e atribuídos à mão: parameter properties não são sintaxe apagável
-  // (`erasableSyntaxOnly`), e este arquivo agora passa pelo typecheck junto do resto.
-  constructor(broker: Broker, key: string, selfEcho: boolean) {
+  constructor(broker: Broker, topic: string, authUid: string, selfEcho: boolean) {
     this.broker = broker
-    this.key = key
+    this.topic = topic
+    this.authUid = authUid
     this.selfEcho = selfEcho
+  }
+
+  private sameTopic(): FakeChannel[] {
+    return [...this.broker.channels].filter((ch) => ch.topic === this.topic)
   }
 
   on(type: 'broadcast', filter: { event: string }, cb: (msg: { payload: unknown }) => void): SupabaseChannelLike
@@ -67,14 +103,14 @@ class FakeChannel implements SupabaseChannelLike {
 
   presenceState(): Record<string, unknown[]> {
     const state: Record<string, unknown[]> = {}
-    for (const ch of this.broker.channels) {
-      if (ch.tracked) state[ch.key] = [{ uid: ch.key }]
+    for (const ch of this.sameTopic()) {
+      if (ch.tracked) state[ch.authUid] = [{ uid: ch.authUid }]
     }
     return state
   }
 
   private emitSyncAll(): void {
-    for (const ch of this.broker.channels) {
+    for (const ch of this.sameTopic()) {
       if (!ch.subscribed) continue
       for (const cb of ch.syncCbs) cb()
     }
@@ -82,7 +118,8 @@ class FakeChannel implements SupabaseChannelLike {
 
   send(msg: { type: 'broadcast'; event: string; payload: unknown }): Promise<unknown> {
     if (!this.subscribed) return Promise.resolve({ status: 'not_subscribed' }) // igual ao real: cai no chão
-    for (const ch of this.broker.channels) {
+    if (!canWrite(this.broker, this.topic, this.authUid)) return Promise.resolve({ status: 'error' }) // política recusa (D2)
+    for (const ch of this.sameTopic()) {
       if (ch === this && !this.selfEcho) continue
       if (!ch.subscribed) continue
       for (const cb of ch.broadcastCbs.get(msg.event) ?? []) cb({ payload: msg.payload })
@@ -91,11 +128,12 @@ class FakeChannel implements SupabaseChannelLike {
   }
 
   track(): Promise<unknown> {
+    if (!canWrite(this.broker, this.topic, this.authUid)) return Promise.resolve({}) // política recusa (D2)
     if (this.tracked) return Promise.resolve({})
     this.tracked = true
-    for (const ch of this.broker.channels) {
+    for (const ch of this.sameTopic()) {
       if (!ch.subscribed) continue
-      for (const cb of ch.joinCbs) cb({ key: this.key, newPresences: [{ uid: this.key }] })
+      for (const cb of ch.joinCbs) cb({ key: this.authUid, newPresences: [{ uid: this.authUid }] })
     }
     this.emitSyncAll()
     return Promise.resolve({})
@@ -106,6 +144,16 @@ class FakeChannel implements SupabaseChannelLike {
     this.statusCb = cb
     this.broker.channels.add(this)
     cb?.('SUBSCRIBED')
+    // Catch-up de presença: quem já está `tracked` no MESMO tópico dispara 'join' para o
+    // recém-assinado — espelha o 'sync' inicial do Realtime (presença JÁ existente chega ao
+    // assinar, não só deltas futuros). Sem isto, `watchSeat` num assento cujo dono já estava
+    // presente nunca aprenderia dessa presença — e uma queda dele pareceria uma desconexão
+    // "limpa" (sem par de join anterior) em vez do takeover que de fato é.
+    for (const ch of this.sameTopic()) {
+      if (ch === this || !ch.tracked) continue
+      for (const cb2 of this.joinCbs) cb2({ key: ch.authUid, newPresences: [{ uid: ch.authUid }] })
+    }
+    this.emitSyncAll()
     return this
   }
 
@@ -115,9 +163,9 @@ class FakeChannel implements SupabaseChannelLike {
     this.tracked = false
     this.broker.channels.delete(this)
     if (wasTracked) {
-      for (const ch of this.broker.channels) {
+      for (const ch of this.sameTopic()) {
         if (!ch.subscribed) continue
-        for (const cb of ch.leaveCbs) cb({ key: this.key, leftPresences: [{ uid: this.key }] })
+        for (const cb of ch.leaveCbs) cb({ key: this.authUid, leftPresences: [{ uid: this.authUid }] })
       }
       this.emitSyncAll()
     }
@@ -134,9 +182,9 @@ class FakeChannel implements SupabaseChannelLike {
     this.subscribed = false
     this.tracked = false
     if (wasTracked) {
-      for (const ch of this.broker.channels) {
+      for (const ch of this.sameTopic()) {
         if (ch === this || !ch.subscribed) continue
-        for (const cb of ch.leaveCbs) cb({ key: this.key, leftPresences: [{ uid: this.key }] })
+        for (const cb of ch.leaveCbs) cb({ key: this.authUid, leftPresences: [{ uid: this.authUid }] })
       }
       this.emitSyncAll()
     }
@@ -154,7 +202,9 @@ export interface FakeSupabase {
   client(uid: string): SupabaseLike
   /** Linhas da tabela `rooms` — para asserir upsert parcial. */
   rows: Map<string, Record<string, unknown>>
-  /** O canal MAIS RECENTE assinado com este uid — para simular queda/restauração (041, D14). */
+  /** O canal MAIS RECENTE assinado por este uid AUTENTICADO — para simular queda/restauração
+   * (041, D14). Com três tópicos por sala (043), "mais recente" tende a ser o canal do
+   * PRÓPRIO assento (`s:<uid>`), o último que `connect()` assina. */
   channelByUid(uid: string): { simulateDrop(): void; simulateResubscribe(): void } | undefined
   /** Recusa a próxima gravação `n` vezes (ou sempre, com `'always'`) — FR-012/013, SC-003. */
   failWrites(n: number | 'always'): void
@@ -177,7 +227,7 @@ export function fakeSupabase(): FakeSupabase {
   return {
     rows: broker.rows,
     channelByUid(uid: string) {
-      return [...broker.channels].findLast((ch) => ch.key === uid)
+      return [...broker.channels].findLast((ch) => ch.authUid === uid)
     },
     failWrites(n: number | 'always'): void {
       broker.writeFailures = n
@@ -187,9 +237,9 @@ export function fakeSupabase(): FakeSupabase {
     },
     client(uid: string): SupabaseLike {
       return {
-        channel(_name: string, opts?: unknown): SupabaseChannelLike {
+        channel(name: string, opts?: unknown): SupabaseChannelLike {
           const cfg = opts as { config?: { broadcast?: { self?: boolean } } } | undefined
-          return new FakeChannel(broker, uid, cfg?.config?.broadcast?.self === true)
+          return new FakeChannel(broker, name, uid, cfg?.config?.broadcast?.self === true)
         },
         from(table: string) {
           return {

@@ -2,21 +2,23 @@
 // `@supabase/supabase-js` (recebe o cliente por interface estrutural) para o build ficar verde
 // sem a dependência: quando for conectar de verdade, faça `bun add @supabase/supabase-js`, crie
 // o cliente com `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` e passe-o aqui. A migration
-// `supabase/migrations/0001_rooms_snapshots.sql` cria a tabela `rooms`.
+// `supabase/migrations/0001_rooms_snapshots.sql` cria a tabela `rooms`; `0003_attested_identity.sql`
+// (043) traz as políticas de tópico que este adapter pressupõe.
 //
-// Mapeamento:
-//   • comando guest→host  → Realtime broadcast, evento 'submit'
-//   • comando aceito host→todos → broadcast, evento 'accepted'  (FR-010/011)
-//   • estado da sala host→todos → broadcast, evento 'room'
-//   • pedido de assento guest→host → broadcast, evento 'join'    (FR-002)
-//   • recusa de assento host→guest → broadcast, evento 'rejected' (FR-005)
-//   • (des)conexão → Realtime Presence (chave = uid)             (FR-016/006a)
-//   • snapshot → upsert/select em `rooms` (1 linha/sala)         (FR-013/014)
+// TOPOLOGIA DE TRÊS TÓPICOS (043, D2/D3 do plan) — o remetente vem do ENDEREÇO, não do payload:
+//   • `room:<id>:lobby` — sala publicada, recusa de entrada, aviso de reanexação. Só a
+//     autoridade escreve; qualquer sessão autenticada lê.
+//   • `room:<id>:play`  — comando aceito (parte PÚBLICA). Só a autoridade escreve; só quem tem
+//     assento lê.
+//   • `room:<id>:s:<uid>` — comando do jogador, presença do assento, parte PRIVADA do aceito.
+//     Só o dono e a autoridade escrevem/leem. A autoridade assina um tópico destes POR
+//     ASSENTO (`watchSeat`/`unwatchSeat`, chamados por `host.ts`) — e nunca chama `track()`
+//     nos que não são o seu, para a presença observada ali ser só a do dono (D2).
 //
-// 043 (D-035): o `uid` que este adapter carrega é a identidade ATESTADA pela sessão anônima do
-// Supabase (`ensureSession()`, em `supabaseClient.ts`), não mais um token auto-declarado. Este
-// adapter ainda roda sobre UM canal por sala — a topologia de três tópicos (lobby/play/assento),
-// que faz o remetente vir do ENDEREÇO em vez do payload, é a Fase 2 (D2/D3 do plan da 043).
+// `onPresenceSync` continua entregando o conjunto COMPLETO (contrato §2), mas essa completude
+// agora é uma garantia da AUTORIDADE (que soma `own` + todo assento observado) — um convidado
+// só enxerga o próprio tópico, e é assim que deveria ser: ele nunca precisou ver a presença
+// alheia, só a autoridade precisa reconciliar `seats[].connected` (FR-021 da 041).
 import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import type { JoinError, Room } from './room'
 import { normalizeLog } from '@/game/log'
@@ -71,14 +73,9 @@ interface RoomRow {
 }
 
 const EVENT = { submit: 'submit', accepted: 'accepted', room: 'room', join: 'join', rejected: 'rejected' } as const
+const seatTopic = (roomId: string, uid: string): string => `room:${roomId}:s:${uid}`
 
 export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: string): Transport {
-  // `broadcast.self: true` é OBRIGATÓRIO: no modelo uniforme da spec todo participante —
-  // inclusive o host — submete comandos pelo canal e aplica só o que volta difundido (UI
-  // pessimista). Sem eco do próprio envio, o host nunca veria os próprios comandos.
-  const channel = supabase.channel(`room:${roomId}`, {
-    config: { presence: { key: uid }, broadcast: { self: true } },
-  })
   const submitCbs: ((cmd: CommandEnvelope, fromUid: string) => void)[] = []
   const broadcastCbs: ((cmd: AcceptedCommand) => void)[] = []
   const roomCbs: ((room: Room) => void)[] = []
@@ -87,14 +84,53 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
   const joinRejCbs: ((target: string, reason: JoinError) => void)[] = []
   const statusCbs: ((status: ConnStatus) => void)[] = []
   const presenceSyncCbs: ((uids: ReadonlySet<string>) => void)[] = []
-  const live = new Map<string, number>() // presenças vivas por uid — base do takeover
-  let resolved = false // guarda SEPARADA de `track()` (041, D6) — resolve() roda uma vez; track(), a cada reassinatura
+  const live = new Map<string, number>() // presenças vivas por uid — base do takeover, somada entre TODOS os canais de assento observados
+  const off = <T>(arr: T[], cb: T): Unsubscribe => () => {
+    const i = arr.indexOf(cb)
+    if (i >= 0) arr.splice(i, 1)
+  }
 
-  channel
-    .on('broadcast', { event: EVENT.submit }, ({ payload }) => {
-      const p = payload as { cmd: CommandEnvelope; uid: string }
-      for (const cb of submitCbs) cb(p.cmd, p.uid)
-    })
+  // — presença: agregada entre `own` e cada assento observado (`watchSeat`) —
+  function emitPresenceSyncAll(): void {
+    const uids = new Set([...live.entries()].filter(([, n]) => n > 0).map(([k]) => k))
+    for (const cb of presenceSyncCbs) cb(uids)
+  }
+  function onSeatPresenceJoin(key: string, newPresences?: unknown[]): void {
+    const before = live.get(key) ?? 0
+    live.set(key, before + (newPresences?.length ?? 1))
+    for (const cb of presenceCbs) cb({ uid: key, connected: true, takeover: before > 0 })
+    emitPresenceSyncAll()
+  }
+  function onSeatPresenceLeave(key: string, leftPresences?: unknown[]): void {
+    const after = (live.get(key) ?? 0) - (leftPresences?.length ?? 1)
+    if (after > 0) {
+      live.set(key, after)
+      // Sobrou conexão viva com este uid: é a ponta antiga de um takeover, não uma queda.
+      for (const cb of presenceCbs) cb({ uid: key, connected: false, takeover: true })
+    } else {
+      live.delete(key)
+      for (const cb of presenceCbs) cb({ uid: key, connected: false, takeover: false })
+    }
+    emitPresenceSyncAll()
+  }
+
+  // — status combinado: 'connected' só quando os TRÊS canais-base estão assinados —
+  const baseUp = { lobby: false, play: false, own: false }
+  let resolveConnect: (() => void) | null = null
+  function noteBaseStatus(key: keyof typeof baseUp, up: boolean): void {
+    baseUp[key] = up
+    const allUp = baseUp.lobby && baseUp.play && baseUp.own
+    for (const cb of statusCbs) cb(allUp ? 'connected' : 'reconnecting')
+    if (allUp) resolveConnect?.()
+  }
+
+  // `broadcast.self: true` é OBRIGATÓRIO nos três: no modelo uniforme todo participante —
+  // inclusive o host — submete/difunde pelo canal e aplica só o que volta (UI pessimista).
+  const lobby = supabase.channel(`room:${roomId}:lobby`, { config: { broadcast: { self: true }, private: true } })
+  const play = supabase.channel(`room:${roomId}:play`, { config: { broadcast: { self: true }, private: true } })
+  const own = supabase.channel(seatTopic(roomId, uid), { config: { presence: { key: uid }, broadcast: { self: true }, private: true } })
+
+  lobby
     .on('broadcast', { event: EVENT.join }, ({ payload }) => {
       const p = payload as { who: JoinRequest; uid: string }
       for (const cb of joinReqCbs) cb(p.who, p.uid)
@@ -103,69 +139,56 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       const p = payload as { uid: string; reason: JoinError }
       for (const cb of joinRejCbs) cb(p.uid, p.reason)
     })
-    .on('broadcast', { event: EVENT.accepted }, ({ payload }) => {
-      for (const cb of broadcastCbs) cb(payload as AcceptedCommand)
-    })
     .on('broadcast', { event: EVENT.room }, ({ payload }) => {
       for (const cb of roomCbs) cb(payload as Room)
     })
-    // TAKEOVER (FR-006a) por CONTAGEM de presenças vivas por uid. Antes este adapter
-    // emitia `takeover: false` fixo, então o `if (change.takeover) return` do host
-    // (`host.ts:110`) nunca disparava em produção: um F5 do convidado gera um `join` e um
-    // `leave` com a MESMA chave, e o `leave` derrubava o assento → pausa espúria. O
-    // `localTransport` acertava, e nenhum teste via a diferença porque a suíte headless só
-    // exercita o adapter local. É o que a suíte de conformidade agora cobre nos dois.
-    .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-      const before = live.get(key) ?? 0
-      live.set(key, before + (newPresences?.length ?? 1))
-      for (const cb of presenceCbs) cb({ uid: key, connected: true, takeover: before > 0 })
-    })
-    .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-      const after = (live.get(key) ?? 0) - (leftPresences?.length ?? 1)
-      if (after > 0) {
-        live.set(key, after)
-        // Sobrou conexão viva com este uid: é a ponta antiga de um takeover, não uma queda.
-        for (const cb of presenceCbs) cb({ uid: key, connected: false, takeover: true })
-        return
-      }
-      live.delete(key)
-      for (const cb of presenceCbs) cb({ uid: key, connected: false, takeover: false })
-    })
-    // Conjunto COMPLETO de presença (041, contrato §2) — fonte de verdade para a autoridade
-    // que reassume reconciliar `seats[].connected` (FR-021). Push, não pull: um `presenceState()`
-    // logo após `SUBSCRIBED` perderia a corrida do estado ainda chegando (D7 do plan).
-    .on('presence', { event: 'sync' }, () => {
-      const uids = new Set(Object.keys(channel.presenceState()))
-      for (const cb of presenceSyncCbs) cb(uids)
-    })
 
-  const off = <T>(arr: T[], cb: T): Unsubscribe => () => {
-    const i = arr.indexOf(cb)
-    if (i >= 0) arr.splice(i, 1)
-  }
+  play.on('broadcast', { event: EVENT.accepted }, ({ payload }) => {
+    for (const cb of broadcastCbs) cb(payload as AcceptedCommand)
+  })
+
+  own
+    .on('broadcast', { event: EVENT.submit }, ({ payload }) => {
+      // O remetente é o DONO deste canal — `uid` do closure, nunca do payload (D3).
+      for (const cb of submitCbs) cb((payload as { cmd: CommandEnvelope }).cmd, uid)
+    })
+    .on('broadcast', { event: EVENT.accepted }, ({ payload }) => {
+      for (const cb of broadcastCbs) cb(payload as AcceptedCommand) // parte PRIVADA do aceito (D9)
+    })
+    // TAKEOVER (FR-006a) por CONTAGEM de presenças vivas. Ver `supabaseTransport.ts` da 041
+    // para o histórico do defeito 1 — aqui a fonte passa a ser o canal do PRÓPRIO assento.
+    .on('presence', { event: 'join' }, ({ key, newPresences }) => onSeatPresenceJoin(key, newPresences))
+    .on('presence', { event: 'leave' }, ({ key, leftPresences }) => onSeatPresenceLeave(key, leftPresences))
+    .on('presence', { event: 'sync' }, () => emitPresenceSyncAll())
+
+  // — assentos observados pela AUTORIDADE (043, D2) — um canal por assento, sem `track()` —
+  const watched = new Map<string, SupabaseChannelLike>()
 
   return {
     uid,
 
-    // O conserto do defeito 1 (041, D6): `resolve()` da promessa e `track()` de presença são
-    // DUAS garantias, não uma. `resolve()` roda uma vez; `track()` roda em TODA reassinatura —
-    // é o que faz uma queda de rede reanunciar presença ao voltar, em vez de ficar invisível.
+    // Resolve quando os TRÊS canais-base estiverem 'SUBSCRIBED'. `track()` só no PRÓPRIO —
+    // é o que faz uma queda de rede reanunciar presença ao voltar (041, D6), e só a presença
+    // do dono, nunca a de quem a autoridade observa por `watchSeat`.
     async connect(): Promise<void> {
       await new Promise<void>((resolve) => {
-        channel.subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            void channel.track({ uid }) // toda vez: reassinatura reanuncia presença (FR-001)
-            for (const cb of statusCbs) cb('connected')
-            if (!resolved) { resolved = true; resolve() }
-            return
-          }
-          for (const cb of statusCbs) cb('reconnecting')
+        resolveConnect = resolve
+        lobby.subscribe((status) => noteBaseStatus('lobby', status === 'SUBSCRIBED'))
+        play.subscribe((status) => noteBaseStatus('play', status === 'SUBSCRIBED'))
+        own.subscribe((status) => {
+          const up = status === 'SUBSCRIBED'
+          if (up) void own.track({ uid }) // toda vez: reassinatura reanuncia presença (FR-001)
+          noteBaseStatus('own', up)
         })
       })
     },
 
     disconnect(): void {
-      void channel.unsubscribe()
+      void lobby.unsubscribe()
+      void play.unsubscribe()
+      void own.unsubscribe()
+      for (const ch of watched.values()) void ch.unsubscribe()
+      watched.clear()
     },
 
     onStatus(cb): Unsubscribe {
@@ -175,12 +198,12 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
 
     onPresenceSync(cb): Unsubscribe {
       presenceSyncCbs.push(cb)
-      cb(new Set(Object.keys(channel.presenceState()))) // estado inicial (contrato §2.2)
+      cb(new Set([...live.entries()].filter(([, n]) => n > 0).map(([k]) => k))) // estado inicial (contrato §2.2)
       return off(presenceSyncCbs, cb)
     },
 
     submit(cmd: CommandEnvelope): void {
-      void channel.send({ type: 'broadcast', event: EVENT.submit, payload: { cmd, uid } })
+      void own.send({ type: 'broadcast', event: EVENT.submit, payload: { cmd } })
     },
     onSubmit(cb): Unsubscribe {
       submitCbs.push(cb)
@@ -188,15 +211,47 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     },
 
     broadcast(cmd: AcceptedCommand): void {
-      void channel.send({ type: 'broadcast', event: EVENT.accepted, payload: cmd })
+      void play.send({ type: 'broadcast', event: EVENT.accepted, payload: cmd })
     },
     onBroadcast(cb): Unsubscribe {
       broadcastCbs.push(cb)
       return off(broadcastCbs, cb)
     },
 
+    // Parte PRIVADA (043, D9/D10) — no tópico do PRÓPRIO canal se o alvo sou eu, senão no
+    // canal observado daquele assento (`watchSeat` deve ter sido chamado antes; sem ele, a
+    // política do servidor recusaria de qualquer forma — aqui, sem canal, não há o que enviar).
+    broadcastPrivate(targetUid: string, cmd: AcceptedCommand): void {
+      const ch = targetUid === uid ? own : watched.get(targetUid)
+      if (!ch) return
+      void ch.send({ type: 'broadcast', event: EVENT.accepted, payload: cmd })
+    },
+
+    watchSeat(seatUid: string): void {
+      if (seatUid === uid || watched.has(seatUid)) return // o próprio já está em `own`
+      const ch = supabase.channel(seatTopic(roomId, seatUid), { config: { presence: { key: seatUid }, broadcast: { self: true }, private: true } })
+      ch
+        .on('broadcast', { event: EVENT.submit }, ({ payload }) => {
+          for (const cb of submitCbs) cb((payload as { cmd: CommandEnvelope }).cmd, seatUid)
+        })
+        .on('presence', { event: 'join' }, ({ key, newPresences }) => onSeatPresenceJoin(key, newPresences))
+        .on('presence', { event: 'leave' }, ({ key, leftPresences }) => onSeatPresenceLeave(key, leftPresences))
+        .on('presence', { event: 'sync' }, () => emitPresenceSyncAll())
+        .subscribe() // SEM `track()` — a presença observada aqui é só a do dono (D2)
+      watched.set(seatUid, ch)
+    },
+
+    unwatchSeat(seatUid: string): void {
+      const ch = watched.get(seatUid)
+      if (!ch) return
+      watched.delete(seatUid)
+      void ch.unsubscribe()
+      live.delete(seatUid)
+      emitPresenceSyncAll()
+    },
+
     requestJoin(who: JoinRequest): void {
-      void channel.send({ type: 'broadcast', event: EVENT.join, payload: { who, uid } })
+      void lobby.send({ type: 'broadcast', event: EVENT.join, payload: { who, uid } })
     },
     onJoinRequest(cb): Unsubscribe {
       joinReqCbs.push(cb)
@@ -204,7 +259,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     },
 
     rejectJoin(target: string, reason: JoinError): void {
-      void channel.send({ type: 'broadcast', event: EVENT.rejected, payload: { uid: target, reason } })
+      void lobby.send({ type: 'broadcast', event: EVENT.rejected, payload: { uid: target, reason } })
     },
     onJoinRejected(cb): Unsubscribe {
       joinRejCbs.push(cb)
@@ -212,7 +267,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     },
 
     publishRoom(room: Room): void {
-      void channel.send({ type: 'broadcast', event: EVENT.room, payload: room })
+      void lobby.send({ type: 'broadcast', event: EVENT.room, payload: room })
     },
     onRoom(cb): Unsubscribe {
       roomCbs.push(cb)

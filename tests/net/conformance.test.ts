@@ -1,6 +1,6 @@
 // SUÍTE DE CONFORMIDADE da porta `Transport` — card 6 do review de arquitetura.
 //
-// Dois adapters justificam a seam, e a seam está pagando: `host.ts` são 232 linhas de
+// Dois adapters justificam a seam, e a seam está pagando: `host.ts` são centenas de linhas de
 // autoridade que rodam sem alteração sobre um hub in-memory e sobre Realtime+Postgres.
 // O que faltava era o CONTRATO: a semântica da porta vivia em prosa (`transport.ts`),
 // só o adapter local era testado, e o não-testado é o que roda em produção.
@@ -9,13 +9,20 @@
 // `takeover: false` fixo, então `if (change.takeover) return` (host.ts:110) nunca
 // disparava online — um F5 do convidado gerava `join`+`leave` com a mesma chave e o
 // `leave` derrubava o assento, pausando a partida sem motivo.
+//
+// 043 (D2/D3, T011): a topologia virou três tópicos e o remetente passou a vir do ENDEREÇO —
+// `broadcast`/`publishRoom`/`rejectJoin` só têm efeito quando quem chama é a autoridade (o
+// uid do assento `isHost` na ÚLTIMA sala persistida), e a autoridade só observa
+// `onSubmit`/`onPresence` de um assento depois de `watchSeat(uid)`. `asHost()` abaixo
+// estabelece essa sala mínima ANTES de exercitar as garantias — sem ela, "ninguém é
+// autoridade" (fail-closed) é o comportamento correto, não um bug do teste.
 import { describe, expect, it, vi } from 'vitest'
 import type { Transport, PresenceChange, AcceptedCommand, PersistedSnapshot } from '@/net/transport'
 import { LocalHub, localTransport } from '@/net/localTransport'
 import { supabaseTransport } from '@/net/supabaseTransport'
 import { durableWrites } from '@/net/durableWrites'
 import { fakeSupabase } from './fakeSupabase'
-import type { Room } from '@/net/room'
+import type { Room, Seat } from '@/net/room'
 
 // Fábrica de N transportes ligados na MESMA sala — a única coisa que difere entre adapters.
 // 041: ganhou `dropChannel`/`restoreChannel` — a queda/restauração de CANAL sem contar como
@@ -54,14 +61,28 @@ const ADAPTERS: [string, () => Fixture][] = [
 
 const ROOM: Room = { id: 'sala1', status: 'lobby', seats: [] }
 const ACCEPTED: AcceptedCommand = { seq: 1, action: { kind: 'roll' }, resolved: { rng: [], now: [] } }
+const seat = (uid: string, isHost: boolean, i = 0): Seat => ({
+  uid, playerId: `p${i + 1}`, name: uid, color: '#fff', isHost, connected: true, reentryCode: '',
+})
+
+// Estabelece `t` como a AUTORIDADE da sala (043) — persiste uma sala mínima com `t` no
+// assento `isHost`. Sem isto, `broadcast`/`publishRoom`/`rejectJoin` são recusados por
+// construção (fail-closed): "quem é a autoridade" vem da sala persistida, nunca de quem
+// chamou primeiro `make()`.
+async function asHost(t: Transport, others: string[] = []): Promise<void> {
+  const seats = [seat(t.uid, true), ...others.map((uid, i) => seat(uid, false, i + 1))]
+  await t.saveRoom({ ...ROOM, seats })
+}
 
 describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
-  it('submit chega ao host com o uid da CONEXÃO', async () => {
+  it('submit chega ao host com o uid da CONEXÃO, depois de watchSeat', async () => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
     await host.connect()
     await guest.connect()
+    await asHost(host, ['t-guest'])
+    host.watchSeat('t-guest') // 043, D2 — a autoridade só ouve quem observa
 
     const seen: { senderId: string; from: string }[] = []
     host.onSubmit((cmd, fromUid) => seen.push({ senderId: cmd.senderId, from: fromUid }))
@@ -70,12 +91,29 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     expect(seen).toEqual([{ senderId: 'p2', from: 't-guest' }])
   })
 
+  it('sem watchSeat, o submit do assento não observado não chega (043, D2/D3)', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    const guest = f.make('t-guest')
+    await host.connect()
+    await guest.connect()
+    await asHost(host, ['t-guest'])
+    // Sem `host.watchSeat('t-guest')` — a autoridade não assinou aquele tópico.
+
+    const seen: unknown[] = []
+    host.onSubmit((cmd, fromUid) => seen.push({ cmd, fromUid }))
+    guest.submit({ senderId: 'p2', action: { kind: 'roll' } })
+
+    expect(seen).toEqual([])
+  })
+
   it('broadcast alcança TODOS, inclusive o próprio host (modelo uniforme)', async () => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
     await host.connect()
     await guest.connect()
+    await asHost(host, ['t-guest'])
 
     const atHost: number[] = []
     const atGuest: number[] = []
@@ -88,12 +126,31 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     expect(atGuest).toEqual([1])
   })
 
+  it('broadcast por NÃO-AUTORIDADE não alcança ninguém (043, D2)', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    const guest = f.make('t-guest')
+    await host.connect()
+    await guest.connect()
+    await asHost(host, ['t-guest']) // t-host é a autoridade; t-guest não é
+
+    const atHost: number[] = []
+    const atGuest: number[] = []
+    host.onBroadcast((c) => atHost.push(c.seq))
+    guest.onBroadcast((c) => atGuest.push(c.seq))
+    guest.broadcast(ACCEPTED) // guest tentando se fazer passar pela autoridade
+
+    expect(atHost).toEqual([])
+    expect(atGuest).toEqual([])
+  })
+
   it('DOIS assinantes de onBroadcast recebem — não é um slot único', async () => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
     await host.connect()
     await guest.connect()
+    await asHost(host, ['t-guest'])
 
     const a: number[] = []
     const b: number[] = []
@@ -111,6 +168,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const guest = f.make('t-guest')
     await host.connect()
     await guest.connect()
+    await asHost(host, ['t-guest'])
 
     const a: number[] = []
     const b: number[] = []
@@ -129,6 +187,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const guest = f.make('t-guest')
     await host.connect()
     await guest.connect()
+    await asHost(host, ['t-guest'])
 
     const seen: Room[] = []
     guest.onRoom((r) => seen.push(r))
@@ -137,12 +196,37 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     expect(seen.at(-1)?.status).toBe('playing')
   })
 
-  it('requestJoin chega com o uid da conexão; rejectJoin volta ao pedinte', async () => {
+  it('publishRoom/rejectJoin por NÃO-AUTORIDADE não alcançam ninguém (043, D2)', async () => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
     await host.connect()
     await guest.connect()
+    await asHost(host, ['t-guest'])
+
+    const seenRoom: Room[] = []
+    guest.onRoom((r) => seenRoom.push(r))
+    const seenRejects: string[] = []
+    host.onJoinRejected((uid) => seenRejects.push(uid)) // host também "recebe" (mesmo canal)
+
+    guest.publishRoom({ ...ROOM, status: 'playing' })
+    guest.rejectJoin('t-host', 'already-started')
+
+    expect(seenRoom).toEqual([])
+    expect(seenRejects).toEqual([])
+  })
+
+  // 043, D4: o pedido de assento sai do canal e vira RPC na Fase 3 (`request_seat`) — o host
+  // não tem como assinar o tópico de um assento que ainda não existe. Até lá, `requestJoin`
+  // funciona só no adapter local (que não modela essa restrição); no Supabase é
+  // intencionalmente surdo — cobrado por `reentry.test.ts`/`lobby.test.ts` a partir da 3.
+  it.skipIf(_name === 'supabaseTransport')('requestJoin chega com o uid da conexão (localTransport) — Supabase migra para RPC na Fase 3', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    const guest = f.make('t-guest')
+    await host.connect()
+    await guest.connect()
+    await asHost(host)
 
     const pedidos: string[] = []
     host.onJoinRequest((_who, fromUid) => pedidos.push(fromUid))
@@ -157,8 +241,8 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
   })
 
   // 041 — contrato §3: reentrada por código não é uma mensagem nova na porta, é o MESMO
-  // `JoinRequest` com `reentryCode` presente.
-  it('§3: pedido com reentryCode chega ao host com o uid da CONEXÃO', async () => {
+  // `JoinRequest` com `reentryCode` presente. Mesma restrição de Fase acima (043, D4).
+  it.skipIf(_name === 'supabaseTransport')('§3: pedido com reentryCode chega ao host com o uid da CONEXÃO', async () => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
@@ -172,12 +256,13 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     expect(pedidos).toEqual([{ fromUid: 't-guest', reentryCode: 'ABC123' }])
   })
 
-  it('§3: recusa por código inválido ("bad-code") chega, e o pedinte a reconhece como sua', async () => {
+  it.skipIf(_name === 'supabaseTransport')('§3: recusa por código inválido ("bad-code") chega, e o pedinte a reconhece como sua', async () => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-a')
     await host.connect()
     await guest.connect()
+    await asHost(host)
 
     const recusas: { uid: string; reason: string }[] = []
     guest.onJoinRejected((uid, reason) => recusas.push({ uid, reason }))
@@ -188,10 +273,12 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
 
   // — PRESENÇA: onde os adapters divergiam —
 
-  it('conectar emite presença sem takeover', async () => {
+  it('conectar emite presença sem takeover — a autoridade observando o assento', async () => {
     const f = fixture()
     const host = f.make('t-host')
     await host.connect()
+    await asHost(host, ['t-guest'])
+    host.watchSeat('t-guest')
 
     const seen: PresenceChange[] = []
     host.onPresence((c) => seen.push(c))
@@ -207,6 +294,8 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const guest = f.make('t-guest')
     await host.connect()
     await guest.connect()
+    await asHost(host, ['t-guest'])
+    host.watchSeat('t-guest')
 
     const seen: PresenceChange[] = []
     host.onPresence((c) => seen.push(c))
@@ -221,6 +310,8 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const antiga = f.make('t-guest')
     await host.connect()
     await antiga.connect()
+    await asHost(host, ['t-guest'])
+    host.watchSeat('t-guest')
 
     const seen: PresenceChange[] = []
     host.onPresence((c) => seen.push(c))
@@ -249,7 +340,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const t = f.make('t-host')
     await t.connect()
-    const room: Room = { id: 'sala1', status: 'lobby', seats: [{ uid: 't-host', playerId: 'p1', name: 'Ana', color: '#fff', connected: true, isHost: true, reentryCode: '' }] }
+    const room: Room = { id: 'sala1', status: 'lobby', seats: [seat('t-host', true)] }
     await t.saveRoom(room)
     expect(await t.loadRoom()).toEqual(room)
   })
@@ -274,7 +365,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
 // 041 — contrato §1/§2: conexão da PRÓPRIA sessão e presença em conjunto. O contrato exige
 // que os DOIS adapters cumpram exatamente a mesma semântica; é aqui que o defeito 1 (queda
 // reassinada não reanunciava presença em produção) fica provado nos dois, não só no local.
-describe.each(ADAPTERS)('contrato de Transport (041) — %s', (_name, fixture) => {
+describe.each(ADAPTERS)('contrato de Transport (041/043) — %s', (_name, fixture) => {
   describe('§1 onStatus — a conexão desta sessão', () => {
     it('queda de canal emite "reconnecting"', async () => {
       const f = fixture()
@@ -313,38 +404,46 @@ describe.each(ADAPTERS)('contrato de Transport (041) — %s', (_name, fixture) =
     })
   })
 
-  describe('§2 onPresenceSync — quem está no canal, em conjunto', () => {
+  // 043: a completude do conjunto é uma garantia da AUTORIDADE (que observa cada assento por
+  // `watchSeat`) — não de qualquer participante. Um convidado, que só tem o próprio tópico,
+  // só se vê a si mesmo — e é assim que deveria ser (policies.md §2: presença segue a
+  // política do TÓPICO DE ASSENTO, e ninguém além do dono e da autoridade o assina).
+  describe('§2 onPresenceSync — quem está no canal, em conjunto (visão da autoridade)', () => {
     it('após connect(), chega um conjunto contendo o próprio uid', async () => {
       const f = fixture()
       const t = f.make('t-host')
       await t.connect()
       let latest: ReadonlySet<string> = new Set()
-      t.onPresenceSync((tokens) => { latest = tokens })
+      t.onPresenceSync((uids) => { latest = uids })
       expect(latest.has('t-host')).toBe(true)
     })
 
-    it('com dois participantes, ambos os tokens aparecem para os dois', async () => {
+    it('a autoridade que observa os dois assentos vê os dois uids; o convidado só vê o próprio', async () => {
       const f = fixture()
       const ta = f.make('t-host')
       const tb = f.make('t-guest')
       await ta.connect()
       await tb.connect()
+      await asHost(ta, ['t-guest'])
+      ta.watchSeat('t-guest')
       let seenByA: ReadonlySet<string> = new Set()
       let seenByB: ReadonlySet<string> = new Set()
-      ta.onPresenceSync((tokens) => { seenByA = tokens })
-      tb.onPresenceSync((tokens) => { seenByB = tokens })
+      ta.onPresenceSync((uids) => { seenByA = uids })
+      tb.onPresenceSync((uids) => { seenByB = uids })
       expect([...seenByA].sort()).toEqual(['t-guest', 't-host'])
-      expect([...seenByB].sort()).toEqual(['t-guest', 't-host'])
+      expect([...seenByB]).toEqual(['t-guest'])
     })
 
-    it('após a saída de um, o conjunto vem sem ele', async () => {
+    it('após a saída de um, o conjunto da autoridade vem sem ele', async () => {
       const f = fixture()
       const ta = f.make('t-host')
       const tb = f.make('t-guest')
       await ta.connect()
       await tb.connect()
+      await asHost(ta, ['t-guest'])
+      ta.watchSeat('t-guest')
       let seenByA: ReadonlySet<string> = new Set()
-      ta.onPresenceSync((tokens) => { seenByA = tokens })
+      ta.onPresenceSync((uids) => { seenByA = uids })
       tb.disconnect()
       expect([...seenByA]).toEqual(['t-host'])
     })
@@ -355,8 +454,10 @@ describe.each(ADAPTERS)('contrato de Transport (041) — %s', (_name, fixture) =
       const tb = f.make('t-guest')
       await ta.connect()
       await tb.connect()
+      await asHost(tb, ['t-host']) // aqui quem observa é tb — a autoridade deste cenário
+      tb.watchSeat('t-host')
       let seenByB: ReadonlySet<string> = new Set()
-      tb.onPresenceSync((tokens) => { seenByB = tokens })
+      tb.onPresenceSync((uids) => { seenByB = uids })
       expect(seenByB.has('t-host')).toBe(true)
 
       f.dropChannel('t-host')
@@ -364,6 +465,46 @@ describe.each(ADAPTERS)('contrato de Transport (041) — %s', (_name, fixture) =
 
       f.restoreChannel('t-host')
       expect(seenByB.has('t-host')).toBe(true)
+    })
+
+    it('desassinar (`unwatchSeat`) tira o assento do conjunto observado', async () => {
+      const f = fixture()
+      const ta = f.make('t-host')
+      const tb = f.make('t-guest')
+      await ta.connect()
+      await tb.connect()
+      await asHost(ta, ['t-guest'])
+      ta.watchSeat('t-guest')
+      let seenByA: ReadonlySet<string> = new Set()
+      ta.onPresenceSync((uids) => { seenByA = uids })
+      expect(seenByA.has('t-guest')).toBe(true)
+
+      ta.unwatchSeat('t-guest')
+      expect(seenByA.has('t-guest')).toBe(false)
+    })
+  })
+
+  describe('§3 broadcastPrivate — só o dono (e a autoridade) recebem', () => {
+    it('a parte privada chega só ao alvo, não a terceiros', async () => {
+      const f = fixture()
+      const host = f.make('t-host')
+      const guest = f.make('t-guest')
+      const terceiro = f.make('t-terceiro')
+      await host.connect()
+      await guest.connect()
+      await terceiro.connect()
+      await asHost(host, ['t-guest', 't-terceiro'])
+      host.watchSeat('t-guest')
+      host.watchSeat('t-terceiro')
+
+      const atGuest: number[] = []
+      const atTerceiro: number[] = []
+      guest.onBroadcast((c) => atGuest.push(c.seq))
+      terceiro.onBroadcast((c) => atTerceiro.push(c.seq))
+      host.broadcastPrivate('t-guest', ACCEPTED)
+
+      expect(atGuest).toEqual([1])
+      expect(atTerceiro).toEqual([])
     })
   })
 

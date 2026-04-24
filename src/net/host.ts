@@ -54,9 +54,20 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   let opened = false
   const subs: Unsubscribe[] = []
   const listeners = new Set<() => void>()
+  let watchedUids = new Set<string>() // 043, T015 — assentos cujo tópico privado a autoridade assina
 
   function notify(): void {
     for (const cb of listeners) cb()
+  }
+
+  // Assina o tópico de cada assento NOVO e dessassina o de quem saiu (043, D2/D3) — reanexar
+  // troca o `uid` do assento, então o antigo perde o tópico e o novo ganha; kick dessassina;
+  // um assento que só mudou de `connected`/posição não move nada aqui.
+  function syncWatchedSeats(): void {
+    const current = new Set(room.seats.map((s) => s.uid))
+    for (const uid of current) if (!watchedUids.has(uid)) transport.watchSeat(uid)
+    for (const uid of watchedUids) if (!current.has(uid)) transport.unwatchSeat(uid)
+    watchedUids = current
   }
 
   // Publica a sala para todos e a persiste. Com partida em curso, a sala vive DENTRO do
@@ -111,6 +122,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
         return
       }
       room = result.room
+      syncWatchedSeats()
       publishAndPersistRoom()
       syncPause()
       return
@@ -125,6 +137,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
       return
     }
     room = result.room
+    syncWatchedSeats()
     publishAndPersistRoom()
   }
 
@@ -179,6 +192,11 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   async function ensureOpen(): Promise<void> {
     if (opened) return
     opened = true
+    // 043, T015: assina o tópico de cada assento já existente ANTES de `onPresenceSync` — o
+    // "estado inicial" que essa assinatura entrega na hora precisa já refletir todo mundo,
+    // senão a 1ª reconciliação vê só o próprio uid, marca os demais desconectados, e a
+    // correção que `watchSeat` reemite dispara um `pause`+`resume` espúrio.
+    syncWatchedSeats()
     subs.push(transport.onSubmit(handleSubmit))
     subs.push(transport.onPresence(handlePresence))
     subs.push(transport.onJoinRequest(handleJoinRequest))
@@ -241,6 +259,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
       const result = kickSeat(room, uid)
       if (!result.ok) return result
       room = result.room
+      syncWatchedSeats()
       transport.rejectJoin(uid, 'kicked')
       publishAndPersistRoom()
       return { ok: true as const }
