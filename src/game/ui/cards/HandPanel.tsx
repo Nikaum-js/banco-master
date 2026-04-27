@@ -20,28 +20,38 @@ export function HandPanel() {
     <div className="side-panel-section">
       <div className="flex items-baseline justify-between mb-3">
         <p className="label text-gold">Minhas Cartas</p>
-        <p className="label text-cream-muted">{cards.length} / 3</p>
+        <span className="label text-cream-muted tabular-nums px-2 py-0.5 rounded-full bg-coffee-900 border border-coffee-500">
+          {cards.length}/3
+        </span>
       </div>
 
       {cards.length === 0 ? (
-        <div className="flex items-center justify-center px-3 py-4 rounded-[var(--radius-card)] border border-dashed border-coffee-500 bg-coffee-800/40">
+        <div className="flex items-center justify-center px-3 py-5 rounded-[var(--radius-card)] border border-dashed border-coffee-500 bg-coffee-800/40">
           <p className="label text-cream-muted text-center leading-snug">Nenhuma carta na mão</p>
         </div>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-2.5">
           {cards.map((c) => (
             <li
               key={c.id}
-              className="rounded-[var(--radius-card)] border border-coffee-500 bg-coffee-800 overflow-hidden"
-              style={{ borderLeft: `4px solid ${c.rarityColor}` }}
+              className="rounded-[var(--radius-card)] border border-coffee-500 bg-coffee-800 overflow-hidden transition-all hover:border-[rgba(212,175,55,0.6)] hover:shadow-[var(--shadow-dropdown)]"
             >
-              <div className="px-3 py-2">
+              {/* faixa de raridade no topo */}
+              <div className="h-1" style={{ background: c.rarityColor }} aria-hidden />
+              <div
+                className="px-3 py-2.5"
+                style={{ background: `linear-gradient(180deg, ${c.rarityColor}1f 0%, transparent 58%)` }}
+              >
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.rarityColor }} aria-hidden />
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ background: c.rarityColor, boxShadow: `0 0 6px ${c.rarityColor}` }}
+                    aria-hidden
+                  />
                   <span className="display text-cream text-sm leading-none flex-1 min-w-0 truncate">{c.label}</span>
                 </div>
-                <p className="text-cream-muted text-xs leading-snug mt-1">{c.desc}</p>
-                <div className="flex items-center justify-end gap-2 mt-2">
+                <p className="text-cream-muted text-xs leading-snug mt-1.5">{c.desc}</p>
+                <div className="flex items-center gap-2 mt-2.5">
                   {!c.playable && c.reason && (
                     <span className="text-cream-muted text-[10px] leading-snug flex-1 min-w-0">{c.reason}</span>
                   )}
@@ -50,7 +60,7 @@ export function HandPanel() {
                     disabled={!c.playable}
                     title={c.reason}
                     onClick={() => onUse(c.id, c.needsTarget)}
-                    className="shrink-0 px-4 py-1 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 font-bold text-xs hover:brightness-110 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    className="ml-auto shrink-0 px-4 py-1.5 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 font-bold text-xs hover:brightness-110 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   >
                     Usar
                   </button>

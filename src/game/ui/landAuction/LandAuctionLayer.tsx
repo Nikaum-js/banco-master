@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useGameStore } from '@/game/store'
 import { committedCash, LAND_AUCTION_WINDOW } from '@/game/economy/landAuction'
+import { rentLadder } from '@/game/economy/rent'
 import { buildCost } from '@/game/economy/construction'
 import type { LandLot } from '@/game/economy/types'
 import { BOARD, type PropertySquare, type Square } from '@/lib/boardData'
@@ -36,17 +37,17 @@ function LandDeedIcon({ sq, size = 40 }: { sq: Square; size?: number }) {
 
 function rentRows(sq: Square): { label: string; value: string }[] {
   if (sq.kind === 'property') {
-    const b = (sq as PropertySquare).rent
-    const h = THEME.HOUSE_RENT_MULT
+    const p = sq as PropertySquare
+    const l = rentLadder(p.group, p.rent)
     return [
-      { label: 'Terreno', value: money(b) },
-      { label: '1 casa', value: money(b * h[0]) },
-      { label: '2 casas', value: money(b * h[1]) },
-      { label: '3 casas', value: money(b * h[2]) },
-      { label: '4 casas', value: money(b * h[3]) },
-      { label: 'Hotel', value: money(b * THEME.HOTEL_RENT_MULT) },
-      { label: '2º hotel', value: money(b * THEME.HOTEL2_RENT_MULT) },
-      { label: 'Arranha-céu', value: money(b * THEME.SKYSCRAPER_RENT_MULT) },
+      { label: 'Terreno', value: money(p.rent) },
+      { label: '1 casa', value: money(l.house[0]) },
+      { label: '2 casas', value: money(l.house[1]) },
+      { label: '3 casas', value: money(l.house[2]) },
+      { label: '4 casas', value: money(l.house[3]) },
+      { label: 'Hotel', value: money(l.hotel) },
+      { label: '2º hotel', value: money(l.hotel2) },
+      { label: 'Arranha-céu', value: money(l.skyscraper) },
     ]
   }
   if (sq.kind === 'airport') {

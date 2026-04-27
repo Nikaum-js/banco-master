@@ -11,7 +11,8 @@ const propName = (pos: number) => BOARD[pos]?.name ?? `#${pos}`
 const CONFETTI_COLORS = ['#fb923c', '#3b82f6', '#22c55e', '#d4af37', '#e74c3c', '#f4e8d0']
 
 // Confete caindo do topo — peças coloridas com posição/rotação/tempo aleatórios.
-function Confetti() {
+// Exportado: reusado na celebração do vencedor (GameHUD, fim de jogo).
+export function Confetti() {
   const pieces = useMemo(
     () =>
       Array.from({ length: 130 }, (_, i) => ({
