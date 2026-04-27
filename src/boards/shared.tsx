@@ -389,6 +389,7 @@ export const GROUP_BG: Record<string, string> = {
   yellow:  'bg-group-yellow',
   green:   'bg-group-green',
   navy:    'bg-group-navy',
+  purple:  'bg-group-purple',
 }
 
 // Cores hex pros grupos (match com --color-group-* no index.css).
