@@ -1,14 +1,15 @@
 import { lazy, Suspense } from 'react'
+import { importWithReload } from '@/app/lazyImportRecovery'
 import { OnlineGate } from '@/net/ui/OnlineGate'
 
-const GameSurface = lazy(() => import('@/game/ui/GameSurface'))
-const SoundBoard = lazy(() =>
+const GameSurface = lazy(() => importWithReload(() => import('@/game/ui/GameSurface')))
+const SoundBoard = lazy(() => importWithReload(() =>
   import('@/game/ui/sound/SoundBoard').then((module) => ({ default: module.SoundBoard })),
-)
+))
 
-const VisualLab = lazy(() =>
+const VisualLab = lazy(() => importWithReload(() =>
   import('@/game/ui/lab/VisualLab').then((module) => ({ default: module.VisualLab })),
-)
+))
 
 // O tabuleiro Clássico É a tela inicial. A rolagem é o DiceArena central; o
 // GameDriver faz o turno "ir sozinho" (resolve/finaliza); o ModalLayer (022) traz
