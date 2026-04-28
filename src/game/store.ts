@@ -27,9 +27,13 @@ import { goBonus, payToCenter, collectCenter } from './balancing/balancing'
 import { payDebt, declareBankruptcy } from './falencia/falencia'
 import { grantLoan, payOffLoan, chargeLoanInterest } from './emprestimos/emprestimos'
 import { rollTaxMan } from './balancing/taxMan'
+import { executeTrade, type Trade } from './economy/trade'
+import { tickImmunities } from './economy/imunidade'
+import { tickTempEffects } from './economy/tempEffects'
 import { deckCardIds } from './cards/catalog'
 import { shuffle } from './cards/decks'
 import { cardResolve, playHandCard, resolveCardDiscard, resolveCardShortcut } from './cards/draw'
+import { taxBunkerResolve, respondReaction } from './cards/reacao'
 
 // Portas default — placeholders até as specs irmãs (Balanceamento, Falência).
 export const defaultPorts: TurnPorts = {
@@ -38,7 +42,11 @@ export const defaultPorts: TurnPorts = {
   onCollectCenter: (state, id) => collectCenter(state, id), // Free Parking (007)
   isEliminated: () => false,
   onInsolvency: () => {},
-  afterPassGo: (state, id) => chargeLoanInterest(state, id), // juros de empréstimo no GO (010)
+  afterPassGo: (state, id) => {
+    chargeLoanInterest(state, id) // juros de empréstimo no GO (010)
+    tickImmunities(state, id) // expira imunidades por volta do beneficiário (014)
+    tickTempEffects(state, id) // expira efeitos temporários por volta do originador (015)
+  },
 }
 
 function seedTitles(): Record<number, Title> {
@@ -85,6 +93,8 @@ export function createSeedState(playerIds: string[]): GameState {
     centerPot: 500, // 007 — Free Parking
     loans: [], // 010 — empréstimos ativos
     taxManPos: 0, // 012 — Fiscal começa em GO
+    immunities: [], // 014 — imunidades de aluguel ativas
+    tempEffects: [], // 015 — efeitos temporários de carta
   }
   startTurn(state)
   return state
@@ -113,13 +123,15 @@ interface GameStore {
   placeHouseBid(playerId: string, amount: number): void
   mortgageProperty(pos: number): void
   unmortgageProperty(pos: number): void
-  playHandCard(cardId: string): void
+  playHandCard(cardId: string, target?: number, targetPlayer?: string): void
   discardCard(cardId: string): void
   chooseCardShortcut(dir: 'frente' | 'tras'): void
   payDebt(): void
   declareBankruptcy(): void
   grantLoan(creditorId: string, principal: number, ratePct: number): void
   payOffLoan(): void
+  executeTrade(trade: Trade): void
+  respondReaction(use: boolean): void
   setPaused(p: boolean): void
 }
 
@@ -160,7 +172,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       rng: () => Math.random(),
       // Fiscal injetado só aqui (jogo real); defaultPorts segue sem ele p/ não afetar os testes (012)
       ports: { ...defaultPorts, taxMan: (s, rng) => rollTaxMan(s, rng) },
-      resolve: (r) => economyResolve(r) ?? cardResolve(r), // economy trata propriedade; cartas tratam acaso/tesouro
+      resolve: (r) => economyResolve(r) ?? cardResolve(r) ?? taxBunkerResolve(r), // +Bunker intercepta imposto (017)
       now: () => Date.now(),
     },
     rollDice: () => set((st) => ({ game: rollDice(st.game, st.ctx) })),
@@ -195,8 +207,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
     mortgageProperty: (pos) => set((st) => ({ game: mortgageProperty(st.game, pos) })),
     unmortgageProperty: (pos) => set((st) => ({ game: unmortgageProperty(st.game, pos) })),
-    playHandCard: (cardId) =>
-      set((st) => ({ game: playHandCard(st.game, activePlayer(st.game).id, cardId, st.ctx.ports) })),
+    playHandCard: (cardId, target, targetPlayer) =>
+      set((st) => ({ game: playHandCard(st.game, activePlayer(st.game).id, cardId, st.ctx.ports, target, targetPlayer) })),
     discardCard: (cardId) => set((st) => ({ game: resolveCardDiscard(st.game, cardId) })),
     chooseCardShortcut: (dir) => set((st) => ({ game: resolveCardShortcut(st.game, dir, st.ctx.ports) })),
     payDebt: () => set((st) => ({ game: payDebt(st.game) })),
@@ -204,6 +216,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     grantLoan: (creditorId, principal, ratePct) =>
       set((st) => ({ game: grantLoan(st.game, activePlayer(st.game).id, creditorId, principal, ratePct) })),
     payOffLoan: () => set((st) => ({ game: payOffLoan(st.game, activePlayer(st.game).id) })),
+    executeTrade: (trade) => set((st) => ({ game: executeTrade(st.game, trade) })), // não gated por turno (§8.1)
+    respondReaction: (use) => set((st) => ({ game: respondReaction(st.game, use, st.ctx.ports) })), // 017
     setPaused: (p) => {
       set((st) => ({ game: { ...st.game, paused: p } }))
       rearmAuction()
