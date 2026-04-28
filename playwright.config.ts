@@ -10,7 +10,7 @@ import { defineConfig, devices } from '@playwright/test'
 // formulário (`e2e/a11y.spec.ts` só audita a tela). Se `VITE_SUPABASE_URL`/
 // `VITE_SUPABASE_ANON_KEY` reais já estiverem no ambiente, eles prevalecem — isto é só o piso.
 const FAKE_SUPABASE_URL = 'https://e2e-placeholder.supabase.co'
-const FAKE_SUPABASE_ANON_KEY = 'e2e-placeholder-anon-key'
+const FAKE_SUPABASE_ANON_KEY = 'sb_publishable_e2e_placeholder_key_x'
 
 export default defineConfig({
   testDir: './e2e',
