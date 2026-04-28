@@ -462,6 +462,56 @@ test('girar não perde a sessão nem remonta o tabuleiro', async ({ page }) => {
   expect(afterSquares, 'tabuleiro remontou diferente').toBe(beforeSeed)
 })
 
+// Densidade da gaveta — o gate que FALTAVA, e cuja ausência deixou a primeira versão
+// desta feature ir a produção quebrada. Ela media geometria (tabuleiro acima da dobra,
+// nada transbordando) e passava, enquanto no aparelho real a gaveta herdava tamanhos de
+// desktop e cabiam duas linhas e meia. Geometria certa e densidade errada passam no mesmo
+// teste — a menos que alguém meça a densidade.
+//
+// Altura de viewport de NAVEGADOR (barra de endereço e de navegação já descontadas), que
+// é o que o jogador tem de fato, e não a altura nominal do aparelho.
+for (const size of [
+  { width: 360, height: 640 },
+  { width: 412, height: 740 },
+] as const) {
+  test(`retrato ${size.width}×${size.height}: a gaveta cabe informação de verdade`, async ({ page }) => {
+    await page.setViewportSize(size)
+    await page.goto('/play?players=6')
+    await page.waitForSelector('.board-stage')
+    await page.waitForTimeout(800)
+
+    const m = await page.evaluate(() => {
+      const panel = document.querySelector('.side-panel:not([hidden])') as HTMLElement
+      const rows = Array.from(document.querySelectorAll('.player-row'))
+      const die = document.querySelector('.dice-arena .relative')?.getBoundingClientRect()
+      const board = document.querySelector('.board-frame')!.getBoundingClientRect()
+      // Seção ESPREMIDA: `.side-panel-section` tem `overflow: hidden`, então quando o flex
+      // a comprime o conteúdo é cortado em silêncio — foi o que decapitou a linha do
+      // jogador. `scrollHeight > clientHeight` é exatamente esse corte.
+      const squeezed = Array.from(document.querySelectorAll('.side-panel:not([hidden]) .side-panel-section'))
+        .filter((el) => el.scrollHeight > el.clientHeight + 1)
+        .map((el) => el.className.split(/\s+/)[1] ?? 'section')
+      return {
+        squeezed,
+        rowH: rows.length ? Math.round(rows[0].getBoundingClientRect().height) : 0,
+        rowsFullyVisible: rows.filter((el) => {
+          const b = el.getBoundingClientRect()
+          return b.top >= panel.getBoundingClientRect().top - 1 && b.bottom <= window.innerHeight + 1
+        }).length,
+        dieRatio: die ? die.width / board.width : 0,
+        panelScrolls: panel.scrollHeight > panel.clientHeight,
+      }
+    })
+
+    expect(m.squeezed, 'seção da gaveta espremida — conteúdo cortado sem aviso').toEqual([])
+    expect(m.rowH, 'linha do jogador voltou à altura de desktop').toBeLessThanOrEqual(72)
+    expect(m.rowsFullyVisible, 'a gaveta não mostra nem dois jogadores inteiros').toBeGreaterThanOrEqual(2)
+    // O dado é o objeto que mais destoava: 56px fixos num miolo de ~200px.
+    expect(m.dieRatio, 'dado desproporcional ao tabuleiro').toBeLessThanOrEqual(0.12)
+    expect(m.panelScrolls, 'com seis jogadores a gaveta tem de rolar, não comprimir').toBe(true)
+  })
+}
+
 test('retrato: o convite com QR não estoura o modal no menor telefone', async ({ page }) => {
   // A grade do convite tinha piso RÍGIDO de duas colunas (~386px de largura mínima)
   // inclusive no bloco "de celular" — não cabia em 390px e destruía 320px. Piso mínimo

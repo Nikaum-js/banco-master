@@ -1352,7 +1352,7 @@ function PotCard({ pot }: { pot: number }) {
 
   return (
     <section
-      className="relative overflow-hidden rounded-[var(--radius-card)] border-2 px-5 py-4 text-center shrink-0"
+      className="pot-card relative overflow-hidden rounded-[var(--radius-card)] border-2 px-5 py-4 text-center shrink-0"
       style={{
         borderColor: 'color-mix(in srgb, var(--color-brass) 45%, transparent)',
         background: 'radial-gradient(130% 105% at 50% 0%, color-mix(in srgb, var(--color-brass) 20%, transparent) 0%, var(--color-coffee-900) 62%)',
@@ -1373,10 +1373,10 @@ function PotCard({ pot }: { pot: number }) {
         initial={reduced ? false : { scale: 1.1 }}
         animate={{ scale: 1 }}
         transition={{ type: 'spring', stiffness: 340, damping: 18 }}
-        className="currency text-gold-glow leading-none mt-2.5"
-        style={{ fontSize: 40, textShadow: '0 2px 16px color-mix(in srgb, var(--color-brass) 55%, transparent)' }}
+        className="pot-card__amount currency text-gold-glow leading-none mt-2.5"
+        style={{ textShadow: '0 2px 16px color-mix(in srgb, var(--color-brass) 55%, transparent)' }}
       >
-        <span className="text-gold-soft text-lg align-top mr-0.5">R$</span>
+        <span className="pot-card__currency text-gold-soft text-lg align-top mr-0.5">R$</span>
         {pot.toLocaleString('pt-BR')}
       </motion.p>
 

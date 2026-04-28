@@ -15,8 +15,18 @@ import type { SpeedFace } from '@/game/ui/diceFaces'
 
 export const ROLL_DURATION_MS = 1050
 
-const DIE_PX = 56               // w-14 / h-14
-const HALF = DIE_PX / 2
+// Tamanho do dado como VARIÁVEL, não constante (D-079). O valor de mesa continua 56px; o
+// que muda é quem pode falar sobre ele — em retrato de celular o miolo do tabuleiro é uma
+// fração do que é no desktop, e dois dados de 56px ali dentro ficam desproporcionais.
+//
+// Precisa ser variável de CSS, e não um `scale` na folha de estilo, por causa do CUBO: cada
+// face é posicionada com `translateZ(metade do lado)`. Encolher só a caixa deixaria as seis
+// faces flutuando à distância antiga; um `scale` no ancestral encolheria o desenho sem
+// encolher a CAIXA, e o layout continuaria reservando 56px. Derivando a meia-aresta da
+// mesma variável, caixa e profundidade andam juntas — e os pips e a sombra também, por isso
+// eles saem de medidas fixas do Tailwind e passam a ser proporção do lado.
+const DIE_VAR = 'var(--die-size, 56px)'
+const DIE_HALF = `calc(${DIE_VAR} / 2)`
 
 // Rotação a aplicar no CUBO INTEIRO pra trazer a face do valor N pra câmera.
 // Layout de d6 ocidental: faces opostas somam 7 (1↔6, 2↔5, 3↔4).
@@ -38,16 +48,25 @@ function DotFace({ value, transform }: { value: number; transform: string }) {
   const dots = DOT_LAYOUT[value]
   return (
     <div
-      className="absolute inset-0 grid grid-cols-3 grid-rows-3 gap-1 p-2 bg-cream rounded-[var(--radius-card)]"
+      className="absolute inset-0 grid grid-cols-3 grid-rows-3 bg-cream rounded-[var(--radius-card)]"
       style={{
         transform,
         backfaceVisibility: 'hidden',
         boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.25), inset 0 -2px 3px rgba(0,0,0,0.15)',
+        // Proporção do lado, não medida fixa: `p-2`/`gap-1` são 8px e 4px, que num dado de
+        // 56px são discretos e num de 34px comem a face inteira.
+        padding: `calc(${DIE_VAR} / 7)`,
+        gap: `calc(${DIE_VAR} / 14)`,
       }}
     >
       {[1,2,3,4,5,6,7,8,9].map(i => (
         <div key={i} className="flex items-center justify-center">
-          {dots.includes(i) && <span className="w-2 h-2 rounded-full bg-coffee-950" />}
+          {dots.includes(i) && (
+            <span
+              className="rounded-full bg-coffee-950"
+              style={{ width: `calc(${DIE_VAR} / 7)`, height: `calc(${DIE_VAR} / 7)` }}
+            />
+          )}
         </div>
       ))}
     </div>
@@ -133,10 +152,11 @@ export function Dice({ value, rollKey }: { value: number; rollKey: number }) {
   const [initRx, initRy] = FACE_REST[value]
 
   return (
-    <div className="relative" style={{ width: DIE_PX, height: DIE_PX, perspective: 500 }}>
+    <div className="relative" style={{ width: DIE_VAR, height: DIE_VAR, perspective: 500 }}>
       <motion.div
         aria-hidden="true"
-        className="dice-shadow absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-10 h-1.5 rounded-full bg-black/60 blur-[3px]"
+        className="dice-shadow absolute left-1/2 -translate-x-1/2 -bottom-1.5 h-1.5 rounded-full bg-black/60 blur-[3px]"
+        style={{ width: `calc(${DIE_VAR} * 5 / 7)` }}
         animate={reduced ? { scaleX: 1, opacity: 0.55 } : rollKey > 0 ? { scaleX: [1, 0.4, 0.4, 1.15, 1, 1.08, 1], opacity: [0.55, 0.15, 0.15, 0.65, 0.5, 0.6, 0.55] } : { scaleX: 1, opacity: 0.55 }}
         transition={{ duration: reduced ? 0 : 1.05, times: [0, 0.08, 0.55, 0.6, 0.7, 0.85, 1] }}
       />
@@ -146,12 +166,12 @@ export function Dice({ value, rollKey }: { value: number; rollKey: number }) {
         style={{ transformStyle: 'preserve-3d' }}
         initial={{ rotateX: initRx, rotateY: initRy }}
       >
-        <DotFace value={1} transform={`rotateY(0deg)   translateZ(${HALF}px)`} />
-        <DotFace value={2} transform={`rotateY(90deg)  translateZ(${HALF}px)`} />
-        <DotFace value={3} transform={`rotateX(90deg)  translateZ(${HALF}px)`} />
-        <DotFace value={4} transform={`rotateX(-90deg) translateZ(${HALF}px)`} />
-        <DotFace value={5} transform={`rotateY(-90deg) translateZ(${HALF}px)`} />
-        <DotFace value={6} transform={`rotateY(180deg) translateZ(${HALF}px)`} />
+        <DotFace value={1} transform={`rotateY(0deg)   translateZ(${DIE_HALF})`} />
+        <DotFace value={2} transform={`rotateY(90deg)  translateZ(${DIE_HALF})`} />
+        <DotFace value={3} transform={`rotateX(90deg)  translateZ(${DIE_HALF})`} />
+        <DotFace value={4} transform={`rotateX(-90deg) translateZ(${DIE_HALF})`} />
+        <DotFace value={5} transform={`rotateY(-90deg) translateZ(${DIE_HALF})`} />
+        <DotFace value={6} transform={`rotateY(180deg) translateZ(${DIE_HALF})`} />
       </motion.div>
     </div>
   )
@@ -169,10 +189,11 @@ export function SpeedDie({ face, rollKey }: { face: SpeedFace; rollKey: number }
   const [initRx, initRy] = FACE_REST[value]
 
   return (
-    <div className="relative" style={{ width: DIE_PX, height: DIE_PX, perspective: 500 }}>
+    <div className="relative" style={{ width: DIE_VAR, height: DIE_VAR, perspective: 500 }}>
       <motion.div
         aria-hidden="true"
-        className="dice-shadow absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-10 h-1.5 rounded-full bg-black/60 blur-[3px]"
+        className="dice-shadow absolute left-1/2 -translate-x-1/2 -bottom-1.5 h-1.5 rounded-full bg-black/60 blur-[3px]"
+        style={{ width: `calc(${DIE_VAR} * 5 / 7)` }}
         animate={reduced ? { scaleX: 1, opacity: 0.55 } : rollKey > 0 ? { scaleX: [1, 0.4, 0.4, 1.15, 1, 1.08, 1], opacity: [0.55, 0.15, 0.15, 0.65, 0.5, 0.6, 0.55] } : { scaleX: 1, opacity: 0.55 }}
         transition={{ duration: reduced ? 0 : 1.05, times: [0, 0.08, 0.55, 0.6, 0.7, 0.85, 1] }}
       />
@@ -182,12 +203,12 @@ export function SpeedDie({ face, rollKey }: { face: SpeedFace; rollKey: number }
         style={{ transformStyle: 'preserve-3d' }}
         initial={{ rotateX: initRx, rotateY: initRy }}
       >
-        <SpeedFaceContent kind="one"   transform={`rotateY(0deg)   translateZ(${HALF}px)`} />
-        <SpeedFaceContent kind="two"   transform={`rotateY(90deg)  translateZ(${HALF}px)`} />
-        <SpeedFaceContent kind="three" transform={`rotateX(90deg)  translateZ(${HALF}px)`} />
-        <SpeedFaceContent kind="mr"    transform={`rotateX(-90deg) translateZ(${HALF}px)`} />
-        <SpeedFaceContent kind="bus"   transform={`rotateY(-90deg) translateZ(${HALF}px)`} />
-        <SpeedFaceContent kind="mr"    transform={`rotateY(180deg) translateZ(${HALF}px)`} />
+        <SpeedFaceContent kind="one"   transform={`rotateY(0deg)   translateZ(${DIE_HALF})`} />
+        <SpeedFaceContent kind="two"   transform={`rotateY(90deg)  translateZ(${DIE_HALF})`} />
+        <SpeedFaceContent kind="three" transform={`rotateX(90deg)  translateZ(${DIE_HALF})`} />
+        <SpeedFaceContent kind="mr"    transform={`rotateX(-90deg) translateZ(${DIE_HALF})`} />
+        <SpeedFaceContent kind="bus"   transform={`rotateY(-90deg) translateZ(${DIE_HALF})`} />
+        <SpeedFaceContent kind="mr"    transform={`rotateY(180deg) translateZ(${DIE_HALF})`} />
       </motion.div>
     </div>
   )
