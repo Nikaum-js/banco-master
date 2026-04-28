@@ -21,7 +21,7 @@
 ## M1 — Motor de jogo (lógica) 🟡 em andamento
 
 Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vitest). Cada item abaixo é uma feature SDD completa (`spec→plan→tasks→implement`).
-**Estado: ~68 testes verdes (`npx vitest run tests/game`). ⚠️ Ainda NÃO ligado à UI — não é jogável no navegador (ver M2).**
+**Estado: 103 testes verdes (`npx vitest run tests/game`). HUD mínimo funcional liga o motor à tela (demo local jogável); UI completa segue em M2.**
 
 ### Feito
 
@@ -31,13 +31,14 @@ Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vite
 - ✅ **004 Construção** — casas/hotel, uniformidade, grupo parcial (70%), estoque do banco, leilão de casas
 - ✅ **005 Hipoteca** — hipotecar/deshipotecar (metade + 10%), regra de transferência
 - ✅ **006 Sistema de Cartas** — 2 decks (Acaso/Tesouro), raridades, mão (limite 3, privada), saque, timing, 14 efeitos autocontidos + framework; **D-018** propagado (Surpresa→Acaso)
+- ✅ **007 Balanceamento/Catch-up** — GO Progressivo + Free Parking (pote); imposto/multa de prisão debitam de fato
+- ✅ **008 Falência & Fim de jogo** — dívida pendente (pagar/falir), destino dos ativos (§9.2), eliminação, vitória
+- ✅ **009 Bus Tickets** — *uso* do ticket (mover pelo lado, §10.7) + espaço Bus Ticket concede +1 (§2.7); contador já existia (006/D-012)
+- ✅ **010 Empréstimos** — solicitar na dívida pendente, juros simples por GO, quitar (só principal), máx. 1 ativo/devedor; **destrava a Falência §9.3** (credor do empréstimo herda ativos+passivos)
 
 ### Pendente (engine — specs futuras)
 
-- [ ] **Bus Tickets** — *uso* do ticket (mover pelo lado do tabuleiro); o contador já existe (006/D-012)
 - [ ] **Negociação** — proposta, contraproposta, imunidades (D-010)
-- [ ] **Empréstimos entre jogadores** (D-009) — solicitar, juros por GO, quitar
-- [ ] **Falência & Fim de jogo** — insolvência (hoje só sinalizada por porta `onInsolvency`), redistribuição de ativos, eliminação, vitória
 - [ ] **Mecânicas de Balanceamento** — Speed Die já no motor; faltam **GO Progressivo**, **Free Parking** (pote), **Tax Man**, **Hangar**, **Skyscraper**, **2º hotel** (hoje portas/stub: `onPassGo`/`onPayToCenter`/`onCollectCenter`)
 - [ ] **Subsistema de Cartas deferido** — ofensivas com alvo (Aquisição Hostil, Despejo, Auditoria), **reação** (Diplomacia, Bunker Fiscal) e **efeitos temporários de N voltas** (Boicote, Imunidade, Apagão, Greve). Hoje são *no-op seguro* no catálogo
 - [ ] **Tema "Cidades do Mundo"** — preços, aluguéis e custos de construção **finais** (hoje escada provisória $60–$400 + multiplicadores provisórios)
