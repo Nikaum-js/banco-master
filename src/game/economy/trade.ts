@@ -13,9 +13,9 @@ import { activePlayer } from '../turn/turnMachine'
 import { liquidationValue } from '../falencia/falencia'
 import { logEvent } from '../log'
 
-// `Trade`/`ImmunityGrant` agora vivem em ./types (024, p/ o GameState referenciar
-// sem ciclo). Re-exportados aqui para não quebrar quem importa de './trade'.
-export type { Trade, ImmunityGrant } from './types'
+// `Trade` vive em ./types (024, p/ o GameState referenciar sem ciclo).
+// Re-exportado aqui para preservar o ponto de import público já usado.
+export type { Trade } from './types'
 
 function clone(state: GameState): GameState {
   return structuredClone(state)

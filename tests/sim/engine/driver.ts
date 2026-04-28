@@ -1,7 +1,6 @@
 // Driver do harness (036/D1-D2): dirige o MESMO motor puro que src/game/store.ts liga
 // ao Zustand — sem Zustand, sem timers reais. `now()` é um relógio LÓGICO controlado
 // pelo próprio harness (não Date.now()), avançado explicitamente para fechar leilões.
-import { BOARD } from '@/lib/boardData'
 import { buildGameCtx, buildInitialGame } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
@@ -71,6 +70,3 @@ export function closeExhaustedAuctions(session: SimSession): boolean {
   for (const action of actions) session.game = applyCommand(session.game, action, session.ctx)
   return actions.length > 0
 }
-
-// Só para referência de teste (BOARD_SIZE) — reexport leve, evita import duplicado.
-export const BOARD_SIZE = BOARD.length

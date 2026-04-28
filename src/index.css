@@ -11,8 +11,6 @@
    14px fixos e só cabe em condensada. */
 @import "@fontsource/press-start-2p/latin-400.css";
 
-@custom-variant dark (&:is(.dark *));
-
 /* =====================================================================
    Design tokens — "Atlas da Meia-Noite"
    Identidade Banco Master · carta náutica noturna: tinta azul-profunda,
@@ -55,11 +53,6 @@
   /* As classes coffee-*, cream, gold e logo seguem compilando em toda a UI */
   /* (painéis, modais, HUD, layers) e resolvem pra nova identidade. */
   /* Código novo deve preferir ink/starlight/brass/signal. */
-  --color-coffee-50:  var(--color-ink-50);
-  --color-coffee-100: var(--color-ink-100);
-  --color-coffee-200: var(--color-ink-200);
-  --color-coffee-300: var(--color-ink-300);
-  --color-coffee-400: var(--color-ink-400);
   --color-coffee-500: var(--color-ink-500);
   --color-coffee-600: var(--color-ink-600);
   --color-coffee-700: var(--color-ink-700);
@@ -72,7 +65,6 @@
   --color-gold-soft: var(--color-brass-soft);
   --color-gold-glow: var(--color-brass-glow);
   --color-logo: var(--color-signal);
-  --color-logo-deep: var(--color-signal-deep);
 
   /* ---------- 10 cores de grupo — "luzes de cidade" sobre a tinta ---------- */
   --color-group-brown:   #c2854f;
@@ -747,54 +739,6 @@
     --motion-base: 0ms;
     --motion-slow: 0ms;
   }
-}
-
-/* =====================================================================
-   Variáveis do shadcn re-pintadas pro Atlas da Meia-Noite
-   ===================================================================== */
-:root {
-  --background: #0d1424;
-  --foreground: #eef2fb;
-  --card: #182136;
-  --card-foreground: #eef2fb;
-  --popover: #182136;
-  --popover-foreground: #eef2fb;
-  --primary: #d9a650;
-  --primary-foreground: #0d1424;
-  --secondary: #2c3750;
-  --secondary-foreground: #eef2fb;
-  --muted: #202942;
-  --muted-foreground: #93a1bd;
-  --accent: #2c3750;
-  --accent-foreground: #eef2fb;
-  --destructive: #e2574b;
-  --destructive-foreground: #eef2fb;
-  --border: #2c3750;
-  --input: #2c3750;
-  --ring: #d9a650;
-  --radius: 4px;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
 }
 
 /* =====================================================================
@@ -1678,50 +1622,6 @@
     box-shadow: inset 0 1px 0 rgb(238 242 251 / 0.035);
   }
 
-  /* Carta de propriedade — tinta profunda com filete de luz no topo,
-     mimic de prancha de instrumento gravada */
-  .property-card {
-    background-color: var(--color-ink-700);
-    border: 1px solid var(--color-ink-500);
-    box-shadow:
-      inset 0 0 0 1px var(--color-ink-800),
-      inset 0 1px 0 0 rgb(238 242 251 / 0.05),
-      var(--shadow-card);
-    border-radius: var(--radius-card);
-    transition: transform 220ms var(--ease-paper),
-                box-shadow 220ms var(--ease-paper);
-  }
-
-  .property-card:hover {
-    transform: translateY(-2px);
-    box-shadow:
-      inset 0 0 0 1px var(--color-ink-800),
-      inset 0 1px 0 0 rgb(238 242 251 / 0.05),
-      var(--shadow-lift);
-  }
-
-  /* Faixa colorida no topo da carta (cor do grupo) */
-  .property-stripe {
-    border-bottom: 1px solid var(--color-ink-950);
-    box-shadow:
-      inset 0 -1px 0 0 rgb(0 0 0 / 0.4),
-      inset 0 1px 0 0 rgb(255 255 255 / 0.12);
-  }
-
-  /* Faixa horizontal — usada nos lados sul/norte do tabuleiro */
-  .property-stripe-h {
-    box-shadow:
-      inset 0 -1px 0 0 rgb(0 0 0 / 0.4),
-      inset 0 1px 0 0 rgb(255 255 255 / 0.12);
-  }
-
-  /* Faixa vertical — usada nos lados oeste/leste do tabuleiro */
-  .property-stripe-v {
-    box-shadow:
-      inset -1px 0 0 0 rgb(0 0 0 / 0.4),
-      inset 1px 0 0 0 rgb(255 255 255 / 0.12);
-  }
-
   /* Square de tabuleiro — placa de tinta com filete de luz, sobre as
      juntas escuras (ink-950) da moldura */
   .board-square {
@@ -1930,18 +1830,10 @@
   .avatar-totem__bar--4 { animation-delay: calc(var(--face-delay, 0s) + 0.36s); }
   .avatar-totem__bar--5 { animation-delay: calc(var(--face-delay, 0s) + 0.48s); }
 
-  @keyframes skin-robot-beacon {
-    0%, 72%, 78%, 84%, 100% { opacity: 1; }
-    75%, 81%                { opacity: 0.25; }
-  }
   @keyframes skin-astronaut-shine {
     0%, 68%, 94%, 100% { opacity: 0.68; transform: translate(0, 0); }
     78%                { opacity: 0.92; transform: translate(3px, -2px); }
     86%                { opacity: 0.58; transform: translate(0, 0); }
-  }
-  .skin-robot__beacon {
-    animation: skin-robot-beacon 13s ease-in-out infinite;
-    animation-delay: var(--face-delay, 0s);
   }
   .skin-astronaut__shine {
     animation: skin-astronaut-shine 15s ease-in-out infinite;
@@ -1966,22 +1858,6 @@
       transition-duration: 0.01ms !important;
       will-change: auto;
     }
-  }
-
-  /* Cédula — chip com cara de papel-moeda */
-  .bill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.375rem 0.625rem;
-    background-color: var(--color-ink-800);
-    border: 1px solid var(--color-ink-500);
-    border-left: 3px solid var(--color-brass);
-    border-radius: var(--radius-sharp);
-    font-family: var(--font-slab);
-    font-variant-numeric: tabular-nums;
-    color: var(--color-brass-glow);
-    box-shadow: var(--shadow-press);
   }
 
   /* =================================================================
@@ -3191,20 +3067,6 @@
     .flap-anim { animation: none; }
   }
 
-  /* CTA contido usado nas etapas do lobby. */
-  .cta-embark {
-    position: relative;
-    overflow: hidden;
-    letter-spacing: 0.025em;
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, var(--color-brass) 18%, transparent),
-      0 5px 14px -10px color-mix(in srgb, var(--color-brass) 60%, transparent);
-  }
-  .cta-embark:hover,
-  .cta-embark:focus-visible {
-    filter: none;
-  }
-
   /* =================================================================
      Portal do mapa — vencedor do protótipo da home. A estrutura é a
      mesma nos dois mundos; tokens e modificadores trocam o material.
@@ -4131,29 +3993,6 @@
   .avatar-concept-lab__option .avatar-face * {
     animation: none !important;
   }
-  .identity-passport__orbit {
-    position: absolute;
-    inset: 12px;
-    border: 1px dashed color-mix(in srgb, var(--color-brass) 40%, transparent);
-    border-radius: 50%;
-    animation: identity-orbit 28s linear infinite;
-  }
-  .identity-passport__orbit::before,
-  .identity-passport__orbit::after {
-    content: "";
-    position: absolute;
-    width: 7px;
-    height: 7px;
-    border: 1px solid var(--color-brass);
-    border-radius: 50%;
-    background: var(--color-ink-950);
-    box-shadow: 0 0 9px color-mix(in srgb, var(--color-brass) 52%, transparent);
-  }
-  .identity-passport__orbit::before { top: 10%; left: 13%; }
-  .identity-passport__orbit::after { right: 8%; bottom: 18%; }
-  @keyframes identity-orbit {
-    to { rotate: 360deg; }
-  }
   .identity-passport__name {
     position: relative;
     z-index: 1;
@@ -4361,7 +4200,6 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .identity-passport__orbit,
     .avatar-concept-lab__art {
       animation: none;
     }
@@ -4876,8 +4714,6 @@
   .neon-stage {
     --neon-cyan: #56cdec;
     --neon-pink: #f2589c;
-    --neon-violet: #a76bf5;
-    --neon-text: #d7c9ff;
     background-color: #07021a;
     color: #f4f0ff;
     font-family: ui-monospace, SFMono-Regular, "Courier New", monospace;

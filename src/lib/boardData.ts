@@ -167,23 +167,3 @@ export const BOARD: Square[] = [
   { pos: 46, kind: 'property', group: 'platinum', name: 'Abu Dhabi',   uf: 'AE', capital: 'Emirados', price: 550, rent: 60 },
   { pos: 47, kind: 'property', group: 'platinum', name: 'Dubai',       uf: 'AE', capital: 'Emirados', price: 650, rent: 72 },
 ]
-
-// Helpers para layouts que precisam separar as quatro arestas do tabuleiro
-// (cantos em 0/12/24/36).
-export const BOTTOM_SIDE = BOARD.slice(0, 13)   // 0..12  (incluindo cantos)
-export const LEFT_SIDE   = BOARD.slice(12, 25)  // 12..24
-export const TOP_SIDE    = BOARD.slice(24, 37)  // 24..36
-export const RIGHT_SIDE  = BOARD.slice(36, 48).concat(BOARD[0]) // 36..47, 0
-
-// Versões sem repetir cantos — úteis quando o layout posiciona cantos à parte.
-export const BOTTOM_INNER = BOARD.slice(1, 12)   // 1..11
-export const LEFT_INNER   = BOARD.slice(13, 24)  // 13..23
-export const TOP_INNER    = BOARD.slice(25, 36)  // 25..35
-export const RIGHT_INNER  = BOARD.slice(37, 48)  // 37..47
-
-export const CORNERS = {
-  go:        BOARD[0],
-  jail:      BOARD[12],
-  parking:   BOARD[24],
-  gotojail:  BOARD[36],
-} as const

@@ -14,17 +14,6 @@ import { create } from 'zustand'
 export const BOARD_THEMES = ['atlas', 'neon'] as const
 export type BoardTheme = (typeof BOARD_THEMES)[number]
 
-export const BOARD_THEME_LABEL: Record<BoardTheme, string> = {
-  atlas: 'Atlas da Meia-Noite',
-  neon: 'Fliperama Neon',
-}
-
-/** O que cada tema faz, em uma linha — vai no `title` do botão de troca. */
-export const BOARD_THEME_HINT: Record<BoardTheme, string> = {
-  atlas: 'carta náutica · latão · tinta azul',
-  neon: 'synthwave · pixel · tubo de imagem',
-}
-
 function coerce(t: unknown): BoardTheme {
   return BOARD_THEMES.includes(t as BoardTheme) ? (t as BoardTheme) : 'atlas'
 }

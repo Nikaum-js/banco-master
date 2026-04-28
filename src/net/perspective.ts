@@ -17,8 +17,6 @@ export interface Secrets {
   decks: Partial<Record<DeckId, CardId[]>> // deck real, íntegro (só a autoridade recebe tudo)
 }
 
-export const EMPTY_SECRETS: Secrets = { hands: {}, decks: {} }
-
 // Separa o `GameState` real (só existe na autoridade) em público + segredo. Público preserva
 // TODO comprimento (§12.3, D7) — só o CONTEÚDO da mão/deck vira `null`.
 export function splitSnapshot(game: GameState, room: Room): { publicGame: GameState; secrets: Secrets } {

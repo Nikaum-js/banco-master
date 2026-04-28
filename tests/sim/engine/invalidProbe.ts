@@ -6,7 +6,7 @@ import { BOARD } from '@/lib/boardData'
 import type { GameState } from '@/game/turn/types'
 import { activePlayer } from '@/game/turn/turnMachine'
 import type { RNG } from '@/game/turn/dice'
-import { createSimSession, dispatch, type SimSession } from './driver'
+import { dispatch, type SimSession } from './driver'
 import type { SimAction } from './types'
 
 export interface ProbeEntry {
@@ -115,6 +115,3 @@ export function applyProbe(session: SimSession, probe: ProbeEntry): { ok: boolea
   const same = JSON.stringify(before) === JSON.stringify(shadow.game)
   return { ok: same, detail: same ? '' : `sonda "${probe.name}" mutou o estado — deveria ser no-op` }
 }
-
-// Reexportado só para o teste de unidade poder montar uma sessão mínima sem duplicar setup.
-export { createSimSession }

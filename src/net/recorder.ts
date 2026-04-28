@@ -31,8 +31,6 @@ export interface Resolved {
   reactions: CardSlot[]
 }
 
-export const EMPTY_RESOLVED: Resolved = { rng: [], now: [], draws: [], reactions: [] }
-
 // Embrulha `base` gravando cada `rng()`/`now()`/`ports.draw()`/`ports.hasReaction()`
 // consumido. `drain()` devolve uma cópia dos valores gravados até então.
 export function recordingCtx(base: TurnCtx): { ctx: TurnCtx; drain: () => Resolved } {

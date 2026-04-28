@@ -58,16 +58,6 @@ export function canBuild(state: GameState, pos: number): boolean {
   return true
 }
 
-// Próxima cidade do grupo onde construir (a de menor nível — uniformidade). null se nenhuma.
-export function nextBuildTarget(state: GameState, group: GroupKey, ownerId: string): number | null {
-  const cities = ownedGroupCities(state, group, ownerId)
-  if (cities.length === 0) return null
-  const min = Math.min(...cities.map((c) => cityLevel(state.titles[c.pos])))
-  if (min >= buildLevelLimit(cities.length, groupSize(group))) return null
-  const target = cities.find((c) => cityLevel(state.titles[c.pos]) === min)
-  return target ? target.pos : null
-}
-
 // Pode construir 1 nível NESTA cidade? Encapsula a guarda de buildHouse (023):
 // canBuild + nível<7 + uniformidade (menor nível do grupo) + teto de posse + caixa.
 // Não considera `paused` (o comando trata).

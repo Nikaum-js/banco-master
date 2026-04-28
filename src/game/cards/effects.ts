@@ -131,7 +131,3 @@ const handlers: Record<string, Handler> = {
 export function applyEffect(effect: string, state: GameState, playerId: string, ports: TurnPorts): void {
   handlers[effect]?.(state, playerId, ports)
 }
-
-export function isImplemented(effect: string): boolean {
-  return effect in handlers
-}

@@ -153,11 +153,3 @@ export function SwapMiniGlyph({ size = 20 }: { size?: number }) {
     </svg>
   )
 }
-
-export function CheckTinyGlyph({ size = 10 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden>
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  )
-}

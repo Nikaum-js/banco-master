@@ -488,10 +488,6 @@ export function blockingSeats(room: Room, eliminatedIds: ReadonlySet<string> = n
   return room.seats.filter((s) => !s.connected && !eliminatedIds.has(s.playerId))
 }
 
-export function hostDisconnected(room: Room): boolean {
-  return !hostSeat(room).connected
-}
-
 // Alfabeto sem ambiguidade visual (sem `0/O`, `1/I/L`), maiúsculas — legível em voz alta e
 // digitável em teclado de celular (041, data-model §3): o caso de uso é ditar para si mesmo
 // em outro aparelho. 6 caracteres em alfabeto de 32 dá margem folgada para 8 assentos.
