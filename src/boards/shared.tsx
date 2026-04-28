@@ -619,11 +619,6 @@ export function PlayersPanel() {
                 <strong>{activePlayers}</strong>
                 <span>/ 8</span>
               </span>
-              <span className="players-capacity__slots" aria-hidden>
-                {Array.from({ length: 8 }, (_, index) => (
-                  <i key={index} data-filled={index < activePlayers || undefined} />
-                ))}
-              </span>
             </div>
           )}
         />
@@ -733,12 +728,6 @@ function PlayerRow({ player: p, seat }: { player: Player; seat: number }) {
 
         {/* Cor identifica o assento, mas todo estado também permanece textual. */}
         <span className="player-row__signals">
-          {p.active && (
-            <span title="Turno atual" className="player-row__turn">
-              <i aria-hidden />
-              VEZ
-            </span>
-          )}
           {p.loanActive && <span title="Empréstimo ativo" className="player-row__signal player-row__signal--alert">$$</span>}
           {p.immune && <span title="Imunidade ativa" className="player-row__signal">IMU</span>}
         </span>

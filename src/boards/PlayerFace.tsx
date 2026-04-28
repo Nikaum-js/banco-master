@@ -57,9 +57,11 @@ export function PlayerFace({
       data-skin={resolvedSkin}
       aria-hidden="true"
     >
-      <PlayerSkinArtwork id={resolvedSkin} color={head} layer="behind" />
-      <AvatarArtwork id={resolvedAvatar} color={head} asleep={asleep} />
-      <PlayerSkinArtwork id={resolvedSkin} color={head} layer="front" />
+      <g className="avatar-artwork">
+        <PlayerSkinArtwork id={resolvedSkin} color={head} layer="behind" />
+        <AvatarArtwork id={resolvedAvatar} color={head} asleep={asleep} />
+        <PlayerSkinArtwork id={resolvedSkin} color={head} layer="front" />
+      </g>
 
       {active && (
         <circle
