@@ -34,6 +34,7 @@ describe('isolamento visual das telas de entrada', () => {
     )
 
     expect(document.querySelector('[data-entry-backdrop="atlas"]')).toBeTruthy()
+    expect(document.querySelector('[data-entry-cityscape="atlas"]')).toBeTruthy()
     expect(document.querySelector('[data-entry-backdrop="neon"]')).toBeNull()
     expect(screen.getByTestId('entry-content')).toBeTruthy()
   })
@@ -49,6 +50,7 @@ describe('isolamento visual das telas de entrada', () => {
     act(() => useBoardTheme.getState().setTheme('neon'))
 
     expect(document.querySelector('[data-entry-backdrop="atlas"]')).toBeNull()
+    expect(document.querySelector('[data-entry-cityscape="atlas"]')).toBeNull()
     expect(document.querySelector('[data-entry-backdrop="neon"]')).toBeTruthy()
     expect(screen.getByTestId('entry-content')).toBeTruthy()
     expect(mounts).toBe(1)

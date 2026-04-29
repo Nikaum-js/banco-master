@@ -8,6 +8,7 @@ import { motion, useMotionValue, useSpring, useTransform, type MotionValue } fro
 import { cn } from '@/lib/utils'
 import { useMotion } from '@/game/ui/motion'
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
+import { AtlasCityscape } from './home/AtlasCityscape'
 import { NeonBackdrop } from './home/NeonBackdrop'
 
 const RADAR_TICKS = Array.from({ length: 48 }, (_, i) => i * 7.5)
@@ -281,7 +282,7 @@ export function EntryStage({ children }: { children: ReactNode }) {
   }
 
   const content = (
-    <div className="relative min-h-full flex flex-col items-center justify-center gap-6 p-4 py-10 [@media(max-height:640px)]:gap-3 [@media(max-height:640px)]:py-4">
+    <div className="relative z-40 min-h-full flex flex-col items-center justify-center gap-6 p-4 py-10 [@media(max-height:640px)]:gap-3 [@media(max-height:640px)]:py-4">
       {children}
     </div>
   )
@@ -303,10 +304,15 @@ export function EntryStage({ children }: { children: ReactNode }) {
             data-entry-backdrop="atlas"
             aria-hidden="true"
           >
-            <ParallaxLayer depth={9}>
+            <ParallaxLayer depth={9} className="z-10">
               <AviationChart className="absolute inset-0 h-full w-full text-brass" />
             </ParallaxLayer>
-            <ParallaxLayer depth={24}>
+            <ParallaxLayer depth={16} className="z-20">
+              <AtlasCityscape className="absolute inset-0 h-full w-full text-brass" />
+            </ParallaxLayer>
+            {/* A aeronave fica depois (e acima) do skyline: ela cruza o céu e
+                nunca desaparece atrás de uma fachada alta. */}
+            <ParallaxLayer depth={28} className="z-30">
               <AirspaceRoutes className="absolute inset-0 h-full w-full text-brass" />
             </ParallaxLayer>
             {!reduced && <CursorLantern x={lx} y={ly} />}

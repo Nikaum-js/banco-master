@@ -1348,6 +1348,82 @@
     84%, 92% { opacity: 1; }
   }
 
+  /* Cidade do Atlas: dois planos arquitetônicos, detalhes de fachada e vida
+     pontual. O desenho permanece discreto o bastante para o cartão de embarque
+     continuar como foco; profundidade vem do contraste, não de blur pesado. */
+  .entry-city-band--far {
+    opacity: 0.34;
+    stroke-width: 0.8;
+  }
+  .entry-city-band--near {
+    opacity: 0.68;
+    stroke-width: 1;
+    filter: drop-shadow(0 -8px 20px rgb(217 166 80 / 0.035));
+  }
+  .entry-city-building {
+    stroke: color-mix(in srgb, var(--color-brass) 72%, transparent);
+  }
+  .entry-city-cornice {
+    fill: none;
+    stroke: color-mix(in srgb, var(--color-brass-glow) 62%, transparent);
+    stroke-width: 1.1;
+    opacity: 0.54;
+  }
+  .entry-city-rib {
+    fill: none;
+    stroke: color-mix(in srgb, var(--color-brass) 34%, transparent);
+    stroke-width: 0.65;
+  }
+  .entry-city-rooftop {
+    fill: none;
+    stroke: color-mix(in srgb, var(--color-brass) 74%, transparent);
+    stroke-width: 1;
+  }
+  .entry-city-window {
+    filter: drop-shadow(0 0 2px rgb(255 217 138 / 0.22));
+  }
+  .entry-city-window--pulse {
+    animation: entry-city-window-pulse 10s steps(1, end) infinite;
+  }
+  @keyframes entry-city-window-pulse {
+    0%, 38%, 100% { opacity: 0.58; }
+    40%, 47% { opacity: 0.14; }
+    49%, 78% { opacity: 0.48; }
+    80%, 84% { opacity: 0.22; }
+  }
+  .entry-city-beacon {
+    filter: drop-shadow(0 0 4px var(--color-signal-glow));
+    animation: entry-city-beacon 2.8s steps(1, end) infinite;
+  }
+  @keyframes entry-city-beacon {
+    0%, 82%, 100% { opacity: 0.16; }
+    85%, 91% { opacity: 0.9; }
+  }
+  .entry-city-traffic {
+    opacity: 0;
+    transform-box: fill-box;
+    animation: entry-city-traffic 24s linear infinite;
+  }
+  .entry-city-traffic--outbound {
+    transform: translate(-40px, 879px);
+  }
+  .entry-city-traffic--inbound {
+    transform: translate(1480px, 886px);
+    animation-name: entry-city-traffic-reverse;
+    animation-duration: 31s;
+    animation-delay: -13s;
+  }
+  @keyframes entry-city-traffic {
+    0% { opacity: 0; transform: translate(-40px, 879px); }
+    8%, 92% { opacity: 0.54; }
+    100% { opacity: 0; transform: translate(1480px, 879px); }
+  }
+  @keyframes entry-city-traffic-reverse {
+    0% { opacity: 0; transform: translate(1480px, 886px); }
+    8%, 92% { opacity: 0.42; }
+    100% { opacity: 0; transform: translate(-40px, 886px); }
+  }
+
   .entry-runway-light {
     opacity: 0.22;
     animation: entry-runway-light 2.25s ease-in-out infinite;
@@ -1361,11 +1437,17 @@
     .entry-aircraft__airframe,
     .entry-aircraft__wake,
     .entry-aircraft__beacon,
+    .entry-city-window--pulse,
+    .entry-city-beacon,
+    .entry-city-traffic,
     .entry-runway-light {
       animation: none;
     }
     .entry-aircraft__wake { opacity: 0.26; }
     .entry-aircraft__beacon { opacity: 0.7; }
+    .entry-city-window--pulse { opacity: 0.5; }
+    .entry-city-beacon { opacity: 0.65; }
+    .entry-city-traffic { opacity: 0; }
     .entry-runway-light { opacity: 0.32; }
   }
 
