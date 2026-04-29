@@ -8,8 +8,8 @@ import { LocalHub, localTransport } from '@/net/localTransport'
 import { SEAT_COLORS } from '@/net/room'
 import { mulberry32 } from '../sim/engine/rng'
 
-const ANA: SessionIdentity = { name: 'Ana', color: SEAT_COLORS[0], piece: 'aviao' }
-const BRUNO: SessionIdentity = { name: 'Bruno', color: SEAT_COLORS[1], piece: 'navio' }
+const ANA: SessionIdentity = { name: 'Ana', color: SEAT_COLORS[0] }
+const BRUNO: SessionIdentity = { name: 'Bruno', color: SEAT_COLORS[1] }
 
 // 043: a identidade não entra mais por parâmetro — quem a informa é o TRANSPORTE, que a
 // obtém da sessão atestada. Aqui o hub local faz o papel, com o uid fixo do caso.

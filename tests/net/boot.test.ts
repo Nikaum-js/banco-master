@@ -13,11 +13,8 @@ import { createHost } from '@/net/host'
 import type { Client } from '@/net/client'
 import { mulberry32 } from '../sim/engine/rng'
 
-// Anotadas de propósito: sem o tipo, `piece` alarga para `string` e um id fora do catálogo
-// passa batido — era o caso de `'cartola'` aqui, que `pieceOf` silenciosamente servia como
-// avião. Com a anotação, peça inexistente é erro de compilação.
-const ANA: SessionIdentity = { name: 'Ana', color: SEAT_COLORS[0], piece: 'aviao' }
-const BRUNO: SessionIdentity = { name: 'Bruno', color: SEAT_COLORS[1], piece: 'navio' }
+const ANA: SessionIdentity = { name: 'Ana', color: SEAT_COLORS[0] }
+const BRUNO: SessionIdentity = { name: 'Bruno', color: SEAT_COLORS[1] }
 
 // Uma sessão ligada ao hub in-memory. `connectStore` é um espião: o boot não deve depender
 // do Zustand para funcionar.

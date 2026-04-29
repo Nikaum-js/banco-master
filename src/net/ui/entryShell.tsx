@@ -43,7 +43,7 @@ export function CompassRose({ size, className }: { size?: number | string; class
 }
 
 // ---------------------------------------------------------------------
-// Aviões — a silhueta da peça `aviao` (pieceGlyphs), centrada e apontando +x,
+// Aviões — silhueta de avião em line art, centrada e apontando +x,
 // com rastro de condensação — pronta pra seguir rota com `offset-rotate: auto`.
 // ---------------------------------------------------------------------
 function PlaneMark({ scale = 1 }: { scale?: number }) {

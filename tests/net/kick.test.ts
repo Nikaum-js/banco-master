@@ -6,7 +6,6 @@ import { createHost } from '@/net/host'
 import { createClient, type Client } from '@/net/client'
 import { LocalHub, localTransport } from '@/net/localTransport'
 import { availableColors, createRoom, kickSeat, SEAT_COLORS } from '@/net/room'
-import { availablePieces } from '@/net/identity'
 import { mulberry32 } from '../sim/engine/rng'
 
 const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0))
@@ -16,7 +15,7 @@ async function lobbyCom(convidados: number): Promise<{ hub: LocalHub; host: Retu
   const transport = localTransport(hub, 'tok-host')
   const hostClient = createClient(transport)
   await hostClient.join()
-  const host = createHost(transport, createRoom('r1', { uid: 'tok-host', name: 'Host', color: SEAT_COLORS[0], piece: 'aviao' }), {
+  const host = createHost(transport, createRoom('r1', { uid: 'tok-host', name: 'Host', color: SEAT_COLORS[0] }), {
     rng: mulberry32(4),
     now: () => 1_000,
   })
@@ -26,7 +25,7 @@ async function lobbyCom(convidados: number): Promise<{ hub: LocalHub; host: Retu
   for (let i = 0; i < convidados; i++) {
     const c = createClient(localTransport(hub, `tok-${i}`))
     await c.join()
-    c.requestJoin({ name: `P${i + 1}`, color: SEAT_COLORS[i + 1], piece: (['navio', 'trem', 'taxi'] as const)[i] })
+    c.requestJoin({ name: `P${i + 1}`, color: SEAT_COLORS[i + 1] })
     await flush()
     guests.push(c)
   }
@@ -47,16 +46,14 @@ describe('kick no lobby (FR-024/025)', () => {
     expect(guests[0].playerId()).toBeNull()
   })
 
-  it('cor e peça do removido voltam a ficar disponíveis', async () => {
+  it('a cor do removido volta a ficar disponível', async () => {
     const { host } = await lobbyCom(1)
     expect(availableColors(host.room())).not.toContain(SEAT_COLORS[1])
-    expect(availablePieces(host.room())).not.toContain('navio')
 
     host.kick('tok-0')
     await flush()
 
     expect(availableColors(host.room())).toContain(SEAT_COLORS[1])
-    expect(availablePieces(host.room())).toContain('navio')
   })
 
   it('o anfitrião não remove a si mesmo (FR-025)', async () => {

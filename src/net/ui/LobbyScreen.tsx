@@ -1,23 +1,25 @@
-// Telas de sala (spec 037, T018; redesenho no lançamento) — nome + cor + peça + assentos +
-// iniciar. Vocabulário visual: a "sala de mapas" do `entryShell` (o mesmo mundo do
-// tabuleiro — graticule, latão, marcas de registro), peças em SVG autoral (`pieceGlyphs`)
-// e o PRÓPRIO token do tabuleiro (`PlayerFace`) como preview: a pergunta "como eu apareço
-// na mesa?" é respondida mostrando, não descrevendo.
+// Telas de sala (spec 037, T018; redesenho no lançamento) — nome + cor + visual + assentos
+// + iniciar. Vocabulário visual: a "sala de mapas" do `entryShell` (o mesmo mundo do
+// tabuleiro — graticule, latão, marcas de registro) e o PRÓPRIO token do tabuleiro
+// (`PlayerFace`) como preview: a pergunta "como eu apareço na mesa?" é respondida
+// mostrando, não descrevendo.
 import { useState } from 'react'
 import { Button, Chip } from '@/game/ui/primitives'
 import { PlayerFace } from '@/boards/shared'
-import { availableColors, availablePieces, MAX_SEATS, MIN_SEATS, PIECES, pieceOf, type JoinError, type PieceId, type Room } from '@/net/room'
+import { SKINS, type SkinId } from '@/boards/faceSkins'
+import { availableColors, MAX_SEATS, MIN_SEATS, type JoinError, type Room } from '@/net/room'
 import { NAME_MAX, recallPlayerName, rememberPlayerName } from '@/net/session'
 import { EntryPanel, EntryStage, EntryHeader } from './entryShell'
-import { PieceGlyph } from './pieceGlyphs'
 
 const JOIN_ERROR_TEXT: Record<JoinError, string> = {
   'room-full': `Sala cheia — o limite é ${MAX_SEATS} jogadores.`,
   'color-taken': 'Essa cor já foi escolhida por outro jogador.',
-  'piece-taken': 'Essa peça já foi escolhida por outro jogador.',
+  // Cor fora da paleta não vem do lobby (a grade só oferece as oito): o texto fala de
+  // recomeçar a escolha, não de trocar de cor, porque quem cai aqui está com a tela velha.
+  'invalid-color': 'Essa cor não existe mais nesta mesa. Recarregue e escolha de novo.',
   'already-started': 'A partida já começou — não é possível entrar agora.',
   'unknown-uid': 'Sessão não reconhecida nesta sala.',
-  kicked: 'O anfitrião removeu você desta sala.',
+  kicked: 'O host removeu você desta sala.',
   'bad-code': 'Código de reentrada inválido.',
 }
 
@@ -50,32 +52,31 @@ export function IdentityForm({
   cta: string
   busy?: boolean
   error?: JoinError | string | null
-  onSubmit: (name: string, color: string, piece: PieceId) => void
+  onSubmit: (name: string, color: string) => void
 }) {
   const salaVazia: Room = { id: '', status: 'lobby', seats: [] }
   const free = availableColors(room ?? salaVazia)
-  const freePieces = availablePieces(room ?? salaVazia)
   // Já vem preenchido com o nome da home (`rememberPlayerName`): aqui a pergunta que
   // sobra é a aparência — o nome só é redigitado por quem quiser trocá-lo.
   const [name, setName] = useState(() => recallPlayerName())
   const [color, setColor] = useState(free[0] ?? '')
-  const [piece, setPiece] = useState<PieceId>(freePieces[0])
+  // Visual do personagem — por enquanto SÓ nesta tela (escolha visual, ainda não
+  // viaja no `onSubmit` nem entra no assento; a propagação vem depois de fechar o catálogo).
+  const [skin, setSkin] = useState<SkinId>('careca')
   const chosen = free.includes(color) ? color : (free[0] ?? '')
-  const chosenPiece = freePieces.includes(piece) ? piece : freePieces[0]
   const message = error && (error in JOIN_ERROR_TEXT ? JOIN_ERROR_TEXT[error as JoinError] : String(error))
 
   return (
     <Frame title={title} subtitle={subtitle}>
       {/* Preview vivo — o token REAL do tabuleiro com a cor escolhida, respirando. */}
       <div className="flex items-center gap-3.5 px-4 py-3 rounded-[var(--radius-card)] bg-ink-950/50 border border-ink-500">
-        <PlayerFace color={chosen || 'var(--color-ink-400)'} size={46} active />
+        <PlayerFace color={chosen || 'var(--color-ink-400)'} size={46} active skin={skin} />
         <div className="min-w-0 flex-1">
           <p className={`font-semibold leading-tight truncate ${name.trim() ? 'text-starlight' : 'text-starlight-muted/70'}`}>
             {name.trim() || 'Viajante sem nome'}
           </p>
-          <p className="label text-starlight-muted mt-1 flex items-center gap-1.5">
-            <PieceGlyph id={chosenPiece} size={13} className="text-brass shrink-0" />
-            {pieceOf(chosenPiece).label} · assim você aparece na mesa
+          <p className="label text-starlight-muted mt-1">
+            {SKINS.find((s) => s.id === skin)?.label} · assim você aparece na mesa
           </p>
         </div>
       </div>
@@ -117,23 +118,24 @@ export function IdentityForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <span className="label text-brass">Sua peça</span>
+        <span className="label text-brass">Seu visual</span>
         <div className="grid grid-cols-4 gap-2">
-          {PIECES.filter((p) => freePieces.includes(p.id)).map((p) => (
+          {SKINS.map((s) => (
             <button
-              key={p.id}
+              key={s.id}
               type="button"
-              onClick={() => setPiece(p.id)}
-              aria-label={p.label}
-              aria-pressed={p.id === chosenPiece}
-              title={p.label}
-              className={`h-12 rounded-[var(--radius-card)] border grid place-items-center transition-all ${
-                p.id === chosenPiece
+              onClick={() => setSkin(s.id)}
+              aria-label={`Visual ${s.label}`}
+              aria-pressed={s.id === skin}
+              title={s.label}
+              className={`py-1.5 rounded-[var(--radius-card)] border grid place-items-center gap-0.5 transition-all ${
+                s.id === skin
                   ? 'border-brass/80 bg-brass/10 text-brass-glow shadow-[var(--shadow-glow)]'
                   : 'border-ink-500 bg-ink-900/60 text-starlight-muted hover:text-starlight hover:border-ink-300'
               }`}
             >
-              <PieceGlyph id={p.id} size={24} />
+              <PlayerFace color={chosen || 'var(--color-ink-400)'} size={30} skin={s.id} />
+              <span className="text-[9px] uppercase tracking-wider leading-none">{s.label}</span>
             </button>
           ))}
         </div>
@@ -144,10 +146,10 @@ export function IdentityForm({
       <Button
         variant="ghost"
         className="cta-embark py-3 text-sm"
-        disabled={!name.trim() || !chosen || !chosenPiece || busy}
+        disabled={!name.trim() || !chosen || busy}
         onClick={() => {
           rememberPlayerName(name)
-          onSubmit(name.trim(), chosen, chosenPiece)
+          onSubmit(name.trim(), chosen)
         }}
       >
         {busy ? 'Conectando…' : cta}
@@ -161,7 +163,7 @@ export function IdentityForm({
 //
 // Ordem da tela (revisão de UI, referência: richup.io): convite → jogadores → iniciar. O
 // texto do estado incompleto também mudou porque MENTIA: dizia "a partida começa com 2
-// jogadores", como se ela partisse sozinha ao chegar o segundo — quem começa é o anfitrião,
+// jogadores", como se ela partisse sozinha ao chegar o segundo — quem começa é o host,
 // e 2 é o mínimo, não o número.
 export function RoomLobby({
   room,
@@ -235,10 +237,9 @@ export function RoomLobby({
             <PlayerFace color={s.color} size={30} />
             <span className="text-starlight truncate flex-1 inline-flex items-center gap-2 min-w-0">
               <span className="truncate">{s.name}</span>
-              <PieceGlyph id={s.piece} size={14} className="text-starlight-muted/80 shrink-0" />
             </span>
             {s.uid === myUid && <Chip tone="gold">você</Chip>}
-            {s.isHost && <Chip>anfitrião</Chip>}
+            {s.isHost && <Chip>host</Chip>}
             {!s.connected && <Chip tone="alert">offline</Chip>}
             {isHost && !s.isHost && onKick && (
               <button
@@ -269,7 +270,7 @@ export function RoomLobby({
           {starting ? 'Iniciando…' : 'Iniciar partida'}
         </Button>
       ) : (
-        <p className="label text-starlight-muted text-center">Aguardando o anfitrião iniciar a partida…</p>
+        <p className="label text-starlight-muted text-center">Aguardando o host iniciar a partida…</p>
       )}
 
       {/* 4. Código de reentrada do PRÓPRIO assento (041, D-033/FR-030): visível desde o
@@ -298,7 +299,6 @@ export function TurnOrderReveal({ room, onDone }: { room: Room; onDone: () => vo
             <span className="display text-brass text-xl w-7 text-center tabular-nums">{i + 1}º</span>
             <PlayerFace color={s.color} size={30} />
             <span className="text-starlight truncate flex-1">{s.name}</span>
-            <PieceGlyph id={s.piece} size={14} className="text-starlight-muted/80 shrink-0" />
           </li>
         ))}
       </ol>

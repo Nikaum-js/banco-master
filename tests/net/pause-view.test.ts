@@ -52,12 +52,12 @@ describe('pauseBannerView (041)', () => {
     expect(view.tail).toBe('reconectar e o salvamento voltar')
   })
 
-  it('host fora: a frase muda para "o anfitrião voltar"', () => {
+  it('host fora: a frase muda para "o host voltar"', () => {
     const g = { ...jogo(), paused: pausedBy('disconnect') }
     const room = markDisconnected(sala(), 'tok-1') // tok-1 é o host
     const view = pauseBannerView(g, room)!
     expect(view.hostFora).toBe(true)
-    expect(view.tail).toBe('o anfitrião voltar')
+    expect(view.tail).toBe('o host voltar')
   })
 
   it('eliminado desconectado não aparece nos ausentes (D-029)', () => {

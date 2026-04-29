@@ -32,8 +32,9 @@ export type Player = {
 
 // --- Ponte com o motor (020): estado reativo dos painéis ---------------------
 // Paleta de token por assento (disjunta das cores de grupo). Espelhada em
-// `src/net/room.ts` (SEAT_COLORS), que é a fonte para a escolha no lobby.
-export const PLAYER_COLORS = ['#d9a650', '#a76bf5', '#06b6d4', '#14b8a6', '#d946ef', '#f97316', '#35d97b', '#4d8bf5']
+// `src/net/room.ts` (SEAT_COLORS), que é a fonte para a escolha no lobby — e a razão de
+// cada valor está lá (D-045: OKLCH, croma coeso, ordem por ponto-mais-distante).
+export const PLAYER_COLORS = ['#d9a650', '#3b8bd0', '#36dde7', '#00bca5', '#e77376', '#7b9d41', '#b665a2', '#b0a5ff']
 
 // Mapeia o GameState real → view-model `Player` dos painéis. PURO (testável).
 // A identidade (nome/cor) vem da SALA quando há uma (spec 038); sem sala, do fallback —

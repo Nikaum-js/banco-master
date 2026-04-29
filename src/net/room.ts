@@ -8,38 +8,17 @@
 // Clarifications). Ordem de turno = ordem de entrada (host = 1º assento); a rolagem de ordem
 // inicial pertence ao 038+ (FR-006).
 
-// Paleta de assentos — espelha `PLAYER_COLORS` de `src/boards/shared.tsx` (mantida aqui para
-// não acoplar a casca de rede à UI). 8 cores → no máximo 8 assentos (§11.1).
-// Catálogo de PEÇAS — uma por assento possível (§11.1 = até 8, FR-023). Rótulos
-// temáticos do tabuleiro "Cidades do Mundo"; a arte fica na UI, aqui só id + emblema.
+// Paleta de assentos — espelha `PLAYER_COLORS` de `game/ui/panels/playersView.ts` (mantida
+// aqui para não acoplar a casca de rede à UI). 8 cores → no máximo 8 assentos (§11.1).
 //
-// Menores do review de arquitetura (2026-07-25): o catálogo morava em `identity.ts` mas a
-// REGRA de unicidade da peça já morava aqui (`joinRoom` → 'piece-taken'), enquanto a cor
-// tinha catálogo e regra no mesmo arquivo. A fragmentação cobrava um `as PieceId` em
-// `identityOf`; agora `Seat.piece` é tipado e o cast some.
-export const PIECES = [
-  { id: 'aviao', label: 'Avião', glyph: '✈' },
-  { id: 'navio', label: 'Navio', glyph: '⚓' },
-  { id: 'trem', label: 'Trem', glyph: '🚂' },
-  { id: 'taxi', label: 'Táxi', glyph: '🚕' },
-  { id: 'balao', label: 'Balão', glyph: '🎈' },
-  { id: 'bussola', label: 'Bússola', glyph: '🧭' },
-  { id: 'mala', label: 'Mala', glyph: '🧳' },
-  { id: 'farol', label: 'Farol', glyph: '🗼' },
-] as const
-
-export type PieceId = (typeof PIECES)[number]['id']
-
-/**
- * Peça pelo id, com fallback. Uma resposta só: havia TRÊS lookups `PIECES.find(...)` com
- * três fallbacks diferentes (`'●'` no `LobbyScreen`, `PIECES[0]` no `PlayerName`,
- * `fallbackIdentity` no `identity.ts`) — a mesma peça aparecia diferente por tela.
- */
-export function pieceOf(id?: string): (typeof PIECES)[number] {
-  return PIECES.find((p) => p.id === id) ?? PIECES[0]
-}
-
-export const SEAT_COLORS = ['#d9a650', '#a76bf5', '#06b6d4', '#14b8a6', '#d946ef', '#f97316', '#35d97b', '#4d8bf5'] as const
+// A PEÇA (avião, navio, trem…) foi removida em D-044: era escolha sem consequência — nunca
+// chegou ao tabuleiro, onde o token sempre foi a carinha na cor do assento. Com ela fora, a
+// COR é o único distintivo entre jogadores, e por isso a paleta deixou de ser escolhida a
+// olho (D-045): as oito nascem em OKLCH com croma coeso (~0,13) e claridade escalonada
+// (0,62–0,82), e a ORDEM é por ponto-mais-distante — as mesas pequenas ficam com os pares
+// mais separados que a paleta permite (2 jogadores: ΔE 0,26; 4: 0,11; 8: 0,07, medidos no
+// PIOR caso entre visão típica, deuteranopia e protanopia).
+export const SEAT_COLORS = ['#d9a650', '#3b8bd0', '#36dde7', '#00bca5', '#e77376', '#7b9d41', '#b665a2', '#b0a5ff'] as const
 
 export const MIN_SEATS = 2
 export const MAX_SEATS = 8
@@ -51,7 +30,6 @@ export interface Seat {
   uid: string // ERA `token` (043, D-042) — identidade atestada pelo servidor, chave de reconexão
   name: string // nome exibido (livre)
   color: string // cor (única por sala)
-  piece?: PieceId // peça visual (única por sala, §12.5/spec 038); ausente em salas da 037
   isHost: boolean
   connected: boolean
   /** Código de reentrada (041, D-033) — estável pela vida do assento; sobrevive à perda do
@@ -96,13 +74,12 @@ export function redactRoom(room: Room): Room {
 }
 
 export type JoinResult = { ok: true; room: Room; seat: Seat } | { ok: false; reason: JoinError }
-export type JoinError = 'room-full' | 'color-taken' | 'piece-taken' | 'already-started' | 'unknown-uid' | 'kicked' | 'bad-code'
+export type JoinError = 'room-full' | 'color-taken' | 'invalid-color' | 'already-started' | 'unknown-uid' | 'kicked' | 'bad-code'
 
 export interface Identity {
   uid: string // ERA `token` (043, D-042) — emitido pelo servidor, nunca escolhido pelo participante
   name: string
   color: string
-  piece?: PieceId // escolhida no lobby (spec 038); opcional para compatibilidade com a 037
   /** Código de reentrada PRONTO (041, D-033/D12) — `room.ts` não tem RNG e não deveria
    * ganhar um; quem minta é quem já tem RNG (host) ou o `roomSession` na criação. Vazio nos
    * chamadores que não exercitam reentrada (determinístico, sem mock). */
@@ -123,42 +100,49 @@ export function hostSeat(room: Room): Seat {
 
 // Cria a sala com o host ocupando o 1º assento (FR-001). Cor livre entre as da paleta.
 export function createRoom(id: string, host: Identity): Room {
+  if (!isSeatColor(host.color)) throw new Error('invalid-color')
   return {
     id,
     status: 'lobby',
     seats: [{
-      playerId: seatIdFor(0), uid: host.uid, name: host.name, color: host.color, piece: host.piece,
+      playerId: seatIdFor(0), uid: host.uid, name: host.name, color: host.color,
       isHost: true, connected: true, reentryCode: host.reentryCode ?? '',
     }],
   }
 }
 
+/** A cor pedida é uma das oito da paleta? Comparação exata — a paleta é fechada (D-045). */
+export function isSeatColor(c: string): boolean {
+  return (SEAT_COLORS as readonly string[]).includes(c)
+}
+
 // Entrada por link (FR-002/005). Uid já assentado → reconexão (use `reattach`), não join.
-// Regras: sala cheia recusa; cor duplicada recusa; após o início, uid novo é recusado.
+// Regras: sala cheia recusa; cor fora da paleta recusa; cor duplicada recusa; após o início,
+// uid novo é recusado.
 export function joinRoom(room: Room, who: Identity): JoinResult {
   const existing = seatByUid(room, who.uid)
   if (existing) return { ok: true, room: markConnected(room, who.uid), seat: seatByUid(markConnected(room, who.uid), who.uid)! }
   if (room.status !== 'lobby') return { ok: false, reason: 'already-started' } // sem novos assentos após o início (FR-005, §11.2)
   if (room.seats.length >= MAX_SEATS) return { ok: false, reason: 'room-full' } // §11.1
+  // A cor precisa ser da PALETA antes de precisar ser única. Sem esta linha, a unicidade
+  // é só igualdade exata de string: `''` passa (e cai no fallback por índice de
+  // `identityOf`, que pode colidir com a cor de outro assento), e `#d9a651` passa ao lado
+  // do ouro `#d9a650` — indistinguíveis na mesa, distintos pro `===`. Como a paleta é
+  // fechada e derivada (D-045), aceitar cor de fora invalidaria a separação medida sob
+  // dicromacia que é a razão de ela existir. O lobby já só oferece as oito; esta é a
+  // guarda da AUTORIDADE, pro caso do pedido não vir do lobby.
+  if (!isSeatColor(who.color)) return { ok: false, reason: 'invalid-color' }
   if (room.seats.some((s) => s.color === who.color)) return { ok: false, reason: 'color-taken' } // cor única (§12.5)
-  if (who.piece && room.seats.some((s) => s.piece === who.piece)) return { ok: false, reason: 'piece-taken' } // peça única (§12.5 / FR-022)
   const seat: Seat = {
     playerId: seatIdFor(room.seats.length),
     uid: who.uid,
     name: who.name,
     color: who.color,
-    piece: who.piece,
     isHost: false,
     connected: true,
     reentryCode: who.reentryCode ?? '',
   }
   return { ok: true, room: { ...room, seats: [...room.seats, seat] }, seat }
-}
-
-// Peças ainda livres na sala — escolha única por sala, como a cor (§12.5 / FR-022).
-export function availablePieces(room: Room): PieceId[] {
-  const taken = new Set<string>(room.seats.map((s) => s.piece).filter(Boolean) as string[])
-  return PIECES.map((p) => p.id).filter((id) => !taken.has(id))
 }
 
 // Cores ainda disponíveis para escolha no lobby mínimo.
@@ -176,7 +160,7 @@ export function reattach(room: Room, uid: string): { ok: true; room: Room; seat:
   return { ok: true, room: next, seat: seatByUid(next, uid)! }
 }
 
-// Host remove um jogador ANTES do início (§11.1 / spec 038 FR-024). Libera cor e peça. O
+// Host remove um jogador ANTES do início (§11.1 / spec 038 FR-024). Libera a cor. O
 // host não se remove (FR-025), e depois do início ninguém é removido — expulsar mid-game
 // colidiria com D-016/princípio VII e exigiria ADR próprio.
 export function kickSeat(

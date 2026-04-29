@@ -12,7 +12,7 @@ export interface PauseBannerView {
   readonly ausentes: readonly Seat[] // quem está desconectado e trava a mesa (vazio se só 'persistence')
   readonly hostFora: boolean
   /** Como a frase termina após "Aguardando " (+ nomes, se houver): "reconectar", "o
-   * anfitrião voltar", "o salvamento voltar", ou a junção das duas causas com "e". */
+   * host voltar", "o salvamento voltar", ou a junção das duas causas com "e". */
   readonly tail: string
 }
 
@@ -27,7 +27,7 @@ export function pauseBannerView(game: GameState, room: Room | null): PauseBanner
   const hostFora = ausentes.some((s) => s.isHost)
 
   const clauses: string[] = []
-  if (paused.causes.includes('disconnect')) clauses.push(hostFora ? 'o anfitrião voltar' : 'reconectar')
+  if (paused.causes.includes('disconnect')) clauses.push(hostFora ? 'o host voltar' : 'reconectar')
   if (paused.causes.includes('persistence')) clauses.push('o salvamento voltar')
 
   return { ausentes, hostFora, tail: clauses.join(' e ') }

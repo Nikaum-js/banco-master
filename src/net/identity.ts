@@ -1,4 +1,4 @@
-// Identidade de exibição (spec 038, US2): playerId → nome, cor e peça.
+// Identidade de exibição (spec 038, US2): playerId → nome e cor.
 //
 // Vive na SALA, nunca no `GameState` (D-019): o snapshot é persistido a cada comando, e
 // nome dentro de `Player` viraria PII em repouso sem necessidade. A junção acontece na
@@ -7,17 +7,14 @@
 // O fallback sintético existe para que NENHUMA superfície precise de `if (multiplayer)`:
 // com ou sem sala, a UI pede a identidade e recebe algo exibível — que é como `p1..p8`
 // some da interface inteira de uma vez (FR-009).
-// O VOCABULÁRIO de assento (cores, peças e as regras de unicidade das duas) vive em
-// `./room`. Aqui fica só a projeção de EXIBIÇÃO: playerId → o que aparece na tela.
-import { PIECES, SEAT_COLORS, type PieceId, type Room } from './room'
-
-export { PIECES, type PieceId } // reexport: a UI já os importa daqui
+// O VOCABULÁRIO de assento (cores e a regra de unicidade delas) vive em `./room`. Aqui fica
+// só a projeção de EXIBIÇÃO: playerId → o que aparece na tela.
+import { SEAT_COLORS, type Room } from './room'
 
 export interface PlayerIdentity {
   playerId: string
   name: string
   color: string
-  piece: PieceId
 }
 
 // Índice do assento a partir do id serializável ('p3' → 2). O motor só conhece esses ids.
@@ -33,7 +30,6 @@ export function fallbackIdentity(playerId: string): PlayerIdentity {
     playerId,
     name: `Jogador ${i + 1}`,
     color: SEAT_COLORS[i % SEAT_COLORS.length],
-    piece: PIECES[i % PIECES.length].id,
   }
 }
 
@@ -46,8 +42,5 @@ export function identityOf(room: Room | null, playerId: string): PlayerIdentity 
     playerId,
     name: seat.name.trim() || fb.name, // nome vazio nunca chega à tela (FR-012)
     color: seat.color || fb.color,
-    piece: seat.piece ?? fb.piece,
   }
 }
-
-export { availablePieces } from './room' // a regra de unicidade é da SALA

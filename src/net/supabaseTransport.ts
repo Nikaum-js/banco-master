@@ -146,7 +146,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
   // Uma assinatura recusada num canal privado não é de graça: o Realtime derruba a CONEXÃO
   // inteira ("Unauthorized: You do not have permissions to read from this Channel topic"), e
   // junto vão `:lobby` e `:s:<uid>`, que estavam saudáveis. Enquanto o socket se restabelece,
-  // tudo o que o anfitrião difunde se perde — o convidado ficava para sempre em "Conectando…"
+  // tudo o que o host difunde se perde — o convidado ficava para sempre em "Conectando…"
   // esperando a resposta que já tinha passado. Medido em navegador: com `:play` fora do ar, o
   // convidado entra na sala normalmente; com ele batendo na porta, não entra. Era mais caro
   // insistir do que esperar.
@@ -222,7 +222,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
 
   // A permissão de ESCRITA de um canal privado é decidida no JOIN, não por mensagem — e fica
   // como está pelo resto da vida daquele canal (043, T045; medido contra infra real, e o
-  // defeito mais escondido da spec). O anfitrião assina `:lobby` dentro de `connect()`, que
+  // defeito mais escondido da spec). O host assina `:lobby` dentro de `connect()`, que
   // roda ANTES de `host.open()` gravar a linha da sala; naquele instante `room_host_uid()` é
   // NULL, a política de insert nega, e a negativa é cacheada. A partir daí TODO `publishRoom`
   // é descartado em silêncio — `send()` continua resolvendo "ok", nenhum log de erro sai, e o
@@ -250,14 +250,14 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
   // certo e não custa nada a quem nunca vai escrever.
   // Devolve promessa e o chamador ESPERA: quem grava a sala publica logo em seguida
   // (`ensureOpen`, host.ts), e publicar num canal ainda em join perde a mensagem — inclusive o
-  // auto-eco de que a própria tela do anfitrião depende para saber que a sala existe.
+  // auto-eco de que a própria tela do host depende para saber que a sala existe.
   async function reauthorizeLobbyAfterFirstWrite(): Promise<void> {
     if (lobbyReauthorized) return
     lobbyReauthorized = true
     // Solta o canal velho ANTES de montar o novo, e ESPERA: os dois têm o MESMO tópico, e um
     // `unsubscribe()` que chega depois do join do substituto faz o servidor tratar a saída
     // como saída do tópico — o canal novo fica joined do lado do cliente e não recebe mais
-    // nada. Foi assim que o anfitrião parou de enxergar os pedidos de assento: a difusão da
+    // nada. Foi assim que o host parou de enxergar os pedidos de assento: a difusão da
     // sala saía, mas o `join` do convidado nunca voltava.
     const stale = lobby
     await stale.unsubscribe().catch(() => {})
@@ -266,14 +266,14 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     // Reemite a última sala publicada. Ela QUASE CERTAMENTE se perdeu: `durableWrites` resolve
     // `saveRoom` no enfileiramento, não na gravação (041, D8/contrato §4), então `ensureOpen`
     // publica bem antes de a linha existir — e naquele instante a autoridade ainda não tinha
-    // permissão de escrita neste canal. Sem esta reemissão, a primeira sala do anfitrião some
+    // permissão de escrita neste canal. Sem esta reemissão, a primeira sala do host some
     // para sempre: não há nada que a publique de novo, e o convidado espera indefinidamente
     // por uma difusão que já aconteceu no vazio.
     if (lastPublishedRoom) lobby.send({ type: 'broadcast', event: EVENT.room, payload: lastPublishedRoom }).catch(() => {})
   }
 
   // O status do canal ANTIGO não pode votar: ele ainda emite ao ser descartado, e um
-  // `'CLOSED'` atrasado derrubava o `connect()` do anfitrião para 'reconnecting' — a tela dele
+  // `'CLOSED'` atrasado derrubava o `connect()` do host para 'reconnecting' — a tela dele
   // nem chegava a abrir a sala. Só a tentativa CORRENTE fala pelo `:lobby`.
   function subscribeLobby(): Promise<void> {
     const attempt = lobby
@@ -440,7 +440,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     // carimba `auth.uid()` no servidor e difunde ao lobby por conta própria (`realtime.send`).
     async requestJoin(who: JoinRequest): Promise<void> {
       const { error } = await supabase.rpc('request_seat', {
-        room_id: roomId, name: who.name, color: who.color, piece: who.piece ?? null,
+        room_id: roomId, name: who.name, color: who.color,
       })
       if (error) throw error
     },
@@ -496,7 +496,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     // (Postgres combina SELECT+UPDATE — "quais linhas você vê" AND "quais dessas você
     // atualiza"), e `rooms` nunca teve select policy (D5). Sem RPC, TODO upsert contra uma
     // linha JÁ existente afetava 0 linhas, em silêncio — a sala nunca era realmente salva.
-    // `write_room` valida "é o anfitrião" por dentro e grava bypassando RLS (mesmo padrão de
+    // `write_room` valida "é o host" por dentro e grava bypassando RLS (mesmo padrão de
     // `request_seat`/`reattach_by_code`). Upsert PARCIAL preservado: só toca `status`/`seats`,
     // nunca `game`/`seq`/`secrets` — a função só declara essas duas colunas no `do update set`.
     async saveRoom(room: Room): Promise<void> {

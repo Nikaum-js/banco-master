@@ -32,7 +32,7 @@ export interface DiceArenaView {
    * Existe separado de `canRoll`/`canJailDecide` porque nem toda ação da zona era filtrada por
    * ele — `canFinalize` e `purchase` saíam só do `GameState`, então quem observava via
    * "Finalizar turno" e "Comprar R$ X" ACIONÁVEIS, e o clique virava um comando que o
-   * anfitrião descartava em silêncio. Com um flag só, a zona toda passa a responder à mesma
+   * host descartava em silêncio. Com um flag só, a zona toda passa a responder à mesma
    * pergunta, e um botão novo não nasce fora da regra por esquecimento.
    */
   readonly isActor: boolean

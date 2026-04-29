@@ -151,7 +151,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     // até a próxima ressincronização.
     const pub = redactAccepted(cmd)
     if (pub !== cmd) {
-      // O DONO da carta vê a própria — e o ANFITRIÃO vê tudo (SRS §10.3, exceção conhecida:
+      // O DONO da carta vê a própria — e o HOST vê tudo (SRS §10.3, exceção conhecida:
       // o navegador dele roda a autoridade e por isso já conhece baralho e mãos por inteiro —
       // isto só torna a visão do PRÓPRIO client dele consistente com o que `loadSnapshot` já
       // lhe dá num resync, em vez de ficar redigida até o próximo). Ambas ANTES da pública —
@@ -198,7 +198,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   function handleJoinRequest(who: JoinRequest, fromUid: string): void {
     const taken = new Set(room.seats.map((s) => s.reentryCode))
     const result = joinRoom(room, {
-      uid: fromUid, name: who.name, color: who.color, piece: who.piece,
+      uid: fromUid, name: who.name, color: who.color,
       reentryCode: newReentryCode(rng, taken), // room.ts não tem RNG (D12) — o host minta
     })
     if (!result.ok) {
@@ -348,7 +348,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
         room = snap.room
       } else {
         // Sem partida ainda (lobby): a sala com que esta autoridade foi construída pode vir de
-        // `Client.room()`, que NUNCA carrega código (T023) — é o caso do anfitrião que dá F5
+        // `Client.room()`, que NUNCA carrega código (T023) — é o caso do host que dá F5
         // antes de iniciar. A prévia é íntegra para a autoridade (T043/D-043), e é dela que os
         // códigos voltam; sem isto o `taken` de `newReentryCode` mintaria contra um conjunto de
         // vazios, e a sala em memória divergiria da linha persistida.

@@ -7,10 +7,33 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { Button } from '@/game/ui/primitives'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
-import { PieceGlyph } from '../pieceGlyphs'
 import { DepartureFlap } from '../departureFlap'
 import { EntryPanel, EntryStage, OrnamentRule } from '../entryShell'
 import { COMMIT_SHA, MAX_PLAYERS, NAME_MAX, STATS, TAGLINE, useHomeForm, type HomeActions } from './homeShared'
+
+// Bússola do CTA — puramente decorativa (gira no hover). Ficava no catálogo de peças, que
+// saiu com D-044; a arte veio junto pra cá porque o botão é o único lugar que a usava.
+function CompassGlyph({ size = 17, className }: { size?: number; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="16" cy="16" r="12.2" />
+      <path d="M16 3.8v2.4M28.2 16h-2.4M16 28.2v-2.4M3.8 16h2.4" />
+      <path d="M21.9 10.1 18 18l-7.9 3.9L14 14Z" />
+      <circle cx="16" cy="16" r="1.4" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
 
 const WORDMARK = [
   { text: 'Banco', tone: 'text-starlight' },
@@ -121,8 +144,7 @@ export function HomeAtlas(actions: HomeActions) {
 
           <div className="relative">
             <Button variant="ghost" onClick={f.create} className="cta-embark group w-full py-3 text-sm gap-2.5">
-              <PieceGlyph
-                id="bussola"
+              <CompassGlyph
                 size={17}
                 className="text-brass transition-transform duration-500 ease-[var(--ease-paper)] group-hover:rotate-[140deg]"
               />

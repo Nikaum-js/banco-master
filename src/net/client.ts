@@ -97,7 +97,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
       joinError = null // assento concedido (ou reanexado) → limpa recusa anterior
       return
     }
-    // Meu assento sumiu da sala publicada: fui removido pelo anfitrião (spec 038, FR-024).
+    // Meu assento sumiu da sala publicada: fui removido pelo host (spec 038, FR-024).
     // Volto a ser um visitante sem assento — e um novo pedido fica sujeito às regras da sala
     // (FR-026), em vez de o cliente seguir se achando sentado.
     playerId = null
@@ -168,7 +168,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
           // quem chamou JÁ SABE que existe — viu a sala em `playing`, ou viu uma lacuna de
           // `seq` — e "ausente" só pode ser CEDO DEMAIS: `durableWrites` resolve a promessa de
           // `saveSnapshot` quando o pedido entra na fila, não quando a linha commita (D8,
-          // contrato §4), então o anfitrião anuncia `playing` antes de o `game` estar gravado.
+          // contrato §4), então o host anuncia `playing` antes de o `game` estar gravado.
           // Tratar isso como "não há partida" prendia o convidado no lobby PARA SEMPRE — nada
           // mais o acordaria, porque a difusão de sala já tinha passado. Cai no mesmo retry com
           // backoff dos erros de rede, que é onde este caso sempre pertenceu.

@@ -23,7 +23,7 @@ import type { GameAction, PlayerAction } from '@/game/commands'
 import type { GameState } from '@/game/turn/types'
 import type { Resolved } from './recorder'
 import type { Secrets } from './perspective'
-import type { JoinError, PieceId, PublicRoom, Room } from './room'
+import type { JoinError, PublicRoom, Room } from './room'
 
 // Comando em trânsito guest→host: carrega o `playerId` DECLARADO pelo remetente. O host
 // confere contra a identidade real da conexão — o `uid` da conexão que entregou o comando,
@@ -82,7 +82,6 @@ export interface CommandFailure {
 export interface JoinRequest {
   name: string
   color: string
-  piece?: PieceId // peça visual escolhida no lobby (spec 038); única por sala
 }
 
 // Status de conexão da PRÓPRIA sessão (041, contrato §1). Só dois valores: "conectado
@@ -141,7 +140,7 @@ export interface Transport {
   onJoinRejected(cb: (uid: string, reason: JoinError) => void): Unsubscribe
 
   // Reanexação por CÓDIGO (041, D-033 → 043, D4) — não passa pela autoridade: vale para
-  // TODOS os assentos, inclusive o do anfitrião, porque o caso que justifica existir é
+  // TODOS os assentos, inclusive o do host, porque o caso que justifica existir é
   // exatamente aquele em que não há autoridade viva para autorizar (celular sem bateria).
   // Único ponto do port com uma regra de domínio implementada no SERVIDOR (`reattach_by_code`,
   // security definer) — o espelho puro continua em `room.ts` para o adapter local e os testes.

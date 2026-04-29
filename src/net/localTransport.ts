@@ -198,7 +198,7 @@ export class LocalHub {
 
   // Espelho local da RPC `reattach_by_code` (043, D4) — mesmo reducer PURO de `room.ts` que a
   // SQL replica no servidor. Sem checagem de autoridade: é a ÚNICA regra de domínio que roda
-  // sem depender de quem está online, de propósito (o caso que justifica é o anfitrião FORA).
+  // sem depender de quem está online, de propósito (o caso que justifica é o host FORA).
   reattachByCodeRpc(code: string, uid: string): { ok: true } | { ok: false; reason: 'bad-code' } {
     if (!this.storedRoom) return { ok: false, reason: 'bad-code' }
     const result = reattachByCode(this.storedRoom, code, uid)
@@ -211,9 +211,9 @@ export class LocalHub {
   }
 
   // Autoridade da sala = dono do assento `isHost` na ÚLTIMA sala persistida (043, D2/D3 —
-  // espelha a política SQL "update só o uid do assento de anfitrião"). Por `isHost`, não por
+  // espelha a política SQL "update só o uid do assento de host"). Por `isHost`, não por
   // posição: `shuffleSeatOrder` reordena o array para a ordem de turno e não garante que o
-  // anfitrião fique em `seats[0]`. `null` antes de qualquer `saveRoom`/`saveSnapshot` — nesse
+  // host fique em `seats[0]`. `null` antes de qualquer `saveRoom`/`saveSnapshot` — nesse
   // instante NINGUÉM é autoridade, e a checagem abaixo recusa por padrão (fail-closed).
   private currentHostUid(): string | null {
     const room = this.storedRoom ?? this.lastRoom
@@ -235,7 +235,7 @@ export class LocalHub {
   }
 
   // Paridade de recusa: só a autoridade difunde (043, T013) — espelha a política de
-  // `room:<id>:play`, escrevível só pelo uid do assento de anfitrião.
+  // `room:<id>:play`, escrevível só pelo uid do assento de host.
   broadcast(cmd: AcceptedCommand, fromUid: string): void {
     if (fromUid !== this.currentHostUid()) return
     for (const conn of this.conns.values()) {

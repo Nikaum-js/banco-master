@@ -10,7 +10,7 @@
 // resta é o que de fato é React: ler a URL, assinar a sessão e escolher a tela.
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { connectMultiplayer } from '@/net/connectStore'
-import { hostSeat, type PieceId } from '@/net/room'
+import { hostSeat } from '@/net/room'
 import { parseRoomLink, roomLink } from '@/net/session'
 import { createRoomSession, type RoomSession } from '@/net/roomSession'
 import { setActiveSession } from '@/net/activeSession'
@@ -132,7 +132,7 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
   if (phase === 'error') {
     const msg =
       error === 'already-started'
-        ? 'A partida desta sala já começou. Peça um link novo ao anfitrião.'
+        ? 'A partida desta sala já começou. Peça um novo link ao host.'
         : error === 'ended'
           ? 'Esta partida já terminou. Crie uma sala nova para jogar de novo.'
           : String(error ?? 'Erro desconhecido.')
@@ -148,8 +148,8 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
   if (phase === 'identity') {
     // Criar a sala troca a URL para o link dela — assim um F5 do host cai no fluxo de
     // reentrada e reassume a autoridade (FR-015).
-    const createAndHost = (name: string, color: string, piece: PieceId): void => {
-      void session.create({ name, color, piece }).then((id) => {
+    const createAndHost = (name: string, color: string): void => {
+      void session.create({ name, color }).then((id) => {
         if (id) window.history.replaceState(null, '', roomLink(id, window.location.origin))
       })
     }
@@ -161,14 +161,14 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
         cta="Confirmar e entrar"
         busy={busy}
         error={error}
-        onSubmit={(name, color, piece) => session.requestSeat({ name, color, piece })}
+        onSubmit={(name, color) => session.requestSeat({ name, color })}
       />
     ) : (
       <IdentityForm
         title="Criar sala"
-        subtitle="Você será o anfitrião — confirme seu nome e escolha sua aparência"
+        subtitle="Você será o host. Escolha seu nome e como vai aparecer na mesa"
         room={null}
-        cta="Confirmar e criar sala"
+        cta="Criar sala"
         busy={busy}
         error={error}
         onSubmit={createAndHost}

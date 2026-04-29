@@ -11,7 +11,7 @@
 // Aqui o transporte entra por PARÂMETRO. `OnlineGate` vira uma assinatura.
 import { createClient, type Client } from './client'
 import { createHost, type Host, type HostOptions } from './host'
-import { createRoom, hostSeat, newReentryCode, seatByUid, type JoinError, type PieceId, type Room } from './room'
+import { createRoom, hostSeat, newReentryCode, seatByUid, type JoinError, type Room } from './room'
 import { newRoomId } from './session'
 import type { Transport, Unsubscribe } from './transport'
 import { nullTelemetry, type Telemetry, type TelemetryEvent } from '@/telemetry/port'
@@ -25,7 +25,6 @@ export type SessionPhase = 'identity' | 'lobby' | 'order' | 'playing' | 'error' 
 export interface SessionIdentity {
   name: string
   color: string
-  piece: PieceId
 }
 
 export interface RoomSessionState {
@@ -165,7 +164,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
     emit({
       // `room ?? state.room` (043, T045): o client só conhece a sala DEPOIS de recebê-la por
       // difusão ou prévia; a autoridade a conhece desde que a criou. Deixar o `null` do client
-      // sobrescrever apagava a sala recém-criada e a tela do anfitrião voltava para
+      // sobrescrever apagava a sala recém-criada e a tela do host voltava para
       // "Conectando…" — a sessão não pode desaprender o que já sabe.
       room: room ?? state.room,
       error: joinError,
@@ -255,7 +254,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
     },
 
     // 043, D4: por RPC (`transport.reattach`), não mais um `JoinRequest` com código — reanexar
-    // deixou de ser um tipo de pedido de assento. `name`/`color`/`piece` ficam de fora (contrato
+    // deixou de ser um tipo de pedido de assento. `name`/`color` ficam de fora (contrato
     // §3.2): a identidade visual pertence ao assento, não a quem está reabrindo. Sucesso não
     // precisa tocar `phase`/`room` aqui — `client.ts` reage sozinho ao aviso de reanexação
     // (ressincroniza, descobre o próprio assento) e `syncFromClient` segue a fase dali. Recusa
@@ -286,7 +285,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
 
     kick(target: string): void {
       const r = host?.kick(target)
-      if (r && !r.ok) emit({ error: r.reason === 'is-host' ? 'O anfitrião não pode se remover.' : String(r.reason) })
+      if (r && !r.ok) emit({ error: r.reason === 'is-host' ? 'O host não pode se remover.' : String(r.reason) })
     },
 
     orderSeen: () => emit({ phase: 'playing' }),

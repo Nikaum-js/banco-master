@@ -12,12 +12,44 @@ describe('sala e identidade', () => {
     expect(room.seats[0]).toMatchObject({ playerId: 'p1', isHost: true, connected: true })
   })
 
+  it('host também precisa escolher uma cor da paleta (D-045)', () => {
+    expect(() => createRoom('r1', { ...host, color: '#ff0000' })).toThrow('invalid-color')
+  })
+
   it('cor é única por sala; duplicata é recusada (§12.5)', () => {
     const room = createRoom('r1', host)
     const dup = joinRoom(room, { uid: 'g', name: 'Amigo', color: SEAT_COLORS[0] })
     expect(dup).toEqual({ ok: false, reason: 'color-taken' })
     const ok = joinRoom(room, { uid: 'g', name: 'Amigo', color: SEAT_COLORS[1] })
     expect(ok.ok).toBe(true)
+  })
+
+  // A unicidade sozinha é só `===` entre strings. Estes casos passariam por ela e ainda
+  // assim quebrariam a mesa: cor vazia (que cai no fallback por índice e pode colidir) e
+  // cor a um dígito da de outro jogador. Por isso a paleta é fechada ANTES da unicidade.
+  it.each([
+    ['vazia', ''],
+    ['quase igual ao ouro', '#d9a651'],
+    ['fora da paleta', '#ff0000'],
+    ['ouro em maiúsculas', '#D9A650'],
+  ])('cor %s é recusada mesmo sem estar tomada (D-045)', (_caso, cor) => {
+    const room = createRoom('r1', host)
+    expect(joinRoom(room, { uid: 'g', name: 'Amigo', color: cor })).toEqual({
+      ok: false,
+      reason: 'invalid-color',
+    })
+  })
+
+  it('as oito da paleta entram, uma por assento, sem repetir (§12.5 + D-045)', () => {
+    let room = createRoom('r1', host)
+    for (let i = 1; i < MAX_SEATS; i++) {
+      const r = joinRoom(room, { uid: `g${i}`, name: `G${i}`, color: SEAT_COLORS[i] })
+      expect(r.ok).toBe(true)
+      if (r.ok) room = r.room
+    }
+    const cores = room.seats.map((s) => s.color)
+    expect(new Set(cores).size).toBe(MAX_SEATS)
+    expect(cores.every((c) => (SEAT_COLORS as readonly string[]).includes(c))).toBe(true)
   })
 
   it('nome duplicado é permitido (Clarifications)', () => {
