@@ -1,24 +1,19 @@
 // Camada de modais centrais (022). Único ponto com efeito desta fatia: consome
 // activeModal(game) (puro) e dispara os comandos já existentes do store. Reusa o
 // vocabulário visual dos popovers de propriedade (cartão coffee + header com stripe).
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
 import { activeModal, type ModalView, type HandCardView } from './activeModal'
-import type { Square, PropertySquare, AirportSquare } from '@/lib/boardData'
-import { BOARD } from '@/lib/boardData'
-
-type PropertyOrAirportOrUtility = Extract<Square, { kind: 'property' | 'airport' | 'utility' }>
-import {
-  GROUP_COLOR,
-  SquareIcon,
-  CompactRent,
-  CompactRentText,
-  computeRents,
-} from '@/boards/shared'
+import { BOARD, type PropertySquare } from '@/lib/boardData'
+import { sideOf } from '@/game/turn/turnMachine'
+import { AUCTION_WINDOW } from '@/game/economy/purchase'
+import { RARITY_COLOR, RARITY_LABEL, cardLabel, CARD_DESC } from '@/game/ui/cards/cardMeta'
+import { useBusTicketUI } from '@/game/ui/busTicketUI'
+import { GROUP_COLOR, SquareIcon, PlayerFace, computeRents, PLAYER_COLORS } from '@/boards/shared'
 import { buildCost } from '@/game/economy/construction'
-import { RARITY_COLOR, cardLabel, CARD_DESC } from '@/game/ui/cards/cardMeta'
+import { GavelIcon, CoinIcon, HouseIcon, HotelIcon } from '@/game/ui/icons'
 
 // Botão de ação do modal (dourado = primário; coffee = secundário).
 function ActionBtn({
@@ -47,14 +42,17 @@ function ActionBtn({
 }
 
 // Cartão central — shell coffee idêntico ao dos popovers, mas centralizado.
-function Card({ children }: { children: React.ReactNode }) {
+function Card({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.92, y: 8 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.92, y: 8 }}
       transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-      className="w-[300px] max-w-[90vw] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden"
+      className={cn(
+        'max-w-[92vw] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden',
+        wide ? 'w-[360px]' : 'w-[300px]',
+      )}
       onClick={(e) => e.stopPropagation()}
     >
       {children}
@@ -81,114 +79,45 @@ function Header({ bg, icon, title, subtitle }: { bg: string; icon: React.ReactNo
   )
 }
 
-// Corpo (deed) da propriedade/aeroporto/utilidade em compra — reusa CompactRent.
-function PurchaseBody({ square, price }: { square: PropertyOrAirportOrUtility; price: number }) {
-  if (square.kind === 'property') {
-    const p = square as PropertySquare
-    const rents = computeRents(p.rent)
-    return (
-      <div className="px-3.5 py-3">
-        <p className="label text-gold mb-2" style={{ fontSize: '9px' }}>Aluguel</p>
-        <div className="flex flex-col gap-0.5">
-          <CompactRent label="Base" value={rents.base} active />
-          <CompactRent label="1 casa" value={rents.house1} />
-          <CompactRent label="2 casas" value={rents.house2} />
-          <CompactRent label="3 casas" value={rents.house3} />
-          <CompactRent label="4 casas" value={rents.house4} />
-          <CompactRent label="Hotel" value={rents.hotel} />
-          <CompactRent label="Arranha-céu" value={rents.skyscraper} accent />
-        </div>
-        <div className="mt-3 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-0.5">
-          <CompactRent label="Preço" value={price} muted />
-          <CompactRent label="Casa" value={buildCost(p)} muted />
-          <CompactRent label="Hipoteca" value={Math.floor(price / 2)} muted />
-        </div>
-      </div>
-    )
-  }
-  if (square.kind === 'airport') {
-    return (
-      <div className="px-3.5 py-3">
-        <p className="label text-gold mb-2" style={{ fontSize: '9px' }}>Aluguel por aeroportos possuídos</p>
-        <div className="flex flex-col gap-0.5">
-          <CompactRent label="1 aeroporto" value={25} />
-          <CompactRent label="2 aeroportos" value={50} />
-          <CompactRent label="3 aeroportos" value={100} />
-          <CompactRent label="4 aeroportos" value={200} accent />
-        </div>
-        <div className="mt-3 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-0.5">
-          <CompactRent label="Preço" value={price} muted />
-          <CompactRent label="Hipoteca" value={Math.floor(price / 2)} muted />
-        </div>
-      </div>
-    )
-  }
-  // utility
-  return (
-    <div className="px-3.5 py-3">
-      <p className="label text-gold mb-2" style={{ fontSize: '9px' }}>Aluguel baseado nos dados</p>
-      <div className="flex flex-col gap-0.5">
-        <CompactRentText label="1 utilidade" value="4× os dados" />
-        <CompactRentText label="2 utilidades" value="10× os dados" />
-        <CompactRentText label="3 utilidades" value="20× os dados" accent />
-      </div>
-      <div className="mt-3 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-0.5">
-        <CompactRent label="Preço" value={price} muted />
-        <CompactRent label="Hipoteca" value={Math.floor(price / 2)} muted />
-      </div>
-    </div>
-  )
-}
-
-function headerForSquare(square: PropertyOrAirportOrUtility): { bg: string; icon: React.ReactNode; title: string; subtitle?: string } {
-  if (square.kind === 'property') {
-    const p = square as PropertySquare
-    const color = GROUP_COLOR[p.group]
-    return {
-      bg: `linear-gradient(180deg, ${color} 0%, ${color} 60%, color-mix(in srgb, ${color} 75%, #000) 100%)`,
-      icon: (
-        <div className="w-9 h-9 rounded-full bg-coffee-900 border-2 border-coffee-950 overflow-hidden shadow-[0_2px_4px_rgba(0,0,0,0.55)]">
-          <img src={`https://flagcdn.com/${p.uf.toLowerCase()}.svg`} alt={p.uf} className="w-full h-full object-cover" draggable={false} />
-        </div>
-      ),
-      title: p.name,
-      subtitle: p.capital,
-    }
-  }
-  if (square.kind === 'airport') {
-    return {
-      bg: 'linear-gradient(180deg, #d4af37 0%, #b8941f 100%)',
-      icon: <SquareIcon square={square} size={32} />,
-      title: square.name,
-      subtitle: (square as AirportSquare).iata,
-    }
-  }
-  const accent = square.icon === 'fuel' ? '#22c55e' : square.icon === 'bolt' ? '#ffd97a' : '#fb923c'
-  return {
-    bg: `linear-gradient(180deg, ${accent} 0%, color-mix(in srgb, ${accent} 70%, #000) 100%)`,
-    icon: <SquareIcon square={square} size={32} />,
-    title: square.name,
-    subtitle: 'Utilidade',
-  }
-}
-
 export function ModalLayer() {
   const game = useGameStore((s) => s.game)
-  const buyProperty = useGameStore((s) => s.buyProperty)
-  const declineProperty = useGameStore((s) => s.declineProperty)
   const placeBid = useGameStore((s) => s.placeBid)
-  const passBid = useGameStore((s) => s.passBid)
   const discardCard = useGameStore((s) => s.discardCard)
   const chooseCardShortcut = useGameStore((s) => s.chooseCardShortcut)
   const chooseBusMove = useGameStore((s) => s.chooseBusMove)
   const chooseTripleDest = useGameStore((s) => s.chooseTripleDest)
   const confirmCardReveal = useGameStore((s) => s.confirmCardReveal)
+  const chooseBusRide = useGameStore((s) => s.chooseBusRide)
+  const useBusTicketCmd = useGameStore((s) => s.useBusTicket)
+  const busArmed = useBusTicketUI((s) => s.armed)
+  const disarmBus = useBusTicketUI((s) => s.disarm)
 
   const view = activeModal(game)
   const activeId = game.players[game.turnOrder[game.activeSeat]].id
+  const activePlayer = game.players[game.turnOrder[game.activeSeat]]
+  // Seletor de uso de ticket GUARDADO (carta): aberto pelo HUD, só antes de rolar.
+  const showBusArmed = busArmed && game.turn.state === 'aguardando-rolagem' && activePlayer.busTickets >= 1 && sideOf(activePlayer.pos) !== null
 
   return (
     <AnimatePresence>
+      {showBusArmed && (
+        <motion.div
+          key="bus-armed-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-coffee-950/70 backdrop-blur-[2px] p-4"
+        >
+          <BusPicker
+            fromPos={activePlayer.pos}
+            title="Usar Bus Ticket"
+            subtitle="Vá para uma casa do mesmo lado"
+            onPick={(pos) => { useBusTicketCmd(pos); disarmBus() }}
+            onCancel={disarmBus}
+          />
+        </motion.div>
+      )}
       {view && (
         <motion.div
           key="modal-backdrop"
@@ -198,19 +127,17 @@ export function ModalLayer() {
           transition={{ duration: 0.15 }}
           className="fixed inset-0 z-[60] flex items-center justify-center bg-coffee-950/70 backdrop-blur-[2px] p-4"
         >
-          {view.kind === 'purchase' && (
-            <Card>
-              <Header {...headerForSquare(view.square as PropertyOrAirportOrUtility)} />
-              <PurchaseBody square={view.square as PropertyOrAirportOrUtility} price={view.price} />
-              <div className="px-3.5 pb-3.5 pt-1 flex gap-2">
-                <ActionBtn onClick={buyProperty}>Comprar</ActionBtn>
-                <ActionBtn onClick={declineProperty} variant="secondary">Recusar → leilão</ActionBtn>
-              </div>
-            </Card>
+          {view.kind === 'bus-ride' && (
+            <BusPicker
+              fromPos={view.pos}
+              title="Bus Ticket"
+              subtitle="Você parou no ônibus — escolha aonde ir (mesmo lado)"
+              onPick={(pos) => chooseBusRide(pos)}
+            />
           )}
 
           {view.kind === 'auction' && (
-            <AuctionCard view={view} activeId={activeId} placeBid={placeBid} passBid={passBid} />
+            <AuctionCard view={view} activeId={activeId} placeBid={placeBid} />
           )}
 
           {view.kind === 'card-discard' && (
@@ -238,24 +165,45 @@ export function ModalLayer() {
           )}
 
           {view.kind === 'card-reveal' && (
-            <Card>
-              <Header
-                bg={`linear-gradient(180deg, ${RARITY_COLOR[view.rarity]} 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 70%, #000) 100%)`}
-                icon={null}
-                title={view.deckId === 'acaso' ? 'Acaso' : 'Tesouro'}
-                subtitle={view.mode === 'mao' ? 'Vai para a sua mão' : 'Efeito imediato'}
-              />
-              <div className="px-3.5 py-4 flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="shrink-0 w-3 h-3 rounded-full" style={{ background: RARITY_COLOR[view.rarity] }} aria-hidden />
-                  <span className="display text-cream text-lg leading-none">{cardLabel(view.effect)}</span>
-                </div>
-                <p className="text-cream-muted text-sm leading-snug">{CARD_DESC[view.effect] ?? 'Carta sorteada.'}</p>
-                <div className="pt-1">
-                  <ActionBtn onClick={() => confirmCardReveal()}>Continuar</ActionBtn>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 10, rotateZ: -2 }}
+              animate={{ opacity: 1, scale: 1, y: 0, rotateZ: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-[300px] max-w-[90vw] bg-coffee-800 rounded-[var(--radius-card)] overflow-hidden border-2"
+              style={{ borderColor: RARITY_COLOR[view.rarity], boxShadow: `0 12px 40px rgba(0,0,0,0.55), 0 0 22px color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 45%, transparent)` }}
+            >
+              {/* Faixa da raridade */}
+              <div
+                className="px-4 py-2.5 flex items-center justify-between"
+                style={{ background: `linear-gradient(180deg, ${RARITY_COLOR[view.rarity]} 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 75%, #000) 100%)` }}
+              >
+                <span className="display text-coffee-950 text-sm leading-none tracking-[0.2em] uppercase">{view.deckId === 'acaso' ? 'Acaso' : 'Tesouro'}</span>
+                <span className="label text-coffee-950/85" style={{ fontSize: '9px' }}>{RARITY_LABEL[view.rarity]}</span>
+              </div>
+
+              {/* Corpo */}
+              <div className="px-5 pt-7 pb-5 flex flex-col items-center gap-5">
+                <h2 className="display text-cream text-3xl leading-[0.95] text-center">{cardLabel(view.effect)}</h2>
+                <div className="w-full">
+                  <div className="flex items-center gap-2 justify-center mb-2">
+                    <span className="h-px flex-1 bg-coffee-500/50" />
+                    <span className="label text-gold" style={{ fontSize: '9px' }}>O que faz</span>
+                    <span className="h-px flex-1 bg-coffee-500/50" />
+                  </div>
+                  <p className="text-cream text-sm leading-snug text-center">{CARD_DESC[view.effect] ?? 'Carta sorteada.'}</p>
                 </div>
               </div>
-            </Card>
+
+              {/* Rodapé */}
+              <div className="px-4 py-3 border-t-2 border-coffee-950 bg-coffee-900/60">
+                <p className="label text-cream-muted text-center mb-2" style={{ fontSize: '9px' }}>vai para a sua mão</p>
+                <div className="flex">
+                  <ActionBtn onClick={() => confirmCardReveal()}>Guardar na mão</ActionBtn>
+                </div>
+              </div>
+            </motion.div>
           )}
 
           {view.kind === 'bus-move' && (
@@ -307,6 +255,118 @@ export function ModalLayer() {
   )
 }
 
+// Fileira do MESMO LADO (a única para onde o Bus Ticket pode ir) — uma faixa de
+// casas como um trecho do tabuleiro: faixa de cor do grupo, peões e nº da casa.
+// A casa atual fica marcada; as demais são clicáveis. Tooltip mostra o nome.
+function SideRow({ fromPos, onPick }: { fromPos: number; onPick: (pos: number) => void }) {
+  const players = useGameStore((s) => s.game.players)
+  const turnOrder = useGameStore((s) => s.game.turnOrder)
+  const activeSeat = useGameStore((s) => s.game.activeSeat)
+  const activeIdx = turnOrder[activeSeat] // índice em players do jogador da vez
+  const side = sideOf(fromPos)
+  const cells = BOARD.filter((sq) => sideOf(sq.pos) === side).reverse() // casas do lado, na ordem do tabuleiro (de trás pra frente)
+  // Rostos por casa (peão = carinha, nunca bolinha): cor por assento + destaque do jogador da vez.
+  const facesAt: Record<number, { color: string; active: boolean }[]> = {}
+  players.forEach((p, i) => {
+    if (p.eliminated) return
+    ;(facesAt[p.pos] ??= []).push({ color: PLAYER_COLORS[i % PLAYER_COLORS.length], active: i === activeIdx })
+  })
+  return (
+    <div className="flex gap-1 justify-center overflow-x-auto pb-1 bg-coffee-950/40 rounded-[var(--radius-sharp)] p-1.5">
+      {cells.map((sq) => {
+        const isFrom = sq.pos === fromPos
+        const isProp = sq.kind === 'property'
+        const stripe = isProp ? GROUP_COLOR[(sq as PropertySquare).group]
+          : sq.kind === 'airport' || sq.kind === 'utility' ? '#d4af37' : 'transparent'
+        const price = 'price' in sq ? sq.price : null
+        const faces = facesAt[sq.pos] ?? []
+        return (
+          <button
+            key={sq.pos}
+            type="button"
+            disabled={isFrom}
+            onClick={() => onPick(sq.pos)}
+            title={sq.name}
+            className={cn(
+              'relative shrink-0 w-[60px] h-[112px] rounded-[4px] border flex flex-col overflow-hidden transition-colors',
+              isFrom ? 'border-cream bg-coffee-600 cursor-default' : 'border-gold/70 bg-coffee-900/60 hover:bg-gold/25 hover:border-gold cursor-pointer',
+            )}
+          >
+            <span className="h-2 w-full shrink-0" style={{ background: stripe }} />
+            <span className="flex-1 flex flex-col items-center justify-center gap-0.5 px-1 text-center min-h-0">
+              {/* Propriedade = bandeira do país; demais tipos = glifo da casa (acaso/Tesouro/aeroporto/utilidade/taxa/cantos) */}
+              {isProp ? (
+                <span
+                  className="rounded-full border border-coffee-950/70 overflow-hidden shrink-0"
+                  style={{ width: 20, height: 20, boxShadow: 'inset 0 0 0 1px rgba(212,175,55,0.5)' }}
+                >
+                  <img
+                    src={`https://flagcdn.com/${(sq as PropertySquare).uf.toLowerCase()}.svg`}
+                    alt={(sq as PropertySquare).uf}
+                    className="w-full h-full object-cover block"
+                    draggable={false}
+                  />
+                </span>
+              ) : (
+                <span className="text-gold leading-none"><SquareIcon square={sq} size={20} /></span>
+              )}
+              <span className="text-cream leading-tight" style={{ fontSize: '9px' }}>{isFrom ? 'VOCÊ AQUI' : sq.name}</span>
+              {price != null && <span className="currency text-gold-glow leading-none" style={{ fontSize: '11px' }}>R$ {price}</span>}
+            </span>
+            <span className="flex items-center justify-center gap-px flex-wrap shrink-0 pb-1 min-h-[16px]">
+              {faces.slice(0, 4).map((f, j) => (
+                <PlayerFace key={j} color={f.color} active={f.active} size={16} />
+              ))}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// Seletor de destino do Bus Ticket — a FILEIRA (lado) como uma faixa de casas com
+// nome vertical. Usado pelo espaço (D-021, chooseBusRide) e pela carta (useBusTicket).
+function BusPicker({
+  fromPos,
+  title,
+  subtitle,
+  onPick,
+  onCancel,
+}: {
+  fromPos: number
+  title: string
+  subtitle: string
+  onPick: (pos: number) => void
+  onCancel?: () => void
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.92, y: 8 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.92, y: 8 }}
+      transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+      onClick={(e) => e.stopPropagation()}
+      className="w-[760px] max-w-[96vw] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden"
+    >
+      <Header bg="linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" icon={null} title={title} subtitle={subtitle} />
+      <div className="px-5 py-5">
+        <SideRow fromPos={fromPos} onPick={onPick} />
+        <p className="label text-cream-muted text-center mt-3 leading-snug">Clique numa casa da fileira para ir.</p>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="mt-3 w-full px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-700 text-cream border border-coffee-500 hover:bg-coffee-600 font-bold text-sm transition-colors"
+          >
+            Cancelar
+          </button>
+        )}
+      </div>
+    </motion.div>
+  )
+}
+
 // Linha de carta no descarte — cor da raridade + rótulo, clicável.
 function DiscardRow({ card, onPick }: { card: HandCardView; onPick: () => void }) {
   const color = RARITY_COLOR[card.rarity]
@@ -323,46 +383,165 @@ function DiscardRow({ card, onPick }: { card: HandCardView; onPick: () => void }
   )
 }
 
-// Cartão de leilão (propriedade ou casas). Valor de lance é estado LOCAL.
+// Faixas de aluguel exibidas no deed do leilão (até hotel).
+type AuctionSquare = Extract<ModalView, { kind: 'auction' }>['square']
+function deedRows(sq: AuctionSquare): { label: string; value: string }[] {
+  if (sq.kind === 'property') {
+    const r = computeRents((sq as PropertySquare).rent)
+    return [
+      { label: 'Com aluguel', value: `R$ ${r.base}` },
+      { label: '1 casa', value: `R$ ${r.house1}` },
+      { label: '2 casas', value: `R$ ${r.house2}` },
+      { label: '3 casas', value: `R$ ${r.house3}` },
+      { label: '4 casas', value: `R$ ${r.house4}` },
+      { label: 'Hotel', value: `R$ ${r.hotel}` },
+    ]
+  }
+  if (sq.kind === 'airport') {
+    return [
+      { label: '1 aeroporto', value: 'R$ 25' },
+      { label: '2 aeroportos', value: 'R$ 50' },
+      { label: '3 aeroportos', value: 'R$ 100' },
+      { label: '4 aeroportos', value: 'R$ 200' },
+    ]
+  }
+  return [
+    { label: '1 utilidade', value: '4× dados' },
+    { label: '2 utilidades', value: '10× dados' },
+    { label: '3 utilidades', value: '20× dados' },
+  ]
+}
+
+function DeedStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex flex-col items-center gap-0.5 flex-1">
+      <span className="text-gold">{icon}</span>
+      <span className="currency text-cream text-sm leading-none">{value}</span>
+      <span className="label text-cream-muted" style={{ fontSize: '8px' }}>{label}</span>
+    </div>
+  )
+}
+
+function DeedIcon({ sq }: { sq: AuctionSquare }) {
+  if (sq.kind === 'property') {
+    const uf = (sq as PropertySquare).uf
+    return (
+      <div className="w-10 h-10 rounded-full bg-coffee-900 border-2 border-coffee-950 overflow-hidden shrink-0 shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+        <img src={`https://flagcdn.com/${uf.toLowerCase()}.svg`} alt={uf} className="w-full h-full object-cover" draggable={false} />
+      </div>
+    )
+  }
+  return <span className="text-gold shrink-0"><SquareIcon square={sq} size={34} /></span>
+}
+
+// Tela de leilão (D-021/redesign) — overlay 2 colunas: lances+timer | deed.
 function AuctionCard({
   view,
   activeId,
   placeBid,
-  passBid,
 }: {
   view: Extract<ModalView, { kind: 'auction' }>
   activeId: string
   placeBid: (playerId: string, amount: number) => void
-  passBid: (playerId: string) => void
 }) {
-  const minNext = view.currentBid + 50
-  const [bid, setBid] = useState(minNext)
+  const cash = useGameStore((s) => s.game.players.find((p) => p.id === activeId)?.cash ?? 0)
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 200)
+    return () => clearInterval(t)
+  }, [])
+  const msLeft = Math.max(0, view.deadline - now)
+  const secLeft = Math.ceil(msLeft / 1000)
+  const fillPct = Math.max(0, Math.min(100, 100 - (msLeft / AUCTION_WINDOW) * 100)) // enche; reseta a cada lance
+  const sq = view.square
+  const price = 'price' in sq ? sq.price : 0
+  const isProp = sq.kind === 'property'
+  const houseCost = isProp ? buildCost(sq as PropertySquare) : 0
+  const accent = isProp ? GROUP_COLOR[(sq as PropertySquare).group] : '#d4af37'
 
   return (
-    <Card>
-      <Header bg="linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" icon={null} title={view.square.name} subtitle="Leilão de propriedade" />
-      <div className="px-3.5 py-3">
-        <div className="flex flex-col gap-0.5">
-          <CompactRent label="Lance atual" value={view.currentBid} active />
-        </div>
-        <p className="text-cream-muted text-xs mt-2">
-          Maior licitante: <span className="text-cream">{view.highBidder ?? '—'}</span>
-        </p>
-        <p className="text-cream-muted text-xs mt-0.5">Fecha sozinho em ~10s.</p>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.92, y: 8 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.92, y: 8 }}
+      transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+      onClick={(e) => e.stopPropagation()}
+      className="w-[600px] max-w-[95vw] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden"
+    >
+      {/* Título */}
+      <div className="px-4 py-3 border-b-2 border-coffee-950 bg-[linear-gradient(180deg,#d4af37_0%,#b8941f_100%)] text-center">
+        <h3 className="display text-coffee-950 text-xl leading-none tracking-wide">Leilão</h3>
+      </div>
+      {/* Nome + ícone, centralizado */}
+      <div className="flex items-center justify-center gap-2.5 px-4 pt-4 pb-3">
+        <DeedIcon sq={sq} />
+        <h2 className="display text-cream text-2xl leading-none">{sq.name}</h2>
+      </div>
 
-        <div className="mt-3 flex items-center gap-2">
-          <input
-            type="number"
-            min={minNext}
-            step={50}
-            value={bid}
-            onChange={(e) => setBid(Number(e.target.value))}
-            className="w-20 px-2 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream text-sm"
-          />
-          <ActionBtn onClick={() => placeBid(activeId, Math.max(bid, minNext))}>Dar lance</ActionBtn>
-          <ActionBtn onClick={() => passBid(activeId)} variant="secondary">Passar</ActionBtn>
+      <div className="flex divide-x divide-coffee-500/50 border-t border-coffee-500/40">
+        {/* Coluna esquerda — lances + timer */}
+        <div className="flex-1 p-5 flex flex-col gap-6">
+          <div>
+            <p className="label text-cream-muted">Lance atual</p>
+            <p className="currency text-gold-glow text-5xl leading-none mt-2">R$ {view.currentBid.toLocaleString('pt-BR')}</p>
+            <p className="text-cream-muted text-xs mt-2">Maior: <span className="text-cream">{view.highBidder ?? '—'}</span></p>
+          </div>
+
+          {/* Timer: enche até 100% → encerra; reseta a cada lance */}
+          <div>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <GavelIcon size={13} className="text-cream-muted" />
+              <span className="label leading-none text-cream-muted">Termina em {secLeft}s…</span>
+            </div>
+            <div className="h-2.5 rounded-full bg-coffee-950/60 overflow-hidden">
+              <div className="h-full rounded-full bg-gold" style={{ width: `${fillPct}%`, transition: 'width 0.2s linear' }} />
+            </div>
+          </div>
+
+          <div>
+            <p className="label text-cream-muted mb-2">Meu lance…</p>
+            <div className="flex gap-2">
+              {[2, 10, 100].map((inc) => {
+                const next = view.currentBid + inc
+                return (
+                  <button
+                    key={inc}
+                    type="button"
+                    disabled={next > cash}
+                    onClick={() => placeBid(activeId, next)}
+                    className="flex-1 flex flex-col items-center px-1 py-3 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 hover:brightness-110 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    <span className="currency text-base leading-none text-coffee-950">R$ {next}</span>
+                    <span className="currency mt-1.5 leading-none text-coffee-950" style={{ fontSize: '11px' }}>+R$ {inc}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Coluna direita — deed (aluguéis + preço/casa/hotel) */}
+        <div className="flex-1 p-5">
+          <div className="rounded-[var(--radius-card)] border border-coffee-500 bg-coffee-900/50 overflow-hidden h-full flex flex-col">
+            <div className="px-4 py-2.5 text-center border-b border-coffee-500/60" style={{ background: `color-mix(in srgb, ${accent} 22%, transparent)` }}>
+              <p className="display text-cream text-base leading-none">{sq.name}</p>
+            </div>
+            <div className="px-4 py-3 flex flex-col gap-2 flex-1">
+              {deedRows(sq).map((r) => (
+                <div key={r.label} className="flex items-baseline justify-between gap-3 text-[13px]">
+                  <span className="text-cream-muted">{r.label}</span>
+                  <span className="currency text-cream">{r.value}</span>
+                </div>
+              ))}
+            </div>
+            <div className="px-3 py-3 border-t border-coffee-500/60 flex items-stretch gap-2">
+              <DeedStat icon={<CoinIcon size={16} />} label="Preço" value={`R$ ${price}`} />
+              {isProp && <DeedStat icon={<HouseIcon size={16} />} label="Casa" value={`R$ ${houseCost}`} />}
+              {isProp && <DeedStat icon={<HotelIcon size={16} />} label="Hotel" value={`R$ ${houseCost}`} />}
+            </div>
+          </div>
         </div>
       </div>
-    </Card>
+    </motion.div>
   )
 }
