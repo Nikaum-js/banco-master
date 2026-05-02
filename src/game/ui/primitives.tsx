@@ -25,9 +25,9 @@ export function Button({
     <button
       type={type}
       className={cn(
-        'px-3 py-2 rounded-[var(--radius-sharp)] font-bold text-sm leading-none',
+        'min-h-11 px-3 py-2 rounded-[var(--radius-sharp)] font-bold text-sm leading-none',
         'inline-flex items-center justify-center gap-1.5 whitespace-nowrap',
-        'transition-all active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed disabled:active:translate-y-0',
+        'touch-manipulation transition-all active:translate-y-px active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:translate-y-0 disabled:active:scale-100',
         variant === 'primary' &&
           'bg-gold text-coffee-950 hover:brightness-110 disabled:hover:brightness-100',
         variant === 'secondary' &&
@@ -47,7 +47,7 @@ export function Button({
 // (contador, chip, slots). Mesmo ritmo visual em todas as seções.
 export function SectionHeader({ title, meta, className }: { title: string; meta?: ReactNode; className?: string }) {
   return (
-    <div className={cn('flex items-center justify-between gap-2 mb-3', className)}>
+    <div className={cn('panel-section-header flex items-center justify-between gap-2 mb-3', className)}>
       <p className="label text-gold">{title}</p>
       {meta}
     </div>
@@ -138,7 +138,7 @@ export function EmptyState({ icon, title, hint, className }: { icon?: ReactNode;
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center gap-1.5 px-3 py-5 rounded-[var(--radius-card)] border border-dashed border-coffee-500 bg-coffee-800/40 text-center',
+        'panel-empty-state flex flex-col items-center justify-center gap-1.5 px-3 py-4 rounded-[var(--radius-card)] border border-coffee-500 bg-coffee-800/40 text-center',
         className,
       )}
     >
@@ -149,7 +149,7 @@ export function EmptyState({ icon, title, hint, className }: { icon?: ReactNode;
       )}
       <p className="label text-cream-muted leading-snug">{title}</p>
       {hint && (
-        <p className="text-cream-muted/85 leading-snug" style={{ fontSize: '10px' }}>
+        <p className="panel-empty-state__hint text-cream-muted/85 leading-snug" style={{ fontSize: '10px' }}>
           {hint}
         </p>
       )}
