@@ -3,6 +3,7 @@ import { GameHUD } from '@/game/ui/GameHUD'
 import { GameDriver } from '@/game/ui/GameDriver'
 import { ModalLayer } from '@/game/ui/modals/ModalLayer'
 import { TradeLayer } from '@/game/ui/trade/TradeLayer'
+import { LandAuctionLayer } from '@/game/ui/landAuction/LandAuctionLayer'
 import { HandCardLayer } from '@/game/ui/cards/HandCardLayer'
 import { NoticeLayer } from '@/game/ui/NoticeLayer'
 import { DebugLogger } from '@/game/ui/DebugLogger'
@@ -19,6 +20,7 @@ export default function App() {
       <GameDriver />
       <ModalLayer />
       <TradeLayer />
+      <LandAuctionLayer />
       <HandCardLayer />
       <NoticeLayer />
       <GameHUD />
