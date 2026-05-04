@@ -70,7 +70,6 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Desconexão mid-game | Partida pausa; propriedades não vão ao banco; aguarda reconexão |
 | Speed Die | Presente — ativado após primeira volta completa do jogador |
 | Construção com grupo parcial | Permitida com penalidade no aluguel (70% com construção, 150% sem) |
-| Propriedade Coringa | Presente — 2 coringas no tabuleiro, 25% mais cara para construir |
 | Free Parking com prêmio acumulado | Presente — impostos/multas vão para o centro, prêmio inicial $500 |
 | GO Progressivo | Presente — escala de $100 (1º lugar) a $400 (último) por patrimônio |
 | Segundo hotel por propriedade | Presente — sequencial, mesmo aluguel, estratégico pelo estoque |
@@ -88,44 +87,51 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 
 ### 2.1 Estrutura Geral
 
-O tabuleiro é composto por **40 casas** dispostas em um quadrado, percorridas no sentido horário.
+O tabuleiro é composto por **48 casas** dispostas em um quadrado, percorridas no sentido horário (11 casas por lado + 4 cantos).
+
+> **Nota de design (v1.1):** o tabuleiro foi expandido de 40 → 48 casas, inspirado no **Monopoly: The Mega Edition** (52 casas), para suportar partidas de 7-8 jogadores com mais profundidade. A escolha é coerente: as mecânicas que o Mega introduziu para fazer um tabuleiro maior funcionar — Speed Die (§13.2), Skyscraper (§13.7), Bus Tickets (§10.7), Hangares ≈ Train Depots (§13.6) e construção com grupo parcial (§13.3) — **já existiam neste SRS**. A expansão completa esse design em vez de divergir do Richup.
 
 | Tipo de casa | Quantidade |
 |---|---|
-| Propriedades de cidade (grupos de cor) | 22 |
+| Propriedades de cidade (grupos de cor) | 28 |
 | Aeroportos | 4 |
-| Utilidades | 2 |
+| Utilidades | 3 |
 | Cartas Surpresa | 3 |
 | Cartas Tesouro | 3 |
 | Impostos | 2 |
+| Bus Ticket (espaço) | 1 |
 | Cantos especiais | 4 |
-| **Total** | **40** |
+| **Total** | **48** |
 
 ### 2.2 Cantos Especiais
+
+Com 48 casas (11 por lado + 4 cantos), os cantos ficam nos índices múltiplos de 12:
 
 | Casa | Posição |
 |---|---|
 | GO (Início) | Índice 0 — canto inferior direito |
-| Prisão / Apenas Visitando | Índice 10 — canto inferior esquerdo |
-| Férias (Free Parking) | Índice 20 — canto superior esquerdo |
-| Vá para a Prisão | Índice 30 — canto superior direito |
+| Prisão / Apenas Visitando | Índice 12 — canto inferior esquerdo |
+| Férias (Free Parking) | Índice 24 — canto superior esquerdo |
+| Vá para a Prisão | Índice 36 — canto superior direito |
 
 ### 2.3 Grupos de Propriedades de Cidade
 
-As 22 propriedades são divididas em 8 grupos de cores, conforme o tema do Richup.io:
+As 28 propriedades são divididas em 8 grupos de cores. Os grupos **premium** (laranja, vermelho, amarelo, verde) têm 4 propriedades; os demais têm 3:
 
 | Grupo (Cor) | Nº propriedades | Exemplo de cidades/países |
 |---|---|---|
-| Marrom | 2 | África (ex: Argélia, Egito) |
+| Marrom | 3 | África (ex: Argélia, Egito) |
 | Azul Claro | 3 | Ásia (ex: China) |
 | Rosa / Magenta | 3 | Europa Central (ex: Alemanha) |
-| Laranja | 3 | Europa Ocidental (ex: França) |
-| Vermelho | 3 | Sul da Europa (ex: Itália) |
-| Amarelo | 3 | Norte da Europa (ex: Reino Unido) |
-| Verde | 3 | EUA — propriedades premium |
-| Azul Escuro | 2 | EUA — propriedades máximas |
+| Laranja | 4 | Europa Ocidental (ex: França) |
+| Vermelho | 4 | Sul da Europa (ex: Itália) |
+| Amarelo | 4 | Norte da Europa (ex: Reino Unido) |
+| Verde | 4 | EUA — propriedades premium |
+| Azul Escuro | 3 | EUA — propriedades máximas |
 
-> 📌 Nomes exatos, preços, aluguéis e custos de construção devem ser extraídos diretamente do Richup.io (via partida de referência ou print) e inseridos no arquivo de tema antes do início do desenvolvimento de UI.
+> **Balanceamento (por que grupos de 3-4):** grupos maiores tornam o monopólio mais difícil de fechar — sobretudo o do líder — o que segura o *runaway leader* e força mais negociação. Esse é o mecanismo central do Mega Edition para muitos jogadores, e combina com a regra de **monopólio parcial** (§13.3): constrói-se com a maioria do grupo (2 de 3, ou 3 de 4) com aluguel reduzido.
+
+> 📌 Nomes exatos, preços, aluguéis e custos de construção devem ser extraídos do Richup.io como base e estendidos para as 28 propriedades (escada de preços mais granular, do mais barato ~$60 ao mais caro ~$400), inseridos no arquivo de tema antes do desenvolvimento de UI.
 
 ### 2.4 Aeroportos
 
@@ -138,16 +144,17 @@ Existem **4 aeroportos** distribuídos um em cada lado do tabuleiro. O aluguel e
 | 3 | $100 |
 | 4 | $200 |
 
-Aeroportos podem ser hipotecados, mas **não recebem construções de casas/hotéis**. Podem receber **Hangares** (ver Seção 13.7).
+Aeroportos podem ser hipotecados, mas **não recebem construções de casas/hotéis**. Podem receber **Hangares** (ver Seção 13.6).
 
 ### 2.5 Utilidades
 
-Existem 2 utilidades (ex: Companhia Elétrica e Companhia de Água). O aluguel é baseado no valor dos dados:
+Existem **3 utilidades** (ex: Petrobras, Eletrobras e uma 3ª companhia — Gás/Saneamento). A 3ª segue o Mega Edition (Gas Company). O aluguel é baseado no valor dos dados:
 
 | Utilidades possuídas | Aluguel |
 |---|---|
 | 1 | 4× o valor dos dados |
 | 2 | 10× o valor dos dados |
+| 3 | 20× o valor dos dados |
 
 Utilidades podem ser hipotecadas mas não recebem construções.
 
@@ -158,13 +165,17 @@ Utilidades podem ser hipotecadas mas não recebem construções.
 | Income Tax | $200 fixo (ou 10% do patrimônio — seguir Richup.io) |
 | Luxury Tax | $100 fixo |
 
+### 2.7 Espaço Bus Ticket
+
+Casa especial nova (1 no tabuleiro), inspirada no Mega Edition. Quem para nela **compra uma carta Bus Ticket** (se ainda houver no baralho), guardada na mão do jogador. O uso do Bus Ticket — pular para um canto do lado atual do tabuleiro em vez de rolar — segue a mecânica já definida em §10.7. Não é propriedade; não pode ser comprada nem hipotecada.
+
 ---
 
 ## 3. Regras de Jogo — Fluxo de Turno
 
 ### 3.1 Início de Partida
 
-- Cada jogador começa com **$1.500**.
+- Cada jogador começa com **$2.000**. (Tabuleiro de 48 casas exige mais caixa inicial que o padrão de 40 — mais trânsito e mais propriedades para comprar. Meio-termo entre o $1.500 clássico e o $2.500 do Mega Edition.)
 - A ordem dos turnos é definida por rolagem de dados no lobby (maior valor começa).
 - Todos os jogadores iniciam na casa **GO** (índice 0).
 - Todos os títulos de propriedade começam com o banco.
@@ -184,7 +195,7 @@ Utilidades podem ser hipotecadas mas não recebem construções.
 
 ### 3.3 Passar pelo GO
 
-Sempre que o token passar pela casa GO (ou parar nela), o jogador recebe o valor calculado pelo **GO Progressivo** (Seção 13.6).
+Sempre que o token passar pela casa GO (ou parar nela), o jogador recebe o valor calculado pelo **GO Progressivo** (Seção 13.5).
 
 > 📌 Cartas que enviam o jogador diretamente para uma casa **NÃO** pagam GO ao passar, a menos que a carta diga explicitamente.
 
@@ -213,7 +224,7 @@ Sempre que o token passar pela casa GO (ou parar nela), o jogador recebe o valor
 
 ### 4.3 Aeroporto
 
-Seguir Seção 2.4 e regras de Hangar (Seção 13.7).
+Seguir Seção 2.4 e regras de Hangar (Seção 13.6).
 
 ### 4.4 Utilidade
 
@@ -221,7 +232,7 @@ Seguir Seção 2.5. O valor dos dados utilizado é o da rolagem que levou o joga
 
 ### 4.5 Imposto
 
-O valor é debitado automaticamente. Vai para o **centro do tabuleiro** (Free Parking — Seção 13.5), não para o banco.
+O valor é debitado automaticamente. Vai para o **centro do tabuleiro** (Free Parking — Seção 13.4), não para o banco.
 
 ### 4.6 Surpresa / Tesouro
 
@@ -231,26 +242,26 @@ O valor é debitado automaticamente. Vai para o **centro do tabuleiro** (Free Pa
 
 ### 4.7 GO (Início)
 
-Recebe o valor progressivo (Seção 13.6) ao passar ou parar. Nenhuma outra ação.
+Recebe o valor progressivo (Seção 13.5) ao passar ou parar. Nenhuma outra ação.
 
 ### 4.8 Apenas Visitando / Prisão
 
-- Chegou à casa 10 por movimento normal: apenas visitando. Sem penalidade.
+- Chegou à casa 12 por movimento normal: apenas visitando. Sem penalidade.
 - Chegou por envio direto (carta, "Vá para a Prisão", 3 duplas): está preso (Seção 4.11).
 
 ### 4.9 Vá para a Prisão
 
-Enviado imediatamente à Prisão (índice 10). **NÃO** recebe o GO. Não move mais no turno.
+Enviado imediatamente à Prisão (índice 12). **NÃO** recebe o GO. Não move mais no turno.
 
 ### 4.10 Férias (Free Parking)
 
-Coleta o prêmio acumulado no centro do tabuleiro (ver Seção 13.5).
+Coleta o prêmio acumulado no centro do tabuleiro (ver Seção 13.4).
 
 ### 4.11 Regras da Prisão
 
 Antes de rolar, o preso pode escolher:
 
-1. Pagar multa de **$50** (vai para o centro — Seção 13.5) e rolar normalmente.
+1. Pagar multa de **$50** (vai para o centro — Seção 13.4) e rolar normalmente.
 2. Usar carta "Saia da Prisão" e rolar normalmente.
 3. Rolar os dados: se tirar dupla, sai e move o valor. Se não, permanece preso.
 
@@ -284,7 +295,7 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 - **Uniformidade:** não pode haver diferença maior que 1 casa entre propriedades do mesmo grupo possuídas pelo jogador.
 - Sequência por propriedade: 0 → 1 → 2 → 3 → 4 casas → 1 hotel → 2 hotéis (Seção 14).
 - O hotel substitui as 4 casas (retornam ao banco).
-- **Limite global do banco:** 32 casas e 12 hotéis. Se houver escassez de casas, ocorre **leilão de casas** entre interessados (Seção 5.4).
+- **Limite global do banco:** 40 casas e 16 hotéis (escalado de 32/12 para acompanhar as 28 propriedades). Se houver escassez de casas, ocorre **leilão de casas** entre interessados (Seção 5.4) — a escassez segue sendo alavanca estratégica, sem virar trava constante.
 - Custos de construção definidos na ficha de cada propriedade no tema.
 
 ### 5.3 Venda de Construções
@@ -563,7 +574,6 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 > - O alvo deve possuir **pelo menos 2 propriedades não-hipotecadas** no momento.
 > - Propriedade hipotecada é transferível conforme Seção 6.3 (com regras de transferência de hipoteca).
 > - **Aeroportos e Utilidades:** o preço é multiplicado por **1,5×** (sobretaxa de 50% como compensação ao dono pela perda do escalonamento).
-> - **Coringa:** vale apenas se ainda **não foi declarada uma cor** (Seção 13.4).
 > - Não pode ser usada em propriedade do próprio jogador.
 > - O alvo **NÃO pode recusar**.
 
@@ -571,7 +581,7 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 > Escolha 1 casa (não hotel) construída de outro jogador. Ela é demolida — retorna ao banco. O dono NÃO recebe nada. Não afeta a uniformidade obrigatória do grupo do alvo (ele pode reconstruir depois).
 
 **Auditoria Fiscal** (Surpresa)
-> Escolha um jogador. Ele paga **10% do patrimônio líquido** (dinheiro + propriedades + construções) ao banco. O valor vai para o **centro do tabuleiro** (Free Parking — Seção 13.5).
+> Escolha um jogador. Ele paga **10% do patrimônio líquido** (dinheiro + propriedades + construções) ao banco. O valor vai para o **centro do tabuleiro** (Free Parking — Seção 13.4).
 
 **Diplomacia** (Tesouro)
 > **Reação.** Cancela uma carta ofensiva sendo usada contra você (Aquisição Hostil, Despejo, Auditoria Fiscal, Boicote). A carta cancelada é descartada como se tivesse sido usada (volta ao fundo do deck).
@@ -602,7 +612,7 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 > Mova-se até 3 casas para frente ou para trás (jogador escolhe). Resolve a casa onde parar normalmente. Se passar pelo GO indo para trás, NÃO recebe bônus.
 
 **Apagão** (Surpresa, imediato)
-> Por **1 volta completa**, todos os Hangares ficam inativos — aeroportos voltam ao aluguel base sem dobra do Hangar (ver Seção 13.7).
+> Por **1 volta completa**, todos os Hangares ficam inativos — aeroportos voltam ao aluguel base sem dobra do Hangar (ver Seção 13.6).
 
 **Greve nas Utilidades** (Surpresa, imediato)
 > Por **1 volta completa**, as 2 utilidades não cobram aluguel.
@@ -619,10 +629,10 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 #### 🟩 Cartas Comuns clássicas
 
 **Vá direto para a Prisão** (Surpresa)
-> Vá imediatamente para a casa Prisão (índice 10). **NÃO** recebe bônus do GO se passar por ele. Não move mais no turno.
+> Vá imediatamente para a casa Prisão (índice 12). **NÃO** recebe bônus do GO se passar por ele. Não move mais no turno.
 
 **Volta para o GO** (Surpresa)
-> Mova-se diretamente para a casa GO. Recebe o bônus progressivo (Seção 13.6).
+> Mova-se diretamente para a casa GO. Recebe o bônus progressivo (Seção 13.5).
 
 **Conserto de Imóveis** (Surpresa)
 > Pague **$25 por casa** e **$100 por hotel** que possui. Valor vai para o **centro do tabuleiro** (Free Parking).
@@ -664,7 +674,7 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 - Após usar o Bus Ticket, o turno do jogador continua normalmente (ações facultativas e finalizar turno).
 - Se passar pelo GO durante o movimento do Bus Ticket, **recebe** o bônus progressivo.
 
-> 📌 Os "lados do tabuleiro" são as 4 sequências de 10 casas entre os cantos. Lado 1: casas 1–9 (entre GO e Prisão). Lado 2: casas 11–19. Lado 3: casas 21–29. Lado 4: casas 31–39.
+> 📌 Os "lados do tabuleiro" são as 4 sequências de 11 casas entre os cantos. Lado 1: casas 1–11 (entre GO=0 e Prisão=12). Lado 2: casas 13–23 (entre Prisão=12 e Férias=24). Lado 3: casas 25–35 (entre Férias=24 e Vá-pra-Prisão=36). Lado 4: casas 37–47 (entre Vá-pra-Prisão=36 e GO).
 
 ---
 
@@ -704,7 +714,7 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 
 ### 12.1 Layout do Tabuleiro
 
-Replicar o layout do Richup.io: visão 2D de cima, quadrado, 40 casas ao redor da borda. Interior exibe HUD, log de eventos, etc.
+Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor da borda (11 por lado + 4 cantos). Interior exibe HUD, log de eventos, etc.
 
 ### 12.2 Modais Obrigatórios
 
@@ -728,7 +738,6 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 40 casas ao redor d
 | Diplomacia disponível (reação) | Jogador é alvo de carta ofensiva — pergunta se quer usar Diplomacia |
 | Bunker Fiscal disponível (reação) | Jogador deve pagar imposto — pergunta se quer usar Bunker |
 | Aquisição Hostil sofrida (notificação) | Jogador perdeu propriedade — visualizar transferência |
-| Coringa — escolha de cor (após Aquisição Hostil) | Novo dono herda coringa não declarada — pode declarar |
 | Usar Bus Ticket | Jogador ativa antes de rolar — escolhe casa do mesmo lado |
 | Falência | Jogador não consegue pagar |
 | Fim de jogo | Último jogador restante |
@@ -737,7 +746,6 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 40 casas ao redor d
 | Free Parking coletado | Jogador para em Férias com prêmio acumulado |
 | Speed Die — escolha de dado (Ônibus) | Resultado da face Ônibus |
 | Speed Die — escolha de casa (Triples) | Triples nos dados |
-| Coringa — escolha de grupo | Construção inicial em coringa |
 | Hangar | Jogador deseja construir hangar em aeroporto próprio |
 
 ### 12.3 HUD
@@ -817,22 +825,9 @@ Jogadores podem construir mesmo sem grupo completo, com penalidade no aluguel:
 
 > 📌 O incentivo de completar o grupo via trade se mantém. O caminho de progresso existe sem cooperação obrigatória.
 
-### 13.4 Propriedade Coringa
+### 13.4 Free Parking com Prêmio Acumulado
 
-Existem **2 propriedades coringa** no tabuleiro, distribuídas uma em cada metade do percurso:
-
-- Pode ser usada como **qualquer cor de grupo** para fins de construção.
-- O jogador declara qual grupo ela representa ao iniciar a construção. Decisão **irreversível** na mesma partida.
-- Aluguel cobrado quando outros jogadores param nela: **valor fixo** definido no tema (não escala com construção).
-- Custo de construção: **25% mais alto** que o custo padrão do grupo que representa.
-- Pode ser hipotecada, negociada e incluída em trades normalmente.
-- **Não conta** para o limite de casas/hotéis do banco — tem estoque próprio.
-
-> 📌 Válvula de escape para jogador travado com grupos fragmentados. Mais caro, mas independente de negociação.
-
-### 13.5 Free Parking com Prêmio Acumulado
-
-A casa Férias (índice 20) acumula prêmio em dinheiro ao longo da partida:
+A casa Férias (índice 24) acumula prêmio em dinheiro ao longo da partida:
 
 - Todo valor pago em **impostos** (Income Tax, Luxury Tax) vai para o centro.
 - Todo valor pago em **multas** de cartas Surpresa/Tesouro vai para o centro.
@@ -843,7 +838,7 @@ A casa Férias (índice 20) acumula prêmio em dinheiro ao longo da partida:
 
 > 📌 Catch-up discreto e natural. Quem está perdendo torce para cair no Free Parking.
 
-### 13.6 GO Progressivo
+### 13.5 GO Progressivo
 
 O valor recebido ao passar pelo GO escala **inversamente** com a posição do jogador no ranking de patrimônio líquido (dinheiro + valor das propriedades + valor das construções):
 
@@ -857,7 +852,7 @@ O valor recebido ao passar pelo GO escala **inversamente** com a posição do jo
 
 > 📌 Cálculo automático no momento da passagem. UI mostra apenas o valor recebido, **sem destacar** que é catch-up. Valores podem ser ajustados após playtesting.
 
-### 13.7 Hangar (Melhoria de Aeroporto)
+### 13.6 Hangar (Melhoria de Aeroporto)
 
 Cada aeroporto pode receber **um Hangar**, melhoria individual que **dobra o aluguel** daquele aeroporto específico:
 
@@ -869,7 +864,7 @@ Cada aeroporto pode receber **um Hangar**, melhoria individual que **dobra o alu
 
 > 📌 Torna aeroportos mais estratégicos e dá um vetor de progresso independente do gate de grupos.
 
-### 13.8 Skyscraper (Arranha-céu)
+### 13.7 Skyscraper (Arranha-céu)
 
 Quarto nível de construção, **acima do segundo hotel**. Pré-requisitos:
 
@@ -885,7 +880,7 @@ Características:
 - Substitui visualmente o 2º hotel (não é construção adicional sobreposta).
 - Venda: metade do custo, respeitando uniformidade.
 
-### 13.9 Tax Man (Fiscal)
+### 13.8 Tax Man (Fiscal)
 
 Token especial controlado pelo banco. A cada turno:
 
@@ -990,12 +985,12 @@ Jogadores podem conceder empréstimos entre si durante a partida, criando dinâm
 
 | Termo | Definição |
 |---|---|
-| GO / Início | Casa índice 0. Receber valor progressivo ao passar/parar (Seção 13.6) |
+| GO / Início | Casa índice 0. Receber valor progressivo ao passar/parar (Seção 13.5) |
 | Grupo completo | Um jogador possui todas as propriedades de um grupo de cor |
 | Dupla | Mesmos valores nos dois dados brancos |
 | Hipoteca | Propriedade dada como garantia ao banco em troca de metade do valor |
 | Hotel | Construção máxima de casas: substitui 4 casas. Até 2 hotéis por propriedade |
-| Skyscraper | Construção acima do 2º hotel, requer grupo completo (Seção 13.8) |
+| Skyscraper | Construção acima do 2º hotel, requer grupo completo (Seção 13.7) |
 | Leilão | Disputa de lances por uma propriedade ou casa |
 | Surpresa | Deck de cartas de acaso (Chance no Monopoly clássico) — efeitos ofensivos/caóticos |
 | Tesouro | Deck de cartas de baú comunitário (Community Chest) — efeitos defensivos/benignos |
@@ -1010,8 +1005,7 @@ Jogadores podem conceder empréstimos entre si durante a partida, criando dinâm
 | Turno ativo | O turno do jogador que deve agir no momento |
 | Speed Die | Terceiro dado especial ativado após a 1ª volta. Faces: 1/2/3, Mr. Banco Master, Ônibus |
 | Mr. Banco Master | Face do Speed Die que envia o jogador à próxima propriedade disponível |
-| Propriedade Coringa | Propriedade especial que representa qualquer grupo de cor para construção |
-| Free Parking / Férias | Casa índice 20 que acumula prêmio em dinheiro |
+| Free Parking / Férias | Casa índice 24 que acumula prêmio em dinheiro |
 | GO Progressivo | Valor recebido ao passar pelo GO escala por posição no ranking |
 | Imunidade de Aluguel | Benefício negociável: passar por propriedade sem pagar aluguel por N voltas |
 | Empréstimo | Transferência de dinheiro entre jogadores, juros 10–50% por GO |
