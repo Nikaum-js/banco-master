@@ -87,8 +87,9 @@ export function createSeedState(playerIds: string[], startedAt = 0): GameState {
     log: [], // 021 — event log do jogo
     tradeProposals: [], // 047 — propostas simultâneas e independentes
     nextTradeProposalId: 1, // 047 — ids determinísticos no snapshot/replay
-    landAuction: null, // 031 — pregão de escassez de terrenos (evento autônomo)
-    landAuctionArmed: true, // 031 — trava de episódio: armado de início
+    obligations: [], // 051 — obrigações a outro jogador ainda não pagas (§9.1/D-061)
+    landAuction: null, // 031/039 — pregão simultâneo (escassez §7.5 ou espólio §9.2); evento autônomo
+    landAuctionArmed: true, // 031 — trava de episódio: armado de início (D-060 restaurou)
     tradeHistory: [], // 027 — histórico de trocas aceitas
     notice: null, // 030 — notificação informativa (Free Parking / Aquisição Hostil)
     eliminationOrder: [], // 044 — quedas na ordem em que a falência foi processada

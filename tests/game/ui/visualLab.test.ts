@@ -25,7 +25,7 @@ describe('VisualLab', () => {
     expect(ids).toEqual(expect.arrayContaining([
       'bus-ticket',
       'trade-compose',
-      'land-auction',
+      'estate-auction',
       'debt-short',
       'property-houses',
       'endgame',
