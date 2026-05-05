@@ -14,7 +14,7 @@ export interface HandCardView {
 }
 
 export type ModalView =
-  | { kind: 'purchase'; pos: number; square: Square; price: number; playerId: string }
+  // compra NÃO é mais modal — vira ação inline embaixo dos dados (DiceArena)
   | { kind: 'auction'; pos: number; square: Square; currentBid: number; highBidder: string | null; deadline: number }
   | { kind: 'card-discard'; playerId: string; cards: HandCardView[] }
   | { kind: 'card-shortcut' }
@@ -22,6 +22,7 @@ export type ModalView =
   // Escolhas do Speed Die (turn.awaitingChoice) — também decisões centrais (022.1)
   | { kind: 'bus-move'; pos: number; white: [number, number]; playerId: string }
   | { kind: 'triple-dest'; pos: number; playerId: string }
+  | { kind: 'bus-ride'; pos: number; playerId: string } // parou no espaço Bus Ticket (D-021)
 
 // Jogador da vez (mesma convenção do resto da UI/motor).
 function activeId(game: GameState): string {
@@ -36,6 +37,7 @@ function activePos(game: GameState): number {
 export function activeModal(game: GameState): ModalView | null {
   const res = game.resolution
   if (!res) {
+    // Prisão NÃO é modal — a decisão aparece inline embaixo dos dados (DiceArena).
     // Sem resolução: pode haver escolha de Speed Die pendente (Ônibus/Triple).
     const t = game.turn
     if (t.awaitingChoice === 'onibus' && t.lastRoll) {
@@ -44,14 +46,13 @@ export function activeModal(game: GameState): ModalView | null {
     if (t.awaitingChoice === 'triple') {
       return { kind: 'triple-dest', pos: activePos(game), playerId: activeId(game) }
     }
+    if (t.awaitingChoice === 'bus-ride') {
+      return { kind: 'bus-ride', pos: activePos(game), playerId: activeId(game) }
+    }
     return null
   }
   switch (res.kind) {
-    case 'purchase': {
-      const square = BOARD[res.pos]
-      const price = 'price' in square ? square.price : 0
-      return { kind: 'purchase', pos: res.pos, square, price, playerId: activeId(game) }
-    }
+    // 'purchase': sem modal — a decisão de compra aparece inline na DiceArena.
     case 'auction': {
       const a = res.auction
       return { kind: 'auction', pos: a.pos, square: BOARD[a.pos], currentBid: a.currentBid, highBidder: a.highBidder, deadline: a.deadline }

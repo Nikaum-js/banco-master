@@ -10,16 +10,10 @@ function base(): GameState {
 }
 
 describe('activeModal — compra e caso "nenhum" (US1)', () => {
-  it('SC-001: purchase → descritor com pos/square/price/playerId', () => {
+  it('SC-001: purchase NÃO gera modal (decisão é inline na DiceArena) → null', () => {
     const g = base()
-    g.resolution = { kind: 'purchase', pos: 1 } // Roma, preço 60
-    expect(activeModal(g)).toEqual({
-      kind: 'purchase',
-      pos: 1,
-      square: BOARD[1],
-      price: 60,
-      playerId: 'p1',
-    })
+    g.resolution = { kind: 'purchase', pos: 1 } // Roma — compra agora é embaixo dos dados
+    expect(activeModal(g)).toBeNull()
   })
 
   it('SC-004: sem resolução coberta → null', () => {
