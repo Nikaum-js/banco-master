@@ -134,6 +134,27 @@
   --text-nano: 0.5rem;     /* 8px — legendas mínimas (stat de deed) */
 }
 
+/* Em celular paisagem, os dois cabeçalhos das colunas já identificam as partes.
+   A balança é o resumo visual redundante: ela cede espaço para os termos roláveis,
+   preservando a operação completa da troca em 740×360 (044/055). */
+@media (orientation: landscape) and (max-height: 420px) and (min-width: 641px) {
+  .trade-composer__stage {
+    padding-block: 0.25rem;
+  }
+
+  .trade-composer__scale-row {
+    display: none;
+  }
+
+  .trade-composer__sides > div > div:first-child {
+    padding-block: 0.4rem;
+  }
+
+  .trade-composer__footer {
+    padding-block: 0.5rem;
+  }
+}
+
 /* =====================================================================
    Leilão de título — pregão ao vivo + escritura.
    A moldura continua sendo o ModalShell canônico; esta camada organiza

@@ -250,6 +250,13 @@
   font-size: 0.65rem;
 }
 
+.deed-actions__grid[data-kind="airport"] .ui-button {
+  min-width: 0;
+  padding-inline: 0.35rem;
+  line-height: 1.1;
+  white-space: normal;
+}
+
 .deed-actions__note {
   display: grid;
   grid-template-columns: 1rem minmax(0, 1fr);

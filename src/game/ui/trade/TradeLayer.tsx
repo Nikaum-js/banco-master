@@ -57,9 +57,9 @@ function Backdrop({ children }: { children: ReactNode }) {
   return <Overlay z={65}>{children}</Overlay>
 }
 
-function Card({ children }: { children: ReactNode }) {
+function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <ModalShell className="w-[720px] max-w-[96vw] max-h-[92vh] flex flex-col">
+    <ModalShell className={cn('w-[720px] max-w-[96vw] max-h-[92vh] flex flex-col', className)}>
       {children}
     </ModalShell>
   )
@@ -683,13 +683,13 @@ function Composer({ onClose, proposerId }: { onClose: () => void; proposerId: st
   const themIdentity = recipient ? identityOf(room, recipient.id) : null
 
   return (
-    <Card>
+    <Card className="trade-composer">
       <Header title="Negociação" subtitle="Monte os dois lados e confirme" />
 
       {/* Mesa — Você e o destinatário flanqueiam a balança; cada prato pesa um lado.
           Fundo translúcido: deixa o gradiente do shell respirar (nada de cor chapada). */}
-      <div className="px-4 pt-3 pb-2 bg-coffee-950/25 border-b border-coffee-700/50 shrink-0 flex flex-col gap-1.5">
-        <div className="flex items-center justify-center gap-1">
+      <div className="trade-composer__stage px-4 pt-3 pb-2 bg-coffee-950/25 border-b border-coffee-700/50 shrink-0 flex flex-col gap-1.5">
+        <div className="trade-composer__scale-row flex items-center justify-center gap-1">
           <FaceTag color={meIdentity.color} avatar={meIdentity.avatar} skin={meIdentity.skin} name="Você" />
           <TradeScale
             leftPositions={[...offered]}
@@ -730,7 +730,7 @@ function Composer({ onClose, proposerId }: { onClose: () => void; proposerId: st
         )}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden flex divide-x divide-coffee-500/40">
+      <div className="trade-composer__sides flex-1 min-h-0 overflow-hidden flex divide-x divide-coffee-500/40">
         <Side
           title="Você oferece"
           color={meIdentity.color}
@@ -803,7 +803,7 @@ function Composer({ onClose, proposerId }: { onClose: () => void; proposerId: st
       )}
 
       {/* Convenção de rodapé: secundário à ESQUERDA, primário à DIREITA */}
-      <div className="px-5 py-3 border-t-2 border-coffee-950 shrink-0 flex gap-2">
+      <div className="trade-composer__footer px-5 py-3 border-t-2 border-coffee-950 shrink-0 flex gap-2">
         <Button className="flex-1 py-2.5" variant="secondary" onClick={onClose}>Cancelar</Button>
         <Button className="flex-1 py-2.5" onClick={() => { proposeTrade(trade); onClose() }} disabled={!canPropose}>Confirmar</Button>
       </div>
