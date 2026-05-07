@@ -7879,6 +7879,7 @@
   }
 
   .deck-odds-row {
+    position: relative; /* âncora do painel de descrição — ver `__desc` */
     border-bottom: 1px solid color-mix(in srgb, var(--color-brass) 12%, transparent);
   }
 
@@ -7953,13 +7954,40 @@
   }
 
   /* A explicação. Recuada até a coluna do nome para ficar claro a quem pertence. */
+  /* A DESCRIÇÃO NÃO ENTRA NO FLUXO, e isso não é estilo — é a correção de um bug.
+
+     Aberta no fluxo, ela empurrava as linhas de baixo. Com hover abrindo, isso fecha um LOOP DE
+     REALIMENTAÇÃO: o painel abre → as linhas se deslocam → a linha sai de baixo do cursor →
+     dispara `mouseleave` → fecha → o layout volta → dispara `mouseenter` → abre de novo. O
+     sintoma é o pisca-pisca ao passar o mouse entre dois itens, e nenhum debounce conserta a
+     causa: enquanto o hover mexer no layout sob o cursor, a oscilação continua possível.
+
+     Fora do fluxo, nada se move quando o painel aparece, então o ciclo não pode nem começar.
+     `pointer-events: none` completa: o cursor atravessa o painel e continua chegando na linha
+     que está embaixo, sem zona morta. */
   .deck-odds-row__desc {
-    margin: 0 0 0.55rem 3.1rem;
-    padding-left: 0.6rem;
-    border-left: 2px solid color-mix(in srgb, var(--deck-odds-accent) 45%, transparent);
+    position: absolute;
+    top: 100%;
+    left: 3.1rem;
+    right: 0.35rem;
+    z-index: 2;
+    pointer-events: none;
+    margin: 0;
+    padding: 0.5rem 0.6rem;
+    border-left: 2px solid color-mix(in srgb, var(--deck-odds-accent) 55%, transparent);
+    border-radius: 0 var(--radius-sharp) var(--radius-sharp) 0;
+    background: color-mix(in srgb, var(--color-ink-abyss) 96%, var(--color-brass));
+    box-shadow: var(--shadow-card);
     color: var(--color-cream-muted);
     font-size: 0.75rem;
     line-height: 1.45;
+  }
+
+  /* Nas últimas linhas o painel abriria para fora da lista e o `overflow-y` a cortaria; ali ele
+     sobe. Três linhas é a folga: o texto mais longo do catálogo cabe em duas linhas de 0,75rem. */
+  .deck-odds-row:nth-last-child(-n+3) .deck-odds-row__desc {
+    top: auto;
+    bottom: 100%;
   }
 
   .deck-odds-foot {
