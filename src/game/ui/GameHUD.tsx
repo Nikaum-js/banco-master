@@ -40,6 +40,7 @@ export function GameHUD() {
   const useBusTicket = useGameStore((s) => s.useBusTicket)
   const grantLoan = useGameStore((s) => s.grantLoan)
   const payOffLoan = useGameStore((s) => s.payOffLoan)
+  const respondReaction = useGameStore((s) => s.respondReaction)
   const [busArmed, setBusArmed] = useState(false)
 
   const active = game.players[game.turnOrder[game.activeSeat]]
@@ -54,6 +55,22 @@ export function GameHUD() {
   if (game.phase === 'ended') {
     const winner = game.players.find((p) => !p.eliminated)
     actions = <span className="text-gold font-bold">🏆 Fim de jogo — vencedor: {winner?.id ?? '—'}</span>
+  } else if (res?.kind === 'reaction-diplomacia') {
+    actions = (
+      <>
+        <span>⚡ {res.reactorId}: {res.effect} contra você — usar Diplomacia?</span>
+        <Btn onClick={() => respondReaction(true)}>Usar</Btn>
+        <Btn onClick={() => respondReaction(false)}>Recusar</Btn>
+      </>
+    )
+  } else if (res?.kind === 'reaction-bunker') {
+    actions = (
+      <>
+        <span>⚡ Imposto ${res.amount} — usar Bunker Fiscal?</span>
+        <Btn onClick={() => respondReaction(true)}>Usar</Btn>
+        <Btn onClick={() => respondReaction(false)}>Recusar</Btn>
+      </>
+    )
   } else if (res?.kind === 'debt') {
     const shortfall = res.amount - active.cash
     // §15.2: pedir empréstimo (default principal = déficit, taxa 20%) a quem tiver caixa
@@ -169,6 +186,16 @@ export function GameHUD() {
       {game.loans.length > 0 && (
         <span className="text-cream-muted text-xs">
           🤝 {game.loans.map((l) => `${l.debtorId}→${l.creditorId} $${l.principal}@${l.ratePct}%`).join(' · ')}
+        </span>
+      )}
+      {game.immunities.length > 0 && (
+        <span className="text-cream-muted text-xs">
+          🛡️ {game.immunities.map((i) => `${i.beneficiaryId}@${BOARD[i.pos].name}${i.lapsRemaining === null ? '∞' : `·${i.lapsRemaining}v`}`).join(' · ')}
+        </span>
+      )}
+      {game.tempEffects.length > 0 && (
+        <span className="text-cream-muted text-xs">
+          ⚡ {game.tempEffects.map((e) => `${e.kind}${e.pos !== null ? `@${BOARD[e.pos].name}` : ''}·${e.lapsRemaining}v`).join(' · ')}
         </span>
       )}
       <span className="ml-auto flex flex-wrap items-center gap-2">{actions}</span>
