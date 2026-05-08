@@ -4,7 +4,9 @@
 
 **Created**: 2026-05-24
 
-**Status**: Draft
+**Status**: ❌ DESCONTINUADA (2026-05-25)
+
+> ⚠️ **Esta feature foi removida do produto.** A escassez de construção foi eliminada — casas, hotéis e arranha-céus são ilimitados (ver [D-022](../../docs/DECISIONS.md#d-022--escassez-de-construção-removida-construção-ilimitada)). Sem escassez de casas não há o que leiloar; o módulo `economy/houseAuction.ts`, o `HouseAuctionLayer` e os testes foram apagados. Um **leilão por escassez de _terrenos_** (últimos lotes livres do tabuleiro) pode ser desenhado no futuro — é outra coisa, não reaproveita esta spec. O texto abaixo fica como registro histórico.
 
 **Input**: User description: "Leilão de casas em escassez (§5.4) como evento autônomo no estado (campo `houseAuction`), com gatilho manual (botão) e modal dedicado; fechar transfere as casas ao vencedor sem mexer no turno."
 

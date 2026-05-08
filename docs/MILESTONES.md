@@ -21,21 +21,21 @@
 ## M1 — Motor de jogo (lógica) ✅ (single-player; 2 regras multiplayer movidas ao M3)
 
 Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vitest). Cada item abaixo é uma feature SDD completa (`spec→plan→tasks→implement`).
-**Estado: 234 testes verdes (`bunx vitest run tests/game`). Motor completo para uma partida single-player (turno, economia, construção, cartas — 0 no-op, tema, §8.4, §9.3/§9.4). Auditoria SRS×código (2026-05-24) confirmou as regras de turno/economia/cartas; restam 2 regras que só fazem sentido com vários jogadores ao mesmo tempo — leilão dos bens do falido-ao-banco (§9.2) e auto-disparo do leilão de casas em escassez (§5.4) — realocadas para o M3 (eram "simplificações documentadas" no HANDOVER).**
+**Estado: 234 testes verdes (`bunx vitest run tests/game`). Motor completo para uma partida single-player (turno, economia, construção, cartas — 0 no-op, tema, §8.4, §9.3/§9.4). Auditoria SRS×código (2026-05-24) confirmou as regras de turno/economia/cartas; resta 1 regra que só faz sentido com vários jogadores — leilão dos bens do falido-ao-banco (§9.2) — realocada para o M3. _(2026-05-25: escassez de construção + leilão de casas §5.4 **removidos**; construção ilimitada — [D-022](DECISIONS.md).)_**
 
 ### Feito
 
 - ✅ **001 Tabuleiro & Casas** — estrutura de 48 casas (SRS §2) + render estático do board
 - ✅ **002 Fluxo de Turno** — FSM pura: rolar/mover/resolver/finalizar, duplas, prisão, Speed Die; resolução por portas
 - ✅ **003 Compra & Aluguel** — compra/recusa, leilão (timer), aluguel escalonado por posse; introduz **caixa** e **títulos**
-- ✅ **004 Construção** — casas/hotel, uniformidade, grupo parcial (70%), estoque do banco, leilão de casas
+- ✅ **004 Construção** — casas/hotel, uniformidade, grupo parcial (70%) _(estoque do banco/leilão de casas removidos — D-022)_
 - ✅ **005 Hipoteca** — hipotecar/deshipotecar (metade + 10%), regra de transferência
 - ✅ **006 Sistema de Cartas** — 2 decks (Acaso/Tesouro), raridades, mão (limite 3, privada), saque, timing, 14 efeitos autocontidos + framework; **D-018** propagado (Surpresa→Acaso)
 - ✅ **007 Balanceamento/Catch-up** — GO Progressivo + Free Parking (pote); imposto/multa de prisão debitam de fato
 - ✅ **008 Falência & Fim de jogo** — dívida pendente (pagar/falir), destino dos ativos (§9.2), eliminação, vitória
 - ✅ **009 Bus Tickets** — *uso* do ticket (mover pelo lado, §10.7) + espaço Bus Ticket concede +1 (§2.7); contador já existia (006/D-012)
 - ✅ **010 Empréstimos** — solicitar na dívida pendente, juros simples por GO, quitar (só principal), máx. 1 ativo/devedor; **destrava a Falência §9.3** (credor do empréstimo herda ativos+passivos)
-- ✅ **011 Construção avançada** — 2º hotel (§14, escassez de estoque), Hangar (§13.6, dobra aluguel do aeroporto), Skyscraper (§13.7, grupo completo, aluguel fixo + ×3 no grupo); ladder 0–7
+- ✅ **011 Construção avançada** — 2º hotel (§14, **cobra mais aluguel** que o 1º — D-022), Hangar (§13.6, dobra aluguel do aeroporto), Skyscraper (§13.7, grupo completo, aluguel fixo + ×3 no grupo); ladder 0–7
 - ✅ **012 Tax Man** (§13.8) — Fiscal do banco move a cada turno (porta em `advanceSeat`) e cobra do dono o aluguel da casa onde para (removido da economia); catch-up discreto. **Fecha as mecânicas de balanceamento.**
 - ✅ **013 Negociação — troca** (§8.1–§8.3) — `executeTrade`: trocar propriedades (incl. hipotecadas, taxa de 10%) + caixa entre dois jogadores, a qualquer momento; cartas/Bus Tickets/construções não-negociáveis
 - ✅ **014 Imunidade de aluguel** (§8.4 / D-010) — concedida na troca, por N voltas ou permanente; beneficiário não paga (pessoal); expira no GO; visível no HUD. **Negociação completa** (transferência de imunidade existente entregue no 028)
@@ -48,7 +48,7 @@ Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vite
 ### Pendente (engine)
 - ✅ **Transferência de imunidade existente** (§8.4 "transferíveis") — entregue no **028** (re-atribui beneficiário, preserva voltas/`granterId`).
 - ⤳ **Leilão dos bens do falido-ao-banco** (§9.2): hoje as propriedades voltam **direto** ao banco (grátis); o SRS pede **leilão**. Precisa de licitantes = vários jogadores → **movido ao M3**.
-- ⤳ **Auto-disparo do leilão de casas em escassez** (§5.4): o mecanismo existe (026), mas só é aberto **manualmente**; o gatilho automático pressupõe **demanda concorrente** (vários querendo construir) → **movido ao M3**.
+- ❌ **Leilão de casas em escassez** (§5.4): **removido** (2026-05-25, [D-022](DECISIONS.md)) — construção é ilimitada, não há escassez de casas. Spec 026 descontinuada.
 - [ ] **Rebalanceamento pós-playtest** (tuning dos knobs em `theme.ts`).
 
 ---
@@ -65,7 +65,7 @@ O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o 
 - ✅ **024** — **Negociação (trade) na UI**: `validateTrade` extraído (executeTrade delega) + `tradableProps` + `GameState.pendingTrade` + reducers `proposeTrade`/`acceptTrade`/`rejectTrade` (testados) + `TradeLayer` (compositor 2 colunas + modal recebido, com imunidades §8.4) + botão "Negociar". _Acabamento visual a confirmar no `bun run dev`._
 - ✅ **Polimento de fluidez** (glue, fora do SDD): **cor real do dono** na célula comprada (`ClassicSquare` lê `game.titles`); **token = `PlayerFace`** (rosto) de volta no `LiveTokens`; HUD de prisão explicita a 3ª tentativa; **feedback de caixa** (delta flutuante no `PlayerRow`); painel **"Efeitos ativos" real** (`tempEffects`) + **`EffectMark`** pulsante nas casas afetadas (apagão/greve/boicote/imunidade-temp); dado já anima (3D no `DiceArena`)
 - ✅ **025** — **Revelação de carta sacada**: `card-reveal` (ResolutionSlice) + `cardRevealResolve` (peek) + `confirmCardReveal` (saca via `cardResolve` intacto); modal central (nome/deck/raridade/descrição + "Continuar"). _Acabamento visual a confirmar no `bun run dev`._
-- ✅ **026** — **Leilão de casas em escassez** (§5.4): evento autônomo `GameState.houseAuction` (saiu da resolução de turno) + `HouseAuctionLayer` + botão "Leilão de casas" (gatilho manual; auto-disparo = M3). `house-auction` de resolução removido (código morto).
+- ❌ **026** — **Leilão de casas em escassez**: **DESCONTINUADA (2026-05-25, [D-022](DECISIONS.md))** — escassez de construção removida (construção ilimitada). `economy/houseAuction.ts`, `HouseAuctionLayer`, botão no `PlayersPanel` e testes apagados; `GameState.houseAuction` removido.
 - ✅ **027** — **Painel Trades ao vivo**: `GameState.tradeHistory` (bounded) + `acceptTrade` registra/loga; `tradesView` (puro) + painel real (pendente + histórico); mock removido.
 - ✅ **028** — **Transferência de imunidade existente** (§8.4): `Trade += fromImmunityTransfers?`/`toImmunityTransfers?` (posições); `validateTrade` exige `hasImmunity(ofertante, pos)`; `executeTrade` re-atribui o `beneficiaryId` (preserva voltas + `granterId`), antes das concessões novas. Compositor ganha seção "Transferir imunidade" por lado; modal recebido lista 🛡️➡️. _Acabamento visual a confirmar no `bun run dev`._
 
@@ -103,8 +103,7 @@ O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o 
 
 ### Regras que estavam "simplificadas" e voltam aqui (precisam de vários jogadores)
 
-6. [ ] **Leilão dos bens do falido-ao-banco** (§9.2) — ao falir **devendo ao banco**, as propriedades (sem construções) vão a **leilão** entre os demais, em vez de voltar grátis. Reusa o motor de leilão (003/026).
-7. [ ] **Auto-disparo do leilão de casas em escassez** (§5.4) — quando há **demanda concorrente** e o estoque do banco não cobre, abrir `openHouseAuction` automaticamente (hoje só botão manual).
+6. [ ] **Leilão dos bens do falido-ao-banco** (§9.2) — ao falir **devendo ao banco**, as propriedades (sem construções) vão a **leilão** entre os demais, em vez de voltar grátis. Reusa o motor de leilão (003).
 
 ---
 
