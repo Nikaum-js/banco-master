@@ -94,6 +94,12 @@ describe('trade draft', () => {
     draft = apply(game, draft, { kind: 'toggle-transfer', party: 'from', pos: 3 })
 
     expect(draft.from.transfers).toEqual(new Set([3]))
+    // Transferir a imunidade sem receber nada é doação (§8.5) — a projeção explica o quanto falta.
+    expect(projectTradeDraft(game, draft).canPropose).toBe(false)
+    expect(projectTradeDraft(game, draft).counterpart).toMatchObject({ fromMissing: 8 })
+
+    draft = apply(game, draft, { kind: 'set-cash', party: 'to', amount: 20 })
     expect(projectTradeDraft(game, draft).canPropose).toBe(true)
+    expect(projectTradeDraft(game, draft).counterpart).toBeNull()
   })
 })

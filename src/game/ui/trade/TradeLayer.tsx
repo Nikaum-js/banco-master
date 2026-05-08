@@ -589,13 +589,16 @@ function Side({
 // ---------------------------------------------------------------------
 // Compositor — montar a proposta.
 // ---------------------------------------------------------------------
-function Composer({ onClose }: { onClose: () => void }) {
+function Composer({ onClose, proposerId }: { onClose: () => void; proposerId: string | null }) {
   const game = useGameStore((s) => s.game)
   const room = useRoomStore((s) => s.room)
   const dispatchTrade = useGameStore((s) => s.dispatch)
   const proposeTrade = (trade: Trade): void => dispatchTrade({ kind: 'propose-trade', trade })
 
-  const me = game.players[game.turnOrder[game.activeSeat]]
+  // Negociação é uma ação em nome do remetente e pode nascer fora da vez dele. Em sala,
+  // "você" é o assento ligado à sessão local; o jogador ativo só é fallback do modo local.
+  const active = game.players[game.turnOrder[game.activeSeat]]
+  const me = game.players.find((player) => player.id === proposerId) ?? active
   const [draft, send] = useReducer(
     (current: ReturnType<typeof createTradeDraft>, action: Parameters<typeof updateTradeDraft>[2]) =>
       updateTradeDraft(game, current, action),
@@ -603,7 +606,7 @@ function Composer({ onClose }: { onClose: () => void }) {
     (initialGame) => createTradeDraft(initialGame, me.id),
   )
   const view = projectTradeDraft(game, draft)
-  const { proposer, recipients: others, recipient, trade, canPropose } = view
+  const { proposer, recipients: others, recipient, trade, canPropose, counterpart } = view
   const { props: offered, cash: fromCash, tickets: fromTickets, grants: fromGrants, transfers: fromTransfers } = draft.from
   const { props: requested, cash: toCash, tickets: toTickets, grants: toGrants, transfers: toTransfers } = draft.to
   const change = (party: TradeDraftParty) => ({
@@ -722,6 +725,19 @@ function Composer({ onClose }: { onClose: () => void }) {
           }
         />
       </div>
+
+      {/* Piso de contrapartida (§8.5): recusa explicada COM o número que falta. Sem isso, o
+          botão desabilitado é indistinguível de bug — e é justamente quem está montando uma
+          proposta desequilibrada que precisa saber de quanto. */}
+      {counterpart && (
+        <p className="px-5 pt-3 label text-signal-glow normal-case leading-snug shrink-0" role="status">
+          {counterpart.fromMissing > 0 && counterpart.toMissing > 0
+            ? `Os dois lados estão entregando muito para o que recebem: faltam ${money(counterpart.fromMissing)} do lado de ${meIdentity.name} e ${money(counterpart.toMissing)} do outro.`
+            : counterpart.fromMissing > 0
+              ? `Você está entregando demais para o que recebe: faltam ${money(counterpart.fromMissing)} em contrapartida.`
+              : `${themIdentity?.name ?? 'O outro lado'} entrega demais para o que recebe: faltam ${money(counterpart.toMissing)} em contrapartida.`}
+        </p>
+      )}
 
       {/* Convenção de rodapé: secundário à ESQUERDA, primário à DIREITA */}
       <div className="px-5 py-3 border-t-2 border-coffee-950 shrink-0 flex gap-2">
@@ -943,7 +959,7 @@ export function TradeLayer() {
         </Backdrop>
       ) : open ? (
         <Backdrop key="composer">
-          <Composer onClose={hide} />
+          <Composer onClose={hide} proposerId={local.seatId} />
         </Backdrop>
       ) : null}
     </AnimatePresence>

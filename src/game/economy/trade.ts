@@ -6,6 +6,7 @@ import { BOARD } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
 import type { Trade, ImmunityGrant } from './types'
 import { ownerOf } from './titles'
+import { meetsCounterpart } from './appraisal'
 import { cityLevel } from './construction'
 import { transferKeepFee } from './mortgage'
 import { hasImmunity } from './imunidade'
@@ -99,6 +100,11 @@ export function validateTrade(state: GameState, trade: Trade): boolean {
   if (!validImmunityGrants(state, trade.toImmunities, toId, toProps)) return false
   if (!validImmunityTransfers(state, trade.fromImmunityTransfers, fromId)) return false // §8.4 transferência
   if (!validImmunityTransfers(state, trade.toImmunityTransfers, toId)) return false
+  // Contrapartida mínima (§8.5, D-055): entregar ativos e não receber metade do valor de volta
+  // é doação, e doação decide a partida fora do tabuleiro. Dinheiro pago não conta contra quem
+  // paga — ver `appraisal.ts`. Independente da proteção de credor logo abaixo: aquela cuida do
+  // devedor em cobrança, esta cuida da mesa inteira, a qualquer momento.
+  if (!meetsCounterpart(state, trade)) return false
   const fin = finalCash(state, trade)
   if (!fin || fin.from < 0 || fin.to < 0) return false // taxas deixariam alguém negativo
   // Proteção do credor (§9.1): com dívida pendente, troca envolvendo o DEVEDOR (jogador

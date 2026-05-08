@@ -72,10 +72,10 @@ describe('proposeTrade / acceptTrade / rejectTrade (US1+US2)', () => {
 
   it('permite várias propostas ativas, inclusive entre o mesmo par', () => {
     const g = proposeTrade(setup(), baseTrade())
-    const r = proposeTrade(g, baseTrade({ toProps: [6] }))
+    const r = proposeTrade(g, baseTrade({ toProps: [6], fromCash: 40 }))
     expect(r.tradeProposals).toEqual([
       { id: 1, trade: baseTrade() },
-      { id: 2, trade: baseTrade({ toProps: [6] }) },
+      { id: 2, trade: baseTrade({ toProps: [6], fromCash: 40 }) },
     ])
     expect(r.nextTradeProposalId).toBe(3)
   })
@@ -87,11 +87,11 @@ describe('proposeTrade / acceptTrade / rejectTrade (US1+US2)', () => {
 
   it('SC-002: acceptTrade aplica a troca e remove somente a proposta identificada', () => {
     let g = proposeTrade(setup(), baseTrade())
-    g = proposeTrade(g, baseTrade({ toProps: [6] }))
+    g = proposeTrade(g, baseTrade({ toProps: [6], fromCash: 40 }))
     const r = acceptTrade(g, 1)
     expect(r.titles[1].ownerId).toBe('p2') // pos1 foi de p1 → p2
     expect(r.titles[7].ownerId).toBe('p1') // pos7 foi de p2 → p1
-    expect(r.tradeProposals).toEqual([{ id: 2, trade: baseTrade({ toProps: [6] }) }])
+    expect(r.tradeProposals).toEqual([{ id: 2, trade: baseTrade({ toProps: [6], fromCash: 40 }) }])
   })
 
   it('SC-003: acceptTrade é no-op se a proposta ficou obsoleta', () => {
@@ -104,9 +104,9 @@ describe('proposeTrade / acceptTrade / rejectTrade (US1+US2)', () => {
 
   it('SC-003: rejectTrade descarta somente a escolhida sem mover nada', () => {
     let g = proposeTrade(setup(), baseTrade())
-    g = proposeTrade(g, baseTrade({ toProps: [6] }))
+    g = proposeTrade(g, baseTrade({ toProps: [6], fromCash: 40 }))
     const r = rejectTrade(g, 1)
-    expect(r.tradeProposals).toEqual([{ id: 2, trade: baseTrade({ toProps: [6] }) }])
+    expect(r.tradeProposals).toEqual([{ id: 2, trade: baseTrade({ toProps: [6], fromCash: 40 }) }])
     expect(r.titles[1].ownerId).toBe('p1') // nada mudou
     expect(r.titles[7].ownerId).toBe('p2')
   })
@@ -201,7 +201,8 @@ describe('transferência de imunidade existente (028)', () => {
   it('transferência no lado `to` re-atribui to→from', () => {
     const g = setup()
     g.immunities.push({ beneficiaryId: 'p2', pos: 3, lapsRemaining: 1, granterId: 'p1' })
-    const r = acceptTrade(proposeTrade(g, baseTrade({ toImmunityTransfers: [3] })), 1)
+    // §8.5: p2 entrega Cairo + a imunidade, então precisa de um pouco de caixa junto de Roma.
+    const r = acceptTrade(proposeTrade(g, baseTrade({ toImmunityTransfers: [3], fromCash: 10 })), 1)
     expect(hasImmunity(r, 'p1', 3)).toBe(true)
     expect(hasImmunity(r, 'p2', 3)).toBe(false)
   })

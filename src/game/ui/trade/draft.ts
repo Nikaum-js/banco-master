@@ -2,6 +2,7 @@
 // termos e elegibilidade. React só despacha intents e renderiza esta projeção.
 import { BOARD } from '@/lib/boardData'
 import { tradableProps, validateTrade } from '@/game/economy/trade'
+import { tradeBalance } from '@/game/economy/appraisal'
 import type { Immunity, Trade } from '@/game/economy/types'
 import type { GameState, Player } from '@/game/turn/types'
 
@@ -45,6 +46,17 @@ export interface TradeDraftProjection {
   toImmunities: Immunity[]
   trade: Trade
   canPropose: boolean
+  /**
+   * Piso de contrapartida (§8.5) quando a proposta NÃO o atinge: quanto falta a cada lado, em
+   * valor avaliado. `null` quando atende (ou quando nem há termos). Proposta bloqueada sem
+   * número na tela é lida como bug — este campo existe para a recusa se explicar.
+   */
+  counterpart: TradeCounterpartGap | null
+}
+
+export interface TradeCounterpartGap {
+  fromMissing: number
+  toMissing: number
 }
 
 function emptySide(): TradeDraftSide {
@@ -185,6 +197,10 @@ export function projectTradeDraft(game: GameState, draft: TradeDraft): TradeDraf
   const eligibleRecipients = recipients(game, draft.fromId)
   const recipient = eligibleRecipients.find((player) => player.id === draft.toId)
   const trade = toTrade(draft)
+  const balance = recipient && hasTerms(trade) ? tradeBalance(game, trade) : null
+  const gap = balance && (balance.from.missing > 0 || balance.to.missing > 0)
+    ? { fromMissing: balance.from.missing, toMissing: balance.to.missing }
+    : null
 
   return {
     proposer,
@@ -200,5 +216,6 @@ export function projectTradeDraft(game: GameState, draft: TradeDraft): TradeDraf
       : [],
     trade,
     canPropose: recipient !== undefined && hasTerms(trade) && validateTrade(game, trade),
+    counterpart: gap,
   }
 }

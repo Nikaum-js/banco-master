@@ -2,19 +2,98 @@
 import { act } from 'react'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { ActionsPanel } from '@/boards/shared'
+import { ActionsPanel, PlayersPanel } from '@/boards/shared'
 import { createSeedState } from '@/game/setup'
 import { useGameStore } from '@/game/store'
 import { TradeDeedItem } from '@/game/ui/trade/TradeDeedItem'
 import { useTradeUI } from '@/game/ui/trade/tradeUI'
 import { TradeLayer } from '@/game/ui/trade/TradeLayer'
+import type { Room } from '@/net/room'
+import { useRoomStore } from '@/net/roomStore'
 
 afterEach(() => {
   cleanup()
   useTradeUI.setState({ open: false, selectedProposalId: null })
+  useRoomStore.getState().reset()
 })
 
 describe('apresentação da negociação', () => {
+  it('mantém o empréstimo ativo abaixo dos efeitos na coluna esquerda', () => {
+    const game = createSeedState(['p1', 'p2'])
+    game.loans = [{ debtorId: 'p1', creditorId: 'p2', principal: 26, ratePct: 50 }]
+    act(() => useGameStore.setState({ game }))
+
+    render(
+      <>
+        <PlayersPanel />
+        <ActionsPanel />
+      </>,
+    )
+
+    const effectsPanel = screen.getByText('Efeitos ativos').closest('aside')
+    const loanPanel = screen.getByText('Empréstimo ativo').closest('aside')
+    expect(loanPanel).toBe(effectsPanel)
+    expect(screen.getByText('Empréstimo ativo').closest('.loan-panel-section')).toBeTruthy()
+  })
+
+  it('mostra o empréstimo ao credor sem oferecer quitação em nome do devedor', () => {
+    const game = createSeedState(['p1', 'p2'])
+    game.loans = [{ debtorId: 'p1', creditorId: 'p2', principal: 26, ratePct: 50 }]
+    const room: Room = {
+      id: 'loan-room',
+      status: 'playing',
+      seats: [
+        {
+          playerId: 'p1', uid: 'nikolas-uid', name: 'Nikolas', color: '#3b8bd0',
+          isHost: true, connected: true, reentryCode: 'NIK111',
+        },
+        {
+          playerId: 'p2', uid: 'ana-uid', name: 'Ana', color: '#b665a2',
+          isHost: false, connected: true, reentryCode: 'ANA222',
+        },
+      ],
+    }
+    act(() => {
+      useGameStore.setState({ game })
+      useRoomStore.setState({ room, myUid: 'ana-uid' })
+    })
+
+    render(<PlayersPanel />)
+
+    expect(screen.getByText('Nikolas deve a você')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Quitar/ })).toBeNull()
+    expect(screen.getByText('Principal fixo')).toBeTruthy()
+    expect(screen.getByText('Cobrança por GO')).toBeTruthy()
+  })
+
+  it('oferece quitação somente ao devedor local', () => {
+    const game = createSeedState(['p1', 'p2'])
+    game.loans = [{ debtorId: 'p1', creditorId: 'p2', principal: 26, ratePct: 50 }]
+    const room: Room = {
+      id: 'loan-room',
+      status: 'playing',
+      seats: [
+        {
+          playerId: 'p1', uid: 'nikolas-uid', name: 'Nikolas', color: '#3b8bd0',
+          isHost: true, connected: true, reentryCode: 'NIK111',
+        },
+        {
+          playerId: 'p2', uid: 'ana-uid', name: 'Ana', color: '#b665a2',
+          isHost: false, connected: true, reentryCode: 'ANA222',
+        },
+      ],
+    }
+    act(() => {
+      useGameStore.setState({ game })
+      useRoomStore.setState({ room, myUid: 'nikolas-uid' })
+    })
+
+    render(<PlayersPanel />)
+
+    expect(screen.getByText('Você deve a Ana')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Quitar R$ 26' })).toBeTruthy()
+  })
+
   it('mostra o nome completo e os fatos canônicos de uma propriedade', () => {
     const game = createSeedState(['p1', 'p2'])
     game.titles[33].ownerId = 'p1'
@@ -48,10 +127,11 @@ describe('apresentação da negociação', () => {
 
     render(<><ActionsPanel /><TradeLayer /></>)
 
-    const route = screen.getByLabelText('Jogador 1 propõe uma troca com Jogador 2')
-    expect(within(route).getByText('Jogador 1')).toBeTruthy()
-    expect(within(route).getByText('Jogador 2')).toBeTruthy()
-    expect(route.querySelector('.truncate')).toBeNull()
+    const proposal = screen.getByRole('button', { name: 'Ver proposta de Jogador 1 para Jogador 2' })
+    expect(within(proposal).getByText('Jogador 1')).toBeTruthy()
+    expect(within(proposal).getByText('Jogador 2')).toBeTruthy()
+    expect(proposal.querySelector('.truncate')).toBeNull()
+    expect(screen.queryByText('Ver proposta')).toBeNull()
     expect(screen.queryByText('Nenhum item')).toBeNull()
   })
 
@@ -142,6 +222,51 @@ describe('apresentação da negociação', () => {
     expect(screen.getByText('Negociação', { selector: 'h3' })).toBeTruthy()
   })
 
+  it('usa o assento local como "você" mesmo fora da própria vez', () => {
+    const game = createSeedState(['p1', 'p2'])
+    game.activeSeat = 0
+    game.titles[33].ownerId = 'p1'
+    game.titles[1].ownerId = 'p2'
+    const room: Room = {
+      id: 'r1',
+      status: 'playing',
+      seats: [
+        {
+          playerId: 'p1',
+          uid: 'ana-uid',
+          name: 'Ana',
+          color: '#b665a2',
+          isHost: true,
+          connected: true,
+          reentryCode: 'ANA111',
+        },
+        {
+          playerId: 'p2',
+          uid: 'nikolas-uid',
+          name: 'Nikolas',
+          color: '#3b8bd0',
+          isHost: false,
+          connected: true,
+          reentryCode: 'NIK222',
+        },
+      ],
+    }
+    act(() => {
+      useGameStore.setState({ game })
+      useRoomStore.setState({ room, myUid: 'nikolas-uid' })
+    })
+
+    render(<><ActionsPanel /><TradeLayer /></>)
+    fireEvent.click(screen.getByRole('button', { name: 'Nova negociação' }))
+
+    const youSide = screen.getByText('Você oferece').parentElement?.parentElement
+    expect(youSide).toBeTruthy()
+    expect(within(youSide as HTMLElement).getByRole('button', { name: 'Incluir o título Roma' })).toBeTruthy()
+    expect(within(youSide as HTMLElement).queryByRole('button', { name: 'Incluir o título Rio de Janeiro' })).toBeNull()
+    expect(screen.getByText('Ana oferece')).toBeTruthy()
+    expect(screen.queryByText('Nikolas oferece')).toBeNull()
+  })
+
   it('oferece título ou imunidade no mesmo item da propriedade', () => {
     const game = createSeedState(['p1', 'p2'])
     game.titles[1].ownerId = 'p1'
@@ -162,5 +287,37 @@ describe('apresentação da negociação', () => {
     expect(title.getAttribute('aria-pressed')).toBe('false')
     expect(immunity.getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByLabelText('Duração da imunidade em Roma')).toBeTruthy()
+  })
+
+  // §8.5 (050/D-055, FR-017) — recusar sem dizer o porquê seria indistinguível de bug, e é
+  // justamente quem está montando a proposta desequilibrada que precisa saber de quanto.
+  it('explica a recusa por contrapartida com o valor que falta', () => {
+    const game = createSeedState(['p1', 'p2'])
+    game.titles[1].ownerId = 'p1' // Roma, $60 → piso de $30
+    act(() => useGameStore.setState({ game }))
+
+    render(<><ActionsPanel /><TradeLayer /></>)
+    fireEvent.click(screen.getByRole('button', { name: 'Nova negociação' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Incluir o título Roma' }))
+
+    const status = screen.getByRole('status')
+    expect(status.textContent).toContain('entregando demais')
+    expect(status.textContent).toMatch(/30/)
+    expect((screen.getByRole('button', { name: 'Confirmar' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('some com a explicação quando a contrapartida cobre o piso', () => {
+    const game = createSeedState(['p1', 'p2'])
+    game.titles[1].ownerId = 'p1'
+    game.titles[3].ownerId = 'p2' // Veneza, $80 — contrapartida acima do piso
+    act(() => useGameStore.setState({ game }))
+
+    render(<><ActionsPanel /><TradeLayer /></>)
+    fireEvent.click(screen.getByRole('button', { name: 'Nova negociação' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Incluir o título Roma' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Incluir o título Veneza' }))
+
+    expect(screen.queryByRole('status')).toBeNull()
+    expect((screen.getByRole('button', { name: 'Confirmar' }) as HTMLButtonElement).disabled).toBe(false)
   })
 })
