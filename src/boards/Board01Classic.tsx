@@ -24,6 +24,14 @@ import { StageBackdrop } from './StageBackdrop'
 // é 40 em 11×11. Era um import fixo de `CLASSIC_TOPOLOGY` — a seam existia, mas estava
 // amarrada num tabuleiro só.
 import { topologyOf } from './topology'
+import { PortraitDock } from './PortraitDock'
+import { DOCK_TABS, type DockTab } from './dockTabs'
+import { useMediaQuery } from '@/game/ui/media'
+
+// Limiar do layout de retrato (D-079). Casa com o bloco de mesmo nome em `index.css`:
+// acima dele o empilhamento de tablet (1100px) já serve a mesa sem virar miniatura, e a
+// gaveta com abas só faria esconder o que cabia à vista.
+const PORTRAIT_PHONE = '(orientation: portrait) and (max-width: 820px)'
 
 export default function Board01Classic() {
   // O tabuleiro vem do catálogo do mapa da sala (055/D-069) — cada mapa tem o seu, com
@@ -36,6 +44,13 @@ export default function Board01Classic() {
   // é portado ao `body`: assim ele escapa do stacking context do tabuleiro
   // e continua operável por cima da cobrança de dívida.
   const [selection, setSelection] = useState<{ pos: number; anchor: HTMLElement } | null>(null)
+  // Retrato de celular (D-079): os painéis viram gaveta com abas abaixo do tabuleiro.
+  // Os dois continuam MONTADOS — alterna `hidden`, não a árvore —, então trocar de aba
+  // não descarta nada e a rotação não remonta painel nenhum.
+  // Quem lê o estado dos jogadores é o próprio `PortraitDock` — assinar `game` AQUI faria
+  // as 48 casas re-renderizarem a cada mutação de caixa, e o tabuleiro não depende disso.
+  const portrait = useMediaQuery(PORTRAIT_PHONE)
+  const [dockTab, setDockTab] = useState<DockTab>('players')
   const selectedPos = selection?.pos ?? null
   const selectedSquare: Square | undefined =
     selectedPos !== null ? board.find((s) => s.pos === selectedPos) : undefined
@@ -48,7 +63,7 @@ export default function Board01Classic() {
       onClick={() => setSelection(null)}
     >
       <StageBackdrop />
-      <PlayersPanel />
+      <PlayersPanel dock={portrait ? { ...DOCK_TABS[0], hidden: dockTab !== 'players' } : undefined} />
 
       <div
         className="
@@ -210,7 +225,9 @@ export default function Board01Classic() {
         </div>
       </div>
 
-      <ActionsPanel />
+      <ActionsPanel dock={portrait ? { ...DOCK_TABS[1], hidden: dockTab !== 'actions' } : undefined} />
+
+      {portrait && <PortraitDock tab={dockTab} onTab={setDockTab} />}
     </main>
   )
 }

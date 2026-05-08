@@ -714,12 +714,26 @@ function useLivePlayers(): Player[] {
   return playersView(game, room, myUid)
 }
 
-export function PlayersPanel() {
+// Semântica de aba da gaveta de retrato (D-079). Ausente = painel lateral de sempre; o
+// `aside` só vira `tabpanel` quando existe um `tablist` (o `PortraitDock`) para controlá-lo.
+export type DockPanel = { panelId: string; tabId: string; hidden: boolean }
+
+function dockProps(dock: DockPanel | undefined) {
+  if (!dock) return {}
+  return {
+    id: dock.panelId,
+    role: 'tabpanel' as const,
+    'aria-labelledby': dock.tabId,
+    hidden: dock.hidden,
+  }
+}
+
+export function PlayersPanel({ dock }: { dock?: DockPanel } = {}) {
   const players = useLivePlayers()
   const effects = useGameStore((s) => s.game.tempEffects).map(effectRow) // 024.1 — efeitos reais
   const activePlayers = players.filter((p) => !p.bankrupt).length
   return (
-    <aside className="side-panel">
+    <aside className="side-panel side-panel--players" {...dockProps(dock)}>
       <div className="side-panel-section players-panel-section">
         <SectionHeader
           title="Jogadores"
@@ -1394,7 +1408,7 @@ function PotCard({ pot }: { pot: number }) {
   )
 }
 
-export function ActionsPanel() {
+export function ActionsPanel({ dock }: { dock?: DockPanel } = {}) {
   const game = useGameStore((s) => s.game)
   const room = useRoomStore((s) => s.room)
   const pot = game.centerPot
@@ -1404,7 +1418,7 @@ export function ActionsPanel() {
   )
 
   return (
-    <aside className="side-panel">
+    <aside className="side-panel side-panel--actions" {...dockProps(dock)}>
       <PotCard pot={pot} />
 
       <HandPanel />

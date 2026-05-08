@@ -26,7 +26,6 @@ import {
 } from './LobbyScreen'
 import { SessionBadge } from './SessionBadge'
 import { Button } from '@/game/ui/primitives'
-import { OrientationGate } from '@/game/ui/OrientationGate'
 import type { AvatarId } from '@/boards/playerAvatarCatalog'
 import type { SkinId } from '@/boards/playerSkinCatalog'
 import { recallRoomPreset, rememberRoomPreset } from '@/net/roomPresets'
@@ -51,12 +50,9 @@ export function OnlineSessionGate({
   onExit: () => void
   children: ReactNode
 }) {
+  // Sem gate de orientação (D-079): retrato de celular tem layout próprio e joga.
   if (local) {
-    return (
-      <OrientationGate>
-        <MatchErrorBoundary roomId={null}>{children}</MatchErrorBoundary>
-      </OrientationGate>
-    )
+    return <MatchErrorBoundary roomId={null}>{children}</MatchErrorBoundary>
   }
 
   if (!isSupabaseConfigured()) {
@@ -144,9 +140,7 @@ function OnlineRoom({
   if (phase === 'playing') {
     return (
       <>
-        <OrientationGate>
-          <MatchErrorBoundary roomId={room?.id ?? null}>{children}</MatchErrorBoundary>
-        </OrientationGate>
+        <MatchErrorBoundary roomId={room?.id ?? null}>{children}</MatchErrorBoundary>
         {room && <SessionBadge link={roomLink(room.id, window.location.origin)} />}
       </>
     )

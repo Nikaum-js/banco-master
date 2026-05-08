@@ -21,9 +21,9 @@ const VisualLab = lazy(() => importWithReload(() =>
 // segue idêntico. Com esses params, ele monta a sala online e só libera o tabuleiro
 // quando o estado da partida chega do host.
 //
-// `OrientationGate` é montado pelo `OnlineGate` só quando o TABULEIRO existe. A home e o
-// lobby funcionam em retrato; durante a partida, o gate continua sem desmontar a sessão
-// (só sobrepõe um aviso por cima dos mesmos filhos).
+// Não há gate de orientação (D-079): home, lobby e tabuleiro funcionam nas duas
+// orientações. Em retrato de celular o tabuleiro troca de LAYOUT — vira herói de largura
+// inteira com gaveta de abas abaixo (`boards/PortraitDock`) —, não de disponibilidade.
 export default function App() {
   // `?sons` abre o board de auditoria dos SFX (dev) no lugar do jogo.
   if (new URLSearchParams(window.location.search).has('sons')) {
