@@ -612,16 +612,7 @@ export function ClassicSquare({
               boxShadow: `inset 0 0 0 2px ${owner.color}, inset 0 0 0 3px rgba(15,12,9,0.55)`,
             }}
           />
-          {/* 3) Pílula da cor do dono na borda externa */}
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              ...ownerPillStyle,
-              background: `linear-gradient(${owner.color}, color-mix(in srgb, ${owner.color} 70%, #0f0c09))`,
-              borderRadius: 9999,
-              boxShadow: '0 1px 2px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3)',
-            }}
-          />
+          {/* 3) Pílula removida — stripe exclusiva de aeroportos/utilidades */}
         </>
       )}
       {/* Bandeira-avatar do país — fincada na borda INTERNA (voltada
@@ -726,8 +717,29 @@ export function ClassicSquare({
         </>
       )}
 
+      {/* Faixa de acento na borda externa — aeroportos (dourado) e
+          utilidades (cor do ícone). Identidade visual sem dono. */}
+      {(isAirport || isUtility) && (() => {
+        const color = isAirport
+          ? '#d4af37'
+          : (square as UtilitySquare).icon === 'fuel' ? '#22c55e'
+          : (square as UtilitySquare).icon === 'bolt' ? '#ffd97a'
+          : '#fb923c'
+        const style: React.CSSProperties = (() => {
+          const base = { position: 'absolute' as const, borderRadius: 9999, pointerEvents: 'none' as const, background: color, boxShadow: '0 1px 3px rgba(0,0,0,0.5)' }
+          switch (side) {
+            case 'bottom': return { ...base, left: '20%', right: '20%', bottom: 4, height: 5 }
+            case 'top':    return { ...base, left: '20%', right: '20%', top: 4,    height: 5 }
+            case 'left':   return { ...base, top: '20%', bottom: '20%', left: 4,   width: 5 }
+            case 'right':  return { ...base, top: '20%', bottom: '20%', right: 4,  width: 5 }
+            default:       return base
+          }
+        })()
+        return <div style={style} />
+      })()}
+
       {/* Conteúdo das casas NÃO-propriedade — aeroporto, utility, tax,
-          surpresa, tesouro. Ícone + label no centro da célula.
+          acaso, tesouro. Ícone + label no centro da célula.
           Leste/oeste: gira o bloco inteiro 90° (igual o nome das propriedades)
           + encolhe um pouco pra o label girado caber na altura. */}
       {!isProperty && (
