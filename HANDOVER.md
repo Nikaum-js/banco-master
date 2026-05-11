@@ -1,7 +1,7 @@
 # HANDOVER — Banco Master
 
 > Estado para continuar em um **chat novo**. Snapshot de 2026-05-24.
-> Leitura de partida: este arquivo → `CLAUDE.md` → `docs/MILESTONES.md` → a spec ativa (`specs/010-.../plan.md`).
+> Leitura de partida: este arquivo → `CLAUDE.md` → `docs/MILESTONES.md` → a spec ativa (`specs/012-.../plan.md`).
 
 ## Onde estamos
 
@@ -9,9 +9,9 @@ Saímos da discovery e entramos em **implementação ativa**, feature a feature,
 
 **Como verificar:**
 ```bash
-npx vitest run tests/game   # 103 testes (a verdade do motor)
-npm run build               # tsc -b + vite (deve passar, exit 0)
-npm run dev                 # demo local jogável (HUD na barra de baixo)
+bunx vitest run tests/game  # 124 testes (a verdade do motor) — projeto usa BUN, não npm/npx
+bun run build               # tsc -b + vite (deve passar, exit 0)
+bun run dev                 # demo local jogável (HUD na barra de baixo)
 ```
 
 ## Features entregues (motor, em `src/game/`)
@@ -28,7 +28,9 @@ npm run dev                 # demo local jogável (HUD na barra de baixo)
 | 008 | `falencia-fim-jogo` | dívida pendente → **pagar/falir**, destino dos ativos (§9.2), eliminação, **fim de jogo** (vencedor) |
 | 009 | `bus-tickets` | **uso** do ticket (§10.7: `useBusTicket`/`sideOf` em `turn/`, move pelo lado, credita GO ao cruzar) + **espaço Bus Ticket** (§2.7: parar concede +1) |
 | 010 | `emprestimos` | `emprestimos/` — `grantLoan`/`payOffLoan`/`chargeLoanInterest`; `Loan` + `GameState.loans`; juros simples no GO (porta `afterPassGo`); **falência §9.3** (credor do empréstimo herda) em `falencia.ts` |
-| — | UI wiring | `src/game/ui/` — `GameHUD` (controle do turno; inclui seletor de Bus Ticket e pedir/quitar empréstimo) + `LiveTokens`; montados no `App.tsx`/`Board01Classic.tsx` |
+| 011 | `construcao-avancada` | estende o 004: ladder 0–7 (`cityLevel`), 2º hotel + Skyscraper via `buildHouse`/`sellBuilding`; Hangar (`buildHangar`/`sellHangar`); `rentCity` (Skyscraper fixo + ×3 de grupo); `Title`+`hotel2/skyscraper/hangar`, `bank.skyscrapers`; **sem UI** |
+| 012 | `tax-man` | `balancing/taxMan.ts` — `rollTaxMan` move o Fiscal 1×/turno (porta `taxMan` em `advanceSeat`) e cobra do dono o aluguel (removido da economia); `GameState.taxManPos`; `defaultPorts` **sem** o Fiscal (só o store injeta — zero regressão); **sem UI** |
+| — | UI wiring | `src/game/ui/` — `GameHUD` (controle do turno; inclui seletor de Bus Ticket e pedir/quitar empréstimo) + `LiveTokens`; montados no `App.tsx`/`Board01Classic.tsx`. **Construção (004/011) não está no HUD** (M2) |
 
 **Loop single-player local completo:** comprar → aluguel → construir → hipotecar → GO/Férias → dívida → falir → vencedor.
 
@@ -39,7 +41,7 @@ npm run dev                 # demo local jogável (HUD na barra de baixo)
 - **Serializável (princípio VII):** todo o `GameState` é JSON puro (sem refs/closures); decks/mão = ids; timers guardam `deadline`, não handles.
 - **Portas** (injetadas pelo store, recebem `state`): `onPassGo`/`onPayToCenter`/`onCollectCenter` (balanceamento), `isEliminated`. O 002 **não** importa specs posteriores — elas entram pelas portas / pela composição de `ctx.resolve` (`economyResolve ?? cardResolve`).
 - **Resolução de casa = "slices" pendentes** em `GameState.resolution` que bloqueiam finalizar o turno: `purchase`, `auction`, `house-auction`, `card-discard`, `card-shortcut`, `debt`.
-- **RNG injetável** (`ctx.rng`) → testes determinísticos. `npx vitest run tests/game`.
+- **RNG injetável** (`ctx.rng`) → testes determinísticos. `bunx vitest run tests/game`.
 - **UI:** só o **HUD mínimo** (`GameHUD`) é funcional; os painéis laterais (`PlayersPanel`/`ActionsPanel` em `boards/shared.tsx`) são **mockados/decorativos**.
 
 ## Pendências e itens DEFERIDOS (o backlog real)
@@ -48,13 +50,14 @@ npm run dev                 # demo local jogável (HUD na barra de baixo)
 - **Cartas deferidas** (no-op stub no catálogo 006): ofensivas (Aquisição Hostil, Despejo, Auditoria Fiscal), reação (Diplomacia, Bunker Fiscal), temporárias de N voltas (Boicote, Imunidade, Apagão, Greve). Precisam de um **subsistema de reação/efeitos-temporários**.
 - **Negociação** (§8) — sem spec ainda.
 - **Imunidades** no `declareBankruptcy`: no-op até as cartas de Imunidade. (Falência §9.3 já fechada pelo 010.)
-- **Balanceamento avançado:** Tax Man (§13.8), Hangar (§13.6), Skyscraper (§13.7), 2º hotel (§14).
+- **Balanceamento: COMPLETO** (Speed Die, GO Progressivo, Free Parking, Bus Tickets, Hangar, Skyscraper, 2º hotel, Tax Man — todos entregues).
 - **Tema "Cidades do Mundo":** preços/aluguéis/custos **finais** (hoje escada/multiplicadores provisórios em `boardData.ts` e nos módulos).
 
 **Simplificações documentadas (revisitar):**
 - Cartas de **movimento** mudam a posição mas **não auto-resolvem** a casa de destino (006).
 - **Leilão de casas** e **leilão dos bens da falência-ao-banco**: mecânica existe / simplificada para "volta ao banco"; gatilho em jogo é raro.
 - **Bus Ticket em utilidade** (009): destino utilidade alcançado por ticket cobra **$0** (`diceValue(null)===0`, sem rolagem). Raro; revisitar se virar problema de balanceamento (research R6).
+- **Tax Man — dono sem caixa** (012): o Fiscal debita o que houver (sem caixa negativo); **não fale** um jogador (que pode ser não-ativo) — falência cross-player fora do modelo do 008 (research R7). O dinheiro é **removido** (banco), não vai ao pote.
 - **Empréstimo — juros no GO sem caixa** (010): se o juro de GO excede o caixa pós-bônus, abre `debt` ao credor; no overlap raro de também pousar em aluguel impagável no mesmo GO-pass, o slot único fica com a dívida de juros e a casa de pouso não é re-resolvida (research R5). Credor eliminado antes da quitação → empréstimo perdoado (R8).
 
 **Produto:**
@@ -63,20 +66,21 @@ npm run dev                 # demo local jogável (HUD na barra de baixo)
 
 ## Estado do Git
 
-- **103 commits**, todos em `main` (o projeto não usa branches de feature — trabalha em `main`).
-- Histórico criado via skill **`/micro-commits`** (datas backdatadas aleatórias, identidade `Nikolas Santana <nikolasdssantana@gmail.com>`, mensagens em **inglês** emoji+conventional).
+- **117 commits**, todos em `main` (o projeto não usa branches de feature — trabalha em `main`); incluem até o 010.
+- Histórico criado via skill **`/micro-commits`** (datas backdatadas aleatórias **espalhadas** pelos últimos 6 meses, identidade `Nikolas Santana <nikolasdssantana@gmail.com>`, mensagens em **inglês** emoji+conventional).
 - **NÃO foi feito push** — o usuário faz o push manualmente (`git push origin main`).
-- **009 (Bus Tickets) e 010 (Empréstimos) ainda NÃO commitados** — working tree sujo com os arquivos das features + docs. Rodar `/micro-commits` quando o usuário pedir (008 e anteriores já estão commitados).
+- **011 (Construção avançada) e 012 (Tax Man) ainda NÃO commitados** — working tree sujo com os arquivos das features + docs. Rodar `/micro-commits` quando o usuário pedir.
+- ⚠️ **Usar `bun`**, nunca npm/npx (rodar npm gera `package-lock.json` indevido — já existe um commitado, o usuário optou por mantê-lo).
 
 ## Como continuar (workflow desta sessão)
 
 1. **Por feature:** `/speckit-specify` → (clarify quando houver ambiguidade real, via perguntas) → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`. Tudo confirmado pelo usuário ("pode continuar" = conduza o pipeline inteiro).
-2. **`.specify/feature.json`** rastreia a feature ativa (hoje aponta para `010`); o marcador `<!-- SPECKIT -->` no `CLAUDE.md` aponta para o `plan.md` ativo.
+2. **`.specify/feature.json`** rastreia a feature ativa (hoje aponta para `012`); o marcador `<!-- SPECKIT -->` no `CLAUDE.md` aponta para o `plan.md` ativo.
 3. **Regra crítica (CLAUDE.md):** antes de `/speckit-specify`, ler constitution + SRS (seção da feature) + DECISIONS + specs dependentes.
 4. **Commits:** ao final, rodar `/micro-commits` (backdated, **sem push**) quando o usuário pedir.
-5. **Numeração de specs:** sequencial; a próxima é `011`.
+5. **Numeração de specs:** sequencial; a próxima é `013`.
 
-**Próximos candidatos** (impacto): **Negociação** (grande superfície social, D-010) · **Balanceamento avançado** (Tax Man/Hangar/Skyscraper/2º hotel) · **subsistema de cartas deferido** (ofensivas/reação/temporárias) · ou **UI completa / Multiplayer (M3)**.
+**Próximos candidatos** (impacto): **Negociação** (grande superfície social, D-010 — maior regra de motor ainda pendente) · **subsistema de cartas deferido** (ofensivas/reação/temporárias de N voltas — destrava ~9 cartas no-op do 006) · **Tema "Cidades do Mundo"** (valores finais) · ou **UI completa / Multiplayer (M3)**. Balanceamento está **completo**.
 
 ## Ponteiros
 

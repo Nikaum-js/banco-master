@@ -21,7 +21,7 @@
 ## M1 — Motor de jogo (lógica) 🟡 em andamento
 
 Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vitest). Cada item abaixo é uma feature SDD completa (`spec→plan→tasks→implement`).
-**Estado: 103 testes verdes (`npx vitest run tests/game`). HUD mínimo funcional liga o motor à tela (demo local jogável); UI completa segue em M2.**
+**Estado: 124 testes verdes (`bunx vitest run tests/game`). HUD mínimo funcional liga o motor à tela (demo local jogável); UI completa segue em M2.**
 
 ### Feito
 
@@ -35,11 +35,12 @@ Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vite
 - ✅ **008 Falência & Fim de jogo** — dívida pendente (pagar/falir), destino dos ativos (§9.2), eliminação, vitória
 - ✅ **009 Bus Tickets** — *uso* do ticket (mover pelo lado, §10.7) + espaço Bus Ticket concede +1 (§2.7); contador já existia (006/D-012)
 - ✅ **010 Empréstimos** — solicitar na dívida pendente, juros simples por GO, quitar (só principal), máx. 1 ativo/devedor; **destrava a Falência §9.3** (credor do empréstimo herda ativos+passivos)
+- ✅ **011 Construção avançada** — 2º hotel (§14, escassez de estoque), Hangar (§13.6, dobra aluguel do aeroporto), Skyscraper (§13.7, grupo completo, aluguel fixo + ×3 no grupo); ladder 0–7
+- ✅ **012 Tax Man** (§13.8) — Fiscal do banco move a cada turno (porta em `advanceSeat`) e cobra do dono o aluguel da casa onde para (removido da economia); catch-up discreto. **Fecha as mecânicas de balanceamento.**
 
 ### Pendente (engine — specs futuras)
 
 - [ ] **Negociação** — proposta, contraproposta, imunidades (D-010)
-- [ ] **Mecânicas de Balanceamento** — Speed Die já no motor; faltam **GO Progressivo**, **Free Parking** (pote), **Tax Man**, **Hangar**, **Skyscraper**, **2º hotel** (hoje portas/stub: `onPassGo`/`onPayToCenter`/`onCollectCenter`)
 - [ ] **Subsistema de Cartas deferido** — ofensivas com alvo (Aquisição Hostil, Despejo, Auditoria), **reação** (Diplomacia, Bunker Fiscal) e **efeitos temporários de N voltas** (Boicote, Imunidade, Apagão, Greve). Hoje são *no-op seguro* no catálogo
 - [ ] **Tema "Cidades do Mundo"** — preços, aluguéis e custos de construção **finais** (hoje escada provisória $60–$400 + multiplicadores provisórios)
 
