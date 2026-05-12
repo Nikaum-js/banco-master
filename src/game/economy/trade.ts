@@ -3,27 +3,14 @@
 // Cartas/Bus Tickets/empréstimos NÃO são negociáveis (D-011/D-012) — não existem no payload.
 import { BOARD } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
+import type { Trade, ImmunityGrant } from './types'
 import { ownerOf } from './titles'
 import { cityLevel } from './construction'
 import { transferKeepFee } from './mortgage'
 
-// Concessão de imunidade de aluguel dentro da troca (014, §8.4): sobre propriedade própria
-// mantida, por `laps` voltas (inteiro > 0) ou permanente (`null`).
-export interface ImmunityGrant {
-  pos: number
-  laps: number | null
-}
-
-export interface Trade {
-  fromId: string
-  toId: string
-  fromProps: number[] // posições que `from` oferece
-  fromCash: number // ≥ 0
-  toProps: number[] // posições que `to` oferece
-  toCash: number // ≥ 0
-  fromImmunities?: ImmunityGrant[] // concedidas por `from` → beneficiário `to` (014)
-  toImmunities?: ImmunityGrant[] // concedidas por `to` → beneficiário `from`
-}
+// `Trade`/`ImmunityGrant` agora vivem em ./types (024, p/ o GameState referenciar
+// sem ciclo). Re-exportados aqui para não quebrar quem importa de './trade'.
+export type { Trade, ImmunityGrant } from './types'
 
 function clone(state: GameState): GameState {
   return structuredClone(state)
@@ -64,33 +51,87 @@ function validImmunityGrants(
   return true
 }
 
-export function executeTrade(state: GameState, trade: Trade): GameState {
-  if (state.paused) return state
-  const { fromId, toId, fromProps, fromCash, toProps, toCash } = trade
-  if (fromId === toId) return state
-  if (!Number.isInteger(fromCash) || fromCash < 0 || !Number.isInteger(toCash) || toCash < 0) return state
+// Saldos finais após dinheiro + taxas de hipoteca (10%) das propriedades recebidas.
+function finalCash(state: GameState, trade: Trade): { from: number; to: number } | null {
+  const from = state.players.find((p) => p.id === trade.fromId)
+  const to = state.players.find((p) => p.id === trade.toId)
+  if (!from || !to) return null
+  const feesFrom = mortgageFees(state, trade.toProps) // `from` recebe `toProps`
+  const feesTo = mortgageFees(state, trade.fromProps) // `to` recebe `fromProps`
+  return {
+    from: from.cash - trade.fromCash + trade.toCash - feesFrom,
+    to: to.cash - trade.toCash + trade.fromCash - feesTo,
+  }
+}
 
+// Proposta bem-formada e aplicável? (024) Guarda única, espelha as condições do
+// executeTrade. Não considera `paused` (concern do comando).
+export function validateTrade(state: GameState, trade: Trade): boolean {
+  const { fromId, toId, fromProps, fromCash, toProps, toCash } = trade
+  if (fromId === toId) return false
+  if (!Number.isInteger(fromCash) || fromCash < 0 || !Number.isInteger(toCash) || toCash < 0) return false
   const from = state.players.find((p) => p.id === fromId)
   const to = state.players.find((p) => p.id === toId)
-  if (!from || !to || from.eliminated || to.eliminated) return state
-  if (!ownsAllSemConstrucao(state, fromProps, fromId)) return state
-  if (!ownsAllSemConstrucao(state, toProps, toId)) return state
-  if (from.cash < fromCash || to.cash < toCash) return state // não oferecer mais do que tem
-  if (!validImmunityGrants(state, trade.fromImmunities, fromId, fromProps)) return state // §8.4
-  if (!validImmunityGrants(state, trade.toImmunities, toId, toProps)) return state
+  if (!from || !to || from.eliminated || to.eliminated) return false
+  if (!ownsAllSemConstrucao(state, fromProps, fromId)) return false
+  if (!ownsAllSemConstrucao(state, toProps, toId)) return false
+  if (from.cash < fromCash || to.cash < toCash) return false // não oferecer mais do que tem
+  if (!validImmunityGrants(state, trade.fromImmunities, fromId, fromProps)) return false // §8.4
+  if (!validImmunityGrants(state, trade.toImmunities, toId, toProps)) return false
+  const fin = finalCash(state, trade)
+  if (!fin || fin.from < 0 || fin.to < 0) return false // taxas deixariam alguém negativo
+  return true
+}
 
-  const feesFrom = mortgageFees(state, toProps) // `from` recebe `toProps` → paga 10% das hipotecadas
-  const feesTo = mortgageFees(state, fromProps) // `to` recebe `fromProps`
-  const finalFrom = from.cash - fromCash + toCash - feesFrom
-  const finalTo = to.cash - toCash + fromCash - feesTo
-  if (finalFrom < 0 || finalTo < 0) return state // taxas deixariam alguém negativo
+// Propriedades do dono que podem entrar numa troca: sem construção (cidades nível 0). §8.2
+export function tradableProps(state: GameState, ownerId: string): number[] {
+  const out: number[] = []
+  for (const sq of BOARD) {
+    if (!('price' in sq)) continue
+    if (ownerOf(state, sq.pos) !== ownerId) continue
+    if (sq.kind === 'property' && cityLevel(state.titles[sq.pos]) > 0) continue
+    out.push(sq.pos)
+  }
+  return out
+}
+
+export function executeTrade(state: GameState, trade: Trade): GameState {
+  if (state.paused) return state
+  if (!validateTrade(state, trade)) return state
+  const { fromId, toId, fromProps, toProps } = trade
+  const fin = finalCash(state, trade)!
 
   const s = clone(state)
   for (const p of fromProps) s.titles[p].ownerId = toId // mortgaged/hangar acompanham
   for (const p of toProps) s.titles[p].ownerId = fromId
-  s.players.find((p) => p.id === fromId)!.cash = finalFrom
-  s.players.find((p) => p.id === toId)!.cash = finalTo // taxas removidas (banco)
-  for (const g of trade.fromImmunities ?? []) s.immunities.push({ beneficiaryId: toId, pos: g.pos, lapsRemaining: g.laps })
-  for (const g of trade.toImmunities ?? []) s.immunities.push({ beneficiaryId: fromId, pos: g.pos, lapsRemaining: g.laps })
+  s.players.find((p) => p.id === fromId)!.cash = fin.from
+  s.players.find((p) => p.id === toId)!.cash = fin.to // taxas removidas (banco)
+  for (const g of trade.fromImmunities ?? []) s.immunities.push({ beneficiaryId: toId, pos: g.pos, lapsRemaining: g.laps, granterId: fromId })
+  for (const g of trade.toImmunities ?? []) s.immunities.push({ beneficiaryId: fromId, pos: g.pos, lapsRemaining: g.laps, granterId: toId })
+  return s
+}
+
+// Proposta pendente (024) — uma por vez. proposeTrade grava se válida; acceptTrade
+// executa se ainda válida; rejectTrade descarta. Não bloqueiam o turno ativo.
+export function proposeTrade(state: GameState, trade: Trade): GameState {
+  if (state.paused || state.pendingTrade !== null) return state
+  if (!validateTrade(state, trade)) return state
+  const s = clone(state)
+  s.pendingTrade = trade
+  return s
+}
+
+export function acceptTrade(state: GameState): GameState {
+  if (state.paused || !state.pendingTrade) return state
+  if (!validateTrade(state, state.pendingTrade)) return state // obsoleta → no-op (pode recusar)
+  const s = executeTrade(state, state.pendingTrade)
+  s.pendingTrade = null
+  return s
+}
+
+export function rejectTrade(state: GameState): GameState {
+  if (!state.pendingTrade) return state
+  const s = clone(state)
+  s.pendingTrade = null
   return s
 }

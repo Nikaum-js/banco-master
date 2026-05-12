@@ -45,6 +45,12 @@ export interface Immunity {
   beneficiaryId: string // quem não paga aluguel naquela propriedade (014, §8.4)
   pos: number // propriedade isenta
   lapsRemaining: number | null // voltas restantes; null = permanente (até o fim)
+  granterId?: string // quem concedeu (setado na troca) — limpeza da eliminação §9.4 (019)
+}
+
+export interface LogEntry {
+  who: string // id do jogador (ou "Banco") — sem timestamp; recência = ordem no log (021)
+  what: string
 }
 
 export interface TempEffect {
@@ -54,10 +60,29 @@ export interface TempEffect {
   lapsRemaining: number // voltas restantes (apagao/greve: 1; boicote/imunidade-temp: 2)
 }
 
+// Negociação (013/024) — troca entre dois jogadores. Aqui (não em trade.ts) para o
+// GameState poder referenciar `pendingTrade` sem ciclo de imports.
+export interface ImmunityGrant {
+  pos: number // propriedade própria mantida sobre a qual se concede imunidade (§8.4)
+  laps: number | null // voltas (inteiro > 0) ou null = permanente
+}
+
+export interface Trade {
+  fromId: string
+  toId: string
+  fromProps: number[] // posições que `from` oferece
+  fromCash: number // ≥ 0
+  toProps: number[] // posições que `to` oferece
+  toCash: number // ≥ 0
+  fromImmunities?: ImmunityGrant[] // concedidas por `from` → beneficiário `to` (014)
+  toImmunities?: ImmunityGrant[] // concedidas por `to` → beneficiário `from`
+}
+
 export type ResolutionSlice =
   | { kind: 'purchase'; pos: number }
   | { kind: 'auction'; auction: Auction }
   | { kind: 'house-auction'; auction: HouseAuction } // leilão de casas em escassez (004)
+  | { kind: 'card-reveal'; deckId: DeckId; cardId: string } // carta sacada revelada, aguardando "Continuar" (025)
   | { kind: 'card-discard'; deckId: DeckId; drawnId: string } // mão cheia: escolher descarte (006)
   | { kind: 'card-shortcut'; deckId: DeckId; cardId: string } // Atalho: escolher ±3 (006)
   | { kind: 'debt'; amount: number; creditorId: string | null } // dívida pendente: pagar/falir (008)
