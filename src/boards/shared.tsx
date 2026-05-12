@@ -614,7 +614,8 @@ export function PlayersPanel() {
         <SectionHeader
           title="Jogadores"
           meta={(
-            <div className="players-capacity" aria-label={`${activePlayers} de 8 jogadores`}>
+            <div className="players-capacity">
+              <span className="sr-only">{activePlayers} de 8 jogadores</span>
               <span className="players-capacity__count" aria-hidden>
                 <strong>{activePlayers}</strong>
                 <span>/ 8</span>
@@ -675,7 +676,7 @@ function PlayerRow({ player: p, seat }: { player: Player; seat: number }) {
 
   return (
     <li
-      aria-current={p.active ? 'step' : undefined}
+      data-active={p.active || undefined}
       className={cn(
         'player-row',
         p.active && 'player-row--active',
@@ -699,12 +700,13 @@ function PlayerRow({ player: p, seat }: { player: Player; seat: number }) {
           skin={p.skin}
           active={p.active}
           asleep={p.bankrupt}
-          size={p.active ? 44 : 38}
+          size={40}
         />
         {p.you && <span className="player-row__you" title="Seu assento">VOCÊ</span>}
       </span>
 
       <div className="player-row__identity">
+        {p.active && <span className="sr-only">Turno atual</span>}
         <div className="player-row__headline">
           <p className="display display--tight">{p.name}</p>
         </div>
@@ -712,7 +714,7 @@ function PlayerRow({ player: p, seat }: { player: Player; seat: number }) {
 
       <div className="player-row__meta">
         {p.bankrupt ? (
-          <span className="player-row__state">Falido</span>
+          <span className="player-row__state player-row__state--bankrupt">Falido</span>
         ) : p.connected === false ? (
           // Status de sessão (§12.3/FR-015): quem caiu segue com tudo intacto (FR-020).
           <span title="Desconectado — a partida espera" className="player-row__state player-row__state--offline">

@@ -13,22 +13,36 @@ afterEach(() => {
 })
 
 describe('painel de participantes', () => {
-  it('expõe a lotação, a ordem dos assentos e o turno atual semanticamente', () => {
+  it('expõe a lotação, a ordem dos assentos e o turno atual sem rótulo visual redundante', () => {
     const game = createSeedState(['p1', 'p2'])
     act(() => useGameStore.setState({ game }))
 
     const { container } = render(<PlayersPanel />)
 
-    expect(screen.getByLabelText('2 de 8 jogadores')).toBeTruthy()
+    expect(screen.getByText('2 de 8 jogadores').classList.contains('sr-only')).toBe(true)
     const roster = screen.getByRole('list', { name: 'Participantes da partida' })
     const rows = within(roster).getAllByRole('listitem')
     expect(rows).toHaveLength(2)
-    expect(rows[0].getAttribute('aria-current')).toBe('step')
-    expect(rows[1].hasAttribute('aria-current')).toBe(false)
+    expect(rows[0].dataset.active).toBe('true')
+    expect(rows[0].hasAttribute('aria-current')).toBe(false)
+    expect(within(rows[0]).getByText('Turno atual').classList.contains('sr-only')).toBe(true)
     expect(container.querySelector('.players-capacity__slots')).toBeNull()
     expect(container.querySelectorAll('.player-row__seat')[0]?.textContent).toBe('01')
     expect(container.querySelector('.player-row__portrait .avatar-artwork')).toBeTruthy()
     expect(within(rows[0]).getByText('Caixa')).toBeTruthy()
     expect(within(rows[0]).queryByText('VEZ')).toBeNull()
+  })
+
+  it('trata o participante falido como um assento encerrado', () => {
+    const game = createSeedState(['p1', 'p2'])
+    game.players[1].eliminated = true
+    act(() => useGameStore.setState({ game }))
+
+    const { container } = render(<PlayersPanel />)
+    const row = screen.getByText('Jogador 2').closest('.player-row')
+
+    expect(row?.classList.contains('player-row--bankrupt')).toBe(true)
+    expect(within(row as HTMLElement).getByText('Falido').classList.contains('player-row__state--bankrupt')).toBe(true)
+    expect(container.querySelectorAll('.player-row--bankrupt')).toHaveLength(1)
   })
 })
