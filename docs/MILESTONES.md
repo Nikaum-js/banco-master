@@ -21,7 +21,7 @@
 ## M1 — Motor de jogo (lógica) 🟡 em andamento
 
 Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vitest). Cada item abaixo é uma feature SDD completa (`spec→plan→tasks→implement`).
-**Estado: 124 testes verdes (`bunx vitest run tests/game`). HUD mínimo funcional liga o motor à tela (demo local jogável); UI completa segue em M2.**
+**Estado: 161 testes verdes (`bunx vitest run tests/game`). HUD mínimo funcional liga o motor à tela (demo local jogável); UI completa segue em M2.**
 
 ### Feito
 
@@ -37,11 +37,13 @@ Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vite
 - ✅ **010 Empréstimos** — solicitar na dívida pendente, juros simples por GO, quitar (só principal), máx. 1 ativo/devedor; **destrava a Falência §9.3** (credor do empréstimo herda ativos+passivos)
 - ✅ **011 Construção avançada** — 2º hotel (§14, escassez de estoque), Hangar (§13.6, dobra aluguel do aeroporto), Skyscraper (§13.7, grupo completo, aluguel fixo + ×3 no grupo); ladder 0–7
 - ✅ **012 Tax Man** (§13.8) — Fiscal do banco move a cada turno (porta em `advanceSeat`) e cobra do dono o aluguel da casa onde para (removido da economia); catch-up discreto. **Fecha as mecânicas de balanceamento.**
+- ✅ **013 Negociação — troca** (§8.1–§8.3) — `executeTrade`: trocar propriedades (incl. hipotecadas, taxa de 10%) + caixa entre dois jogadores, a qualquer momento; cartas/Bus Tickets/construções não-negociáveis
+- ✅ **014 Imunidade de aluguel** (§8.4 / D-010) — concedida na troca, por N voltas ou permanente; beneficiário não paga (pessoal); expira no GO; visível no HUD. **Negociação completa** (transferência de imunidade existente deferida)
+- ✅ **015 Cartas — efeitos temporários** (§10.6) — Apagão (Hangares off), Greve (utilidades $0), Boicote (propriedade sem aluguel), Imunidade Temporária (não-alvo); `GameState.tempEffects` + expiração no GO; respeitado por aluguel e Tax Man
+- ✅ **016 Cartas ofensivas com alvo** (§10.6) — Aquisição Hostil (força venda, ×1,5 aeroporto/utilidade), Despejo (demole casa), Auditoria Fiscal (10% do patrimônio ao pote); respeitam Imunidade Temporária
+- ✅ **017 Cartas de reação** (§10.6/§12.4) — Diplomacia (cancela ofensiva; atacante perde a carta) e Bunker Fiscal (cancela imposto); interrupção via `resolution`. **Sistema de cartas COMPLETO — 0 cartas no-op.**
 
 ### Pendente (engine — specs futuras)
-
-- [ ] **Negociação** — proposta, contraproposta, imunidades (D-010)
-- [ ] **Subsistema de Cartas deferido** — ofensivas com alvo (Aquisição Hostil, Despejo, Auditoria), **reação** (Diplomacia, Bunker Fiscal) e **efeitos temporários de N voltas** (Boicote, Imunidade, Apagão, Greve). Hoje são *no-op seguro* no catálogo
 - [ ] **Tema "Cidades do Mundo"** — preços, aluguéis e custos de construção **finais** (hoje escada provisória $60–$400 + multiplicadores provisórios)
 
 ---

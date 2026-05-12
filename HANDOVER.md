@@ -1,7 +1,7 @@
 # HANDOVER — Banco Master
 
 > Estado para continuar em um **chat novo**. Snapshot de 2026-05-24.
-> Leitura de partida: este arquivo → `CLAUDE.md` → `docs/MILESTONES.md` → a spec ativa (`specs/012-.../plan.md`).
+> Leitura de partida: este arquivo → `CLAUDE.md` → `docs/MILESTONES.md` → a spec ativa (`specs/017-.../plan.md`).
 
 ## Onde estamos
 
@@ -9,7 +9,7 @@ Saímos da discovery e entramos em **implementação ativa**, feature a feature,
 
 **Como verificar:**
 ```bash
-bunx vitest run tests/game  # 124 testes (a verdade do motor) — projeto usa BUN, não npm/npx
+bunx vitest run tests/game  # 161 testes (a verdade do motor) — projeto usa BUN, não npm/npx
 bun run build               # tsc -b + vite (deve passar, exit 0)
 bun run dev                 # demo local jogável (HUD na barra de baixo)
 ```
@@ -30,6 +30,11 @@ bun run dev                 # demo local jogável (HUD na barra de baixo)
 | 010 | `emprestimos` | `emprestimos/` — `grantLoan`/`payOffLoan`/`chargeLoanInterest`; `Loan` + `GameState.loans`; juros simples no GO (porta `afterPassGo`); **falência §9.3** (credor do empréstimo herda) em `falencia.ts` |
 | 011 | `construcao-avancada` | estende o 004: ladder 0–7 (`cityLevel`), 2º hotel + Skyscraper via `buildHouse`/`sellBuilding`; Hangar (`buildHangar`/`sellHangar`); `rentCity` (Skyscraper fixo + ×3 de grupo); `Title`+`hotel2/skyscraper/hangar`, `bank.skyscrapers`; **sem UI** |
 | 012 | `tax-man` | `balancing/taxMan.ts` — `rollTaxMan` move o Fiscal 1×/turno (porta `taxMan` em `advanceSeat`) e cobra do dono o aluguel (removido da economia); `GameState.taxManPos`; `defaultPorts` **sem** o Fiscal (só o store injeta — zero regressão); **sem UI** |
+| 013 | `negociacao-troca` | `economy/trade.ts` — `executeTrade(state, trade)`: troca atômica de propriedades (incl. hipotecadas, taxa 10% `transferKeepFee`) + caixa entre 2 jogadores, off-turn; cidades com construção/cartas/Bus Tickets não-negociáveis; sem estado novo; **sem UI** |
+| 014 | `imunidade-aluguel` | `economy/imunidade.ts` (`hasImmunity`/`tickImmunities`) + `GameState.immunities`; `Trade` estendida (`fromImmunities`/`toImmunities`); isenção em `resolveRentable`; expira no `afterPassGo`; HUD mostra status; transferência deferida |
+| 015 | `cartas-efeitos-temporarios` | `economy/tempEffects.ts` + `GameState.tempEffects`; Apagão/Greve (handlers no saque), Boicote/Imunidade Temporária (`playHandCard(target)`); checagens em `resolveRentable`+`taxMan`; expira no `afterPassGo`; 4 cartas saíram de no-op (catálogo `implementado`) |
+| 016 | `cartas-ofensivas` | `cards/ofensivas.ts` (`acquire`/`evict`/`audit`) despachadas por `playHandCard(target?/targetPlayer?)`; Aquisição Hostil (força venda, ×1,5 aeroporto/utilidade, taxa §6.3 se hipotecada), Despejo (−1 casa), Auditoria (10% netWorth ao pote); respeitam `isTempImmune` (015); 3 cartas → `implementado` |
+| 017 | `cartas-reacao` | `cards/reacao.ts` — interrupção via `resolution` (`reaction-diplomacia`/`reaction-bunker`); Diplomacia intercepta as 4 ofensivas (em `playHandCard`), Bunker intercepta imposto (`taxBunkerResolve` no `ctx.resolve`); `respondReaction(use)`; predicados `canAcquire/canEvict/canAudit`. **0 cartas no-op** |
 | — | UI wiring | `src/game/ui/` — `GameHUD` (controle do turno; inclui seletor de Bus Ticket e pedir/quitar empréstimo) + `LiveTokens`; montados no `App.tsx`/`Board01Classic.tsx`. **Construção (004/011) não está no HUD** (M2) |
 
 **Loop single-player local completo:** comprar → aluguel → construir → hipotecar → GO/Férias → dívida → falir → vencedor.
@@ -40,16 +45,16 @@ bun run dev                 # demo local jogável (HUD na barra de baixo)
 - **Lógica pura:** reducers `(state) → state` que **clonam** via `structuredClone`; o **único ponto com efeito é o store** (setters + timers de leilão).
 - **Serializável (princípio VII):** todo o `GameState` é JSON puro (sem refs/closures); decks/mão = ids; timers guardam `deadline`, não handles.
 - **Portas** (injetadas pelo store, recebem `state`): `onPassGo`/`onPayToCenter`/`onCollectCenter` (balanceamento), `isEliminated`. O 002 **não** importa specs posteriores — elas entram pelas portas / pela composição de `ctx.resolve` (`economyResolve ?? cardResolve`).
-- **Resolução de casa = "slices" pendentes** em `GameState.resolution` que bloqueiam finalizar o turno: `purchase`, `auction`, `house-auction`, `card-discard`, `card-shortcut`, `debt`.
+- **Resolução de casa = "slices" pendentes** em `GameState.resolution` que bloqueiam finalizar o turno: `purchase`, `auction`, `house-auction`, `card-discard`, `card-shortcut`, `debt`, `reaction-diplomacia`, `reaction-bunker` (017).
 - **RNG injetável** (`ctx.rng`) → testes determinísticos. `bunx vitest run tests/game`.
 - **UI:** só o **HUD mínimo** (`GameHUD`) é funcional; os painéis laterais (`PlayersPanel`/`ActionsPanel` em `boards/shared.tsx`) são **mockados/decorativos**.
 
 ## Pendências e itens DEFERIDOS (o backlog real)
 
 **Regras do motor:**
-- **Cartas deferidas** (no-op stub no catálogo 006): ofensivas (Aquisição Hostil, Despejo, Auditoria Fiscal), reação (Diplomacia, Bunker Fiscal), temporárias de N voltas (Boicote, Imunidade, Apagão, Greve). Precisam de um **subsistema de reação/efeitos-temporários**.
-- **Negociação** (§8) — sem spec ainda.
-- **Imunidades** no `declareBankruptcy`: no-op até as cartas de Imunidade. (Falência §9.3 já fechada pelo 010.)
+- **Sistema de cartas: COMPLETO** — **0 cartas no-op** no catálogo (todas as 32 implementadas após 015/016/017). Deferido: Bunker sobre "Auditoria recebida" (Diplomacia já cobre) e o **timer de 10s** da reação (UI/M2).
+- **Negociação: COMPLETA** (troca no 013 + imunidade no 014). **Deferido:** transferência de imunidade existente para novo beneficiário (§8.4 "transferíveis", FR-009 do 014).
+- **Limpeza de imunidades/efeitos na eliminação** (§9.4): `declareBankruptcy` ainda **não** remove as `immunities`/`tempEffects` do jogador eliminado — gap pequeno (as cartas já existem desde 014/015). Revisitar.
 - **Balanceamento: COMPLETO** (Speed Die, GO Progressivo, Free Parking, Bus Tickets, Hangar, Skyscraper, 2º hotel, Tax Man — todos entregues).
 - **Tema "Cidades do Mundo":** preços/aluguéis/custos **finais** (hoje escada/multiplicadores provisórios em `boardData.ts` e nos módulos).
 
@@ -66,21 +71,21 @@ bun run dev                 # demo local jogável (HUD na barra de baixo)
 
 ## Estado do Git
 
-- **117 commits**, todos em `main` (o projeto não usa branches de feature — trabalha em `main`); incluem até o 010.
+- **135 commits**, todos em `main` (o projeto não usa branches de feature — trabalha em `main`); incluem até o 012.
 - Histórico criado via skill **`/micro-commits`** (datas backdatadas aleatórias **espalhadas** pelos últimos 6 meses, identidade `Nikolas Santana <nikolasdssantana@gmail.com>`, mensagens em **inglês** emoji+conventional).
 - **NÃO foi feito push** — o usuário faz o push manualmente (`git push origin main`).
-- **011 (Construção avançada) e 012 (Tax Man) ainda NÃO commitados** — working tree sujo com os arquivos das features + docs. Rodar `/micro-commits` quando o usuário pedir.
+- **013–017 ainda NÃO commitados** — working tree sujo com os arquivos das features + docs. Rodar `/micro-commits` quando o usuário pedir.
 - ⚠️ **Usar `bun`**, nunca npm/npx (rodar npm gera `package-lock.json` indevido — já existe um commitado, o usuário optou por mantê-lo).
 
 ## Como continuar (workflow desta sessão)
 
 1. **Por feature:** `/speckit-specify` → (clarify quando houver ambiguidade real, via perguntas) → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`. Tudo confirmado pelo usuário ("pode continuar" = conduza o pipeline inteiro).
-2. **`.specify/feature.json`** rastreia a feature ativa (hoje aponta para `012`); o marcador `<!-- SPECKIT -->` no `CLAUDE.md` aponta para o `plan.md` ativo.
+2. **`.specify/feature.json`** rastreia a feature ativa (hoje aponta para `017`); o marcador `<!-- SPECKIT -->` no `CLAUDE.md` aponta para o `plan.md` ativo.
 3. **Regra crítica (CLAUDE.md):** antes de `/speckit-specify`, ler constitution + SRS (seção da feature) + DECISIONS + specs dependentes.
 4. **Commits:** ao final, rodar `/micro-commits` (backdated, **sem push**) quando o usuário pedir.
-5. **Numeração de specs:** sequencial; a próxima é `013`.
+5. **Numeração de specs:** sequencial; a próxima é `018`.
 
-**Próximos candidatos** (impacto): **Negociação** (grande superfície social, D-010 — maior regra de motor ainda pendente) · **subsistema de cartas deferido** (ofensivas/reação/temporárias de N voltas — destrava ~9 cartas no-op do 006) · **Tema "Cidades do Mundo"** (valores finais) · ou **UI completa / Multiplayer (M3)**. Balanceamento está **completo**.
+**Motor: essencialmente completo** (M1). Balanceamento, Negociação e **Sistema de cartas** todos completos. **Próximos candidatos**: **Tema "Cidades do Mundo"** (valores finais — calibração) · **UI completa (M2)** — conectar o motor à tela (modais, token animado, jogar cartas/negociar/reagir) · **Multiplayer/Sessão (M3)** — Supabase/lobby/resiliência. Gaps menores: limpeza de imunidades na eliminação (§9.4); transferência de imunidade existente (§8.4).
 
 ## Ponteiros
 
