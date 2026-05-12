@@ -69,8 +69,8 @@ export function ConcedeDialog({
             {view.heirId ? (
               // §9.6: desistir não apaga empréstimo. Dizer isso ANTES evita a descoberta cara.
               <>
-                Você tem empréstimo ativo, então o credor herda tudo — propriedades, construções e
-                caixa —, como numa falência.
+                Você tem empréstimo ativo, então o credor herda tudo (propriedades, construções e
+                caixa), como numa falência.
               </>
             ) : (
               <>

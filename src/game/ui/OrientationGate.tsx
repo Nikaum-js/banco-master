@@ -82,7 +82,7 @@ function RotateNotice() {
           <p className="display text-xl text-cream">Gire o aparelho</p>
           <p className="label text-cream-muted normal-case leading-snug">
             O tabuleiro só cabe direito na horizontal. Sua partida continua exatamente do
-            jeito que estava — é só girar a tela.
+            jeito que estava. É só girar a tela.
           </p>
         </div>
       </ModalShell>

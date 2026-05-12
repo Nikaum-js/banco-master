@@ -97,7 +97,7 @@ export function diceArenaView(game: GameState, local: LocalView, gates: DiceAren
 
   const status =
     game.phase === 'ended' ? 'Fim de jogo'
-    : !iAct ? `Vez de ${activeName ?? active?.id ?? '—'}`
+    : !iAct ? `Vez de ${activeName ?? active?.id ?? '·'}`
     : isDoubleReroll ? 'Dupla! Role de novo'
     : turnState === 'aguardando-rolagem' ? 'Sua vez'
     : turnState === 'prisao-decisao' ? `Preso · tentativa ${(active?.jail.attempts ?? 0) + 1}/3`

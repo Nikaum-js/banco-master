@@ -105,7 +105,7 @@ export const TARGET_EFFECT: Record<string, { effect: string; duration: string; c
   boicote: {
     effect: 'A propriedade para de cobrar aluguel.',
     duration: '2 voltas do dono',
-    consequence: 'Ninguém paga aluguel nela — nem você. O dono continua com o título e pode construir, vender e hipotecar normalmente.',
+    consequence: 'Ninguém paga aluguel nela, nem você. O dono continua com o título e pode construir, vender e hipotecar normalmente.',
   },
   aquisicaoHostil: {
     effect: 'Você compra a propriedade à força, pela metade do preço de tabela.',
@@ -125,7 +125,7 @@ export const TARGET_EFFECT: Record<string, { effect: string; duration: string; c
   impostoFederal: {
     effect: 'O alvo paga 25% do patrimônio líquido.',
     duration: 'imediato',
-    get consequence() { return `O valor vai para a ${activeLabels().lottery}, no centro do tabuleiro. Sem caixa, ele paga o que tiver — esta cobrança não abre dívida.` },
+    get consequence() { return `O valor vai para a ${activeLabels().lottery}, no centro do tabuleiro. Sem caixa, ele paga o que tiver, e esta cobrança não abre dívida.` },
   },
   embargoDeObras: {
     effect: 'O alvo fica proibido de construir.',

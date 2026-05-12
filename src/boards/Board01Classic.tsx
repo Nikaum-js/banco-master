@@ -121,7 +121,7 @@ export default function Board01Classic() {
                 {isClickable ? (
                   <button
                     type="button"
-                    aria-label={`${square.name} — ver detalhes`}
+                    aria-label={`${square.name}: ver detalhes`}
                     aria-haspopup="dialog"
                     aria-expanded={isSelected}
                     onClick={(e) => {

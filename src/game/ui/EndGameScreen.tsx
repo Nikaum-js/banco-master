@@ -94,7 +94,7 @@ export function EndGameScreen({
               <span aria-hidden />
             </div>
             <h2 className="display text-cream">
-              {winnerId ? <PlayerName playerId={winnerId} /> : '—'}
+              {winnerId ? <PlayerName playerId={winnerId} /> : '·'}
             </h2>
             {winner && (
               <dl className="endgame-winner-stats">
@@ -145,7 +145,7 @@ export function EndGameScreen({
                 <th scope="col" className="py-1.5 pr-2 font-normal">Jogador</th>
                 <th scope="col" className="py-1.5 pr-2 font-normal text-right">Patrimônio</th>
                 <th scope="col" className="py-1.5 pr-2 font-normal text-right">Em caixa</th>
-                <th scope="col" className="py-1.5 pr-2 font-normal text-right" title="Países com todas as cidades — é o que destrava construção">Países</th>
+                <th scope="col" className="py-1.5 pr-2 font-normal text-right" title="Países com todas as cidades: é o que destrava construção">Países</th>
                 <th scope="col" className="py-1.5 pr-2 font-normal text-right" title="Construções e melhorias somadas">Construções</th>
                 <th scope="col" className="py-1.5 font-normal text-right" title="O maior aluguel que uma propriedade dele cobraria no fim">Maior aluguel</th>
               </tr>
@@ -164,13 +164,13 @@ export function EndGameScreen({
                     {money(row.cash)}
                   </td>
                   <td data-label="Países" className="endgame-countries py-2 pr-2 text-right text-cream-muted tabular-nums">
-                    {row.countries || '—'}
+                    {row.countries || '·'}
                   </td>
                   <td data-label="Construções" className="endgame-buildings py-2 pr-2 text-right text-cream-muted tabular-nums">
-                    {row.buildings || '—'}
+                    {row.buildings || '·'}
                   </td>
                   <td data-label="Maior aluguel" className="endgame-toprent py-2 pr-2 text-right currency text-cream-muted">
-                    {row.topRent > 0 ? money(row.topRent) : '—'}
+                    {row.topRent > 0 ? money(row.topRent) : '·'}
                   </td>
                 </tr>
               ))}

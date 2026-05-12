@@ -188,13 +188,13 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
           // backoff dos erros de rede, que é onde este caso sempre pertenceu.
           if (!snap) {
             if (resyncTarget < 0) return // ninguém prometeu partida — não é falha, não repete
-            throw new Error('resync: snapshot ainda não gravado — tenta de novo')
+            throw new Error('resync: snapshot ainda não gravado, tenta de novo')
           }
           const snapshotRoom = normalizeRoom({ ...snap.room, revision: snap.seq })
           if (room && compareRoomVersion(snapshotRoom, room) < 0) {
-            throw new Error('resync: snapshot de geração anterior — tenta de novo')
+            throw new Error('resync: snapshot de geração anterior, tenta de novo')
           }
-          if (snap.seq < resyncTarget) throw new Error('resync: leitura aquém do piso — tenta de novo')
+          if (snap.seq < resyncTarget) throw new Error('resync: leitura aquém do piso, tenta de novo')
           game = snap.game
           // 043, T023: `loadSnapshot` ainda lê a linha inteira (a leitura por RPC é a Fase 5,
           // `read_snapshot`) — extrai o PRÓPRIO código antes de redigir tudo, para nenhum

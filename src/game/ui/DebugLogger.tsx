@@ -15,7 +15,7 @@ export function DebugLogger() {
     const r = t.lastRoll
     // Resumo técnico legível + o objeto cru (pra expandir/copiar no console).
     console.log(
-      `%c[banco] state=${t.state} seat=${game.activeSeat} doubles=${t.consecutiveDoubles} mayRollAgain=${t.mayRollAgain} pending=${t.pendingResolve} awaiting=${t.awaitingChoice} resolution=${game.resolution?.kind ?? 'null'} roll=${r ? `${r.white[0]}+${r.white[1]}/${String(r.speed)}` : '—'}`,
+      `%c[banco] state=${t.state} seat=${game.activeSeat} doubles=${t.consecutiveDoubles} mayRollAgain=${t.mayRollAgain} pending=${t.pendingResolve} awaiting=${t.awaitingChoice} resolution=${game.resolution?.kind ?? 'null'} roll=${r ? `${r.white[0]}+${r.white[1]}/${String(r.speed)}` : '·'}`,
       'color:#22c55e',
       {
         turn: t,

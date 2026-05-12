@@ -150,7 +150,7 @@ function LotCard(props: {
         {encerrado ? (
           <span className="lot-card__closed-label">
             <GavelIcon size={12} aria-hidden />
-            {lot.highBidder ? 'Arrematado — fechando' : 'Sem lance — fica livre'}
+            {lot.highBidder ? 'Arrematado, fechando' : 'Sem lance, fica livre'}
           </span>
         ) : (
           <>

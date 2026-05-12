@@ -78,23 +78,23 @@ export function replayCtx(base: TurnCtx, resolved: Resolved): TurnCtx {
   return {
     ...base,
     rng: () => {
-      if (rng.length === 0) throw new Error('replayCtx: RNG underflow — divergência host/cliente')
+      if (rng.length === 0) throw new Error('replayCtx: RNG underflow: divergência host/cliente')
       return rng.shift()!
     },
     now: () => {
-      if (now.length === 0) throw new Error('replayCtx: relógio underflow — divergência host/cliente')
+      if (now.length === 0) throw new Error('replayCtx: relógio underflow: divergência host/cliente')
       return now.shift()!
     },
     ports: {
       ...base.ports,
       draw: (state, deckId) => {
         base.ports.draw(state, deckId) // shift local pelo efeito (comprimento) — valor descartado
-        if (draws.length === 0) throw new Error('replayCtx: draws underflow — divergência host/cliente')
+        if (draws.length === 0) throw new Error('replayCtx: draws underflow: divergência host/cliente')
         return draws.shift()!
       },
       hasReaction: () => {
         // Sem efeito colateral a replicar (é um lookup puro) — só devolve o gravado.
-        if (reactions.length === 0) throw new Error('replayCtx: reactions underflow — divergência host/cliente')
+        if (reactions.length === 0) throw new Error('replayCtx: reactions underflow: divergência host/cliente')
         return reactions.shift()!
       },
     },

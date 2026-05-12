@@ -32,13 +32,13 @@ function bodyText(variant: FailureVariant, mode: FailureMode): string {
   if (mode === 'room') {
     return variant === 'match'
       ? 'Algo deu errado na exibição. Isso não é o fim da partida.'
-      : 'A sessão nesta aba caiu — sua ausência foi avisada à mesa como uma queda de conexão comum.'
+      : 'A sessão nesta aba caiu. Sua ausência foi avisada à mesa como uma queda de conexão comum.'
   }
   if (mode === 'entry') {
     return 'Não foi possível abrir esta sessão. Volte ao início e tente novamente.'
   }
   return variant === 'root'
-    ? 'Esta partida local não pode ser recuperada — não há nada salvo fora desta aba.'
+    ? 'Esta partida local não pode ser recuperada. Não há nada salvo fora desta aba.'
     : 'Algo deu errado na exibição desta partida local.'
 }
 
@@ -72,7 +72,7 @@ export function FailureScreen({ variant, mode, roomId, occurrenceId, canRetry, o
           )}
           {variant === 'match' && !canRetry && (
             <p className="label text-signal-glow text-center">
-              Parou de tentar remontar sozinho — a mesma falha se repetiu.
+              Parou de tentar remontar sozinho, porque a mesma falha se repetiu.
             </p>
           )}
 

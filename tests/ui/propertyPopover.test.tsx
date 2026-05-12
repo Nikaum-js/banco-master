@@ -33,7 +33,7 @@ describe('popover de propriedade', () => {
     )
 
     act(() => {
-      screen.getByRole('button', { name: 'Roma — ver detalhes' }).click()
+      screen.getByRole('button', { name: 'Roma: ver detalhes' }).click()
     })
 
     const layer = document.body.querySelector(':scope > [data-deed-popover-layer]')

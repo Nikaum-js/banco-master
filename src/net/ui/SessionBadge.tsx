@@ -53,7 +53,7 @@ export function SessionBadge({ link }: { link: string }) {
         {copied === 'code' ? 'Código copiado!' : myReentryCode}
       </button>
       <p className="text-cream-muted/85" style={{ fontSize: 10 }}>
-        Com o código, você reanexa a este assento de qualquer aparelho — mesmo sem este link salvo.
+        Com o código, você reanexa a este assento de qualquer aparelho, mesmo sem este link salvo.
       </p>
     </div>
   )

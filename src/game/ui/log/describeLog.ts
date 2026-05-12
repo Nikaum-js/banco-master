@@ -92,7 +92,7 @@ function cardImmediatePhrase(name: string, delta: number): LogSentence {
         : [text('Incentivo Fiscal pagaria $50 por propriedade hipotecada, mas não havia hipotecas')]
     case 'Resgate Do Pote':
       return delta > 0
-        ? [text('resgatou '), money(delta), text(' — metade da Loteria')]
+        ? [text('resgatou '), money(delta), text(' (metade da Loteria)')]
         : [text('Resgate do Pote pagaria metade da Loteria, mas o pote estava vazio')]
     case 'Obra Relampago':
       return [text('Obra Relâmpago: a próxima construção será gratuita')]
@@ -106,7 +106,7 @@ function cardImmediatePhrase(name: string, delta: number): LogSentence {
       // efeito não era de caixa ou não encontrou alvo, que é a única coisa verdadeira que se
       // pode afirmar sem saber qual carta é. Carta nova que caia neste ramo com delta 0 merece
       // um `case` próprio acima, não esta frase.
-      return [text('a carta não movimentou dinheiro — o efeito dela não é de caixa, ou não encontrou alvo nesta situação')]
+      return [text('a carta não movimentou dinheiro: o efeito dela não é de caixa, ou não encontrou alvo nesta situação')]
   }
 }
 
@@ -238,7 +238,7 @@ export function describeLogEntry(entry: LogEntry, room: Room | null): LogSentenc
     // débito chega na vez de outra pessoa: sem os dois, o jogador não tem como ligar causa e efeito.
     case 'tax-man':
       return entry.amount < entry.due
-        ? [text('Fiscal parou em '), place(entry.pos), text(': '), who(room, entry.who), text(' pagou '), money(entry.amount), text(' ao banco — todo o caixa que tinha')]
+        ? [text('Fiscal parou em '), place(entry.pos), text(': '), who(room, entry.who), text(' pagou '), money(entry.amount), text(' ao banco, todo o caixa que tinha')]
         : [text('Fiscal parou em '), place(entry.pos), text(': '), who(room, entry.who), text(' pagou '), money(entry.amount), text(' ao banco')]
     case 'hostile-takeover':
       return [who(room, entry.who), text(' tomou '), place(entry.pos), text(' de '), who(room, entry.victimId), text(' por '), money(entry.amount)]
