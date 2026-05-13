@@ -39,14 +39,18 @@ test('partida semeada roda até a última falência e mostra a classificação f
   const rows = page.locator('table tbody tr')
   await expect(rows).toHaveCount(2) // 2 jogadores, 2 linhas — nenhum órfão, nenhum agrupamento "sem posição"
 
-  // Classificação: vencedor em 1º (sem "Queda"), eliminado em 2º com a rodada semeada.
+  // Classificação: vencedor em 1º, eliminado em 2º. A coluna "Queda" saiu na v1.27 — ela só
+  // repetia a ordem que a própria classificação já expressa; o que se afirma agora é a ORDEM.
   const winnerRow = rows.nth(0)
   const eliminatedRow = rows.nth(1)
   await expect(winnerRow).toContainText('1º')
   await expect(winnerRow).toContainText('Jogador 2')
   await expect(eliminatedRow).toContainText('2º')
   await expect(eliminatedRow).toContainText('Jogador 1')
-  await expect(eliminatedRow).toContainText('12') // SEEDED_ROUND em e2eScenario.ts — rodada da queda
+
+  // Contas novas da v1.27 (caixa, países, construções, maior aluguel): o eliminado zera em todas,
+  // e é o travessão que prova que a coluna existe e está preenchida em vez de vazia.
+  await expect(eliminatedRow).toContainText('—')
 
   // Patrimônio: o vencedor herdou caixa + as 4 propriedades (§9.2 — sem empréstimo ativo, o
   // credor herda tudo); o eliminado fica em 0, por definição de falência.
