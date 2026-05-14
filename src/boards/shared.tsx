@@ -1649,6 +1649,7 @@ export function DiceArena() {
   const finalizeTurn = useGameStore((s) => s.finalizeTurn)
   const jailDecision = useGameStore((s) => s.jailDecision)
   const activeCash = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.cash ?? 0)
+  const activeDiscount = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.nextPurchaseDiscount ?? 0) // Investidor Anjo (006)
   const jailAttempts = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.jail.attempts ?? 0)
 
   const [rollKey, setRollKey] = useState(0)
@@ -1670,6 +1671,8 @@ export function DiceArena() {
   const purchasePos = resolution?.kind === 'purchase' ? resolution.pos : null
   const buySq = purchasePos != null ? BOARD[purchasePos] : null
   const buyPrice = buySq && 'price' in buySq ? buySq.price : 0
+  const finalBuyPrice = Math.round(buyPrice * (1 - activeDiscount)) // espelha buyProperty (motor)
+  const hasBuyDiscount = activeDiscount > 0 && finalBuyPrice < buyPrice
   const canFinalize = phase === 'playing' && !paused && turnState === 'aguardando-finalizacao'
 
   function handleRoll() {
@@ -1730,11 +1733,19 @@ export function DiceArena() {
               <TurnActionBtn
                 variant="primary"
                 className="flex-[3]"
-                disabled={activeCash < buyPrice}
+                disabled={activeCash < finalBuyPrice}
                 icon={<ShopIcon size={17} className="shrink-0" />}
                 onClick={() => buyProperty()}
               >
-                Comprar R$ {buyPrice}
+                {hasBuyDiscount ? (
+                  <span className="inline-flex items-baseline gap-1.5">
+                    Comprar
+                    <span className="line-through opacity-55">R$ {buyPrice}</span>
+                    <span className="font-bold">R$ {finalBuyPrice}</span>
+                  </span>
+                ) : (
+                  <>Comprar R$ {buyPrice}</>
+                )}
               </TurnActionBtn>
               <TurnActionBtn
                 variant="secondary"
