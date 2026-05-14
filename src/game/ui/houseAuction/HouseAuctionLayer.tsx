@@ -24,16 +24,18 @@ function Btn({ onClick, disabled, variant = 'primary', children }: { onClick: ()
 
 export function HouseAuctionLayer() {
   const auction = useGameStore((s) => s.game.houseAuction)
-  const cashById = useGameStore((s) => Object.fromEntries(s.game.players.map((p) => [p.id, p.cash])))
+  // Selecionar a lista ESTÁVEL e derivar no corpo: `Object.fromEntries(...)` dentro do
+  // seletor cria objeto novo a cada leitura → loop do useSyncExternalStore.
+  const players = useGameStore((s) => s.game.players)
+  const cashById = Object.fromEntries(players.map((p) => [p.id, p.cash]))
   const placeHouseBid = useGameStore((s) => s.placeHouseBid)
   const closeHouseAuction = useGameStore((s) => s.closeHouseAuction)
 
-  const minNext = (auction?.currentBid ?? 0) + 50
   const [bidder, setBidder] = useState<string>('')
-  const [amount, setAmount] = useState<number>(minNext)
 
   if (!auction) return null
   const sel = bidder || auction.activeBidders[0]
+  const selCash = cashById[sel] ?? 0
 
   return (
     <AnimatePresence>
@@ -58,38 +60,46 @@ export function HouseAuctionLayer() {
             </p>
           </div>
 
-          <div className="px-4 py-3 flex flex-col gap-2">
-            <p className="text-cream text-sm">
-              Lance atual: <span className="text-gold-glow currency">R$ {auction.currentBid.toLocaleString('pt-BR')}</span>
-            </p>
-            <p className="text-cream-muted text-xs">
+          <div className="px-4 py-3 flex flex-col gap-3">
+            <div className="flex items-baseline justify-between">
+              <span className="label text-cream-muted">Lance atual</span>
+              <span className="currency text-gold-glow text-2xl leading-none">R$ {auction.currentBid.toLocaleString('pt-BR')}</span>
+            </div>
+            <p className="text-cream-muted text-xs -mt-1.5">
               Maior licitante: <span className="text-cream">{auction.highBidder ?? '—'}</span>
             </p>
 
-            <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <label className="flex items-center gap-2 text-sm text-cream-muted">
+              <span className="shrink-0">Licitante</span>
               <select
                 value={sel}
                 onChange={(e) => setBidder(e.target.value)}
-                className="px-2 py-1.5 rounded bg-coffee-900 border border-coffee-500 text-cream text-sm"
+                className="flex-1 px-2 py-1.5 rounded bg-coffee-900 border border-coffee-500 text-cream text-sm"
               >
                 {auction.activeBidders.map((id) => (
                   <option key={id} value={id}>{id} (R${cashById[id] ?? 0})</option>
                 ))}
               </select>
-              <input
-                type="number"
-                min={minNext}
-                step={50}
-                value={amount}
-                onChange={(e) => setAmount(Number(e.target.value) || 0)}
-                className="w-24 px-2 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream text-sm"
-              />
-            </div>
+            </label>
 
-            <div className="mt-2 flex gap-2">
-              <Btn onClick={() => placeHouseBid(sel, Math.max(amount, minNext))}>Dar lance</Btn>
-              <Btn onClick={() => closeHouseAuction()} variant="secondary">Encerrar</Btn>
+            {/* Incrementos rápidos: +R$2 / +R$10 / +R$100 */}
+            <div className="flex gap-2">
+              {[2, 10, 100].map((inc) => {
+                const next = auction.currentBid + inc
+                return (
+                  <button
+                    key={inc}
+                    type="button"
+                    disabled={next > selCash}
+                    onClick={() => placeHouseBid(sel, next)}
+                    className="flex-1 px-2 py-2 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 font-bold text-sm hover:brightness-110 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    +R$ {inc}
+                  </button>
+                )
+              })}
             </div>
+            <Btn onClick={() => closeHouseAuction()} variant="secondary">Encerrar</Btn>
           </div>
         </motion.div>
       </motion.div>
