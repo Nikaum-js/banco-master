@@ -1,10 +1,9 @@
 import { cn } from '@/lib/utils'
 import { Crown } from 'lucide-react'
-import { AnimatePresence, motion, useAnimate } from 'motion/react'
+import { motion, useAnimate } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare } from '@/lib/boardData'
-import { isoToFlagEmoji } from '@/lib/boardData'
 
 // ---------------------------------------------------------------------
 // Glifos SVG próprios para casas especiais — substituem ícones lucide
@@ -559,19 +558,6 @@ export function ClassicSquare({
   square,
   side,
 }: { square: Square; side: Side }) {
-  // Pílula da cor do dono — arredondada e centralizada na borda EXTERNA
-  // (oposta ao flag-avatar, que fica na interna). Vertical nas laterais,
-  // horizontal em cima/baixo.
-  const ownerPillStyle: React.CSSProperties = (() => {
-    switch (side) {
-      case 'bottom': return { left: '27%', right: '27%', bottom: 4, height: 5 }
-      case 'top':    return { left: '27%', right: '27%', top: 4, height: 5 }
-      case 'left':   return { top: '27%', bottom: '27%', left: 4, width: 5 }
-      case 'right':  return { top: '27%', bottom: '27%', right: 4, width: 5 }
-      default: return {}
-    }
-  })()
-
   const isProperty = square.kind === 'property'
   const isAirport  = square.kind === 'airport'
   const isUtility  = square.kind === 'utility'
@@ -2251,7 +2237,8 @@ function fivePointStar(cx: number, cy: number, r: number) {
 }
 
 // Bilhete da Loteria — formato de stub real (canhoto à esquerda + corpo + perfuração).
-function LotteryCard({ amount }: { amount: number }) {
+// WIP: ainda não renderizado; exportado para uso futuro (prêmio do Free Parking).
+export function LotteryCard({ amount }: { amount: number }) {
   return (
     <div className="relative w-full" style={{ containerType: 'inline-size' }}>
       {/* sombra projetada */}
