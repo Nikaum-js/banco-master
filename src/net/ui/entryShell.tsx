@@ -13,45 +13,84 @@ import { NeonBackdrop } from './home/NeonBackdrop'
 
 const RUNWAY_LIGHTS = [578, 628, 680, 734, 790, 848] as const
 
-// Aeronave top-down: fuselagem, asas enflechadas, estabilizadores, turbinas, janelas,
-// cockpit, luzes de navegação e duas trilhas de condensação. O pai segue a rota; só o
-// miolo faz a oscilação curta de atitude, mantendo a animação em transform/opacity.
-function AirlinerMark({ scale }: { scale: number }) {
-  const windows = [-28, -16, -4, 8, 20, 32]
+// Aeronave em perspectiva lateral 3/4: a asa próxima é maior, a asa oposta recua,
+// a fuselagem tem ventre e linha de luz, e as turbinas aparecem sob as asas. O pai
+// segue a rota; só o miolo oscila, mantendo a animação em transform/opacity.
+function AirlinerMark({ scale, facing }: { scale: number; facing: 1 | -1 }) {
+  const windows = [-32, -21, -10, 1, 12, 23, 34]
   return (
-    <g transform={`scale(${scale})`}>
+    <g transform={`scale(${scale * facing} ${scale})`}>
       <g className="entry-aircraft__airframe">
         <g className="entry-aircraft__wake" stroke="currentColor" strokeLinecap="round">
-          <path d="M-126-3H-48" strokeWidth="1.4" strokeDasharray="18 10" />
-          <path d="M-126 3H-48" strokeWidth="1.4" strokeDasharray="18 10" />
+          <path d="M-154 1H-61" strokeWidth="1.35" strokeDasharray="22 12" />
+          <path d="M-142 7H-56" strokeWidth="1.1" strokeDasharray="17 13" opacity="0.65" />
         </g>
 
-        <g fill="var(--color-ink-900)" fillOpacity="0.88" stroke="currentColor" strokeLinejoin="round">
-          <path d="M-9-3-27-34-14-36 20-5 39-3 21-1Z" strokeWidth="1.2" />
-          <path d="M-9 3-27 34-14 36 20 5 39 3 21 1Z" strokeWidth="1.2" />
-          <path d="M-36-3-49-17-40-19-24-4Z" strokeWidth="1.1" />
-          <path d="M-36 3-49 17-40 19-24 4Z" strokeWidth="1.1" />
+        {/* Asa distante e estabilizador traseiro: menos contraste cria a
+            profundidade antes mesmo da asa dianteira aparecer. */}
+        <g fill="var(--color-ink-700)" fillOpacity="0.78" stroke="currentColor" strokeLinejoin="round">
+          <path d="M5-5-27-30-10-34 37-4 23-1Z" strokeWidth="1.05" />
+          <path d="M-39 1-58-14-47-17-25 3Z" strokeWidth="1" />
+        </g>
+
+        {/* Cauda vertical atrás da fuselagem. */}
+        <path
+          d="M-49 4-62-25-49-28-27 5Z"
+          fill="var(--color-ink-700)"
+          fillOpacity="0.92"
+          stroke="currentColor"
+          strokeWidth="1.15"
+          strokeLinejoin="round"
+        />
+
+        {/* Corpo curvo, visto ligeiramente de baixo. */}
+        <g stroke="currentColor" strokeLinejoin="round">
           <path
-            d="M-54-4.5C-37-7 33-7 50-4.2L61 0 50 4.2C33 7-37 7-54 4.5L-61 1.2V-1.2Z"
+            d="M-63 4C-48-4-22-8 17-9 39-9 56-5 67 0L74 4 66 8C45 13-36 15-58 10Z"
+            fill="var(--color-ink-800)"
+            fillOpacity="0.96"
             strokeWidth="1.4"
           />
-          <ellipse cx="5" cy="-14" rx="7.5" ry="3.8" strokeWidth="1.1" />
-          <ellipse cx="5" cy="14" rx="7.5" ry="3.8" strokeWidth="1.1" />
+          <path d="M-51 1C-17-7 38-8 62-1" fill="none" stroke="var(--color-starlight)" strokeOpacity="0.34" strokeWidth="1" />
+          <path d="M-54 10C-17 14 40 11 65 7" fill="none" stroke="var(--color-ink-950)" strokeOpacity="0.75" strokeWidth="2" />
         </g>
 
-        <g fill="currentColor" stroke="none" opacity="0.68">
+        {/* Asa dianteira domina a silhueta e traz as duas turbinas visíveis. */}
+        <path
+          d="M8 7-26 34-7 38 42 7 25 4Z"
+          fill="var(--color-ink-900)"
+          fillOpacity="0.98"
+          stroke="currentColor"
+          strokeWidth="1.25"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M-37 7-58 20-45 23-23 10Z"
+          fill="var(--color-ink-900)"
+          stroke="currentColor"
+          strokeWidth="1.05"
+          strokeLinejoin="round"
+        />
+        <g fill="var(--color-ink-950)" stroke="currentColor" strokeWidth="1">
+          <g transform="translate(4 23) rotate(-7)">
+            <path d="M-9-3C-5-6 8-6 12-2V3C7 6-5 6-9 3Z" />
+            <ellipse cx="10.5" cy="0.5" rx="2.8" ry="3.4" fill="var(--color-brass-soft)" fillOpacity="0.55" />
+          </g>
+          <g transform="translate(27 13) rotate(-5) scale(.82)">
+            <path d="M-9-3C-5-6 8-6 12-2V3C7 6-5 6-9 3Z" />
+            <ellipse cx="10.5" cy="0.5" rx="2.8" ry="3.4" fill="var(--color-brass-soft)" fillOpacity="0.5" />
+          </g>
+        </g>
+
+        <g fill="var(--color-brass-glow)" stroke="none" opacity="0.72">
           {windows.map((cx) => (
-            <g key={cx}>
-              <circle cx={cx} cy="-4.7" r="1.05" />
-              <circle cx={cx} cy="4.7" r="1.05" />
-            </g>
+            <rect key={cx} x={cx} y="-2.3" width="4.6" height="2.4" rx="1" />
           ))}
-          <path d="M43-4.5 50-3.4 53-1.6 43-2Z" />
-          <path d="M43 4.5 50 3.4 53 1.6 43 2Z" />
+          <path d="M48-4 58-2 62 0 49-0.5Z" />
         </g>
 
-        <circle className="entry-aircraft__beacon" cx="-27" cy="-34" r="2.4" fill="var(--color-signal-glow)" />
-        <circle className="entry-aircraft__beacon entry-aircraft__beacon--alt" cx="-27" cy="34" r="2.4" fill="var(--color-starlight)" />
+        <circle className="entry-aircraft__beacon" cx="-26" cy="35" r="2.5" fill="var(--color-signal-glow)" />
+        <circle className="entry-aircraft__beacon entry-aircraft__beacon--alt" cx="-27" cy="-30" r="2.2" fill="var(--color-starlight)" />
       </g>
     </g>
   )
@@ -59,15 +98,16 @@ function AirlinerMark({ scale }: { scale: number }) {
 
 const FLIGHT_ROUTES = [
   {
-    // A curva inteira fica acima da fachada mais alta (topo a y=606), já
+    // A curva inteira fica acima da fachada mais alta (topo a y=546), já
     // considerando a envergadura. Antes ela descia a y=750 e o avião parecia
     // atravessar os prédios.
-    d: 'M-170 510C170 405 380 510 650 405S1080 185 1580 270',
+    d: 'M-170 462C170 360 380 462 650 360S1080 168 1580 246',
     duration: '58s',
     delay: '-23s',
     rest: '39%',
     scale: 1.04,
     opacity: 0.58,
+    facing: 1,
   },
   {
     d: 'M1570 72C1240 142 1015 42 740 96S280 210-150 132',
@@ -76,6 +116,7 @@ const FLIGHT_ROUTES = [
     rest: '48%',
     scale: 0.78,
     opacity: 0.44,
+    facing: -1,
   },
 ] as const
 
@@ -103,13 +144,16 @@ function AirspaceRoutes({ className }: { className?: string }) {
             opacity={route.opacity}
             style={{
               offsetPath: `path('${route.d}')`,
-              offsetRotate: 'auto',
+              // A rota distante corre da direita para a esquerda. Espelhar o
+              // avião e mantê-lo nivelado evita que a vista lateral fique de
+              // cabeça para baixo, efeito que a rotação automática de 180° causaria.
+              offsetRotate: route.facing === 1 ? 'auto' : '0deg',
               offsetDistance: route.rest,
               animationDuration: route.duration,
               animationDelay: route.delay,
             }}
           >
-            <AirlinerMark scale={route.scale} />
+            <AirlinerMark scale={route.scale} facing={route.facing} />
           </g>
         </g>
       ))}

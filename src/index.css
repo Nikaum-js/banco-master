@@ -1387,14 +1387,37 @@
   .entry-city-window {
     filter: drop-shadow(0 0 2px rgb(255 217 138 / 0.22));
   }
+  .entry-city-window--far.entry-city-window--pulse {
+    animation-name: entry-city-window-pulse-far;
+  }
   .entry-city-window--pulse {
-    animation: entry-city-window-pulse 10s steps(1, end) infinite;
+    animation-name: entry-city-window-pulse;
+    animation-timing-function: steps(1, end);
+    animation-iteration-count: infinite;
   }
   @keyframes entry-city-window-pulse {
-    0%, 38%, 100% { opacity: 0.58; }
-    40%, 47% { opacity: 0.14; }
-    49%, 78% { opacity: 0.48; }
-    80%, 84% { opacity: 0.22; }
+    0%, 54%, 60%, 100% { opacity: 0.55; }
+    55%, 57% { opacity: 0.12; }
+    58% { opacity: 0.72; }
+    82%, 85% { opacity: 0.2; }
+    83%, 84% { opacity: 0.62; }
+  }
+  @keyframes entry-city-window-pulse-far {
+    0%, 54%, 60%, 100% { opacity: 0.3; }
+    55%, 57% { opacity: 0.07; }
+    58% { opacity: 0.42; }
+    82%, 85% { opacity: 0.1; }
+    83%, 84% { opacity: 0.38; }
+  }
+  .entry-city-window--wake {
+    animation-name: entry-city-window-wake;
+    animation-timing-function: steps(1, end);
+    animation-iteration-count: infinite;
+  }
+  @keyframes entry-city-window-wake {
+    0%, 68%, 100% { opacity: 0.08; }
+    70%, 91% { opacity: 0.5; }
+    93% { opacity: 0.14; }
   }
   .entry-city-beacon {
     filter: drop-shadow(0 0 4px var(--color-signal-glow));
@@ -1404,29 +1427,31 @@
     0%, 82%, 100% { opacity: 0.16; }
     85%, 91% { opacity: 0.9; }
   }
-  .entry-city-traffic {
+  .entry-city-car {
     opacity: 0;
-    transform-box: fill-box;
-    animation: entry-city-traffic 24s linear infinite;
+    transform-box: view-box;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    will-change: transform, opacity;
   }
-  .entry-city-traffic--outbound {
-    transform: translate(-40px, 879px);
+  .entry-city-car--eastbound {
+    animation-name: entry-city-car-eastbound;
   }
-  .entry-city-traffic--inbound {
-    transform: translate(1480px, 886px);
-    animation-name: entry-city-traffic-reverse;
-    animation-duration: 31s;
-    animation-delay: -13s;
+  .entry-city-car--westbound {
+    animation-name: entry-city-car-westbound;
   }
-  @keyframes entry-city-traffic {
-    0% { opacity: 0; transform: translate(-40px, 879px); }
-    8%, 92% { opacity: 0.54; }
-    100% { opacity: 0; transform: translate(1480px, 879px); }
+  @keyframes entry-city-car-eastbound {
+    0% { opacity: 0; transform: translate3d(-90px, 858px, 0); }
+    5%, 95% { opacity: 0.78; }
+    100% { opacity: 0; transform: translate3d(1530px, 858px, 0); }
   }
-  @keyframes entry-city-traffic-reverse {
-    0% { opacity: 0; transform: translate(1480px, 886px); }
-    8%, 92% { opacity: 0.42; }
-    100% { opacity: 0; transform: translate(-40px, 886px); }
+  @keyframes entry-city-car-westbound {
+    0% { opacity: 0; transform: translate3d(1530px, 883px, 0); }
+    5%, 95% { opacity: 0.72; }
+    100% { opacity: 0; transform: translate3d(-90px, 883px, 0); }
+  }
+  .entry-city-car__headlight {
+    filter: drop-shadow(4px 0 5px var(--color-brass-glow));
   }
 
   .entry-runway-light {
@@ -1443,16 +1468,18 @@
     .entry-aircraft__wake,
     .entry-aircraft__beacon,
     .entry-city-window--pulse,
+    .entry-city-window--wake,
     .entry-city-beacon,
-    .entry-city-traffic,
+    .entry-city-car,
     .entry-runway-light {
       animation: none;
     }
     .entry-aircraft__wake { opacity: 0.26; }
     .entry-aircraft__beacon { opacity: 0.7; }
     .entry-city-window--pulse { opacity: 0.5; }
+    .entry-city-window--wake { opacity: 0.12; }
     .entry-city-beacon { opacity: 0.65; }
-    .entry-city-traffic { opacity: 0; }
+    .entry-city-car { opacity: 0; }
     .entry-runway-light { opacity: 0.32; }
   }
 

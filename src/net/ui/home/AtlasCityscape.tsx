@@ -118,27 +118,33 @@ function FacadeWindows({
         Array.from({ length: building.columns }, (_, column) => {
           const seed = hash(buildingIndex + 1, row + 3, column + 7, layer === 'near' ? 19 : 5)
           const lit = seed % 10 > (layer === 'near' ? 3 : 5)
-          const pulse = lit && seed % 17 === 0
+          const pulse = lit && seed % 7 === 0
+          const wake = !lit && seed % 23 === 0
           const width = Math.max(4, Math.min(8, columnGap - 6))
           const x = 9 + column * columnGap + (columnGap - width) / 2
           const y = top + row * rowGap + Math.max(2, (rowGap - 8) / 2)
+          const animationClass = pulse
+            ? ' entry-city-window--pulse'
+            : wake
+              ? ' entry-city-window--wake'
+              : ''
 
           return (
             <rect
               key={`${row}-${column}`}
-              className={pulse ? 'entry-city-window entry-city-window--pulse' : 'entry-city-window'}
+              className={`entry-city-window entry-city-window--${layer}${animationClass}`}
               x={x}
               y={y}
               width={width}
               height={layer === 'near' ? 7 : 5}
               rx="0.7"
-              fill={lit ? 'var(--color-brass-glow)' : 'var(--color-ink-400)'}
+              fill={lit || wake ? 'var(--color-brass-glow)' : 'var(--color-ink-400)'}
               opacity={lit ? (layer === 'near' ? 0.55 : 0.3) : 0.14}
               style={
-                pulse
+                pulse || wake
                   ? {
-                      animationDelay: `${-(seed % 11000)}ms`,
-                      animationDuration: `${8 + (seed % 6)}s`,
+                      animationDelay: `${-(seed % 17000)}ms`,
+                      animationDuration: `${12 + (seed % 10)}s`,
                     }
                   : undefined
               }
@@ -300,27 +306,83 @@ function CityBand({
   )
 }
 
+const CARS = [
+  { lane: 'eastbound', delay: '-4s', duration: '22s', tone: 'var(--color-brass)', scale: 1 },
+  { lane: 'eastbound', delay: '-16s', duration: '29s', tone: 'var(--color-starlight-muted)', scale: 0.9 },
+  { lane: 'westbound', delay: '-9s', duration: '25s', tone: 'var(--color-signal)', scale: 0.94 },
+  { lane: 'westbound', delay: '-21s', duration: '32s', tone: 'var(--color-brass-soft)', scale: 0.84 },
+] as const
+
+function CarGlyph({
+  direction,
+  tone,
+  scale,
+}: {
+  direction: 1 | -1
+  tone: string
+  scale: number
+}) {
+  return (
+    <g transform={`scale(${direction * scale} ${scale})`} strokeLinecap="round" strokeLinejoin="round">
+      <ellipse cx="0" cy="11" rx="27" ry="3.5" fill="var(--color-ink-abyss)" opacity="0.65" stroke="none" />
+      <path
+        d="M-27 6-22-2-9-5H9L20 0 27 3V10H-27Z"
+        fill={tone}
+        fillOpacity="0.72"
+        stroke="var(--color-brass)"
+        strokeOpacity="0.6"
+      />
+      <path d="M-8-3H8L17 1H-15Z" fill="var(--color-ink-700)" stroke="var(--color-starlight-muted)" strokeOpacity="0.32" />
+      <path d="M0-3V1M-15 1h32" stroke="var(--color-starlight-muted)" strokeOpacity="0.34" />
+      <circle cx="-17" cy="10" r="4.2" fill="var(--color-ink-950)" stroke="var(--color-ink-400)" />
+      <circle cx="17" cy="10" r="4.2" fill="var(--color-ink-950)" stroke="var(--color-ink-400)" />
+      <circle cx="-17" cy="10" r="1.5" fill="var(--color-brass-soft)" stroke="none" />
+      <circle cx="17" cy="10" r="1.5" fill="var(--color-brass-soft)" stroke="none" />
+      <circle className="entry-city-car__headlight" cx="27" cy="5" r="2.2" fill="var(--color-brass-glow)" stroke="none" />
+      <rect x="-28" y="4" width="2.5" height="4" rx="1" fill="var(--color-signal-glow)" stroke="none" />
+    </g>
+  )
+}
+
 function StreetLife() {
   return (
     <g className="entry-city-street" stroke="currentColor">
-      <path d="M0 875H1440M0 884H1440" opacity="0.2" />
+      {/* Calçada e meio-fio separam claramente cidade e avenida. */}
+      <rect x="0" y="832" width="1440" height="17" fill="var(--color-ink-700)" fillOpacity="0.8" stroke="none" />
+      <path d="M0 835H1440M0 848H1440" opacity="0.42" />
+      <path d="M0 841H1440" strokeDasharray="3 13" opacity="0.18" />
+
+      {/* Duas pistas, com luz refletida no asfalto e faixa central. */}
+      <rect x="0" y="849" width="1440" height="51" fill="var(--color-ink-abyss)" fillOpacity="0.92" stroke="none" />
+      <rect x="0" y="849" width="1440" height="51" fill="url(#atlas-road-sheen)" stroke="none" />
+      <path d="M0 874H1440" stroke="var(--color-brass)" strokeWidth="1.1" strokeDasharray="28 22" opacity="0.36" />
+      <path d="M0 852H1440M0 897H1440" opacity="0.28" />
+
+      {/* Postes ficam na calçada, atrás dos veículos. */}
       {Array.from({ length: 16 }, (_, index) => {
         const x = 24 + index * 94
         return (
-          <g key={x} transform={`translate(${x} 855)`} opacity={index % 3 === 0 ? 0.42 : 0.25}>
-            <path d="M0 20V0h11v20M0 7h11" />
-            <circle cx="5.5" cy="-2" r="2.2" fill="var(--color-brass-glow)" stroke="none" />
+          <g key={x} transform={`translate(${x} 816)`} opacity={index % 3 === 0 ? 0.5 : 0.3}>
+            <path d="M0 32V2h9M0 27h8" />
+            <path d="M9 2c5 0 5 7 0 7Z" fill="var(--color-brass)" fillOpacity="0.24" />
+            <circle cx="10" cy="5" r="2.2" fill="var(--color-brass-glow)" stroke="none" />
           </g>
         )
       })}
-      <g className="entry-city-traffic entry-city-traffic--outbound">
-        <circle r="2.2" fill="var(--color-brass-glow)" stroke="none" />
-        <circle cx="8" r="2.2" fill="var(--color-brass-glow)" stroke="none" />
-      </g>
-      <g className="entry-city-traffic entry-city-traffic--inbound">
-        <circle r="2" fill="var(--color-signal-glow)" stroke="none" />
-        <circle cx="7" r="2" fill="var(--color-signal-glow)" stroke="none" />
-      </g>
+
+      {CARS.map((car) => (
+        <g
+          key={`${car.lane}-${car.delay}`}
+          className={`entry-city-car entry-city-car--${car.lane}`}
+          style={{ animationDelay: car.delay, animationDuration: car.duration }}
+        >
+          <CarGlyph
+            direction={car.lane === 'eastbound' ? 1 : -1}
+            tone={car.tone}
+            scale={car.scale}
+          />
+        </g>
+      ))}
     </g>
   )
 }
@@ -341,12 +403,17 @@ export function AtlasCityscape({ className }: { className?: string }) {
           <stop offset="48%" stopColor="var(--color-brass)" stopOpacity="0.035" />
           <stop offset="100%" stopColor="var(--color-brass)" stopOpacity="0" />
         </linearGradient>
+        <linearGradient id="atlas-road-sheen" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--color-brass)" stopOpacity="0.055" />
+          <stop offset="52%" stopColor="var(--color-ink-400)" stopOpacity="0.035" />
+          <stop offset="100%" stopColor="var(--color-ink-950)" stopOpacity="0" />
+        </linearGradient>
       </defs>
 
       <rect x="0" y="500" width="1440" height="400" fill="url(#atlas-city-haze)" />
       <NavigationMasts />
-      <CityBand buildings={FAR_BUILDINGS} base={842} layer="far" />
-      <CityBand buildings={NEAR_BUILDINGS} base={900} layer="near" />
+      <CityBand buildings={FAR_BUILDINGS} base={812} layer="far" />
+      <CityBand buildings={NEAR_BUILDINGS} base={840} layer="near" />
       <StreetLife />
     </svg>
   )
