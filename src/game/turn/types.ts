@@ -1,6 +1,6 @@
 // Tipos de domínio do Fluxo de Turno (spec 002). Tudo serializável (JSON puro):
 // nada de funções/refs no estado — pré-requisito de pausa/reconexão (FR-028).
-import type { Title, ResolutionSlice } from '../economy/types'
+import type { Title, ResolutionSlice, BankStock } from '../economy/types'
 
 export type SpeedFace = 1 | 2 | 3 | 'mr-banco' | 'onibus'
 
@@ -58,4 +58,5 @@ export interface GameState {
   phase: GamePhase
   titles: Record<number, Title> // pos → posse (003); só casas compráveis
   resolution: ResolutionSlice | null // interação transitória de compra/leilão (003)
+  bank: BankStock // estoque global de construção (004)
 }

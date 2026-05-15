@@ -45,7 +45,7 @@ export function closeAuction(state: GameState): GameState {
   if (a.highBidder) {
     const winner = s.players.find((p) => p.id === a.highBidder)
     if (winner) winner.cash -= a.currentBid
-    s.titles[a.pos] = { ownerId: a.highBidder, mortgaged: false }
+    s.titles[a.pos].ownerId = a.highBidder
   }
   // sem highBidder → permanece com o banco (FR-015)
   completeResolution(s)

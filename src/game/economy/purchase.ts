@@ -23,7 +23,7 @@ export function buyProperty(state: GameState): GameState {
   const s = clone(state)
   const player = activePlayer(s)
   player.cash -= price
-  s.titles[pos] = { ownerId: player.id, mortgaged: false }
+  s.titles[pos].ownerId = player.id // propriedade livre → sem construção; preserva o shape do título
   completeResolution(s)
   return s
 }

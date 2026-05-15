@@ -22,7 +22,13 @@ export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
   let amount = 0
   if (square.kind === 'airport') amount = rentAirport(countOwned(state, 'airport', owner))
   else if (square.kind === 'utility') amount = rentUtility(countOwned(state, 'utility', owner), diceValue(roll))
-  else amount = rentCity(square.rent, groupOwnedCount(state, square.group, owner), groupSize(square.group))
+  else {
+    const t = state.titles[pos]
+    amount = rentCity(square.rent, groupOwnedCount(state, square.group, owner), groupSize(square.group), {
+      houses: t.houses,
+      hotel: t.hotel,
+    })
+  }
 
   const payer = state.players.find((p) => p.id === playerId)
   if (payer && payer.cash < amount) {
