@@ -22,7 +22,7 @@ import { economyResolve } from './economy/resolveRentable'
 import { buyProperty, declineProperty } from './economy/purchase'
 import { placeBid, passBid, closeAuction } from './economy/auction'
 import { buildHouse, sellBuilding, buildHangar, sellHangar } from './economy/construction'
-import { openHouseAuction, declareBuildInterest, placeHouseBid, closeHouseAuction } from './economy/houseAuction'
+import { openHouseAuction, placeHouseBid, closeHouseAuction } from './economy/houseAuction'
 import { mortgageProperty, unmortgageProperty } from './economy/mortgage'
 import { goBonus, payToCenter, collectCenter } from './balancing/balancing'
 import { payDebt, declareBankruptcy } from './falencia/falencia'
@@ -98,6 +98,7 @@ export function createSeedState(playerIds: string[]): GameState {
     tempEffects: [], // 015 — efeitos temporários de carta
     log: [], // 021 — event log do jogo
     pendingTrade: null, // 024 — proposta de troca pendente
+    houseAuction: null, // 026 — leilão de casas (evento autônomo)
   }
   startTurn(state)
   return state
@@ -122,8 +123,8 @@ interface GameStore {
   buildHangar(pos: number): void
   sellHangar(pos: number): void
   openHouseAuction(housesAvailable: number, bidders: string[]): void
-  declareBuildInterest(playerId: string): void
   placeHouseBid(playerId: string, amount: number): void
+  closeHouseAuction(): void
   mortgageProperty(pos: number): void
   unmortgageProperty(pos: number): void
   playHandCard(cardId: string, target?: number, targetPlayer?: string): void
@@ -152,17 +153,16 @@ function clearAuctionTimer(): void {
 }
 
 export const useGameStore = create<GameStore>((set, get) => {
-  // (Re)agenda o fechamento do leilão (compra ou casas) pelo deadline; respeita pausa.
+  // (Re)agenda o fechamento do leilão de PROPRIEDADE pelo deadline; respeita pausa.
+  // (O leilão de casas — 026 — é evento autônomo de fecho manual, não usa este timer.)
   function rearmAuction(): void {
     clearAuctionTimer()
     const g = get().game
-    if (g.paused || !g.resolution) return
-    const kind = g.resolution.kind
-    if (kind !== 'auction' && kind !== 'house-auction') return
+    if (g.paused || g.resolution?.kind !== 'auction') return
     const deadline = g.resolution.auction.deadline
     const ms = Math.max(0, deadline - Date.now())
     auctionTimer = setTimeout(() => {
-      set((st) => ({ game: kind === 'auction' ? closeAuction(st.game) : closeHouseAuction(st.game) }))
+      set((st) => ({ game: closeAuction(st.game) }))
       clearAuctionTimer()
     }, ms)
   }
@@ -205,15 +205,9 @@ export const useGameStore = create<GameStore>((set, get) => {
     sellBuilding: (pos) => set((st) => ({ game: sellBuilding(st.game, pos) })),
     buildHangar: (pos) => set((st) => ({ game: buildHangar(st.game, pos) })),
     sellHangar: (pos) => set((st) => ({ game: sellHangar(st.game, pos) })),
-    openHouseAuction: (housesAvailable, bidders) => {
-      set((st) => ({ game: openHouseAuction(st.game, housesAvailable, bidders, st.ctx.now!()) }))
-      rearmAuction()
-    },
-    declareBuildInterest: (playerId) => set((st) => ({ game: declareBuildInterest(st.game, playerId) })),
-    placeHouseBid: (playerId, amount) => {
-      set((st) => ({ game: placeHouseBid(st.game, playerId, amount, st.ctx.now!()) }))
-      rearmAuction()
-    },
+    openHouseAuction: (housesAvailable, bidders) => set((st) => ({ game: openHouseAuction(st.game, housesAvailable, bidders) })), // 026 — evento autônomo
+    placeHouseBid: (playerId, amount) => set((st) => ({ game: placeHouseBid(st.game, playerId, amount) })),
+    closeHouseAuction: () => set((st) => ({ game: closeHouseAuction(st.game) })),
     mortgageProperty: (pos) => set((st) => ({ game: mortgageProperty(st.game, pos) })),
     unmortgageProperty: (pos) => set((st) => ({ game: unmortgageProperty(st.game, pos) })),
     playHandCard: (cardId, target, targetPlayer) =>

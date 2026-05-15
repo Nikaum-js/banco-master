@@ -16,7 +16,6 @@ export interface HandCardView {
 export type ModalView =
   | { kind: 'purchase'; pos: number; square: Square; price: number; playerId: string }
   | { kind: 'auction'; pos: number; square: Square; currentBid: number; highBidder: string | null; deadline: number }
-  | { kind: 'house-auction'; housesAvailable: number; currentBid: number; highBidder: string | null; deadline: number }
   | { kind: 'card-discard'; playerId: string; cards: HandCardView[] }
   | { kind: 'card-shortcut' }
   | { kind: 'card-reveal'; deckId: DeckId; cardId: string; rarity: Rarity; effect: string; mode: CardMode }
@@ -56,10 +55,6 @@ export function activeModal(game: GameState): ModalView | null {
     case 'auction': {
       const a = res.auction
       return { kind: 'auction', pos: a.pos, square: BOARD[a.pos], currentBid: a.currentBid, highBidder: a.highBidder, deadline: a.deadline }
-    }
-    case 'house-auction': {
-      const a = res.auction
-      return { kind: 'house-auction', housesAvailable: a.housesAvailable, currentBid: a.currentBid, highBidder: a.highBidder, deadline: a.deadline }
     }
     case 'card-discard': {
       const id = activeId(game)

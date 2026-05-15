@@ -276,7 +276,7 @@ export function ModalLayer() {
             </Card>
           )}
 
-          {(view.kind === 'auction' || view.kind === 'house-auction') && (
+          {view.kind === 'auction' && (
             <AuctionCard view={view} activeId={activeId} placeBid={placeBid} passBid={passBid} />
           )}
 
@@ -397,19 +397,17 @@ function AuctionCard({
   placeBid,
   passBid,
 }: {
-  view: Extract<ModalView, { kind: 'auction' | 'house-auction' }>
+  view: Extract<ModalView, { kind: 'auction' }>
   activeId: string
   placeBid: (playerId: string, amount: number) => void
   passBid: (playerId: string) => void
 }) {
   const minNext = view.currentBid + 50
   const [bid, setBid] = useState(minNext)
-  const title = view.kind === 'auction' ? view.square.name : `${view.housesAvailable} casa(s) em leilão`
-  const subtitle = view.kind === 'auction' ? 'Leilão de propriedade' : 'Escassez de casas'
 
   return (
     <Card>
-      <Header bg="linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" icon={null} title={title} subtitle={subtitle} />
+      <Header bg="linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" icon={null} title={view.square.name} subtitle="Leilão de propriedade" />
       <div className="px-3.5 py-3">
         <div className="flex flex-col gap-0.5">
           <CompactRent label="Lance atual" value={view.currentBid} active />
@@ -429,9 +427,7 @@ function AuctionCard({
             className="w-20 px-2 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream text-sm"
           />
           <ActionBtn onClick={() => placeBid(activeId, Math.max(bid, minNext))}>Dar lance</ActionBtn>
-          {view.kind === 'auction' && (
-            <ActionBtn onClick={() => passBid(activeId)} variant="secondary">Passar</ActionBtn>
-          )}
+          <ActionBtn onClick={() => passBid(activeId)} variant="secondary">Passar</ActionBtn>
         </div>
       </div>
     </Card>

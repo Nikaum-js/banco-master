@@ -81,7 +81,6 @@ export interface Trade {
 export type ResolutionSlice =
   | { kind: 'purchase'; pos: number }
   | { kind: 'auction'; auction: Auction }
-  | { kind: 'house-auction'; auction: HouseAuction } // leilão de casas em escassez (004)
   | { kind: 'card-reveal'; deckId: DeckId; cardId: string } // carta sacada revelada, aguardando "Continuar" (025)
   | { kind: 'card-discard'; deckId: DeckId; drawnId: string } // mão cheia: escolher descarte (006)
   | { kind: 'card-shortcut'; deckId: DeckId; cardId: string } // Atalho: escolher ±3 (006)
