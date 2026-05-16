@@ -22,6 +22,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import { CITIES, COMMIT_SHA, NAME_MAX, STATS, useHomeForm, type HomeActions } from './homeShared'
+import { NeonBackdrop } from './NeonBackdrop'
 
 // ---------------------------------------------------------------------
 // Letreiro de pixel — matriz 5×7 por letra, só as dez de "BANCO MASTER".
@@ -101,118 +102,6 @@ function PixelWordmark() {
   )
 }
 
-// ---------------------------------------------------------------------
-// Cidade — a geração RICA da metrópole (janelas em cor de grupo, torres-mastro com baliza)
-// quantizada na grade de 8px do fliperama, e desenhada em padrão que ROLA. Determinística
-// (LCG semeado): a cidade é a mesma em todo carregamento, e cada janela guarda o próprio
-// atraso de piscada.
-// ---------------------------------------------------------------------
-const NEON_WINDOW = ['skyblue', 'pink', 'yellow', 'purple', 'orange'] as const
-const PATTERN_W = 1440 // largura do padrão = deslocamento da animação (.neon-scroll)
-
-function seeded(seed: number): () => number {
-  let s = seed
-  return () => {
-    s = (s * 1664525 + 1013904223) % 4294967296
-    return s / 4294967296
-  }
-}
-
-interface Tower {
-  x: number
-  w: number
-  h: number
-  mast: boolean
-  lights: { x: number; y: number; hue: string; delay: number }[]
-}
-
-// Alturas BAIXAS de propósito: o sol é uma cúpula de 26vmin apoiada no horizonte, e torre
-// mais alta que ela esconderia o sol inteiro. As poucas torres com mastro são as que cortam
-// a cúpula — e é esse recorte que faz a cidade parecer na frente do poente, não colada nele.
-function towers(seed: number, minH: number, maxH: number): Tower[] {
-  const rnd = seeded(seed)
-  const out: Tower[] = []
-  let x = 0
-  // Para o padrão emendar sem costura, a última torre precisa terminar antes de PATTERN_W:
-  // vão entre prédios é normal, vão um pouco maior na emenda é invisível.
-  while (x < PATTERN_W - 160) {
-    const w = (6 + Math.round(rnd() * 9)) * 8 // 48..120, na grade de 8
-    const h = (Math.round(minH / 8) + Math.round((rnd() * (maxH - minH)) / 8)) * 8
-    const lights: Tower['lights'][number][] = []
-    for (let ly = 16; ly < h - 16; ly += 24) {
-      for (let lx = 8; lx < w - 12; lx += 24) {
-        if (rnd() > 0.34) {
-          lights.push({
-            x: lx,
-            y: ly,
-            hue: `var(--color-group-${NEON_WINDOW[Math.floor(rnd() * NEON_WINDOW.length)]})`,
-            delay: Math.round(rnd() * 7000),
-          })
-        }
-      }
-    }
-    out.push({ x, w, h, mast: rnd() > 0.72, lights })
-    x += w + 8 + Math.round(rnd() * 2) * 8
-  }
-  return out
-}
-
-const FAR = towers(90210, 72, 152)
-const NEAR = towers(31337, 88, 184)
-
-function TowerBand({ list, base, opacity, ink, className }: { list: Tower[]; base: number; opacity: number; ink: string; className: string }) {
-  const band = (offset: number) => (
-    <g key={offset} transform={`translate(${offset} 0)`}>
-      {list.map((t) => (
-        <g key={`${offset}-${t.x}`} transform={`translate(${t.x} ${base - t.h})`}>
-          <rect width={t.w} height={t.h + 16} fill={ink} />
-          <rect width={t.w} height={t.h} fill="none" stroke="var(--color-group-purple)" strokeOpacity="0.5" strokeWidth="1" />
-          {t.mast && (
-            <>
-              {/* torre-mastro: sobe bem acima da fileira e vira a silhueta que corta o sol */}
-              <rect x={Math.round((t.w * 0.28) / 8) * 8} y={-96} width={Math.round((t.w * 0.44) / 8) * 8} height={96} fill={ink} />
-              <rect
-                x={Math.round((t.w * 0.28) / 8) * 8}
-                y={-96}
-                width={Math.round((t.w * 0.44) / 8) * 8}
-                height={96}
-                fill="none"
-                stroke="var(--color-group-purple)"
-                strokeOpacity="0.5"
-                strokeWidth="1"
-              />
-              <path d={`M${t.w / 2} -96v-24`} stroke="var(--color-group-pink)" strokeOpacity="0.6" strokeWidth="2" />
-              <rect className="neon-beacon" x={t.w / 2 - 4} y={-128} width="8" height="8" fill="var(--color-group-red)" />
-            </>
-          )}
-          {t.lights.map((l) => (
-            <rect
-              key={`${l.x}-${l.y}`}
-              className="neon-window"
-              x={l.x}
-              y={l.y}
-              width="8"
-              height="8"
-              fill={l.hue}
-              style={{ animationDelay: `${l.delay}ms` }}
-            />
-          ))}
-        </g>
-      ))}
-    </g>
-  )
-  return (
-    <g className={className} opacity={opacity}>
-      {[0, PATTERN_W].map(band)}
-    </g>
-  )
-}
-
-const COINS = Array.from({ length: 10 }, (_, i) => {
-  const rnd = seeded(555 + i * 31)
-  return { left: `${4 + Math.round(rnd() * 92)}%`, delay: `${-Math.round(rnd() * 9000)}ms`, dur: `${5 + Math.round(rnd() * 6)}s` }
-})
-
 export function HomeNeonArcade(actions: HomeActions) {
   const { reduced } = useMotion()
   const f = useHomeForm(actions)
@@ -222,23 +111,7 @@ export function HomeNeonArcade(actions: HomeActions) {
 
   return (
     <div className="neon-stage fixed inset-0 z-[70] overflow-y-auto overscroll-contain">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-        <div className="neon-sky" />
-        <div className="neon-sun" />
-        {/* A cidade para ACIMA do rodapé: o terço de baixo é a avenida (piso em grade). */}
-        <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice" className="absolute inset-0 w-full h-full">
-          <TowerBand list={FAR} base={556} opacity={0.5} ink="#160c2e" className="neon-scroll neon-scroll--far" />
-          <TowerBand list={NEAR} base={604} opacity={0.92} ink="#0b0620" className="neon-scroll neon-scroll--near" />
-        </svg>
-        <div className="neon-floor" />
-        <div className="neon-haze" />
-        {COINS.map((c) => (
-          <span key={c.left + c.delay} className="neon-coin" style={{ left: c.left, animationDelay: c.delay, animationDuration: c.dur }} />
-        ))}
-        <div className="neon-scan" />
-        <div className="neon-roll" />
-        <div className="neon-crt" />
-      </div>
+      <NeonBackdrop />
 
       {/* Placar do gabinete: os números do tabuleiro no lugar onde um arcade põe pontuação. */}
       <div className="neon-hud" aria-hidden="true">
