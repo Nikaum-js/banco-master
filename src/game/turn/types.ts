@@ -72,4 +72,5 @@ export interface GameState {
   log: LogEntry[] // eventos do jogo (021); bounded em 50, mais recentes ao fim
   pendingTrade: Trade | null // proposta de troca pendente (024); uma por vez; null = nenhuma
   houseAuction: HouseAuction | null // leilão de casas em escassez (026); evento autônomo, fora do turno
+  tradeHistory: Trade[] // trocas aceitas (027); mais recentes ao fim, bounded ~12
 }

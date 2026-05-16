@@ -99,6 +99,7 @@ export function createSeedState(playerIds: string[]): GameState {
     log: [], // 021 — event log do jogo
     pendingTrade: null, // 024 — proposta de troca pendente
     houseAuction: null, // 026 — leilão de casas (evento autônomo)
+    tradeHistory: [], // 027 — histórico de trocas aceitas
   }
   startTurn(state)
   return state

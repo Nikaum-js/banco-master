@@ -7,6 +7,7 @@ import type { Trade, ImmunityGrant } from './types'
 import { ownerOf } from './titles'
 import { cityLevel } from './construction'
 import { transferKeepFee } from './mortgage'
+import { logEvent } from '../log'
 
 // `Trade`/`ImmunityGrant` agora vivem em ./types (024, p/ o GameState referenciar
 // sem ciclo). Re-exportados aqui para não quebrar quem importa de './trade'.
@@ -123,8 +124,11 @@ export function proposeTrade(state: GameState, trade: Trade): GameState {
 
 export function acceptTrade(state: GameState): GameState {
   if (state.paused || !state.pendingTrade) return state
-  if (!validateTrade(state, state.pendingTrade)) return state // obsoleta → no-op (pode recusar)
-  const s = executeTrade(state, state.pendingTrade)
+  const trade = state.pendingTrade
+  if (!validateTrade(state, trade)) return state // obsoleta → no-op (pode recusar)
+  const s = executeTrade(state, trade)
+  s.tradeHistory = [...s.tradeHistory, trade].slice(-12) // 027 — registro (bounded)
+  logEvent(s, trade.fromId, `${trade.fromId} ↔ ${trade.toId}: troca aceita`) // 027
   s.pendingTrade = null
   return s
 }
