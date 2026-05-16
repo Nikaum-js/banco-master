@@ -30,9 +30,13 @@
 - [D-018](#d-018--termo-canônico-acaso-antes-surpresa) — Termo canônico "Acaso" (antes "Surpresa")
 - [D-019](#d-019--autenticação-anônima-por-link-sem-contas-no-v1) — Autenticação anônima por link (sem contas no v1)
 - [D-020](#d-020--modelo-de-autoridade--sincronização-host-autoritativo--realtime--snapshot) — Modelo de autoridade & sync: host-autoritativo + Realtime + snapshot
-- [D-021](#d-021--espaço-bus-ticket-uso-imediato-ao-parar-revisa-27107) — Espaço Bus Ticket: uso imediato ao parar (revisa §2.7/§10.7)
+- [D-021](#d-021--espaço-bus-ticket-uso-imediato-ao-parar-revisa-27107) — Espaço Bus Ticket: uso imediato ao parar (revisa §2.7/§10.7) — **revertida (2026-05-27): volta a guardar o ticket**
 - [D-022](#d-022--escassez-de-construção-removida-construção-ilimitada) — Escassez de construção removida (construção ilimitada; remove leilão de casas)
 - [D-023](#d-023--leilão-de-escassez-de-terrenos-pregão-simultâneo) — Leilão de escassez de terrenos (pregão simultâneo, fim de jogo)
+- [D-024](#d-024--economia-recalibrada-tiers-de-casa--aluguel-por-grupo) — Economia recalibrada: tiers de casa + aluguel por grupo (sweet spots; laranja→3)
+- [D-025](#d-025--distrito-super-luxo-alta-roda) — Distrito super-luxo dos Emirados (Abu Dhabi/Dubai; 10º grupo, armadilha de prestígio)
+- [D-026](#d-026--construção-com-país-parcial--aluguel-escalonado-por-posse) — Construção com país parcial: constrói com 1+ cidade, aluguel escala por posse (revisa D-004)
+- [D-027](#d-027--bus-ticket-usável-também-no-fim-do-turno) — Bus Ticket usável também no fim do turno (não só antes de rolar)
 
 ### Rejeitadas
 - [D-R01](#d-r01--sistema-de-draft-rejeitada) — Sistema de draft de propriedades no início
@@ -59,9 +63,10 @@
 **Atualização (2026-05-24):** desativado por feedback de playtest ("o 3º dado gera muita confusão" — Mr.Banco/Ônibus/Triple). Implementado via flag `THEME.SPEED_DIE_ENABLED=false` (jogo rola sempre 2 dados); o motor, os modais (bus-move/triple-dest) e os testes do Speed Die **permanecem** no código — reversível voltando o flag a `true`. Reavaliar se o first-mover advantage voltar a incomodar (ver D-006: depende de Speed Die + Mr.Banco + GO Progressivo).
 
 ### D-004 — Construção com grupo parcial
-**Data:** 2026-05 · **Status:** aceita
+**Data:** 2026-05 · **Status:** ~~aceita~~ **revisada por D-026 (2026-05-27)**
 **Decisão:** Permitir construção sem grupo completo, com aluguel a 70% (vs. 100% completo).
 **Por quê:** Resolve o "jogador travado" sem cooperação obrigatória. Incentivo de completar grupo via trade se mantém.
+**Revisão (2026-05-27, D-026):** a trava de **maioria** caiu (constrói com ≥1 cidade) e o 70%/100% binário virou uma **escala por posse** (50% → 100%). Ver D-026.
 
 ### D-005 — Propriedade Coringa
 **Data:** 2026-05 · **Status:** revogada
@@ -133,6 +138,8 @@
 **Por quê:** Partidas de 7-8 jogadores precisam de mais propriedades e profundidade — 40 casas saturam rápido (~4 compráveis/jogador). Grupos maiores (3-4) tornam o monopólio mais difícil de fechar, segurando o *runaway leader* e forçando mais negociação (mecanismo central do Mega para muitos jogadores). A escolha é coerente: as mecânicas que fazem um tabuleiro maior funcionar — Speed Die ([D-003](#d-003--speed-die-aps-1-volta)), grupo parcial ([D-004](#d-004--construo-com-grupo-parcial)), Bus Tickets ([D-012](#d-012--bus-tickets-como-item-separado)), Skyscraper, Hangares — **já estavam decididas/no SRS**. A expansão completa um design já meio-Mega em vez de divergir do Richup.
 **Como aplicar:** SRS §2 é a fonte de verdade da nova estrutura (já atualizado). Preços/aluguéis das 28 cidades partem do Richup como base e estendem-se numa escada mais granular ($60–$400). Speed Die permanece padrão. Valores de dinheiro/estoque são tunáveis após playtesting.
 **Atualização (2026-05-25):** o **limite global de estoque** de construção (40 casas / 16 hotéis) foi **removido** — casas, hotéis e arranha-céus são ilimitados ([D-022](#d-022--escassez-de-construção-removida-construção-ilimitada)). O tamanho do tabuleiro (48 casas) e o dinheiro inicial ($2.000) permanecem.
+**Atualização (2026-05-25, composição):** o SRS §2.3 dizia "8 grupos, premium 4/4/4/4" — divergia do board real. A composição correta é **9 grupos: 8 de 3 + verde (EUA) de 4 = 28** (laranja foi de 2 → 3 com Hamburgo; Salvador saiu). Calibração econômica (preços/aluguéis/custos) recalibrada na [D-024](#d-024--economia-recalibrada-tiers-de-casa--aluguel-por-grupo).
+**Atualização (2026-05-25, super-luxo):** com o distrito super-luxo dos Emirados ([D-025](#d-025--distrito-super-luxo-alta-roda)), a composição vira **10 grupos**: 8 de 3 + França (navy) de 2 + Emirados (platinum) de 2 = 28. Verde recua de 4 → 3 (Chicago sai) e França de 3 → 2 (Lyon sai); Abu Dhabi/Dubai entram no topo.
 
 ### D-018 — Termo canônico "Acaso" (antes "Surpresa")
 **Data:** 2026-05-23 · **Status:** aceita
@@ -156,10 +163,12 @@
 **Como aplicar:** definir uma interface de **transporte de comandos** + **persistência de snapshot**; a store Zustand atual segue sendo o reducer no host; clientes não-host viram "magros" (enviam comando, renderizam o snapshot recebido). **Trade-offs:** (a) vantagem/latência do host — mitigável com UI otimista local validada pelos mesmos gates; (b) host como ponto único — aceito no v1 por simplicidade e por já ser o modelo de pausa do §11.3; reavaliar server-autoritativo se virar problema. É a base das fatias 1–2 do M3.
 
 ### D-021 — Espaço Bus Ticket: uso imediato ao parar (revisa §2.7/§10.7)
-**Data:** 2026-05-24 · **Status:** aceita
+**Data:** 2026-05-24 · **Status:** ~~aceita~~ **revertida (2026-05-27)**
 **Decisão:** Parar no **espaço Bus Ticket** NÃO banca mais um ticket — abre **na hora** o seletor de "bus ride": o jogador escolhe uma casa do **mesmo lado** e move-se para lá imediatamente (e o destino é resolvido normalmente). O ticket **guardado** passa a vir **apenas** da carta "Passagem de Ônibus" (Tesouro), usável antes de rolar (§10.7 mantido para a carta).
 **Por quê:** feedback de playtest — parar no espaço e só receber um ticket "invisível" para usar no turno seguinte foi confuso; o jogador espera **agir na hora**. O uso imediato é mais claro e satisfatório, e a corrida do mesmo lado é a mesma mecânica do §10.7.
 **Como aplicar:** motor — o handler `'bus-ticket'` abre `awaitingChoice='bus-ride'` (não credita ticket); `chooseBusRide(dest)` valida mesmo lado, move (credita GO ao cruzar) e resolve o destino. UI — seletor vira modal (`BusPicker`), reusado pela carta guardada. **Atualizar SRS §2.7** (espaço = corrida imediata, não concede ticket) e manter §10.7 para o ticket de carta.
+
+**Reversão (2026-05-27):** volta ao comportamento original do **SRS §2.7** — parar no espaço **GANHA 1 Bus Ticket guardado** (uso facultativo depois, antes de rolar, §10.7). **Por quê:** forçar a viagem na hora tira a agência do jogador; guardar o ticket para usar no momento estratégico é melhor e era a regra escrita no SRS (a atualização do §2.7 prometida pela D-021 nunca foi feita — o texto sempre disse "guardada na mão"). **Como aplicar:** handler `'bus-ticket'` faz `busTickets += 1` e resolve (`done:true`); removida a maquinaria de `bus-ride` (`chooseBusRide`, `awaitingChoice='bus-ride'`, view/modal e ação do store). O ticket — venha da carta ou do espaço — usa o mesmo fluxo `useBusTicket` (botão "Usar Bus Ticket" antes de rolar).
 
 ### D-022 — Escassez de construção removida (construção ilimitada)
 **Data:** 2026-05-25 · **Status:** aceita
@@ -174,6 +183,30 @@
 **Como aplicar:** SRS §7 ganha o gatilho (7.1) + subseção 7.3 (já atualizado). Motor — novo evento autônomo `GameState.landAuction` (NÃO `resolution`), módulo `economy/landAuction.ts` (`maybeOpenLandAuction`/`placeLandBid`/`closeLandAuction`/`committedCash`), flag `landAuctionArmed`, timer no store reusando o padrão/`deadline` do 003. UI: `LandAuctionLayer` autônoma. **Não** reintroduzir `bank`/`houseAuction` ([D-022]).
 
 ---
+
+### D-024 — Economia recalibrada: tiers de casa + aluguel por grupo
+**Data:** 2026-05-25 · **Status:** aceita
+**Decisão:** Recalibrar a economia (pesquisa cruzada com o Monopoly clássico/Mega). **(1) Custo de casa = tier fixo por grupo** ($40 marrom → $240 navy), não mais proporcional ao preço (`preço×0,5`); cria o *sweet spot* laranja/vermelho (casa barata pro aluguel que rende). **(2) Aluguel = multiplicador POR GRUPO** (não mais um único): curva clássica suavizada — grupos baratos com multiplicador grande, caros pequeno; hotel-topo de ~$360 (marrom) a ~$1.800 (navy), cabendo no caixa de $2.000 (antes o topo era $5.000 = falência instantânea). 2º hotel > 1º (§14.4); arranha-céu = topo (§13.7). **(3) Rebalance do tabuleiro:** laranja 2 → 3 (Hamburgo entra, Salvador sai; China/Brasil reorganizam), verde como único premium de 4 (atualiza [D-017](#d-017--tabuleiro-de-48-casas)).
+**Por quê:** o multiplicador único estourava o topo e achatava o piso (spread ~25× vs ~8× do clássico); o custo proporcional eliminava sweet spots (todo terreno com ROI igual). A curva por grupo + tiers devolve profundidade (decisão "onde construir") e segurança (não falir num hotel), alinhada ao Princípio IV. Mantém aeroportos/utilidades/impostos/caixa/GO.
+**Como aplicar:** `theme.ts` ganha `HOUSE_COST` (tiers) e `RENT_MULT` (por grupo); `rent.ts` ganha `rentLadder(group,base)` (FONTE ÚNICA, consumida por `rentCity` e pelas UIs de deed — engine↔UI nunca divergem); `construction.ts buildCost` lê o tier; `boardData` rebalanceado. SRS §2.3/§5.1 atualizados. **Não** reintroduz estoque/bank (D-022). Spec 032.
+
+### D-025 — Distrito super-luxo "Alta Roda"
+**Data:** 2026-05-25 · **Status:** aceita
+**Decisão:** Adicionar um **10º grupo super-luxo** — país **Emirados Árabes** (grupo `platinum`, apelido "Alta Roda"), com 2 cidades — **Abu Dhabi** (~$550) e **Dubai** (~$650) — no clímax do tabuleiro (fim, antes do GO). *(Decisão revista: era Mônaco+Dubai, mas misturava 2 países; padronizado p/ 1 país por grupo — Emirados.)* É a "zona nobre" estilo Boardwalk: preços muito acima do resto, aluguel de prestígio (Dubai: hotel ~$2.300, arranha-céu ~$3.600), custo de casa tier topo ($300) e **ROI propositalmente fraco** (< orange/red) — não é sweet spot, é **flex/ralo de caixa do líder** (armadilha de alto risco). Cor própria (ônix `#26233a`). Pra caber em 48 casas: **verde (EUA) 4→3** (sai Chicago) e **França (navy) 3→2** (sai Lyon) → 10 grupos, 28 cidades. Grupo de 2 = maioria 2 (exige ambas; sem grupo parcial).
+**Por quê:** faltava um polo de cobiça de ponta — o "sonho/aposta" que o azul-escuro dá no Monopoly. Como armadilha (caro, raro de cair, no canto), agrega tensão e dreno de caixa **sem** desfazer a curva suavizada da [D-024](#d-024--economia-recalibrada-tiers-de-casa--aluguel-por-grupo) (hotel ~$2.300 ainda é pagável via hipoteca/venda a partir de $2.000, não one-shot garantido).
+**Como aplicar:** reusa o modelo D-024 (motor inalterado). `boardData` (`GroupKey += 'platinum'`, `GROUPS`, rebalance do lado direito), `theme.ts` (`HOUSE_COST.platinum`/`RENT_MULT.platinum`), cor em 3 fontes (`GROUPS`/`GROUP_COLOR`/`--color-group-platinum` no `index.css`). SRS §2.3/§5.1 atualizados; [D-017](#d-017--tabuleiro-de-48-casas) → 10 grupos. **Não** reintroduz estoque/bank (D-022). Spec 033.
+
+### D-026 — Construção com país parcial + aluguel escalonado por posse
+**Data:** 2026-05-27 · **Status:** aceita (revisa [D-004](#d-004--construo-com-grupo-parcial))
+**Decisão:** Construir casas/hotéis NÃO exige mais a maioria do país — basta possuir a cidade (≥1). O aluguel construído deixa de ser 70%/100% binário e passa a escalar pela posse: `fator = 0,5 + 0,5 × (cidades que possui − 1) / (tamanho do país − 1)` — trio 1/3=50% · 2/3=75% · 3/3=100%; duo 1/2=50% · 2/2=100%. **Arranha-céu** segue exigindo país completo (fator sempre 1,0). Aluguel **sem** construção mantém o set bonus (base/150%/200%, §5.1).
+**Por quê:** destrava o "jogador parado" (constrói cedo com 1 cidade) sem desbalancear — completar o país **dobra** o aluguel construído, mantendo forte o incentivo de fechar o grupo via trade. Mais granular e justo que o degrau único de 70%.
+**Como aplicar:** `rent.ts` (`posseFactor` + ramo construído de `rentCity`), `construction.ts` (remove trava de maioria em `canBuild`), `deedView.ts`/`shared.tsx` (remove razão/mensagem `'maioria'`). SRS §5.1/§5.2/§13.3 atualizados. Spec 034.
+
+### D-027 — Bus Ticket usável também no fim do turno
+**Data:** 2026-05-27 · **Status:** aceita
+**Decisão:** O Bus Ticket guardado, que só podia ser usado **antes de rolar**, passa a poder ser usado **também no fim do turno** (depois de resolver a casa onde caiu): rolar → comprar → usar o ticket → cair noutra casa do mesmo lado → comprar. Mantém o uso pré-rolagem. Regras do salto inalteradas (mesmo lado, **não** cruza o GO, gasta 1 ticket, sem nova rolagem).
+**Por quê:** dá agência tática — o jogador aproveita a jogada normal **e** o salto no mesmo turno, em vez de escolher um ou outro antes de rolar.
+**Como aplicar:** `turnMachine.ts` (`useBusTicket` aceita `'aguardando-finalizacao'`), UI (pílula do HUD + `showBusArmed` no `ModalLayer` nesse estado). SRS §10.7 atualizado. Spec 034.
 
 ## Decisões rejeitadas
 

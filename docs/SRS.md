@@ -69,7 +69,7 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Timer de turno | Não há — o jogador controla quando finaliza |
 | Desconexão mid-game | Partida pausa; propriedades não vão ao banco; aguarda reconexão |
 | Speed Die | Presente — ativado após primeira volta completa do jogador |
-| Construção com grupo parcial | Permitida com penalidade no aluguel (70% com construção, 150% sem) |
+| Construção com país parcial | Permitida com 1+ cidade do país; aluguel construído escala pela posse (50%→100%, §13.3); sem construção mantém 150%/200% |
 | Free Parking com prêmio acumulado | Presente — impostos/multas vão para o centro, prêmio inicial $500 |
 | GO Progressivo | Presente — escala de $100 (1º lugar) a $400 (último) por patrimônio |
 | Segundo hotel por propriedade | Presente — sequencial, cobra **mais** aluguel que o 1º; 2 hotéis viram arranha-céu |
@@ -116,22 +116,24 @@ Com 48 casas (11 por lado + 4 cantos), os cantos ficam nos índices múltiplos d
 
 ### 2.3 Grupos de Propriedades de Cidade
 
-As 28 propriedades são divididas em 8 grupos de cores. Os grupos **premium** (laranja, vermelho, amarelo, verde) têm 4 propriedades; os demais têm 3:
+As 28 propriedades são divididas em **10 grupos de cores** (tema "Cidades do Mundo") — **um país cada**. Oito grupos têm **3** cidades; **França (navy)** e **Emirados (super-luxo)** têm **2** cada — os dois duos de prestígio do topo (28 = 8×3 + 2 + 2):
 
-| Grupo (Cor) | Nº propriedades | Exemplo de cidades/países |
-|---|---|---|
-| Marrom | 3 | África (ex: Argélia, Egito) |
-| Azul Claro | 3 | Ásia (ex: China) |
-| Rosa / Magenta | 3 | Europa Central (ex: Alemanha) |
-| Laranja | 4 | Europa Ocidental (ex: França) |
-| Vermelho | 4 | Sul da Europa (ex: Itália) |
-| Amarelo | 4 | Norte da Europa (ex: Reino Unido) |
-| Verde | 4 | EUA — propriedades premium |
-| Azul Escuro | 3 | EUA — propriedades máximas |
+| Grupo (Cor) | Nº | País | Cidades |
+|---|---|---|---|
+| Marrom (brown) | 3 | Itália | Roma, Veneza, Pisa |
+| Azul-claro (skyblue) | 3 | Egito | Cairo, Gizé, Luxor |
+| Rosa (pink) | 3 | Japão | Tóquio, Kyoto, Osaka |
+| Roxo (purple) | 3 | Espanha | Madri, Ibiza, Sevilha |
+| Laranja (orange) | 3 | Alemanha | Berlim, Munique, Hamburgo |
+| Vermelho (red) | 3 | China | Pequim, Xangai, Hong Kong |
+| Amarelo (yellow) | 3 | Brasil | Rio, São Paulo, Brasília |
+| Verde (green) | 3 | EUA | Nova York, Los Angeles, Miami |
+| Azul-marinho (navy) | **2** | França | Cannes, Paris |
+| **Emirados (platinum)** | **2** | Emirados Árabes (super-luxo) | **Abu Dhabi, Dubai** |
 
-> **Balanceamento (por que grupos de 3-4):** grupos maiores tornam o monopólio mais difícil de fechar — sobretudo o do líder — o que segura o *runaway leader* e força mais negociação. Esse é o mecanismo central do Mega Edition para muitos jogadores, e combina com a regra de **monopólio parcial** (§13.3): constrói-se com a maioria do grupo (2 de 3, ou 3 de 4) com aluguel reduzido.
+> **Balanceamento:** grupos de 3 seguram o *runaway leader* e forçam negociação — dá pra construir com 1 cidade (50% do aluguel), mas **completar o país leva a 100%** e dobra o set bonus sem construção (§5.1/§13.3). **Laranja/Vermelho** (meio do tabuleiro) são o *sweet spot* (casa barata, bom aluguel). Os duos do topo — **França** e **Emirados** — rendem 50% com 1 cidade e 100% com as 2, e são caros: os **Emirados** (Abu Dhabi/Dubai) são o **super-luxo** (preços/aluguéis muito acima, armadilha de prestígio — ver §5 e D-025).
 
-> 📌 Nomes exatos, preços, aluguéis e custos de construção devem ser extraídos do Richup.io como base e estendidos para as 28 propriedades (escada de preços mais granular, do mais barato ~$60 ao mais caro ~$400), inseridos no arquivo de tema antes do desenvolvimento de UI.
+> 📌 Preços ($60→$650), aluguéis-base e **custos de construção (tier por grupo)** vivem no tema (`theme.ts`) — fonte única tunável. Composição e calibração: [D-017](DECISIONS.md) (rev.) + [D-024](DECISIONS.md) + [D-025](DECISIONS.md).
 
 ### 2.4 Aeroportos
 
@@ -167,7 +169,7 @@ Utilidades podem ser hipotecadas mas não recebem construções.
 
 ### 2.7 Espaço Bus Ticket
 
-Casa especial nova (1 no tabuleiro), inspirada no Mega Edition. Quem para nela **compra uma carta Bus Ticket** (se ainda houver no baralho), guardada na mão do jogador. O uso do Bus Ticket — pular para um canto do lado atual do tabuleiro em vez de rolar — segue a mecânica já definida em §10.7. Não é propriedade; não pode ser comprada nem hipotecada.
+Casa especial nova (1 no tabuleiro), inspirada no Mega Edition. Quem para nela **ganha 1 Bus Ticket guardado** (contador próprio, §10.7) — **não é forçado a usá-lo na hora**: fica disponível para uso facultativo antes de rolar, no momento que o jogador escolher (mesma mecânica do ticket vindo da carta "Passagem de Ônibus"). Não é propriedade; não pode ser comprada nem hipotecada. *(D-021 chegou a tornar o espaço uma "corrida imediata"; revertida em 2026-05-27 — ver DECISIONS.)*
 
 ---
 
@@ -282,15 +284,16 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 | 1 de 2 propriedades do grupo (sem construção) | Valor base |
 | 2 de 3 propriedades do grupo (sem construção) | 150% do valor base |
 | Grupo completo (sem construções) | 200% do valor base (dobro) |
-| Com casas/hotel e grupo parcial | 70% do valor da tabela de construção |
-| Com casas/hotel e grupo completo | 100% do valor da tabela de construção |
-| 1, 2, 3, 4 casas, hotel, 2º hotel | Conforme tabela da propriedade |
+| Com construção (escala por posse do país) | tabela de construção × **fator de posse**: 0,5 (1 cidade) → 1,0 (país completo). Trio: 1/3 = 50%, 2/3 = 75%, 3/3 = 100%; duo: 1/2 = 50%, 2/2 = 100% (034) |
+| 1, 2, 3, 4 casas, hotel, 2º hotel, arranha-céu | Tabela de construção = **aluguel-base × multiplicador do GRUPO** (D-024) |
+
+> **Modelo de aluguel (D-024/D-025):** a tabela de construção é **`aluguel-base × multiplicador do grupo`** — não um multiplicador único. Grupos baratos têm multiplicadores maiores e os caros, menores (curva clássica: hotel-topo ~$360 no marrom, ~$1.870 no navy/França, até ~**$2.300 nos Emirados / super-luxo**). O **2º hotel** cobra mais que o 1º (§14.4) e o **arranha-céu** é o topo (§13.7). **Custo de casa** = tier fixo por grupo ($40 marrom → $300 Emirados), não proporcional ao preço — cria o sweet spot laranja/vermelho; os **Emirados** são prestígio (ROI baixo, armadilha — D-025). Valores no tema (`theme.ts`), fonte única `rentLadder`.
 
 > 📌 A regra do grupo parcial implementa a mecânica de balanceamento (Seção 13.3).
 
 ### 5.2 Regras de Construção
 
-- O jogador pode construir mesmo sem grupo completo (Seção 13.3), com penalidade.
+- O jogador pode construir possuindo **qualquer** quantidade de cidades do país (≥1) — não exige maioria (034); o aluguel construído escala pela posse (§5.1/§13.3). **Arranha-céu** é exceção: exige o país completo (§13.7).
 - Nenhuma propriedade do grupo pode estar hipotecada para iniciar construção.
 - **Uniformidade:** não pode haver diferença maior que 1 casa entre propriedades do mesmo grupo possuídas pelo jogador.
 - Sequência por propriedade: 0 → 1 → 2 → 3 → 4 casas → 1 hotel → 2 hotéis (Seção 14) → arranha-céu (Seção 13.7).
@@ -666,8 +669,8 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 - **NÃO** podem ser negociados.
 
 **Como usar:**
-- Apenas durante o próprio turno, **antes de rolar os dados**.
-- Ao usar 1 Bus Ticket, o jogador escolhe uma casa no **mesmo lado do tabuleiro** em que está atualmente e **pula direto** para lá, em vez de rolar os dados.
+- Durante o próprio turno, em duas janelas (034): **antes de rolar os dados** OU **no fim do turno**, depois de já ter rolado e resolvido a casa onde caiu. Pode encadear: rolar → comprar → usar o ticket → cair noutra casa do mesmo lado → comprar também → finalizar.
+- Ao usar 1 Bus Ticket, o jogador escolhe uma casa no **mesmo lado do tabuleiro** em que está atualmente e **pula direto** para lá (sem rolar/sem nova rolagem).
 - Resolve a casa de destino normalmente.
 - Após usar o Bus Ticket, o turno do jogador continua normalmente (ações facultativas e finalizar turno).
 - O Bus Ticket é um **pulo direto** dentro do mesmo lado: **não percorre o tabuleiro e NÃO cruza o GO** — portanto não recebe o bônus de GO (revisão pós-playtest 2026-05-24; antes dava a volta no sentido horário e podia cruzar o GO).
@@ -814,14 +817,16 @@ Terceiro dado especial baseado na mecânica oficial do Monopoly (edição 2006+)
 
 ### 13.3 Construção com Grupo Parcial
 
-Jogadores podem construir mesmo sem grupo completo, com penalidade no aluguel:
+Jogadores podem construir possuindo **qualquer** quantidade de cidades do país (≥1) — **não** é exigida a maioria (revisado 034). O aluguel construído escala pela posse:
 
-- Com construção em grupo parcial: aluguel = **70%** do valor da tabela.
-- Com grupo completo: aluguel = **100%** da tabela (regra padrão).
-- A regra de uniformidade ainda se aplica dentro das propriedades possuídas.
-- Aluguéis sem construção também escalam (ver Seção 5.1: 150% para 2 de 3, 200% para grupo completo).
+- **Fator de posse** sobre a tabela de construção: `0,5 + 0,5 × (cidades que possui − 1) / (tamanho do país − 1)`.
+- País de 3 cidades: 1/3 = **50%**, 2/3 = **75%**, 3/3 = **100%**. Duo (2 cidades): 1/2 = **50%**, 2/2 = **100%**.
+- País completo = 100% da tabela; o fator nunca fica abaixo de 50%.
+- A regra de uniformidade ainda se aplica dentro das cidades possuídas.
+- **Arranha-céu** continua exigindo o país completo (§13.7); o fator não se aplica a ele (sempre 100%).
+- Aluguéis **sem** construção mantêm o set bonus (§5.1: base → 150% maioria → 200% país completo).
 
-> 📌 O incentivo de completar o grupo via trade se mantém. O caminho de progresso existe sem cooperação obrigatória.
+> 📌 Construir cedo (com 1 cidade) já vale a pena; **completar o país dobra** o aluguel — o incentivo de fechar o grupo via trade se mantém forte, sem cooperação obrigatória.
 
 ### 13.4 Free Parking com Prêmio Acumulado
 
@@ -934,16 +939,16 @@ Jogadores podem conceder empréstimos entre si durante a partida, criando dinâm
 
 - **Apenas 1 empréstimo ativo por jogador por vez** — não pode pegar novo enquanto tiver um em aberto.
 - A taxa de juros é definida pelo credor, dentro do range de **10% a 50%** do valor emprestado.
-- Os juros são cobrados a cada vez que o devedor **passa pelo GO** — debitado automaticamente do devedor e creditado ao credor.
-- O devedor pode **quitar a qualquer momento** pagando principal + juros acumulados.
+- Os juros são cobrados a cada vez que o devedor **passa pelo GO** — debitado automaticamente do devedor e creditado ao credor **na hora**.
+- O devedor pode **quitar a qualquer momento** pagando apenas o **principal** (os juros já foram debitados a cada passagem pelo GO — não acumulam para o fim).
 - O credor **não pode cancelar** ou exigir pagamento antecipado unilateralmente — o prazo é do devedor.
 
 ### 15.4 Cálculo de Juros
 
 **Exemplo:** João pediu $500 emprestado de Pedro a 20% de juros.
 
-- A cada passagem pelo GO: João paga **$100** de juros a Pedro (20% de $500).
-- Se João quitar após 2 voltas: paga $500 (principal) + $200 (2× juros) = **$700 total**.
+- A cada passagem pelo GO: João paga **$100** de juros a Pedro (20% de $500), debitado na hora.
+- Após 2 voltas, João já desembolsou $200 em juros (nos GOs). Ao quitar, paga só os **$500** do principal — **$700 desembolsados no total**.
 - Juros são sempre **simples** (sobre o principal original), não compostos.
 
 ### 15.5 Falência do Devedor com Empréstimo Ativo
