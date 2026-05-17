@@ -40,7 +40,7 @@ describe('Aluguel — resolução (US2)', () => {
 
   it('cobra aluguel do pagador e credita o dono (Roma base = 2)', () => {
     const g = createSeedState(['p1', 'p2'])
-    g.titles[1] = { ownerId: 'p2', mortgaged: false } // Roma (brown), p2 só tem 1 do grupo
+    g.titles[1].ownerId = 'p2' // Roma (brown), p2 só tem 1 do grupo
     const out = economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports, state: g })
     expect(out).toEqual({ done: true })
     expect(g.players[0].cash).toBe(2000 - 2)
@@ -49,14 +49,15 @@ describe('Aluguel — resolução (US2)', () => {
 
   it('SC-006: propriedade hipotecada não cobra', () => {
     const g = createSeedState(['p1', 'p2'])
-    g.titles[1] = { ownerId: 'p2', mortgaged: true }
+    g.titles[1].ownerId = 'p2'
+    g.titles[1].mortgaged = true
     economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports, state: g })
     expect(g.players[0].cash).toBe(2000)
   })
 
   it('SC-006: propriedade própria não cobra', () => {
     const g = createSeedState(['p1', 'p2'])
-    g.titles[1] = { ownerId: 'p1', mortgaged: false }
+    g.titles[1].ownerId = 'p1'
     const out = economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports, state: g })
     expect(out).toEqual({ done: true })
     expect(g.players[0].cash).toBe(2000)
@@ -71,7 +72,7 @@ describe('Aluguel — resolução (US2)', () => {
 
   it('FR-016: caixa insuficiente sinaliza insolvência e não fica negativo', () => {
     const g = createSeedState(['p1', 'p2'])
-    g.titles[1] = { ownerId: 'p2', mortgaged: false }
+    g.titles[1].ownerId = 'p2'
     g.players[0].cash = 1 // < aluguel base 2
     let signalled: [string, number, string | null] | null = null
     economyResolve({
@@ -83,5 +84,16 @@ describe('Aluguel — resolução (US2)', () => {
     })
     expect(signalled).toEqual(['p1', 2, 'p2'])
     expect(g.players[0].cash).toBe(1) // não debitou
+  })
+})
+
+describe('Aluguel com construção (US2, 004)', () => {
+  it('SC-003: tabela × 70% (parcial) / 100% (completo) substitui o escalonamento por posse', () => {
+    // base 10, grupo de 3, 1 casa → 10×5 = 50
+    expect(rentCity(10, 3, 3, { houses: 1, hotel: false })).toBe(50) // completo
+    expect(rentCity(10, 2, 3, { houses: 1, hotel: false })).toBe(35) // parcial (maioria) → 50×0.7
+    expect(rentCity(10, 3, 3, { houses: 0, hotel: true })).toBe(1000) // hotel completo → 10×100
+    // sem construção mantém a regra da 003 (200% no grupo completo)
+    expect(rentCity(10, 3, 3, { houses: 0, hotel: false })).toBe(20)
   })
 })
