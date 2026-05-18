@@ -92,10 +92,10 @@ test('dois browsers jogam a mesma partida, cada um da sua perspectiva', async ({
 
   // — 1. Tela inicial: a porta de entrada existe sem editar URL (FR-021) —
   await host.goto('/')
-  await expect(host.getByRole('button', { name: 'Criar sala' })).toBeVisible()
+  await expect(host.getByRole('button', { name: 'Começar uma partida' })).toBeVisible()
 
-  await host.getByRole('button', { name: 'Criar sala' }).click()
-  await fillIdentity(host, HOST_NAME, /^Criar sala$/)
+  await host.getByRole('button', { name: 'Começar uma partida' }).click()
+  await fillIdentity(host, HOST_NAME, /^Confirmar e criar sala$/)
 
   // — 2. Sala aberta: link compartilhável e o host sentado —
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
@@ -108,7 +108,7 @@ test('dois browsers jogam a mesma partida, cada um da sua perspectiva', async ({
   // — 3. Convidada entra pelo link (FR-002) —
   await guest.goto(roomUrl)
   await expect(guest.getByText('Entrar na sala')).toBeVisible({ timeout: 20_000 })
-  await fillIdentity(guest, GUEST_NAME, /^Entrar$/, SEAT_COUNT - 1) // o anfitrião já levou uma
+  await fillIdentity(guest, GUEST_NAME, /^Confirmar e entrar$/, SEAT_COUNT - 1) // o anfitrião já levou uma
   await expect(guest.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
 
   // O anfitrião vê a chegada — sem recarregar nada.
@@ -186,8 +186,8 @@ test('queda do convidado pausa a mesa e diz quem caiu', async ({ browser }) => {
   const guest = await guestCtx.newPage()
 
   await host.goto('/')
-  await host.getByRole('button', { name: 'Criar sala' }).click()
-  await fillIdentity(host, HOST_NAME, /^Criar sala$/)
+  await host.getByRole('button', { name: 'Começar uma partida' }).click()
+  await fillIdentity(host, HOST_NAME, /^Confirmar e criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   const roomUrl = host.url()
   const createdRoomId = roomIdFromUrl(roomUrl)
@@ -195,7 +195,7 @@ test('queda do convidado pausa a mesa e diz quem caiu', async ({ browser }) => {
 
   await guest.goto(roomUrl)
   await expect(guest.getByText('Entrar na sala')).toBeVisible({ timeout: 20_000 })
-  await fillIdentity(guest, GUEST_NAME, /^Entrar$/, SEAT_COUNT - 1) // o anfitrião já levou uma
+  await fillIdentity(guest, GUEST_NAME, /^Confirmar e entrar$/, SEAT_COUNT - 1) // o anfitrião já levou uma
   await expect(host.getByText(GUEST_NAME)).toBeVisible({ timeout: 20_000 })
 
   await host.getByRole('button', { name: /Iniciar partida/ }).click()
@@ -255,8 +255,8 @@ test('leilão sobrevive ao reload do host — prazo preservado (SC-005/SC-009)',
   const guest = await guestCtx.newPage()
 
   await host.goto('/')
-  await host.getByRole('button', { name: 'Criar sala' }).click()
-  await fillIdentity(host, HOST_NAME, /^Criar sala$/)
+  await host.getByRole('button', { name: 'Começar uma partida' }).click()
+  await fillIdentity(host, HOST_NAME, /^Confirmar e criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   const roomUrl = host.url()
   const createdRoomId = roomIdFromUrl(roomUrl)
@@ -264,7 +264,7 @@ test('leilão sobrevive ao reload do host — prazo preservado (SC-005/SC-009)',
 
   await guest.goto(roomUrl)
   await expect(guest.getByText('Entrar na sala')).toBeVisible({ timeout: 20_000 })
-  await fillIdentity(guest, GUEST_NAME, /^Entrar$/, SEAT_COUNT - 1) // o anfitrião já levou uma
+  await fillIdentity(guest, GUEST_NAME, /^Confirmar e entrar$/, SEAT_COUNT - 1) // o anfitrião já levou uma
   await expect(host.getByText(GUEST_NAME)).toBeVisible({ timeout: 20_000 })
 
   await host.getByRole('button', { name: /Iniciar partida/ }).click()
@@ -328,14 +328,14 @@ test('convidado reanexa por código a partir de um terceiro dispositivo', async 
   const guest = await guestCtx.newPage()
 
   await host.goto('/')
-  await host.getByRole('button', { name: 'Criar sala' }).click()
-  await fillIdentity(host, HOST_NAME, /^Criar sala$/)
+  await host.getByRole('button', { name: 'Começar uma partida' }).click()
+  await fillIdentity(host, HOST_NAME, /^Confirmar e criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   const roomUrl = host.url()
 
   await guest.goto(roomUrl)
   await expect(guest.getByText('Entrar na sala')).toBeVisible({ timeout: 20_000 })
-  await fillIdentity(guest, GUEST_NAME, /^Entrar$/, SEAT_COUNT - 1) // o anfitrião já levou uma
+  await fillIdentity(guest, GUEST_NAME, /^Confirmar e entrar$/, SEAT_COUNT - 1) // o anfitrião já levou uma
   await expect(host.getByText(GUEST_NAME)).toBeVisible({ timeout: 20_000 })
 
   await host.getByRole('button', { name: /Iniciar partida/ }).click()
