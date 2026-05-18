@@ -761,7 +761,7 @@ export function ClassicSquare({
               className="display mt-1 text-cream leading-none tracking-wider"
               style={{ fontSize: '14px' }}
             >
-              {(square as AirportSquare).iata}
+              {(square as AirportSquare).name}
             </p>
           )}
           {isUtility && (
@@ -2750,6 +2750,194 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
         )}
       </div>
     </>
+  )
+}
+
+// ---------------------------------------------------------------------
+// AirportPopover — regras e aluguel de aeroporto (SRS §2.4 + §13.6)
+// ---------------------------------------------------------------------
+export function AirportPopover({
+  square,
+  side,
+  onClose,
+}: {
+  square: AirportSquare
+  side: Side
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const positionStyle: React.CSSProperties = (() => {
+    const gap = 10
+    switch (side) {
+      case 'bottom': return { bottom: '100%', left: '50%', marginBottom: gap }
+      case 'top':    return { top: '100%',    left: '50%', marginTop: gap }
+      case 'left':   return { left: '100%',   top: '50%',  marginLeft: gap }
+      case 'right':  return { right: '100%',  top: '50%',  marginRight: gap }
+      default:       return { left: '50%',    top: '50%' }
+    }
+  })()
+  const centerTransform = side === 'left' || side === 'right' ? 'translateY(-50%)' : 'translateX(-50%)'
+  const tailStyle: React.CSSProperties = (() => {
+    const offset = -7
+    const common = { position: 'absolute' as const, width: 12, height: 12, background: 'var(--color-coffee-800)', border: '2px solid var(--color-coffee-500)', transform: 'rotate(45deg)' }
+    switch (side) {
+      case 'bottom': return { ...common, bottom: offset, left: '50%', marginLeft: -6, borderTop: 'none', borderLeft: 'none' }
+      case 'top':    return { ...common, top: offset,    left: '50%', marginLeft: -6, borderBottom: 'none', borderRight: 'none' }
+      case 'left':   return { ...common, left: offset,   top: '50%',  marginTop: -6,  borderTop: 'none', borderRight: 'none' }
+      case 'right':  return { ...common, right: offset,  top: '50%',  marginTop: -6,  borderBottom: 'none', borderLeft: 'none' }
+      default:       return common
+    }
+  })()
+
+  return (
+    <div style={{ position: 'absolute', zIndex: 50, transform: centerTransform, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ position: 'relative' }}>
+        <div className="w-[270px] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden">
+          {/* Header dourado */}
+          <div className="relative px-3.5 py-3 border-b-2 border-coffee-950" style={{ background: 'linear-gradient(180deg, #d4af37 0%, #b8941f 100%)' }}>
+            <button onClick={onClose} aria-label="Fechar" className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-coffee-950/45 text-cream hover:bg-coffee-950/75 flex items-center justify-center text-xs transition-colors">✕</button>
+            <div className="flex items-center gap-2.5 pr-6">
+              <div className="shrink-0 w-9 h-9 flex items-center justify-center">
+                <SquareIcon square={square} size={32} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="display text-coffee-950 text-lg leading-none truncate">{square.name}</h3>
+                <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-coffee-950/25 text-coffee-950 font-bold" style={{ fontSize: '10px', letterSpacing: '0.08em' }}>{square.iata}</span>
+              </div>
+            </div>
+          </div>
+          {/* Corpo */}
+          <div className="px-3.5 py-3">
+            <p className="label text-gold mb-2" style={{ fontSize: '9px' }}>Aluguel por aeroportos possuídos</p>
+            <div className="flex flex-col gap-0.5">
+              <CompactRent label="1 aeroporto" value={25}  />
+              <CompactRent label="2 aeroportos" value={50}  />
+              <CompactRent label="3 aeroportos" value={100} />
+              <CompactRent label="4 aeroportos" value={200} accent />
+            </div>
+            {/* Hangar bonus */}
+            <div className="mt-3 pt-2.5 border-t border-coffee-500/60">
+              <p className="text-cream-muted" style={{ fontSize: '9px' }}>
+                <span className="text-gold font-semibold">Hangar</span> — dobra o aluguel deste aeroporto individualmente.
+              </p>
+            </div>
+            <div className="mt-2.5 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-0.5">
+              <CompactRent label="Preço"    value={square.price}                 muted />
+              <CompactRent label="Hipoteca" value={Math.floor(square.price / 2)} muted />
+            </div>
+          </div>
+        </div>
+        <div style={tailStyle} />
+      </motion.div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------
+// UtilityPopover — regras e aluguel de utilidade (SRS §2.5)
+// ---------------------------------------------------------------------
+export function UtilityPopover({
+  square,
+  side,
+  onClose,
+}: {
+  square: UtilitySquare
+  side: Side
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const positionStyle: React.CSSProperties = (() => {
+    const gap = 10
+    switch (side) {
+      case 'bottom': return { bottom: '100%', left: '50%', marginBottom: gap }
+      case 'top':    return { top: '100%',    left: '50%', marginTop: gap }
+      case 'left':   return { left: '100%',   top: '50%',  marginLeft: gap }
+      case 'right':  return { right: '100%',  top: '50%',  marginRight: gap }
+      default:       return { left: '50%',    top: '50%' }
+    }
+  })()
+  const centerTransform = side === 'left' || side === 'right' ? 'translateY(-50%)' : 'translateX(-50%)'
+  const tailStyle: React.CSSProperties = (() => {
+    const offset = -7
+    const common = { position: 'absolute' as const, width: 12, height: 12, background: 'var(--color-coffee-800)', border: '2px solid var(--color-coffee-500)', transform: 'rotate(45deg)' }
+    switch (side) {
+      case 'bottom': return { ...common, bottom: offset, left: '50%', marginLeft: -6, borderTop: 'none', borderLeft: 'none' }
+      case 'top':    return { ...common, top: offset,    left: '50%', marginLeft: -6, borderBottom: 'none', borderRight: 'none' }
+      case 'left':   return { ...common, left: offset,   top: '50%',  marginTop: -6,  borderTop: 'none', borderRight: 'none' }
+      case 'right':  return { ...common, right: offset,  top: '50%',  marginTop: -6,  borderBottom: 'none', borderLeft: 'none' }
+      default:       return common
+    }
+  })()
+
+  const accentColor = square.icon === 'fuel' ? '#22c55e' : square.icon === 'bolt' ? '#ffd97a' : '#fb923c'
+
+  return (
+    <div style={{ position: 'absolute', zIndex: 50, transform: centerTransform, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ position: 'relative' }}>
+        <div className="w-[270px] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden">
+          {/* Header colorido por tipo */}
+          <div className="relative px-3.5 py-3 border-b-2 border-coffee-950" style={{ background: `linear-gradient(180deg, ${accentColor} 0%, color-mix(in srgb, ${accentColor} 70%, #000) 100%)` }}>
+            <button onClick={onClose} aria-label="Fechar" className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-coffee-950/45 text-cream hover:bg-coffee-950/75 flex items-center justify-center text-xs transition-colors">✕</button>
+            <div className="flex items-center gap-2.5 pr-6">
+              <div className="shrink-0 w-9 h-9 flex items-center justify-center">
+                <SquareIcon square={square} size={32} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="display text-coffee-950 text-lg leading-none truncate">{square.name}</h3>
+                <p className="label text-coffee-950/80 mt-0.5" style={{ fontSize: '9px' }}>Utilidade</p>
+              </div>
+            </div>
+          </div>
+          {/* Corpo */}
+          <div className="px-3.5 py-3">
+            <p className="label text-gold mb-2" style={{ fontSize: '9px' }}>Aluguel baseado nos dados</p>
+            <div className="flex flex-col gap-0.5">
+              <CompactRentText label="1 utilidade"  value="4× os dados" />
+              <CompactRentText label="2 utilidades" value="10× os dados" />
+              <CompactRentText label="3 utilidades" value="20× os dados" accent />
+            </div>
+            <div className="mt-3 pt-2.5 border-t border-coffee-500/60">
+              <p className="text-cream-muted" style={{ fontSize: '9px' }}>
+                O aluguel é o total dos dados × o multiplicador. Não recebe construções.
+              </p>
+            </div>
+            <div className="mt-2.5 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-0.5">
+              <CompactRent label="Preço"    value={square.price}                 muted />
+              <CompactRent label="Hipoteca" value={Math.floor(square.price / 2)} muted />
+            </div>
+          </div>
+        </div>
+        <div style={tailStyle} />
+      </motion.div>
+    </div>
+  )
+}
+
+// Linha compacta com valor textual (não monetário) — para utilidades.
+function CompactRentText({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string
+  value: string
+  accent?: boolean
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-2 px-1.5 py-1 rounded-[var(--radius-sharp)]">
+      <span className="text-xs leading-none text-cream">{label}</span>
+      <span className={cn('text-xs leading-none whitespace-nowrap', accent ? 'text-logo font-semibold' : 'text-gold-glow')}>{value}</span>
+    </div>
   )
 }
 

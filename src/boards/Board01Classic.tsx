@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AnimatePresence } from 'motion/react'
-import { BOARD, type PropertySquare } from '@/lib/boardData'
+import { BOARD, type Square, type PropertySquare, type AirportSquare, type UtilitySquare } from '@/lib/boardData'
 import {
   ClassicSquare,
   CornerSquare,
@@ -10,6 +10,8 @@ import {
   PlayerTokens,
   CenterArena,
   PropertyPopover,
+  AirportPopover,
+  UtilityPopover,
 } from './shared'
 
 // ---------------------------------------------------------------------
@@ -32,10 +34,8 @@ export default function Board01Classic() {
   // outra casa fecha. Guardamos pos (não a square inteira) pra ficar
   // simples; lookup do square é feito no render.
   const [selectedPos, setSelectedPos] = useState<number | null>(null)
-  const selectedSquare =
-    selectedPos !== null
-      ? (BOARD.find((s) => s.pos === selectedPos) as PropertySquare | undefined)
-      : undefined
+  const selectedSquare: Square | undefined =
+    selectedPos !== null ? BOARD.find((s) => s.pos === selectedPos) : undefined
 
   return (
     <main
@@ -87,17 +87,19 @@ export default function Board01Classic() {
             const side = sideOf(square.pos)
             const isCorner = side === 'corner'
             const isProperty = square.kind === 'property'
+            const isAirport  = square.kind === 'airport'
+            const isUtility  = square.kind === 'utility'
+            const isClickable = isProperty || isAirport || isUtility
             const isSelected = selectedPos === square.pos
             return (
               <div
                 key={square.pos}
                 style={gridArea(square.pos)}
-                className={isProperty ? 'relative cursor-pointer' : 'relative'}
+                className={isClickable ? 'relative cursor-pointer' : 'relative'}
                 onClick={
-                  isProperty
+                  isClickable
                     ? (e) => {
                         e.stopPropagation()
-                        // Click na mesma casa → fecha; senão troca pra essa.
                         setSelectedPos((cur) => (cur === square.pos ? null : square.pos))
                       }
                     : undefined
@@ -118,10 +120,26 @@ export default function Board01Classic() {
 
                 {/* Popover-balão adjacente à casa selecionada */}
                 <AnimatePresence>
-                  {isSelected && isProperty && selectedSquare && (
+                  {isSelected && isProperty && selectedSquare?.kind === 'property' && (
                     <PropertyPopover
                       key={square.pos}
-                      square={selectedSquare}
+                      square={selectedSquare as PropertySquare}
+                      side={side}
+                      onClose={() => setSelectedPos(null)}
+                    />
+                  )}
+                  {isSelected && isAirport && selectedSquare?.kind === 'airport' && (
+                    <AirportPopover
+                      key={`airport-${square.pos}`}
+                      square={selectedSquare as AirportSquare}
+                      side={side}
+                      onClose={() => setSelectedPos(null)}
+                    />
+                  )}
+                  {isSelected && isUtility && selectedSquare?.kind === 'utility' && (
+                    <UtilityPopover
+                      key={`utility-${square.pos}`}
+                      square={selectedSquare as UtilitySquare}
                       side={side}
                       onClose={() => setSelectedPos(null)}
                     />
