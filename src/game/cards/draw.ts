@@ -5,9 +5,21 @@ import type { DeckId } from './types'
 import { cardById } from './catalog'
 import { applyEffect } from './effects'
 import { activePlayer, completeResolution, advance, BOARD_SIZE } from '../turn/turnMachine'
+import { BOARD } from '@/lib/boardData'
 import { ownerOf } from '../economy/titles'
 import { addTempEffect } from '../economy/tempEffects'
 import { reactorFor, findReactionCard, applyOffensive } from './reacao'
+import { logEvent } from '../log'
+
+// Nome legível a partir do id da carta ('investidor-anjo-2' → 'Investidor Anjo').
+// Carta imediata é pública (§12.2), então o anúncio pode citar o nome.
+function cardNameFromId(id: string): string {
+  return id
+    .replace(/-\d+$/, '')
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+}
 
 // Resolver de carta — composto com o economyResolve no ctx.resolve do store.
 export function cardResolve(rctx: ResolveCtx): ResolutionOutcome | null {
@@ -17,6 +29,10 @@ export function cardResolve(rctx: ResolveCtx): ResolutionOutcome | null {
   const id = state.decks[deckId].shift()
   if (!id) return { done: true } // nunca esgota na prática (imediatas reciclam)
   const card = cardById(id)
+  // 021/022.1 — carta de mão: privada, só o deck (§10.3). Carta imediata: efeito
+  // público, anuncia o nome (§12.2 "anúncio público").
+  const deckLabel = deckId === 'acaso' ? 'Acaso' : 'Tesouro'
+  logEvent(state, playerId, card.mode === 'mao' ? `sacou ${deckLabel}` : `${deckLabel}: ${cardNameFromId(id)}`)
 
   if (card.mode === 'mao') {
     const player = state.players.find((p) => p.id === playerId)!
@@ -36,6 +52,34 @@ export function cardResolve(rctx: ResolveCtx): ResolutionOutcome | null {
   applyEffect(card.effect, state, playerId, ports)
   state.decks[deckId].push(id) // volta ao fundo
   return { done: true }
+}
+
+// 025 — Revelação: substitui cardResolve no ctx.resolve. PEEK do topo (sem sacar)
+// e pausa em `card-reveal`; o confirm é que saca/processa. NÃO muta deck/mão/caixa.
+export function cardRevealResolve(rctx: ResolveCtx): ResolutionOutcome | null {
+  const { square, state } = rctx
+  if (square.kind !== 'acaso' && square.kind !== 'tesouro') return null
+  const deckId: DeckId = square.kind
+  const cardId = state.decks[deckId][0] // peek (determinístico)
+  if (!cardId) return { done: true } // deck vazio (não ocorre na prática)
+  state.resolution = { kind: 'card-reveal', deckId, cardId }
+  return { done: false, blocksFinalize: true }
+}
+
+// 025 — Confirma a revelação: limpa o card-reveal e chama o cardResolve EXISTENTE
+// (saca de verdade + processa). Reusa toda a regra de carta; sem duplicação.
+export function confirmCardReveal(state: GameState, ports: TurnPorts): GameState {
+  if (state.resolution?.kind !== 'card-reveal') return state
+  const s: GameState = structuredClone(state)
+  s.resolution = null
+  const player = activePlayer(s)
+  const rctx: ResolveCtx = { playerId: player.id, square: BOARD[player.pos], roll: s.turn.lastRoll, ports, state: s }
+  const outcome = cardResolve(rctx) // saca + processa (pode abrir card-discard/card-shortcut)
+  if (outcome?.done) {
+    s.turn.pendingResolve = false
+    s.turn.state = 'aguardando-finalizacao'
+  }
+  return s
 }
 
 // Jogar carta de mão respeitando a janela de timing. Puro; no-op fora da janela.
