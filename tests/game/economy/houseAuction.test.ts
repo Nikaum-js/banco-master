@@ -1,47 +1,63 @@
-import { describe, it, expect, vi } from 'vitest'
-import { openHouseAuction, placeHouseBid, closeHouseAuction, HOUSE_AUCTION_WINDOW } from '@/game/economy/houseAuction'
+import { describe, it, expect } from 'vitest'
+import { openHouseAuction, placeHouseBid, closeHouseAuction } from '@/game/economy/houseAuction'
 import { createSeedState } from '@/game/store'
 import type { GameState } from '@/game/turn/types'
 
-// Estado com uma resolução pendente, pronto para abrir o leilão de casas.
-function pending(playerIds: string[], houses: number): GameState {
-  const g = createSeedState(playerIds)
-  g.turn.state = 'casa-a-resolver'
-  g.turn.pendingResolve = true
+// 026 — leilão de casas é EVENTO AUTÔNOMO (state.houseAuction), fora do turno.
+function base(houses: number): GameState {
+  const g = createSeedState(['p1', 'p2', 'p3'])
   g.bank.houses = houses
   return g
 }
 
-describe('Leilão de casas em escassez (US4)', () => {
-  it('SC-006: escassez abre leilão; maior lance paga ao banco e leva as casas', () => {
-    let g = openHouseAuction(pending(['p1', 'p2', 'p3'], 2), 2, ['p1', 'p2', 'p3'], 0)
-    expect(g.resolution?.kind).toBe('house-auction')
-    g = placeHouseBid(g, 'p2', 50, 1000)
-    expect(placeHouseBid(g, 'p3', 40, 2000)).toBe(g) // ≤ atual → no-op
-    g = placeHouseBid(g, 'p3', 90, 2000)
-    expect(g.resolution).toMatchObject({ auction: { highBidder: 'p3', currentBid: 90 } })
+describe('Leilão de casas — evento autônomo (026)', () => {
+  it('SC-001: abrir seta o campo; já aberto → no-op', () => {
+    const g = openHouseAuction(base(2), 2, ['p1', 'p2', 'p3'])
+    expect(g.houseAuction).toMatchObject({ housesAvailable: 2, currentBid: 0, highBidder: null, activeBidders: ['p1', 'p2', 'p3'] })
+    expect(openHouseAuction(g, 5, ['p1'])).toBe(g) // já há leilão → no-op
+  })
+
+  it('SC-002: lance válido atualiza; rejeita ≤ atual, > caixa, não-participante', () => {
+    let g = openHouseAuction(base(2), 2, ['p1', 'p2'])
+    g = placeHouseBid(g, 'p2', 50)
+    expect(g.houseAuction).toMatchObject({ currentBid: 50, highBidder: 'p2' })
+    expect(placeHouseBid(g, 'p1', 40)).toBe(g) // ≤ atual
+    expect(placeHouseBid(g, 'p1', 999999)).toBe(g) // > caixa
+    expect(placeHouseBid(g, 'p3', 80)).toBe(g) // p3 não é participante
+    g = placeHouseBid(g, 'p1', 90)
+    expect(g.houseAuction).toMatchObject({ currentBid: 90, highBidder: 'p1' })
+  })
+
+  it('SC-003: encerrar com vencedor → paga e leva as casas (estoque cai)', () => {
+    let g = openHouseAuction(base(2), 2, ['p1', 'p2', 'p3'])
+    g = placeHouseBid(g, 'p3', 90)
     g = closeHouseAuction(g)
     expect(g.players[2].cash).toBe(2000 - 90)
-    expect(g.bank.houses).toBe(0) // as 2 casas saíram do estoque
-    expect(g.resolution).toBeNull()
-    expect(g.turn.state).toBe('aguardando-finalizacao')
+    expect(g.bank.houses).toBe(0) // 2 casas saíram do estoque
+    expect(g.houseAuction).toBeNull()
   })
 
-  it('SC-006: leilão sem lance → casas permanecem no banco', () => {
-    let g = openHouseAuction(pending(['p1', 'p2'], 3), 3, ['p1', 'p2'], 0)
+  it('SC-003: encerrar sem lance → casas ficam no banco', () => {
+    let g = openHouseAuction(base(3), 3, ['p1', 'p2'])
     g = closeHouseAuction(g)
     expect(g.bank.houses).toBe(3)
+    expect(g.houseAuction).toBeNull()
+  })
+
+  it('SC-004: abrir/encerrar não alteram o turno', () => {
+    const before = base(2)
+    const turnBefore = JSON.stringify(before.turn)
+    let g = openHouseAuction(before, 2, ['p1', 'p2'])
+    expect(JSON.stringify(g.turn)).toBe(turnBefore)
+    g = placeHouseBid(g, 'p1', 30)
+    g = closeHouseAuction(g)
+    expect(JSON.stringify(g.turn)).toBe(turnBefore)
     expect(g.resolution).toBeNull()
   })
 
-  it('SC-006: fechar ao esgotar o cronômetro (fake timers → closeHouseAuction)', () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(0)
-    let g = openHouseAuction(pending(['p1', 'p2'], 1), 1, ['p1', 'p2'], Date.now())
-    g = placeHouseBid(g, 'p1', 30, Date.now())
-    vi.advanceTimersByTime(HOUSE_AUCTION_WINDOW + 1)
-    g = closeHouseAuction(g)
-    expect(g.players[0].cash).toBe(2000 - 30)
-    vi.useRealTimers()
+  it('reducers sem leilão aberto → no-op', () => {
+    const g = base(5)
+    expect(placeHouseBid(g, 'p1', 50)).toBe(g)
+    expect(closeHouseAuction(g)).toBe(g)
   })
 })

@@ -48,21 +48,6 @@ describe('activeModal — leilão (US2)', () => {
       deadline: 9999,
     })
   })
-
-  it('SC-001: house-auction → housesAvailable, sem propriedade', () => {
-    const g = base()
-    g.resolution = {
-      kind: 'house-auction',
-      auction: { housesAvailable: 2, currentBid: 0, highBidder: null, activeBidders: ['p1', 'p2'], deadline: 8888 },
-    }
-    expect(activeModal(g)).toEqual({
-      kind: 'house-auction',
-      housesAvailable: 2,
-      currentBid: 0,
-      highBidder: null,
-      deadline: 8888,
-    })
-  })
 })
 
 describe('activeModal — decisões de carta (US3)', () => {
