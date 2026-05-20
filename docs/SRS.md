@@ -992,7 +992,7 @@ Jogadores podem conceder empréstimos entre si durante a partida, criando dinâm
 | Hotel | Construção máxima de casas: substitui 4 casas. Até 2 hotéis por propriedade |
 | Skyscraper | Construção acima do 2º hotel, requer grupo completo (Seção 13.7) |
 | Leilão | Disputa de lances por uma propriedade ou casa |
-| Surpresa | Deck de cartas de acaso (Chance no Monopoly clássico) — efeitos ofensivos/caóticos |
+| Acaso (antes Surpresa) | Deck de cartas de acaso (Chance no Monopoly clássico) — efeitos ofensivos/caóticos. Termo canônico definido em [D-018](DECISIONS.md#d-018--termo-canônico-acaso-antes-surpresa); §10 ainda usa "Surpresa" até a spec de Cartas |
 | Tesouro | Deck de cartas de baú comunitário (Community Chest) — efeitos defensivos/benignos |
 | Carta Lendária | Carta de alto impacto (cor laranja), geralmente vai para a mão |
 | Carta Rara | Carta de impacto médio (cor azul), pode ir para a mão ou ter efeito imediato grande |

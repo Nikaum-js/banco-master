@@ -15,7 +15,7 @@ Nenhuma linha de código de produção é escrita antes da spec correspondente e
 
 ### III. Tesouro precisa impactar
 
-O baralho Tesouro **não pode** virar "casa de troquinho" como no Richup.io. A diferença entre Surpresa e Tesouro é **temática** (caótico/ofensivo vs. defensivo/benigno), **nunca de magnitude**. Toda carta nova de Tesouro precisa passar pelo teste: "isso muda a decisão de alguém no turno?" — se a resposta for não, redesenhar.
+O baralho Tesouro **não pode** virar "casa de troquinho" como no Richup.io. A diferença entre Acaso (antes "Surpresa") e Tesouro é **temática** (caótico/ofensivo vs. defensivo/benigno), **nunca de magnitude**. Toda carta nova de Tesouro precisa passar pelo teste: "isso muda a decisão de alguém no turno?" — se a resposta for não, redesenhar.
 
 ### IV. Catch-up é discreto
 
@@ -81,4 +81,4 @@ Emendas a este documento requerem:
 
 **Idioma:** todo conteúdo de specs, plans, tasks e documentação em **português (Brasil)**, salvo termos técnicos consagrados em inglês.
 
-**Version**: 1.0.0 | **Ratified**: 2026-05-22 | **Last Amended**: 2026-05-22
+**Version**: 1.0.1 | **Ratified**: 2026-05-22 | **Last Amended**: 2026-05-23

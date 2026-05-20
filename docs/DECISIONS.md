@@ -27,6 +27,7 @@
 - [D-015](#d-015--sem-timer-de-turno) — Sem timer de turno; jogador controla finalização
 - [D-016](#d-016--desconexo-pausa-partida) — Desconexão pausa a partida, sem perda de propriedades
 - [D-017](#d-017--tabuleiro-de-48-casas) — Tabuleiro expandido para 48 casas (inspirado no Mega Edition)
+- [D-018](#d-018--termo-canônico-acaso-antes-surpresa) — Termo canônico "Acaso" (antes "Surpresa")
 
 ### Rejeitadas
 - [D-R01](#d-r01--sistema-de-draft-rejeitada) — Sistema de draft de propriedades no início
@@ -123,6 +124,15 @@
 **Decisão:** Expandir o tabuleiro de **40 → 48 casas** (11 por lado + 4 cantos), inspirado no **Monopoly: The Mega Edition** (52 casas). Composição: 28 cidades (grupos 3/3/3/4/4/4/4/3, premium com 4), 4 aeroportos, 3 utilidades, 3 Surpresa, 3 Tesouro, 2 impostos, 1 espaço Bus Ticket, 4 cantos. Cantos nos índices 0/12/24/36. Ajustes de economia que acompanham: dinheiro inicial $1.500 → **$2.000**; estoque global de construção 32 casas/12 hotéis → **40 casas/16 hotéis**.
 **Por quê:** Partidas de 7-8 jogadores precisam de mais propriedades e profundidade — 40 casas saturam rápido (~4 compráveis/jogador). Grupos maiores (3-4) tornam o monopólio mais difícil de fechar, segurando o *runaway leader* e forçando mais negociação (mecanismo central do Mega para muitos jogadores). A escolha é coerente: as mecânicas que fazem um tabuleiro maior funcionar — Speed Die ([D-003](#d-003--speed-die-aps-1-volta)), grupo parcial ([D-004](#d-004--construo-com-grupo-parcial)), Bus Tickets ([D-012](#d-012--bus-tickets-como-item-separado)), Skyscraper, Hangares — **já estavam decididas/no SRS**. A expansão completa um design já meio-Mega em vez de divergir do Richup.
 **Como aplicar:** SRS §2 é a fonte de verdade da nova estrutura (já atualizado). Preços/aluguéis das 28 cidades partem do Richup como base e estendem-se numa escada mais granular ($60–$400). Speed Die permanece padrão. Valores de dinheiro/estoque são tunáveis após playtesting.
+
+### D-018 — Termo canônico "Acaso" (antes "Surpresa")
+**Data:** 2026-05-23 · **Status:** aceita
+**Decisão:** O espaço de tabuleiro e o deck de cartas caóticas/ofensivas passam a se chamar **"Acaso"** (era "Surpresa"). "Tesouro" permanece. O `SquareKind` canônico é `'acaso'`.
+**Por quê:** O código já migrou para "Acaso" (commits de board) e o termo é mais limpo — espelha o "Chance" clássico; o próprio glossário do SRS já glosava Surpresa como "cartas de acaso". Alinha a fonte de verdade à direção de produto demonstrada.
+**Como aplicar:** Propagação **incremental** para não churnar a discovery:
+- **Feito agora:** `spec.md` (002) FR-010; glossário SRS §17 (registro do termo canônico); constitution Princípio III (clarificação de termo, bump PATCH 1.0.0 → 1.0.1).
+- **Deferido para a spec de Sistema de Cartas:** find-replace de "Surpresa" → "Acaso" em SRS §2.1/§4.6/§10/§13.4 e em `docs/CARTAS.md` (a spec reescreve §10 de qualquer forma).
+- O **001** (spec/data-model/research) fica como histórico; não reabrir (aprovada).
 
 ---
 
