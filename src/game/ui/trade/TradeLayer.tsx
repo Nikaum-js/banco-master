@@ -209,7 +209,7 @@ function Side({
                 )}
               >
                 <span className={cn('w-3 h-3 rounded-sm shrink-0 border', on ? 'bg-gold border-gold' : 'border-coffee-500')} />
-                <span className="flex-1 min-w-0 truncate">🛡️ {propName(im.pos)} · {lapsLabel(im.laps)}</span>
+                <span className="flex-1 min-w-0 truncate">{propName(im.pos)} · {lapsLabel(im.laps)}</span>
               </button>
             )
           })}
@@ -339,14 +339,14 @@ function Terms({ label, props, cash, immunities, transfers }: { label: string; p
       <p className="label text-gold mb-1.5" style={{ fontSize: '10px' }}>{label}</p>
       {empty && <p className="text-cream-muted text-xs">Nada</p>}
       {props.map((pos) => (
-        <p key={pos} className="text-cream text-xs truncate">🏠 {propName(pos)}</p>
+        <p key={pos} className="text-cream text-xs truncate">{propName(pos)}</p>
       ))}
-      {cash > 0 && <p className="text-gold-glow text-xs">💰 ${cash}</p>}
+      {cash > 0 && <p className="text-gold-glow text-xs">R$ {cash}</p>}
       {immunities?.map((g) => (
-        <p key={g.pos} className="text-cream text-xs truncate">🛡️ {propName(g.pos)} · {lapsLabel(g.laps)}</p>
+        <p key={g.pos} className="text-cream text-xs truncate">Imunidade: {propName(g.pos)} · {lapsLabel(g.laps)}</p>
       ))}
       {transfers?.map((pos) => (
-        <p key={`t${pos}`} className="text-cream text-xs truncate">🛡️➡️ transfere {propName(pos)}</p>
+        <p key={`t${pos}`} className="text-cream text-xs truncate">Transfere imunidade: {propName(pos)}</p>
       ))}
     </div>
   )
