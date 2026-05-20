@@ -11,8 +11,9 @@ import { cityLevel } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
 import { deedView } from '@/game/ui/deed/deedView'
 import { useTradeUI } from '@/game/ui/trade/TradeLayer'
+import { tradesView } from '@/game/ui/trade/tradesView'
 import type { GameState } from '@/game/turn/types'
-import type { TempEffect } from '@/game/economy/types'
+import type { TempEffect, Trade, ImmunityGrant } from '@/game/economy/types'
 
 // ---------------------------------------------------------------------
 // Glifos SVG próprios para casas especiais — substituem ícones lucide
@@ -1090,10 +1091,6 @@ export const MOCK_BUILDINGS: Record<number, number> = {}
 // Propriedades hipotecadas (mock).
 export const MOCK_MORTGAGED = new Set<number>([])
 
-function playerByName(name: string) {
-  return MOCK_PLAYERS.find((p) => p.name === name)
-}
-
 // (OwnerDot removido — bandeirinha de dono com inicial virou redundante
 // quando a stripe ganhou a cor do jogador.)
 
@@ -1403,21 +1400,14 @@ function effectRow(e: TempEffect, i: number): { key: string; label: string; desc
   }
 }
 
-// Trades em aberto + concluídas recentes — SRS §11.
-type TradeStatus = 'incoming' | 'outgoing' | 'completed'
-type Trade = {
-  from: string
-  to: string
-  offer: string
-  request: string
-  status: TradeStatus
-  age: string
+// Trades em aberto + concluídas recentes — SRS §11. Dados reais via tradesView (027).
+function tradeSummary(props: number[], cash: number, imm?: ImmunityGrant[]): string {
+  const parts: string[] = []
+  if (props.length) parts.push(`${props.length} propriedade${props.length > 1 ? 's' : ''}`)
+  if (cash > 0) parts.push(`R$${cash}`)
+  if (imm?.length) parts.push(`${imm.length} imunidade${imm.length > 1 ? 's' : ''}`)
+  return parts.length ? parts.join(' + ') : '—'
 }
-const MOCK_TRADES: Trade[] = [
-  { from: 'Júlia',   to: 'Nikolas', offer: 'AM + R$200', request: 'SP',         status: 'incoming',  age: 'agora' },
-  { from: 'Nikolas', to: 'Caio',    offer: 'R$400',      request: 'PA',         status: 'outgoing',  age: '1m'    },
-  { from: 'Beatriz', to: 'Júlia',   offer: 'PE',         request: 'GO + R$300', status: 'completed', age: '4m'    },
-]
 
 // --- Ponte com o motor (020): estado reativo dos painéis ---------------------
 // Paleta de token por assento (disjunta das cores de grupo). Nome/token reais
@@ -1724,6 +1714,10 @@ export function ActionsPanel() {
   const activeId = game.players[game.turnOrder[game.activeSeat]]?.id
   const goNext = activeId ? goBonus(game, activeId) : 0
   const pot = game.centerPot
+  const trades = tradesView(game) // 027 — painel ao vivo
+  const colorById = Object.fromEntries(
+    game.players.map((p, i) => [p.id, PLAYER_COLORS[i % PLAYER_COLORS.length]]),
+  ) as Record<string, string>
 
   return (
     <aside className="side-panel">
@@ -1777,11 +1771,9 @@ export function ActionsPanel() {
       <div className="side-panel-section">
         <div className="flex items-baseline justify-between mb-3">
           <p className="label text-gold">Trades</p>
-          <p className="label text-cream-muted">
-            {MOCK_TRADES.filter((t) => t.status !== 'completed').length} ativos
-          </p>
+          <p className="label text-cream-muted">{trades.pending ? 1 : 0} ativos</p>
         </div>
-        {MOCK_TRADES.length === 0 ? (
+        {!trades.pending && trades.history.length === 0 ? (
           <div className="flex items-center justify-center px-3 py-4 rounded-[var(--radius-card)] border border-dashed border-coffee-500 bg-coffee-800/40">
             <p className="label text-cream-muted text-center leading-snug">
               Nenhuma proposta no momento
@@ -1789,10 +1781,13 @@ export function ActionsPanel() {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {MOCK_TRADES.map((t, i) => <TradeRow key={i} trade={t} />)}
+            {trades.pending && <TradeRow key="pending" trade={trades.pending} done={false} colorById={colorById} />}
+            {trades.history.map((t, i) => <TradeRow key={`h${i}`} trade={t} done colorById={colorById} />)}
           </div>
         )}
         <button
+          type="button"
+          onClick={() => useTradeUI.getState().show()}
           className="
             w-full mt-3 px-3 py-2 rounded-[var(--radius-sharp)]
             border border-coffee-500 bg-coffee-800/60 text-cream-muted
@@ -1806,64 +1801,36 @@ export function ActionsPanel() {
   )
 }
 
-function TradeRow({ trade }: { trade: Trade }) {
-  const from = playerByName(trade.from)
-  const to   = playerByName(trade.to)
-  if (!from || !to) return null
-
-  const isIncoming  = trade.status === 'incoming'
-  const isOutgoing  = trade.status === 'outgoing'
-  const isCompleted = trade.status === 'completed'
-
+function TradeRow({ trade, done, colorById }: { trade: Trade; done: boolean; colorById: Record<string, string> }) {
   return (
     <div
       className={cn(
         'flex flex-col gap-2 px-3 py-2.5 rounded-[var(--radius-card)] border',
-        isIncoming  && 'bg-coffee-700 border-gold shadow-[0_0_0_1px_rgba(212,175,55,0.3)]',
-        isOutgoing  && 'bg-coffee-800/60 border-coffee-500',
-        isCompleted && 'bg-coffee-800/40 border-coffee-500 opacity-70',
+        done ? 'bg-coffee-800/40 border-coffee-500 opacity-70' : 'bg-coffee-700 border-gold shadow-[0_0_0_1px_rgba(212,175,55,0.3)]',
       )}
     >
       <div className="flex items-center gap-2 min-w-0">
-        <PlayerFace color={from.color} size={22} />
-        <span className="display text-cream text-sm leading-none truncate">{from.name}</span>
+        <PlayerFace color={colorById[trade.fromId] ?? '#888'} size={22} />
+        <span className="display text-cream text-sm leading-none truncate">{trade.fromId}</span>
         <span className="text-cream-muted text-xs shrink-0">→</span>
-        <PlayerFace color={to.color} size={22} />
-        <span className="display text-cream text-sm leading-none truncate">{to.name}</span>
-        <span className="label text-cream-muted ml-auto shrink-0">{trade.age}</span>
+        <PlayerFace color={colorById[trade.toId] ?? '#888'} size={22} />
+        <span className="display text-cream text-sm leading-none truncate">{trade.toId}</span>
       </div>
 
       <div className="flex flex-col gap-0.5 px-1">
         <div className="flex items-baseline gap-2">
           <span className="label text-cream-muted w-14 shrink-0">Oferece</span>
-          <span className="display text-cream text-sm leading-tight">{trade.offer}</span>
+          <span className="text-cream text-sm leading-tight">{tradeSummary(trade.fromProps, trade.fromCash, trade.fromImmunities)}</span>
         </div>
         <div className="flex items-baseline gap-2">
           <span className="label text-cream-muted w-14 shrink-0">Pede</span>
-          <span className="display text-cream text-sm leading-tight">{trade.request}</span>
+          <span className="text-cream text-sm leading-tight">{tradeSummary(trade.toProps, trade.toCash, trade.toImmunities)}</span>
         </div>
       </div>
 
-      {isIncoming && (
-        <div className="flex gap-1.5">
-          <button className="flex-1 label py-1.5 rounded-[var(--radius-sharp)] bg-gold text-coffee-950 hover:bg-gold-glow transition-colors">
-            Aceitar
-          </button>
-          <button className="flex-1 label py-1.5 rounded-[var(--radius-sharp)] border border-coffee-500 text-cream-muted hover:bg-coffee-700 hover:text-cream transition-colors">
-            Recusar
-          </button>
-        </div>
-      )}
-      {isOutgoing && (
-        <p className="label text-cream-muted text-center pt-1.5 border-t border-coffee-500/60">
-          Aguardando resposta…
-        </p>
-      )}
-      {isCompleted && (
-        <p className="label text-gold text-center pt-1.5 border-t border-coffee-500/60">
-          Aceita
-        </p>
-      )}
+      <p className={cn('label text-center pt-1.5 border-t border-coffee-500/60', done ? 'text-gold' : 'text-cream-muted')}>
+        {done ? 'Aceita' : 'Aguardando resposta…'}
+      </p>
     </div>
   )
 }
