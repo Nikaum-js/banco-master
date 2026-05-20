@@ -44,7 +44,11 @@ function seedTitles(): Record<number, Title> {
 
 // Estado inicial determinístico: baralhos na ordem do catálogo, sem embaralhar.
 // Quem quer partida de verdade usa `buildInitialGame`, que embaralha com o RNG dado.
-export function createSeedState(playerIds: string[]): GameState {
+//
+// `startedAt` é OPCIONAL (default `0`, 044/D3): mais de 50 arquivos de teste chamam
+// esta função sem o parâmetro, e `0` é o mesmo sentinela de "sem relógio" que já
+// existia implicitamente — a duração da partida vira indisponível, não errada.
+export function createSeedState(playerIds: string[], startedAt = 0): GameState {
   const players: Player[] = playerIds.map((id) => ({
     id,
     pos: 0,
@@ -86,6 +90,10 @@ export function createSeedState(playerIds: string[]): GameState {
     landAuctionArmed: true, // 031 — trava de episódio: armado de início
     tradeHistory: [], // 027 — histórico de trocas aceitas
     notice: null, // 030 — notificação informativa (Free Parking / Aquisição Hostil)
+    eliminationOrder: [], // 044 — quedas na ordem em que a falência foi processada
+    round: 1, // 044 — a partida começa NA primeira rodada
+    startedAt, // 044 — injetado; 0 = sem relógio (partidas de teste)
+    endedAt: null, // 044 — gravado por checkEndGame na transição para 'ended'
   }
   startTurn(state)
   return state
@@ -94,8 +102,10 @@ export function createSeedState(playerIds: string[]): GameState {
 // Partida nova pronta pra jogar: seed + baralhos embaralhados (FR-001). O resultado
 // embaralhado VIVE no snapshot — os clientes o recebem por leitura, não por replay —
 // então o embaralho não precisa ser gravado pelo recorder.
-export function buildInitialGame(playerIds: string[], rng: RNG): GameState {
-  const g = createSeedState(playerIds)
+//
+// `startedAt` OPCIONAL (default `0`, 044/D3) pela mesma razão de `createSeedState`.
+export function buildInitialGame(playerIds: string[], rng: RNG, startedAt = 0): GameState {
+  const g = createSeedState(playerIds, startedAt)
   g.decks.acaso = weightedShuffle(g.decks.acaso, rng)
   g.decks.tesouro = weightedShuffle(g.decks.tesouro, rng)
   return g

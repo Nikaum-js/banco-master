@@ -211,7 +211,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
 
   async function startInternal(): Promise<void> {
     await ensureOpen()
-    game = buildInitialGame(playerIdsInOrder(room), rng)
+    game = buildInitialGame(playerIdsInOrder(room), rng, now()) // 044/D3: mesmo relógio que o recorder grava/replica
     seq = 0
     await transport.saveSnapshot({ seq, game, room }) // 1º snapshot (FR-006/013): clientes leem ao entrar
     transport.publishRoom(room) // status já 'playing' (definido por startGame antes de criar o host)

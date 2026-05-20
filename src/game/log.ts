@@ -5,7 +5,7 @@
 // LogEntry é união discriminada por `kind` (040/D-032): o motor emite o fato inteiro já
 // montado — logEvent não separa kind dos campos porque isso impediria o TS de
 // correlacioná-los (contrato §1).
-import type { GameState } from './turn/types'
+import type { EliminationRecord, GameState } from './turn/types'
 import type { LogEntry } from './economy/types'
 
 const LOG_MAX = 50
@@ -25,4 +25,26 @@ export function normalizeLog(log: unknown[]): LogEntry[] {
     if (e.kind) return e as LogEntry
     return { kind: 'legacy', who: e.who ?? 'bank', what: e.what ?? '' }
   })
+}
+
+// Normaliza os quatro campos de fim de jogo (044, data-model §1 — Compatibilidade) para
+// snapshot persistido ANTES desta fatia. Mesmo padrão de `normalizeLog`: roda UMA vez, no
+// carregamento (`supabaseTransport.loadSnapshot`), com defaults seguros — nunca inventa um
+// passado que não foi registrado. `matchSummary` sabe ler o resultado (`partial: true`
+// quando falta registro de queda para um eliminado).
+//
+// Guarda `Array.isArray(g.players)`: só corrige quem PARECE um `GameState` de verdade.
+// Sem ela, o spread injetaria os 4 campos em QUALQUER payload que passasse por aqui —
+// inclusive o marcador sintético que a suíte de conformidade do Transport usa pra provar
+// que `saveRoom` não apaga a partida em andamento (`tests/net/conformance.test.ts`), que
+// não é um `GameState` e não deve ganhar campo que nunca pediu.
+export function normalizeGame(raw: unknown): Partial<Pick<GameState, 'eliminationOrder' | 'round' | 'startedAt' | 'endedAt'>> {
+  const g = (raw ?? {}) as Partial<GameState>
+  if (!Array.isArray(g.players)) return {}
+  return {
+    eliminationOrder: Array.isArray(g.eliminationOrder) ? (g.eliminationOrder as EliminationRecord[]) : [],
+    round: typeof g.round === 'number' ? g.round : 0,
+    startedAt: typeof g.startedAt === 'number' ? g.startedAt : 0,
+    endedAt: typeof g.endedAt === 'number' ? g.endedAt : null,
+  }
 }

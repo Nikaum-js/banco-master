@@ -19,7 +19,7 @@
 // (provado headless, SC-005); resta o endurecimento da identidade de transporte.
 import type { AcceptedCommand, CommandEnvelope, CommandFailure, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import type { JoinError, Room } from './room'
-import { normalizeLog } from '@/game/log'
+import { normalizeGame, normalizeLog } from '@/game/log'
 import type { PauseState } from '@/game/turn/types'
 
 // Migração de dados (041, data-model — Migração de dados): salas persistidas ANTES desta
@@ -32,11 +32,13 @@ function normalizePaused(paused: unknown, readAt: number): PauseState | null {
   return null // `false` ou ausente
 }
 
-// Absorve `normalizeLog` (021/040) e a migração de `paused` legado — o mesmo ponto onde
-// `loadSnapshot` já normalizava o log agora normaliza o snapshot inteiro.
+// Absorve `normalizeLog` (021/040), a migração de `paused` legado e os quatro campos de
+// fim de jogo (044, `normalizeGame`) — o mesmo ponto onde `loadSnapshot` já normalizava o
+// log agora normaliza o snapshot inteiro.
 export function normalizeSnapshot(game: PersistedSnapshot['game'], now: () => number = Date.now): PersistedSnapshot['game'] {
   return {
     ...game,
+    ...normalizeGame(game),
     log: normalizeLog(game.log ?? []),
     paused: normalizePaused((game as { paused?: unknown }).paused, now()),
   }
