@@ -22,16 +22,49 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
+  eligibility:
+    name: verificar se há aplicação para publicar
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      deployable: ${{ steps.ci.outputs.deployable }}
+    steps:
+      # A CI pode fechar verde contendo só `detectar escopo` (docs) ou o contrato do
+      # banco (migration). Produção só precisa de rebuild quando o gate da aplicação
+      # realmente rodou e passou.
+      - name: Ler jobs da CI aprovada
+        id: ci
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              ...context.repo,
+              run_id: context.payload.workflow_run.id,
+              per_page: 100,
+            })
+            const quality = jobs.find((job) => job.name === 'lint · types · testes · build')
+            core.setOutput('deployable', quality?.conclusion === 'success' ? 'true' : 'false')
+
   production:
     name: promover produção
+    needs: eligibility
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # O gate inteiro: só promove se o CI daquele commit fechou verde. `workflow_dispatch`
     # não traz `workflow_run`, então a segunda condição libera a republicação manual.
+    # Schedule/manual da CI nunca publica, e docs/migration sem build também não.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+      always() &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        needs.eligibility.outputs.deployable == 'true'))
     environment:
       name: production
       url: ${{ steps.deploy.outputs.url }}
