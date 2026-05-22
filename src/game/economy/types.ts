@@ -76,6 +76,8 @@ export interface Trade {
   toCash: number // ≥ 0
   fromImmunities?: ImmunityGrant[] // concedidas por `from` → beneficiário `to` (014)
   toImmunities?: ImmunityGrant[] // concedidas por `to` → beneficiário `from`
+  fromImmunityTransfers?: number[] // posições de imunidades de que `from` é beneficiário, transferidas a `to` (028, §8.4)
+  toImmunityTransfers?: number[] // imunidades de que `to` é beneficiário, transferidas a `from`
 }
 
 export type ResolutionSlice =
