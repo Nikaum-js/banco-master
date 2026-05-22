@@ -3,6 +3,7 @@ import { GameHUD } from '@/game/ui/GameHUD'
 import { GameDriver } from '@/game/ui/GameDriver'
 import { ModalLayer } from '@/game/ui/modals/ModalLayer'
 import { TradeLayer } from '@/game/ui/trade/TradeLayer'
+import { HouseAuctionLayer } from '@/game/ui/houseAuction/HouseAuctionLayer'
 import { DebugLogger } from '@/game/ui/DebugLogger'
 
 // O tabuleiro Clássico É a tela inicial. A rolagem é o DiceArena central; o
@@ -17,6 +18,7 @@ export default function App() {
       <GameDriver />
       <ModalLayer />
       <TradeLayer />
+      <HouseAuctionLayer />
       <GameHUD />
       <DebugLogger />
     </>

@@ -1451,6 +1451,11 @@ export function PlayersPanel() {
   const log = useGameStore((s) => s.game.log) // 021 — log real do jogo
   const history = [...log].reverse() // mais recentes ao topo (recência = ordem no log)
   const effects = useGameStore((s) => s.game.tempEffects).map(effectRow) // 024.1 — efeitos reais
+  const bankHouses = useGameStore((s) => s.game.bank.houses) // 026
+  const auctionOpen = useGameStore((s) => s.game.houseAuction !== null)
+  const openHouseAuction = useGameStore((s) => s.openHouseAuction)
+  const liveIds = useGameStore((s) => s.game.players.filter((p) => !p.eliminated).map((p) => p.id))
+  const canAuctionHouses = bankHouses >= 1 && liveIds.length >= 2 && !auctionOpen
   return (
     <aside className="side-panel">
       <div className="side-panel-section">
@@ -1468,6 +1473,15 @@ export function PlayersPanel() {
             className="mt-3 w-full px-3 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-700 border border-coffee-500 text-cream text-sm font-bold hover:border-gold hover:bg-coffee-600 transition-colors"
           >
             🤝 Negociar
+          </button>
+        )}
+        {canAuctionHouses && (
+          <button
+            type="button"
+            onClick={() => openHouseAuction(bankHouses, liveIds)}
+            className="mt-2 w-full px-3 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-700 border border-coffee-500 text-cream text-sm font-bold hover:border-gold hover:bg-coffee-600 transition-colors"
+          >
+            🏘 Leilão de casas ({bankHouses})
           </button>
         )}
       </div>
