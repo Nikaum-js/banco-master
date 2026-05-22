@@ -18,9 +18,11 @@ import {
 import { economyResolve } from './economy/resolveRentable'
 import { buyProperty, declineProperty } from './economy/purchase'
 import { placeBid, passBid, closeAuction } from './economy/auction'
+import { buildHouse, sellBuilding } from './economy/construction'
+import { openHouseAuction, declareBuildInterest, placeHouseBid, closeHouseAuction } from './economy/houseAuction'
+import { mortgageProperty, unmortgageProperty } from './economy/mortgage'
 
-// Portas default — placeholders até as specs irmãs. onPassGo retorna valor fixo
-// provisório (GO Progressivo real é de Balanceamento); onInsolvency é de Falência.
+// Portas default — placeholders até as specs irmãs (Balanceamento, Falência).
 export const defaultPorts: TurnPorts = {
   onPassGo: () => 200,
   onPayToCenter: () => {},
@@ -33,7 +35,7 @@ function seedTitles(): Record<number, Title> {
   const titles: Record<number, Title> = {}
   for (const sq of BOARD) {
     if (sq.kind === 'property' || sq.kind === 'airport' || sq.kind === 'utility') {
-      titles[sq.pos] = { ownerId: null, mortgaged: false }
+      titles[sq.pos] = { ownerId: null, mortgaged: false, houses: 0, hotel: false }
     }
   }
   return titles
@@ -65,6 +67,7 @@ export function createSeedState(playerIds: string[]): GameState {
     phase: 'playing',
     titles: seedTitles(),
     resolution: null,
+    bank: { houses: 40, hotels: 16 }, // D-017
   }
   startTurn(state)
   return state
@@ -83,10 +86,17 @@ interface GameStore {
   declineProperty(): void
   placeBid(playerId: string, amount: number): void
   passBid(playerId: string): void
+  buildHouse(pos: number): void
+  sellBuilding(pos: number): void
+  openHouseAuction(housesAvailable: number, bidders: string[]): void
+  declareBuildInterest(playerId: string): void
+  placeHouseBid(playerId: string, amount: number): void
+  mortgageProperty(pos: number): void
+  unmortgageProperty(pos: number): void
   setPaused(p: boolean): void
 }
 
-// Timer do leilão: handle fora do estado (não-serializável); reconstruído pelo deadline.
+// Timer dos leilões: handle fora do estado (não-serializável); reconstruído pelo deadline.
 let auctionTimer: ReturnType<typeof setTimeout> | null = null
 function clearAuctionTimer(): void {
   if (auctionTimer) {
@@ -96,17 +106,19 @@ function clearAuctionTimer(): void {
 }
 
 export const useGameStore = create<GameStore>((set, get) => {
-  // (Re)agenda o fechamento do leilão pelo deadline atual; respeita pausa.
+  // (Re)agenda o fechamento do leilão (compra ou casas) pelo deadline; respeita pausa.
   function rearmAuction(): void {
     clearAuctionTimer()
     const g = get().game
-    if (g.resolution?.kind === 'auction' && !g.paused) {
-      const ms = Math.max(0, g.resolution.auction.deadline - Date.now())
-      auctionTimer = setTimeout(() => {
-        set((st) => ({ game: closeAuction(st.game) }))
-        clearAuctionTimer()
-      }, ms)
-    }
+    if (g.paused || !g.resolution) return
+    const kind = g.resolution.kind
+    if (kind !== 'auction' && kind !== 'house-auction') return
+    const deadline = g.resolution.auction.deadline
+    const ms = Math.max(0, deadline - Date.now())
+    auctionTimer = setTimeout(() => {
+      set((st) => ({ game: kind === 'auction' ? closeAuction(st.game) : closeHouseAuction(st.game) }))
+      clearAuctionTimer()
+    }, ms)
   }
 
   return {
@@ -128,6 +140,19 @@ export const useGameStore = create<GameStore>((set, get) => {
       rearmAuction()
     },
     passBid: (playerId) => set((st) => ({ game: passBid(st.game, playerId) })),
+    buildHouse: (pos) => set((st) => ({ game: buildHouse(st.game, pos) })),
+    sellBuilding: (pos) => set((st) => ({ game: sellBuilding(st.game, pos) })),
+    openHouseAuction: (housesAvailable, bidders) => {
+      set((st) => ({ game: openHouseAuction(st.game, housesAvailable, bidders, st.ctx.now!()) }))
+      rearmAuction()
+    },
+    declareBuildInterest: (playerId) => set((st) => ({ game: declareBuildInterest(st.game, playerId) })),
+    placeHouseBid: (playerId, amount) => {
+      set((st) => ({ game: placeHouseBid(st.game, playerId, amount, st.ctx.now!()) }))
+      rearmAuction()
+    },
+    mortgageProperty: (pos) => set((st) => ({ game: mortgageProperty(st.game, pos) })),
+    unmortgageProperty: (pos) => set((st) => ({ game: unmortgageProperty(st.game, pos) })),
     setPaused: (p) => {
       set((st) => ({ game: { ...st.game, paused: p } }))
       rearmAuction()
