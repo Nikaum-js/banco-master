@@ -93,7 +93,6 @@ Cartas de **baixo impacto** — efeitos imediatos pequenos. São o "miolo" do ba
 > - Propriedade não pode ter construções.
 > - Alvo precisa ter ≥2 propriedades não-hipotecadas.
 > - Aeroportos/Utilidades: paga **1,5× o preço** (compensação).
-> - Coringa: vale só se não foi declarada cor.
 
 **Como usar:** Próprio turno. Vai pra mão.
 
