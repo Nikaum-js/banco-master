@@ -1,5 +1,6 @@
 // Tipos da economia (Compra & Aluguel, spec 003). Autocontido (só primitivos) para
 // evitar ciclo de imports — `turn/types.ts` importa daqui, não o contrário.
+import type { DeckId } from '../cards/types'
 
 export interface Title {
   ownerId: string | null // null = banco (livre)
@@ -33,3 +34,5 @@ export type ResolutionSlice =
   | { kind: 'purchase'; pos: number }
   | { kind: 'auction'; auction: Auction }
   | { kind: 'house-auction'; auction: HouseAuction } // leilão de casas em escassez (004)
+  | { kind: 'card-discard'; deckId: DeckId; drawnId: string } // mão cheia: escolher descarte (006)
+  | { kind: 'card-shortcut'; deckId: DeckId; cardId: string } // Atalho: escolher ±3 (006)
