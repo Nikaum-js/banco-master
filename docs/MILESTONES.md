@@ -73,6 +73,8 @@ O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o 
 
 - ✅ **030** — **Modais informativos** (§12.2, fecha o §12): "Free Parking coletado" e "Aquisição Hostil sofrida". Evento autônomo `GameState.notice` (padrão `pendingTrade`/`houseAuction`, serializável, **não** bloqueia o turno); hook mínimo no motor — `collectCenter` (007) e `acquire` (016) registram; `dismissNotice` limpa. `NoticeLayer` (overlay + "OK"). 5 casos em `tests/game/economy/notice.test.ts`; 007/016 intactos. _Acabamento visual a confirmar no `bun run dev`._
 
+- ✅ **031** — **Leilão de escassez de terrenos** (D-023 / SRS §7.3): pregão **simultâneo** dos últimos terrenos livres. Evento autônomo `GameState.landAuction` (+ `landAuctionArmed`); `economy/landAuction.ts` — `maybeOpenLandAuction` (gatilho 1≤livres≤3 + ≥2 vivos + trava de episódio), `placeLandBid` (§7.2 + **trava de solvência** `committedCash`), `closeLandAuction` (líder paga banco+escritura; sem lance fica livre). Cronômetro próprio no store (padrão/`deadline` do 003). `LandAuctionLayer` no `App`. 13 casos em `landAuction.test.ts`. _Acabamento visual a confirmar no `bun run dev`._
+
 ### Pendente (UI single-player)
 
 - [ ] Acabamento visual de todos os modais/painéis no `bun run dev` (não tenho como ver a tela).
