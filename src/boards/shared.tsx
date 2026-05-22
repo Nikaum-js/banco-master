@@ -1066,12 +1066,12 @@ export const LOCAL_PLAYER_NAME = 'Nikolas'
 // onde está parado, senão some na faixa colorida.
 // Posições em índices 0–47 (tabuleiro de 48). Léo (falido) parado na Prisão (12).
 export const MOCK_PLAYERS: Player[] = [
-  { name: 'Nikolas', color: '#d4af37', money: 2480, pos: 19, cardsInHand: 2, busTickets: 1, speedDieReady: true,  active: true },
-  { name: 'Júlia',   color: '#a855f7', money: 1820, pos: 35, cardsInHand: 1, busTickets: 0, speedDieReady: true,  loanActive: true },
-  { name: 'Caio',    color: '#06b6d4', money: 1240, pos: 7,  cardsInHand: 3, busTickets: 2, speedDieReady: false },
-  { name: 'Beatriz', color: '#14b8a6', money:  980, pos: 42, cardsInHand: 0, busTickets: 0, speedDieReady: true,  immune: true },
-  { name: 'Rafa',    color: '#d946ef', money:  560, pos: 25, cardsInHand: 1, busTickets: 0, speedDieReady: true },
-  { name: 'Léo',     color: '#f4e8d0', money:    0, pos: 12, cardsInHand: 0, busTickets: 0, speedDieReady: false, bankrupt: true },
+  { name: 'Nikolas', color: '#d4af37', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true, active: true },
+  { name: 'Júlia',   color: '#a855f7', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true },
+  { name: 'Caio',    color: '#06b6d4', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true },
+  { name: 'Beatriz', color: '#14b8a6', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true },
+  { name: 'Rafa',    color: '#d946ef', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true },
+  { name: 'Léo',     color: '#f4e8d0', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true },
 ]
 
 // Pote da Loteria (ex Free Parking) — SRS §13.5. Inicia com $500.
@@ -1079,44 +1079,14 @@ export const MOCK_PARKING_POT = 1250
 
 // Propriedades possuídas (mock) — chave = pos, valor = nome do jogador.
 // Cobre uma fatia variada do tabuleiro pra dar densidade visual.
-export const MOCK_OWNERSHIP: Record<number, string> = {
-  1:  'Nikolas',   // Roma (IT)
-  3:  'Nikolas',   // Veneza (IT)
-  11: 'Nikolas',   // Luxor (EG)
-  7:  'Caio',      // Cairo (EG)
-  13: 'Caio',      // Tóquio (JP)
-  16: 'Caio',      // Osaka (JP)
-  19: 'Júlia',     // Délhi (IN)
-  21: 'Júlia',     // Mumbai (IN)
-  31: 'Júlia',     // Rio de Janeiro (BR)
-  33: 'Júlia',     // São Paulo (BR)
-  35: 'Júlia',     // Brasília (BR)
-  23: 'Rafa',      // Calcutá (IN)
-  25: 'Rafa',      // Pequim (CN)
-  26: 'Rafa',      // Xangai (CN)
-  37: 'Beatriz',   // Nova York (US)
-  38: 'Beatriz',   // Los Angeles (US)
-  44: 'Beatriz',   // Londres (GB)
-  46: 'Beatriz',   // Edimburgo (GB)
-  6:  'Júlia',     // Aeroporto JFK
-  18: 'Caio',      // Aeroporto LHR
-  42: 'Beatriz',   // Aeroporto SYD
-  14: 'Nikolas',   // Petróleo Mundial (utility)
-  32: 'Beatriz',   // Energia Mundial (utility)
-}
+export const MOCK_OWNERSHIP: Record<number, string> = {}
 
 // Construções mock — pos → 1..4 casas · 5 = hotel · 6 = skyscraper (SRS §13.8)
 // Cada pos abaixo TEM dono em MOCK_OWNERSHIP (stripe colorida vai aparecer).
-export const MOCK_BUILDINGS: Record<number, number> = {
-  31: 1,  // Rio de Janeiro (Júlia) — 1 casa simples
-  33: 3,  // São Paulo (Júlia) — 3 casas (mostra contador ×3)
-  37: 5,  // Nova York (Beatriz) — hotel
-  46: 6,  // Edimburgo (Beatriz) — skyscraper (raro)
-  25: 6,  // Pequim (Rafa) — skyscraper
-}
+export const MOCK_BUILDINGS: Record<number, number> = {}
 
-// Propriedades hipotecadas (mock) — Osaka (Caio) e Calcutá (Rafa).
-export const MOCK_MORTGAGED = new Set<number>([16, 23])
+// Propriedades hipotecadas (mock).
+export const MOCK_MORTGAGED = new Set<number>([])
 
 function playerByName(name: string) {
   return MOCK_PLAYERS.find((p) => p.name === name)
