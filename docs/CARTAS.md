@@ -68,20 +68,20 @@ Cartas de **baixo impacto** — efeitos imediatos pequenos. São o "miolo" do ba
 
 ## 🃏 Os 2 Baralhos
 
-| | 🃏 **Surpresa** (Chance) | 🎁 **Tesouro** (Community Chest) |
+| | 🃏 **Acaso** (Chance) | 🎁 **Tesouro** (Community Chest) |
 |---|---|---|
 | **Personalidade** | Ofensivo, caótico, agressivo | Defensivo, benigno, com sorte |
-| **Sensação** | "Não quero cair em Surpresa" | "Por favor, Tesouro!" |
+| **Sensação** | "Não quero cair em Acaso" | "Por favor, Tesouro!" |
 | **Casas no tabuleiro** | 3 | 3 |
 | **Cartas no deck** | 16 | 16 |
 
-> 📌 **Princípio de design importante:** No Richup.io o Tesouro virou casa irrelevante de "receber troquinho". No Banco Master, **Tesouro é tão impactante quanto Surpresa** — a diferença é **temática** (ofensivo vs benigno), não de magnitude.
+> 📌 **Princípio de design importante:** No Richup.io o Tesouro virou casa irrelevante de "receber troquinho". No Banco Master, **Tesouro é tão impactante quanto Acaso** — a diferença é **temática** (ofensivo vs benigno), não de magnitude.
 
 ---
 
 ## 📋 Catálogo Completo de Cartas
 
-### 🃏 Deck SURPRESA (16 cartas)
+### 🃏 Deck ACASO (16 cartas)
 
 #### 🟧 Cartas Lendárias (4 cartas)
 
@@ -331,7 +331,7 @@ Pedro de fato tinha Despejo — guarda pra outra oportunidade.
 
 ## 📊 Resumo Quantitativo
 
-| | Surpresa | Tesouro | **Total** |
+| | Acaso | Tesouro | **Total** |
 |---|---|---|---|
 | 🟧 Lendárias | 4 cópias (3 únicas) | 2 cópias (2 únicas) | **6 cópias / 5 únicas** |
 | 🟦 Raras | 3 cópias (2 únicas) | 5 cópias (3 únicas) | **8 cópias / 5 únicas** |
@@ -341,7 +341,7 @@ Pedro de fato tinha Despejo — guarda pra outra oportunidade.
 
 **Probabilidades de saída (numa sacada qualquer):**
 
-| Raridade | Surpresa | Tesouro |
+| Raridade | Acaso | Tesouro |
 |---|---|---|
 | 🟧 Lendária | 25% | 12,5% |
 | 🟦 Rara | 18,75% | 31,25% |

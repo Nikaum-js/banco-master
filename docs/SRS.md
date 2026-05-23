@@ -20,7 +20,7 @@
 7. [Leilão](#7-leilão)
 8. [Negociação entre Jogadores](#8-negociação-entre-jogadores)
 9. [Falência](#9-falência)
-10. [Sistema de Cartas (Surpresa e Tesouro)](#10-sistema-de-cartas-surpresa-e-tesouro)
+10. [Sistema de Cartas (Acaso e Tesouro)](#10-sistema-de-cartas-acaso-e-tesouro)
 11. [Sala, Lobby e Sessão](#11-sala-lobby-e-sessão)
 12. [Interface e Experiência do Usuário](#12-interface-e-experiência-do-usuário)
 13. [Mecânicas de Balanceamento](#13-mecânicas-de-balanceamento)
@@ -96,7 +96,7 @@ O tabuleiro é composto por **48 casas** dispostas em um quadrado, percorridas n
 | Propriedades de cidade (grupos de cor) | 28 |
 | Aeroportos | 4 |
 | Utilidades | 3 |
-| Cartas Surpresa | 3 |
+| Cartas Acaso | 3 |
 | Cartas Tesouro | 3 |
 | Impostos | 2 |
 | Bus Ticket (espaço) | 1 |
@@ -234,7 +234,7 @@ Seguir Seção 2.5. O valor dos dados utilizado é o da rolagem que levou o joga
 
 O valor é debitado automaticamente. Vai para o **centro do tabuleiro** (Free Parking — Seção 13.4), não para o banco.
 
-### 4.6 Surpresa / Tesouro
+### 4.6 Acaso / Tesouro
 
 - O jogador saca a próxima carta do respectivo deck.
 - O efeito é aplicado imediatamente.
@@ -379,7 +379,7 @@ De cada lado (proponente e destinatário), qualquer combinação de:
 
 > 📌 Construções (casas/hotéis) **NÃO** podem ser negociadas diretamente. Devem ser vendidas ao banco antes.
 >
-> 📌 **Cartas em mão NÃO podem ser negociadas** (Surpresa/Tesouro de qualquer raridade, incluindo "Saia da Prisão" e "Aquisição Hostil"). Bus Tickets também **não** são negociáveis. Ver Seção 10 para detalhes do sistema de cartas.
+> 📌 **Cartas em mão NÃO podem ser negociadas** (Acaso/Tesouro de qualquer raridade, incluindo "Saia da Prisão" e "Aquisição Hostil"). Bus Tickets também **não** são negociáveis. Ver Seção 10 para detalhes do sistema de cartas.
 
 ### 8.3 Fluxo de Negociação
 
@@ -447,16 +447,16 @@ A partida termina quando restar apenas **1 jogador** com saldo positivo. Ele é 
 
 ---
 
-## 10. Sistema de Cartas (Surpresa e Tesouro)
+## 10. Sistema de Cartas (Acaso e Tesouro)
 
 ### 10.1 Visão Geral
 
 O Banco Master tem **2 decks separados** de cartas, cada um com 16 cartas distribuídas em 3 níveis de **raridade**:
 
-- 🃏 **Surpresa** (Chance) — efeitos ofensivos, caóticos, agressivos. "Cair em Surpresa pode mudar o jogo."
+- 🃏 **Acaso** (Chance) — efeitos ofensivos, caóticos, agressivos. "Cair em Acaso pode mudar o jogo."
 - 🎁 **Tesouro** (Community Chest) — efeitos defensivos, benignos, com pequenas surpresas. "Cair em Tesouro quase sempre tem peso."
 
-> 📌 **Princípio de design:** Tesouro não pode ser percebido como "casa de troquinho" (problema do Richup.io). A diferença entre Surpresa e Tesouro é **temática**, não de magnitude.
+> 📌 **Princípio de design:** Tesouro não pode ser percebido como "casa de troquinho" (problema do Richup.io). A diferença entre Acaso e Tesouro é **temática**, não de magnitude.
 
 ### 10.2 Sistema de Raridade
 
@@ -496,7 +496,7 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 | ⚡ **Reação** | A qualquer momento, como resposta a uma ação contra você |
 | 🔒 **Preso** | Apenas quando você está preso |
 
-### 10.4 Distribuição do Deck SURPRESA (16 cartas)
+### 10.4 Distribuição do Deck ACASO (16 cartas)
 
 #### 🟧 Lendárias (4 cartas)
 
@@ -568,7 +568,7 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 
 #### 🟧 Cartas Lendárias
 
-**Aquisição Hostil** (Surpresa)
+**Aquisição Hostil** (Acaso)
 > Escolha uma propriedade de outro jogador. Ele é obrigado a vendê-la para você pelo **preço original** que ele pagou. Restrições:
 > - A propriedade **não pode ter construções** (incluindo Hangar em aeroportos).
 > - O alvo deve possuir **pelo menos 2 propriedades não-hipotecadas** no momento.
@@ -577,10 +577,10 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 > - Não pode ser usada em propriedade do próprio jogador.
 > - O alvo **NÃO pode recusar**.
 
-**Despejo** (Surpresa)
+**Despejo** (Acaso)
 > Escolha 1 casa (não hotel) construída de outro jogador. Ela é demolida — retorna ao banco. O dono NÃO recebe nada. Não afeta a uniformidade obrigatória do grupo do alvo (ele pode reconstruir depois).
 
-**Auditoria Fiscal** (Surpresa)
+**Auditoria Fiscal** (Acaso)
 > Escolha um jogador. Ele paga **10% do patrimônio líquido** (dinheiro + propriedades + construções) ao banco. O valor vai para o **centro do tabuleiro** (Free Parking — Seção 13.4).
 
 **Diplomacia** (Tesouro)
@@ -591,10 +591,10 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 
 #### 🟦 Cartas Raras
 
-**Boicote** (Surpresa)
+**Boicote** (Acaso)
 > Escolha 1 propriedade de outro jogador. Por **2 voltas completas**, ela **não cobra aluguel** de nenhum jogador que parar nela.
 
-**Crise Imobiliária** (Surpresa, imediato)
+**Crise Imobiliária** (Acaso, imediato)
 > Todos os jogadores pagam **5% do patrimônio líquido** ao banco. O valor total arrecadado vai para o **centro do tabuleiro** (Free Parking).
 
 **Saia da Prisão** (Tesouro)
@@ -608,13 +608,13 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 
 #### 🟩 Cartas Comuns novas
 
-**Atalho** (Surpresa, imediato)
+**Atalho** (Acaso, imediato)
 > Mova-se até 3 casas para frente ou para trás (jogador escolhe). Resolve a casa onde parar normalmente. Se passar pelo GO indo para trás, NÃO recebe bônus.
 
-**Apagão** (Surpresa, imediato)
+**Apagão** (Acaso, imediato)
 > Por **1 volta completa**, todos os Hangares ficam inativos — aeroportos voltam ao aluguel base sem dobra do Hangar (ver Seção 13.6).
 
-**Greve nas Utilidades** (Surpresa, imediato)
+**Greve nas Utilidades** (Acaso, imediato)
 > Por **1 volta completa**, as 2 utilidades não cobram aluguel.
 
 **Investidor Anjo** (Tesouro, imediato)
@@ -628,19 +628,19 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 
 #### 🟩 Cartas Comuns clássicas
 
-**Vá direto para a Prisão** (Surpresa)
+**Vá direto para a Prisão** (Acaso)
 > Vá imediatamente para a casa Prisão (índice 12). **NÃO** recebe bônus do GO se passar por ele. Não move mais no turno.
 
-**Volta para o GO** (Surpresa)
+**Volta para o GO** (Acaso)
 > Mova-se diretamente para a casa GO. Recebe o bônus progressivo (Seção 13.5).
 
-**Conserto de Imóveis** (Surpresa)
+**Conserto de Imóveis** (Acaso)
 > Pague **$25 por casa** e **$100 por hotel** que possui. Valor vai para o **centro do tabuleiro** (Free Parking).
 
-**Avance 3 casas** (Surpresa)
+**Avance 3 casas** (Acaso)
 > Mova-se 3 casas para frente. Resolve a casa onde parar normalmente.
 
-**Volte 3 casas** (Surpresa)
+**Volte 3 casas** (Acaso)
 > Mova-se 3 casas para trás. Resolve a casa onde parar. Se passar pelo GO indo para trás, NÃO recebe bônus.
 
 **Erro do banco a seu favor** (Tesouro)
@@ -830,7 +830,7 @@ Jogadores podem construir mesmo sem grupo completo, com penalidade no aluguel:
 A casa Férias (índice 24) acumula prêmio em dinheiro ao longo da partida:
 
 - Todo valor pago em **impostos** (Income Tax, Luxury Tax) vai para o centro.
-- Todo valor pago em **multas** de cartas Surpresa/Tesouro vai para o centro.
+- Todo valor pago em **multas** de cartas Acaso/Tesouro vai para o centro.
 - A multa da **Prisão** ($50) vai para o centro.
 - **Prêmio inicial** colocado no centro ao início: **$500**.
 - O jogador que parar em Férias recebe **todo** o dinheiro acumulado.
@@ -992,7 +992,7 @@ Jogadores podem conceder empréstimos entre si durante a partida, criando dinâm
 | Hotel | Construção máxima de casas: substitui 4 casas. Até 2 hotéis por propriedade |
 | Skyscraper | Construção acima do 2º hotel, requer grupo completo (Seção 13.7) |
 | Leilão | Disputa de lances por uma propriedade ou casa |
-| Acaso (antes Surpresa) | Deck de cartas de acaso (Chance no Monopoly clássico) — efeitos ofensivos/caóticos. Termo canônico definido em [D-018](DECISIONS.md#d-018--termo-canônico-acaso-antes-surpresa); §10 ainda usa "Surpresa" até a spec de Cartas |
+| Acaso | Deck de cartas de acaso (Chance no Monopoly clássico) — efeitos ofensivos/caóticos. Termo canônico — [D-018](DECISIONS.md#d-018--termo-canônico-acaso-antes-surpresa) |
 | Tesouro | Deck de cartas de baú comunitário (Community Chest) — efeitos defensivos/benignos |
 | Carta Lendária | Carta de alto impacto (cor laranja), geralmente vai para a mão |
 | Carta Rara | Carta de impacto médio (cor azul), pode ir para a mão ou ter efeito imediato grande |
