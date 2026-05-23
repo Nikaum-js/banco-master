@@ -23,7 +23,7 @@ Mecânicas que ajudam quem está em desvantagem (GO Progressivo, Free Parking, T
 
 ### V. Sem dependência obrigatória de cooperação
 
-Jogador sem grupos completos ainda precisa ter caminho de progresso. Construção em grupo parcial (70% aluguel) e Propriedade Coringa existem exatamente para isto. Decisões futuras não podem reintroduzir gates absolutos de cooperação (ex.: "só constrói com grupo completo"). Cooperação é alavanca de eficiência, nunca pré-requisito de jogar.
+Jogador sem grupos completos ainda precisa ter caminho de progresso. A construção em grupo parcial (70% aluguel) existe exatamente para isto. Decisões futuras não podem reintroduzir gates absolutos de cooperação (ex.: "só constrói com grupo completo"). Cooperação é alavanca de eficiência, nunca pré-requisito de jogar.
 
 ### VI. Privacidade estratégica de cartas
 
