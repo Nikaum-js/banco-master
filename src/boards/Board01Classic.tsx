@@ -7,12 +7,12 @@ import {
   sideOf,
   PlayersPanel,
   ActionsPanel,
-  PlayerTokens,
   CenterArena,
   PropertyPopover,
   AirportPopover,
   UtilityPopover,
 } from './shared'
+import { LiveTokens } from '@/game/ui/LiveTokens'
 
 // ---------------------------------------------------------------------
 // Posição em grid 11×11 a partir do índice clockwise (pos 0 = canto SE)
@@ -149,8 +149,8 @@ export default function Board01Classic() {
             )
           })}
 
-          {/* Peças mockadas dos jogadores */}
-          <PlayerTokens gridArea={gridArea} />
+          {/* Peças vivas dos jogadores (posições vêm do store) */}
+          <LiveTokens gridArea={gridArea} />
         </div>
       </div>
 
