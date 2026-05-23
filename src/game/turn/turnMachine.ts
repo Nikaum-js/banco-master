@@ -32,7 +32,8 @@ function countsAsDouble(roll: Roll): boolean {
 }
 
 // Avança `steps` casas (horário); credita GO ao cruzar/parar no índice 0 (FR-008).
-function advance(player: Player, steps: number, ports: TurnPorts): void {
+// Exportado para reuso por cartas de movimento (006).
+export function advance(player: Player, steps: number, ports: TurnPorts): void {
   if (steps <= 0) return
   const passedGo = player.pos + steps >= BOARD_SIZE
   player.pos = (player.pos + steps) % BOARD_SIZE
