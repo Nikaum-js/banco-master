@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { validateTrade, tradableProps, proposeTrade, acceptTrade, rejectTrade } from '@/game/economy/trade'
+import { hasImmunity } from '@/game/economy/imunidade'
 import type { Trade } from '@/game/economy/types'
 import { createSeedState } from '@/game/store'
 import type { GameState } from '@/game/turn/types'
@@ -141,5 +142,56 @@ describe('imunidades na troca (US3)', () => {
     expect(validateTrade(g, baseTrade({ fromImmunities: [{ pos: 1, laps: 2 }] }))).toBe(false)
     // pos7 é de p2, não de p1
     expect(validateTrade(g, baseTrade({ fromImmunities: [{ pos: 7, laps: 2 }] }))).toBe(false)
+  })
+})
+
+// 028 (§8.4) — transferência de imunidade EXISTENTE (re-atribui beneficiário)
+describe('transferência de imunidade existente (028)', () => {
+  // p1 já é beneficiário de uma imunidade ativa em pos 5 (concedida por p3).
+  function setupImm(over: Partial<{ laps: number | null; granter: string }> = {}): GameState {
+    const g = setup()
+    const laps = 'laps' in over ? over.laps! : 2 // distingue null (permanente) de ausente
+    g.immunities.push({ beneficiaryId: 'p1', pos: 5, lapsRemaining: laps, granterId: over.granter ?? 'p3' })
+    return g
+  }
+
+  it('SC-001: validateTrade aceita quando `from` é beneficiário da pos transferida', () => {
+    expect(validateTrade(setupImm(), baseTrade({ fromImmunityTransfers: [5] }))).toBe(true)
+  })
+
+  it('SC-002: rejeita transferir imunidade de que `from` NÃO é beneficiário', () => {
+    expect(validateTrade(setup(), baseTrade({ fromImmunityTransfers: [5] }))).toBe(false) // ninguém é beneficiário
+    expect(validateTrade(setupImm(), baseTrade({ fromImmunityTransfers: [4] }))).toBe(false) // beneficiário em 5, não 4
+  })
+
+  it('SC-001: executeTrade re-atribui o beneficiário (recebedor passa a ter, ofertante deixa)', () => {
+    const r = acceptTrade(proposeTrade(setupImm(), baseTrade({ fromImmunityTransfers: [5] })))
+    expect(hasImmunity(r, 'p2', 5)).toBe(true)
+    expect(hasImmunity(r, 'p1', 5)).toBe(false)
+    const im = r.immunities.find((i) => i.pos === 5)!
+    expect(im.lapsRemaining).toBe(2) // voltas preservadas
+    expect(im.granterId).toBe('p3') // granter original preservado (§9.4)
+  })
+
+  it('SC-002: imunidade permanente (lapsRemaining null) transferida → recebedor permanente', () => {
+    const r = acceptTrade(proposeTrade(setupImm({ laps: null }), baseTrade({ fromImmunityTransfers: [5] })))
+    expect(hasImmunity(r, 'p2', 5)).toBe(true)
+    expect(r.immunities.find((i) => i.pos === 5)!.lapsRemaining).toBeNull()
+  })
+
+  it('SC-005: transferir existente + conceder nova na mesma troca → ambos aplicados', () => {
+    const g = setupImm()
+    g.titles[9].ownerId = 'p1' // p1 mantém pos9 → pode conceder nova imunidade sobre ela
+    const r = acceptTrade(proposeTrade(g, baseTrade({ fromImmunityTransfers: [5], fromImmunities: [{ pos: 9, laps: 3 }] })))
+    expect(hasImmunity(r, 'p2', 5)).toBe(true) // transferida
+    expect(r.immunities.some((i) => i.beneficiaryId === 'p2' && i.pos === 9 && i.lapsRemaining === 3)).toBe(true) // concedida nova
+  })
+
+  it('transferência no lado `to` re-atribui to→from', () => {
+    const g = setup()
+    g.immunities.push({ beneficiaryId: 'p2', pos: 3, lapsRemaining: 1, granterId: 'p1' })
+    const r = acceptTrade(proposeTrade(g, baseTrade({ toImmunityTransfers: [3] })))
+    expect(hasImmunity(r, 'p1', 3)).toBe(true)
+    expect(hasImmunity(r, 'p2', 3)).toBe(false)
   })
 })
