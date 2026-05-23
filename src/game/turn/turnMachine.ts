@@ -26,6 +26,14 @@ function clone(state: GameState): GameState {
   return structuredClone(state)
 }
 
+// Dispensa a notificação informativa ativa (030, §12.2). Puro; no-op se não há.
+export function dismissNotice(state: GameState): GameState {
+  if (!state.notice) return state
+  const s = clone(state)
+  s.notice = null
+  return s
+}
+
 export function activePlayer(state: GameState): Player {
   return state.players[state.turnOrder[state.activeSeat]]
 }

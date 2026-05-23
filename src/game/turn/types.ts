@@ -53,6 +53,12 @@ export interface Turn {
 
 export type GamePhase = 'lobby' | 'playing' | 'ended'
 
+// Notificação informativa (030, §12.2) — evento autônomo (não resolução): não bloqueia
+// o turno; a UI exibe e dispensa. Serializável (princípio VII).
+export type Notice =
+  | { kind: 'free-parking'; playerId: string; amount: number } // coletou o pote
+  | { kind: 'hostile-takeover'; victimId: string; attackerId: string; pos: number } // perdeu propriedade (Aquisição Hostil)
+
 export interface GameState {
   players: Player[]
   turnOrder: number[] // índices em players (insumo do Lobby)
@@ -73,4 +79,5 @@ export interface GameState {
   pendingTrade: Trade | null // proposta de troca pendente (024); uma por vez; null = nenhuma
   houseAuction: HouseAuction | null // leilão de casas em escassez (026); evento autônomo, fora do turno
   tradeHistory: Trade[] // trocas aceitas (027); mais recentes ao fim, bounded ~12
+  notice: Notice | null // notificação informativa ativa (030, §12.2); null = nenhuma
 }
