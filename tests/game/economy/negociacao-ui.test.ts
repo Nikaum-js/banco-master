@@ -104,6 +104,25 @@ describe('proposeTrade / acceptTrade / rejectTrade (US1+US2)', () => {
     expect(acceptTrade(g)).toBe(g)
     expect(rejectTrade(g)).toBe(g)
   })
+
+  // 027 — registro das aceitas (histórico + log)
+  it('SC-002: acceptTrade registra no histórico e loga; recusar não', () => {
+    const acc = acceptTrade(proposeTrade(setup(), baseTrade()))
+    expect(acc.tradeHistory).toHaveLength(1)
+    expect(acc.tradeHistory[0]).toMatchObject({ fromId: 'p1', toId: 'p2' })
+    expect(acc.log.some((e) => e.what.includes('p1 ↔ p2'))).toBe(true)
+
+    const rej = rejectTrade(proposeTrade(setup(), baseTrade()))
+    expect(rej.tradeHistory).toHaveLength(0)
+    expect(rej.log.some((e) => e.what.includes('↔'))).toBe(false)
+  })
+
+  it('SC-005: histórico é bounded em 12', () => {
+    let g = setup()
+    g.tradeHistory = Array.from({ length: 12 }, () => ({ fromId: 'p1', toId: 'p2', fromProps: [], fromCash: 0, toProps: [], toCash: 0 }))
+    g = acceptTrade(proposeTrade(g, baseTrade()))
+    expect(g.tradeHistory).toHaveLength(12) // descartou a mais antiga
+  })
 })
 
 describe('imunidades na troca (US3)', () => {
