@@ -7,6 +7,7 @@ import type { Trade, ImmunityGrant } from './types'
 import { ownerOf } from './titles'
 import { cityLevel } from './construction'
 import { transferKeepFee } from './mortgage'
+import { hasImmunity } from './imunidade'
 import { logEvent } from '../log'
 
 // `Trade`/`ImmunityGrant` agora vivem em ./types (024, p/ o GameState referenciar
@@ -52,6 +53,16 @@ function validImmunityGrants(
   return true
 }
 
+// Transferência de imunidade existente (028, §8.4): cada pos deve ser uma imunidade
+// ATIVA cujo beneficiário é o transferente. Reusa hasImmunity (014).
+function validImmunityTransfers(
+  state: GameState,
+  transfers: number[] | undefined,
+  beneficiaryId: string,
+): boolean {
+  return (transfers ?? []).every((pos) => hasImmunity(state, beneficiaryId, pos))
+}
+
 // Saldos finais após dinheiro + taxas de hipoteca (10%) das propriedades recebidas.
 function finalCash(state: GameState, trade: Trade): { from: number; to: number } | null {
   const from = state.players.find((p) => p.id === trade.fromId)
@@ -79,6 +90,8 @@ export function validateTrade(state: GameState, trade: Trade): boolean {
   if (from.cash < fromCash || to.cash < toCash) return false // não oferecer mais do que tem
   if (!validImmunityGrants(state, trade.fromImmunities, fromId, fromProps)) return false // §8.4
   if (!validImmunityGrants(state, trade.toImmunities, toId, toProps)) return false
+  if (!validImmunityTransfers(state, trade.fromImmunityTransfers, fromId)) return false // §8.4 transferência
+  if (!validImmunityTransfers(state, trade.toImmunityTransfers, toId)) return false
   const fin = finalCash(state, trade)
   if (!fin || fin.from < 0 || fin.to < 0) return false // taxas deixariam alguém negativo
   return true
@@ -107,6 +120,16 @@ export function executeTrade(state: GameState, trade: Trade): GameState {
   for (const p of toProps) s.titles[p].ownerId = fromId
   s.players.find((p) => p.id === fromId)!.cash = fin.from
   s.players.find((p) => p.id === toId)!.cash = fin.to // taxas removidas (banco)
+  // Transferência de imunidades existentes (028, §8.4): re-atribui só o beneficiário,
+  // preservando lapsRemaining + granterId. ANTES das concessões novas (não casar recém-criada).
+  for (const pos of trade.fromImmunityTransfers ?? []) {
+    const im = s.immunities.find((i) => i.beneficiaryId === fromId && i.pos === pos)
+    if (im) im.beneficiaryId = toId
+  }
+  for (const pos of trade.toImmunityTransfers ?? []) {
+    const im = s.immunities.find((i) => i.beneficiaryId === toId && i.pos === pos)
+    if (im) im.beneficiaryId = fromId
+  }
   for (const g of trade.fromImmunities ?? []) s.immunities.push({ beneficiaryId: toId, pos: g.pos, lapsRemaining: g.laps, granterId: fromId })
   for (const g of trade.toImmunities ?? []) s.immunities.push({ beneficiaryId: fromId, pos: g.pos, lapsRemaining: g.laps, granterId: toId })
   return s
