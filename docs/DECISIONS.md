@@ -14,7 +14,7 @@
 - [D-002](#d-002--at-8-jogadores-por-sala) — Até 8 jogadores humanos por sala
 - [D-003](#d-003--speed-die-aps-1-volta) — Speed Die ativado após 1ª volta
 - [D-004](#d-004--construo-com-grupo-parcial) — Construção com grupo parcial permitida (70% / 150%)
-- [D-005](#d-005--propriedade-coringa) — 2 propriedades coringa no tabuleiro
+- [D-005](#d-005--propriedade-coringa) — ~~2 propriedades coringa no tabuleiro~~ **revogada** (funcionalidade removida)
 - [D-006](#d-006--free-parking-com-prmio-acumulado) — Free Parking acumula prêmio (inicial $500)
 - [D-007](#d-007--go-progressivo) — GO Progressivo ($100 a $400 por ranking)
 - [D-008](#d-008--segundo-hotel-por-propriedade) — Segundo hotel permitido (estoque, não aluguel)
@@ -26,6 +26,7 @@
 - [D-014](#d-014--tesouro-precisa-impactar) — Princípio: Tesouro precisa ser impactante (não "casa de troquinho")
 - [D-015](#d-015--sem-timer-de-turno) — Sem timer de turno; jogador controla finalização
 - [D-016](#d-016--desconexo-pausa-partida) — Desconexão pausa a partida, sem perda de propriedades
+- [D-017](#d-017--tabuleiro-de-48-casas) — Tabuleiro expandido para 48 casas (inspirado no Mega Edition)
 
 ### Rejeitadas
 - [D-R01](#d-r01--sistema-de-draft-rejeitada) — Sistema de draft de propriedades no início
@@ -56,9 +57,10 @@
 **Por quê:** Resolve o "jogador travado" sem cooperação obrigatória. Incentivo de completar grupo via trade se mantém.
 
 ### D-005 — Propriedade Coringa
-**Data:** 2026-05 · **Status:** aceita
-**Decisão:** 2 propriedades coringa no tabuleiro, podem representar qualquer cor para construção. Custo +25%. Decisão de cor é irreversível na partida.
-**Por quê:** Válvula de escape adicional pra grupos fragmentados. Custo extra justifica a flexibilidade.
+**Data:** 2026-05 · **Status:** revogada
+**Revogada** (2026-05-23): funcionalidade removida do produto — mudança de escopo. Não há mais propriedades Coringa no tabuleiro; o caminho de progresso sem cooperação obrigatória fica a cargo da construção com grupo parcial ([D-004](#d-004--construo-com-grupo-parcial)).
+**Decisão original:** 2 propriedades coringa no tabuleiro, podem representar qualquer cor para construção. Custo +25%. Decisão de cor é irreversível na partida.
+**Por quê (original):** Válvula de escape adicional pra grupos fragmentados. Custo extra justifica a flexibilidade.
 
 ### D-006 — Free Parking com prêmio acumulado
 **Data:** 2026-05 · **Status:** aceita
@@ -115,6 +117,12 @@
 **Data:** 2026-05 · **Status:** aceita
 **Decisão:** Em desconexão mid-game, a partida pausa. Propriedades não voltam ao banco. Aguarda reconexão.
 **Por quê:** Resiliência de sessão é objetivo central. Perder partida por desconexão é frustrante e quebra a confiança no produto.
+
+### D-017 — Tabuleiro de 48 casas
+**Data:** 2026-05-23 · **Status:** aceita
+**Decisão:** Expandir o tabuleiro de **40 → 48 casas** (11 por lado + 4 cantos), inspirado no **Monopoly: The Mega Edition** (52 casas). Composição: 28 cidades (grupos 3/3/3/4/4/4/4/3, premium com 4), 4 aeroportos, 3 utilidades, 3 Surpresa, 3 Tesouro, 2 impostos, 1 espaço Bus Ticket, 4 cantos. Cantos nos índices 0/12/24/36. Ajustes de economia que acompanham: dinheiro inicial $1.500 → **$2.000**; estoque global de construção 32 casas/12 hotéis → **40 casas/16 hotéis**.
+**Por quê:** Partidas de 7-8 jogadores precisam de mais propriedades e profundidade — 40 casas saturam rápido (~4 compráveis/jogador). Grupos maiores (3-4) tornam o monopólio mais difícil de fechar, segurando o *runaway leader* e forçando mais negociação (mecanismo central do Mega para muitos jogadores). A escolha é coerente: as mecânicas que fazem um tabuleiro maior funcionar — Speed Die ([D-003](#d-003--speed-die-aps-1-volta)), grupo parcial ([D-004](#d-004--construo-com-grupo-parcial)), Bus Tickets ([D-012](#d-012--bus-tickets-como-item-separado)), Skyscraper, Hangares — **já estavam decididas/no SRS**. A expansão completa um design já meio-Mega em vez de divergir do Richup.
+**Como aplicar:** SRS §2 é a fonte de verdade da nova estrutura (já atualizado). Preços/aluguéis das 28 cidades partem do Richup como base e estendem-se numa escada mais granular ($60–$400). Speed Die permanece padrão. Valores de dinheiro/estoque são tunáveis após playtesting.
 
 ---
 
