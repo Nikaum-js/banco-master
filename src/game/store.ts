@@ -13,6 +13,7 @@ import {
   chooseBusMove,
   chooseTripleDest,
   startTurn,
+  activePlayer,
   type TurnCtx,
 } from './turn/turnMachine'
 import { economyResolve } from './economy/resolveRentable'
@@ -21,6 +22,9 @@ import { placeBid, passBid, closeAuction } from './economy/auction'
 import { buildHouse, sellBuilding } from './economy/construction'
 import { openHouseAuction, declareBuildInterest, placeHouseBid, closeHouseAuction } from './economy/houseAuction'
 import { mortgageProperty, unmortgageProperty } from './economy/mortgage'
+import { deckCardIds } from './cards/catalog'
+import { shuffle } from './cards/decks'
+import { cardResolve, playHandCard, resolveCardDiscard, resolveCardShortcut } from './cards/draw'
 
 // Portas default — placeholders até as specs irmãs (Balanceamento, Falência).
 export const defaultPorts: TurnPorts = {
@@ -49,6 +53,9 @@ export function createSeedState(playerIds: string[]): GameState {
     jail: { inJail: false, attempts: 0 },
     eliminated: false,
     cash: 2000, // SRS §3.1
+    hand: [],
+    busTickets: 0,
+    nextPurchaseDiscount: 0,
   }))
   const state: GameState = {
     players,
@@ -68,6 +75,7 @@ export function createSeedState(playerIds: string[]): GameState {
     titles: seedTitles(),
     resolution: null,
     bank: { houses: 40, hotels: 16 }, // D-017
+    decks: { acaso: deckCardIds('acaso'), tesouro: deckCardIds('tesouro') }, // 006 — embaralhar no store
   }
   startTurn(state)
   return state
@@ -93,6 +101,9 @@ interface GameStore {
   placeHouseBid(playerId: string, amount: number): void
   mortgageProperty(pos: number): void
   unmortgageProperty(pos: number): void
+  playHandCard(cardId: string): void
+  discardCard(cardId: string): void
+  chooseCardShortcut(dir: 'frente' | 'tras'): void
   setPaused(p: boolean): void
 }
 
@@ -122,8 +133,19 @@ export const useGameStore = create<GameStore>((set, get) => {
   }
 
   return {
-    game: createSeedState(['p1', 'p2']),
-    ctx: { rng: () => Math.random(), ports: defaultPorts, resolve: economyResolve, now: () => Date.now() },
+    game: (() => {
+      const g = createSeedState(['p1', 'p2'])
+      const rng = (): number => Math.random()
+      g.decks.acaso = shuffle(g.decks.acaso, rng) // embaralhar no início (FR-001)
+      g.decks.tesouro = shuffle(g.decks.tesouro, rng)
+      return g
+    })(),
+    ctx: {
+      rng: () => Math.random(),
+      ports: defaultPorts,
+      resolve: (r) => economyResolve(r) ?? cardResolve(r), // economy trata propriedade; cartas tratam acaso/tesouro
+      now: () => Date.now(),
+    },
     rollDice: () => set((st) => ({ game: rollDice(st.game, st.ctx) })),
     resolvePending: () => set((st) => ({ game: resolvePending(st.game, st.ctx) })),
     finalizeTurn: () => set((st) => ({ game: finalizeTurn(st.game, st.ctx) })),
@@ -153,6 +175,10 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
     mortgageProperty: (pos) => set((st) => ({ game: mortgageProperty(st.game, pos) })),
     unmortgageProperty: (pos) => set((st) => ({ game: unmortgageProperty(st.game, pos) })),
+    playHandCard: (cardId) =>
+      set((st) => ({ game: playHandCard(st.game, activePlayer(st.game).id, cardId, st.ctx.ports) })),
+    discardCard: (cardId) => set((st) => ({ game: resolveCardDiscard(st.game, cardId) })),
+    chooseCardShortcut: (dir) => set((st) => ({ game: resolveCardShortcut(st.game, dir, st.ctx.ports) })),
     setPaused: (p) => {
       set((st) => ({ game: { ...st.game, paused: p } }))
       rearmAuction()

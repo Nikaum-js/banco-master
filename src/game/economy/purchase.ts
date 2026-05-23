@@ -18,11 +18,13 @@ function priceOf(pos: number): number {
 export function buyProperty(state: GameState): GameState {
   if (state.resolution?.kind !== 'purchase') return state
   const pos = state.resolution.pos
-  const price = priceOf(pos)
+  const discount = activePlayer(state).nextPurchaseDiscount ?? 0 // Investidor Anjo (006)
+  const price = Math.round(priceOf(pos) * (1 - discount))
   if (activePlayer(state).cash < price) return state // sem caixa: não compra fiado (FR-004)
   const s = clone(state)
   const player = activePlayer(s)
   player.cash -= price
+  player.nextPurchaseDiscount = 0 // consome o desconto
   s.titles[pos].ownerId = player.id // propriedade livre → sem construção; preserva o shape do título
   completeResolution(s)
   return s
