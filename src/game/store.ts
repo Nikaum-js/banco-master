@@ -23,6 +23,7 @@ import { buildHouse, sellBuilding } from './economy/construction'
 import { openHouseAuction, declareBuildInterest, placeHouseBid, closeHouseAuction } from './economy/houseAuction'
 import { mortgageProperty, unmortgageProperty } from './economy/mortgage'
 import { goBonus, payToCenter, collectCenter } from './balancing/balancing'
+import { payDebt, declareBankruptcy } from './falencia/falencia'
 import { deckCardIds } from './cards/catalog'
 import { shuffle } from './cards/decks'
 import { cardResolve, playHandCard, resolveCardDiscard, resolveCardShortcut } from './cards/draw'
@@ -106,6 +107,8 @@ interface GameStore {
   playHandCard(cardId: string): void
   discardCard(cardId: string): void
   chooseCardShortcut(dir: 'frente' | 'tras'): void
+  payDebt(): void
+  declareBankruptcy(): void
   setPaused(p: boolean): void
 }
 
@@ -181,6 +184,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       set((st) => ({ game: playHandCard(st.game, activePlayer(st.game).id, cardId, st.ctx.ports) })),
     discardCard: (cardId) => set((st) => ({ game: resolveCardDiscard(st.game, cardId) })),
     chooseCardShortcut: (dir) => set((st) => ({ game: resolveCardShortcut(st.game, dir, st.ctx.ports) })),
+    payDebt: () => set((st) => ({ game: payDebt(st.game) })),
+    declareBankruptcy: () => set((st) => ({ game: declareBankruptcy(st.game, st.ctx) })),
     setPaused: (p) => {
       set((st) => ({ game: { ...st.game, paused: p } }))
       rearmAuction()
