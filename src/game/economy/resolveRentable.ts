@@ -5,7 +5,7 @@ import { ownerOf, isMortgaged, groupOwnedCount, groupSize, countOwned } from './
 import { rentCity, rentAirport, rentUtility, diceValue } from './rent'
 
 export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
-  const { square, state, playerId, roll, ports } = ctx
+  const { square, state, playerId, roll } = ctx
   if (square.kind !== 'property' && square.kind !== 'airport' && square.kind !== 'utility') return null
 
   const pos = square.pos
@@ -32,8 +32,8 @@ export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
 
   const payer = state.players.find((p) => p.id === playerId)
   if (payer && payer.cash < amount) {
-    ports.onInsolvency?.(playerId, amount, owner) // → Falência (FR-016)
-    return { done: true }
+    state.resolution = { kind: 'debt', amount, creditorId: owner } // dívida pendente (008) — pagar/falir
+    return { done: false, blocksFinalize: true }
   }
   if (payer) payer.cash -= amount
   const ownerP = state.players.find((p) => p.id === owner)

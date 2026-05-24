@@ -76,7 +76,7 @@ function land(turn: Turn, player: Player, roll: Roll | null): void {
   turn.mayRollAgain = roll ? countsAsDouble(roll) : false // sair da prisão (roll=null) não dá re-roll (FR-019)
 }
 
-function advanceSeat(s: GameState, ctx: TurnCtx): void {
+export function advanceSeat(s: GameState, ctx: TurnCtx): void {
   const n = s.turnOrder.length
   let next = s.activeSeat
   for (let i = 0; i < n; i++) {

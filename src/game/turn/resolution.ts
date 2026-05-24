@@ -47,11 +47,14 @@ export const resolutionRegistry: Record<Square['kind'], ResolutionHandler> = {
   'bus-ticket': stub,
   // Roteados pelo turno:
   tax: ({ square, ports, state, playerId }) => {
-    if (square.kind === 'tax') {
-      const p = state.players.find((x) => x.id === playerId)
-      if (p) p.cash -= square.amount // débito real (007 — antes era no-op)
-      ports.onPayToCenter(state, square.amount) // → pote
+    if (square.kind !== 'tax') return { done: true }
+    const p = state.players.find((x) => x.id === playerId)
+    if (p && p.cash < square.amount) {
+      state.resolution = { kind: 'debt', amount: square.amount, creditorId: null } // dívida ao banco (008)
+      return { done: false, blocksFinalize: true }
     }
+    if (p) p.cash -= square.amount // débito real (007)
+    ports.onPayToCenter(state, square.amount) // → pote
     return { done: true }
   },
   'corner-parking': ({ playerId, ports, state }) => {
