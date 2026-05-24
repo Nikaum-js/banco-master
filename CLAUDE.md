@@ -98,5 +98,5 @@ Detalhe em [`docs/DECISIONS.md`](./docs/DECISIONS.md).
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-[`specs/017-cartas-reacao/plan.md`](./specs/017-cartas-reacao/plan.md)
+[`specs/025-revelacao-carta/plan.md`](./specs/025-revelacao-carta/plan.md)
 <!-- SPECKIT END -->

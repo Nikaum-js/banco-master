@@ -18,10 +18,10 @@
 
 ---
 
-## M1 — Motor de jogo (lógica) 🟡 em andamento
+## M1 — Motor de jogo (lógica) ✅ (gaps menores)
 
 Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vitest). Cada item abaixo é uma feature SDD completa (`spec→plan→tasks→implement`).
-**Estado: 161 testes verdes (`bunx vitest run tests/game`). HUD mínimo funcional liga o motor à tela (demo local jogável); UI completa segue em M2.**
+**Estado: 214 testes verdes (`bunx vitest run tests/game`). Motor M1 completo (regras + tema + §9.4). M2 (UI) em andamento: dado central + auto-avanço, modais de resolução, Histórico ao vivo, token animado, gestão de propriedade (construção/hipoteca) e negociação (trade) pelo tabuleiro.**
 
 ### Feito
 
@@ -42,24 +42,31 @@ Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vite
 - ✅ **015 Cartas — efeitos temporários** (§10.6) — Apagão (Hangares off), Greve (utilidades $0), Boicote (propriedade sem aluguel), Imunidade Temporária (não-alvo); `GameState.tempEffects` + expiração no GO; respeitado por aluguel e Tax Man
 - ✅ **016 Cartas ofensivas com alvo** (§10.6) — Aquisição Hostil (força venda, ×1,5 aeroporto/utilidade), Despejo (demole casa), Auditoria Fiscal (10% do patrimônio ao pote); respeitam Imunidade Temporária
 - ✅ **017 Cartas de reação** (§10.6/§12.4) — Diplomacia (cancela ofensiva; atacante perde a carta) e Bunker Fiscal (cancela imposto); interrupção via `resolution`. **Sistema de cartas COMPLETO — 0 cartas no-op.**
+- ✅ **018 Tema "Cidades do Mundo"** — valores oficiais centralizados em `src/game/theme.ts` (fonte única, tunável); nomes de casa únicos; ficha em `docs/TEMA.md`.
+- ✅ **019 Limpeza na eliminação** (§9.4) — `declareBankruptcy` remove imunidades concedidas/recebidas e `tempEffects` originados pelo eliminado; `Immunity` ganha `granterId`. **M1 (motor) completo.**
 
-### Pendente (engine — specs futuras)
-- [ ] **Tema "Cidades do Mundo"** — preços, aluguéis e custos de construção **finais** (hoje escada provisória $60–$400 + multiplicadores provisórios)
+### Pendente (engine — gaps menores)
+- [ ] **Transferência de imunidade existente** (§8.4 "transferíveis").
+- [ ] **Rebalanceamento pós-playtest** (tuning dos knobs em `theme.ts`).
 
 ---
 
-## M2 — UI jogável (wiring motor ↔ tela) 🎯 PRÓXIMO
+## M2 — UI jogável (wiring motor ↔ tela) 🟡 em andamento
 
-O salto que falta para **jogar de verdade**: hoje o motor (M1) e o board (001) existem mas **não estão conectados** (nenhum componente consome o `useGameStore`).
+O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o store e dirige o turno (rolar/comprar/leilão/dívida/cartas/reação/Bus Ticket/empréstimo). Fatias por feature SDD:
 
-- [ ] Consumir o store (`useGameStore`) na UI; render reativo do estado da partida
-- [ ] Controles do turno: **Rolar Dados**, **Finalizar Turno**, decisão de prisão, escolhas do Speed Die (Ônibus/Triple)
-- [ ] Movimento do **token** na tela (animação) a partir de `player.pos`
-- [ ] Modais funcionais: compra/recusa, leilão, carta sacada, descarte (4ª carta), construir/vender, hipoteca
-- [ ] Painéis: **caixa**, **mão** (própria, privada) + contador das mãos dos outros, estoque do banco, pote do centro
-- [ ] HUD do mockup vira **funcional** (jogadores, dados, log de eventos)
+- ✅ **020** — `PlayersPanel` + seção "Turno" do `ActionsPanel` consomem o store (`playersView`); render reativo de caixa/vez/mão/Bus Tickets/pote/Próx. GO
+- ✅ **021** — **Log de eventos** real: `GameState.log` (`LogEntry {who,what}`, bound 50) + `logEvent`; emissões no núcleo (rolar/GO/compra/aluguel/imposto/dívida/falência/saque — só o deck); painel **Histórico** consome `[...game.log].reverse()`
+- ✅ **022** — **Modais centrais** dirigidos por resolução: `activeModal(game) → ModalView` (puro, testado) + `ModalLayer` (overlay central, reusa o visual dos popovers); compra/recusa, leilão (propriedade+casas), descarte (mão cheia, privacidade VI), Atalho e escolhas do Speed Die (ônibus/triple). _Acabamento visual a confirmar no `bun run dev`._
+- ✅ **022.1** (glue de jogabilidade, fora do SDD) — `DiceArena` central ligado ao motor + `GameDriver` (auto-resolve/finaliza) + HUD enxuto (só decisões) + `DebugLogger` (console) + `LiveTokens` andando casa a casa
+- ✅ **023** — **Construção/hipoteca pelo tabuleiro**: predicados puros no motor (`canBuildHouse`/`canSellBuilding`/`canBuildHangar`/`canSellHangar`/`canMortgage`/`canUnmortgage`, comandos delegam) + `deedView(game,pos)` (puro, testado) + ações nos popovers (`DeedActions`) + `BuildingMark`/`MortgageMark` lendo estado real. _Acabamento visual a confirmar no `bun run dev`._
+- ✅ **024** — **Negociação (trade) na UI**: `validateTrade` extraído (executeTrade delega) + `tradableProps` + `GameState.pendingTrade` + reducers `proposeTrade`/`acceptTrade`/`rejectTrade` (testados) + `TradeLayer` (compositor 2 colunas + modal recebido, com imunidades §8.4) + botão "Negociar". _Acabamento visual a confirmar no `bun run dev`._
+- ✅ **Polimento de fluidez** (glue, fora do SDD): **cor real do dono** na célula comprada (`ClassicSquare` lê `game.titles`); **token = `PlayerFace`** (rosto) de volta no `LiveTokens`; HUD de prisão explicita a 3ª tentativa; **feedback de caixa** (delta flutuante no `PlayerRow`); painel **"Efeitos ativos" real** (`tempEffects`) + **`EffectMark`** pulsante nas casas afetadas (apagão/greve/boicote/imunidade-temp); dado já anima (3D no `DiceArena`)
+- ✅ **025** — **Revelação de carta sacada**: `card-reveal` (ResolutionSlice) + `cardRevealResolve` (peek) + `confirmCardReveal` (saca via `cardResolve` intacto); modal central (nome/deck/raridade/descrição + "Continuar"). _Acabamento visual a confirmar no `bun run dev`._
+- [ ] Painel **Trades** ao vivo (Histórico já é real; resto do log — construção/hipoteca/trade/loan/reação — é adição futura one-liner)
+- [ ] Gatilho do leilão de casas por escassez (motor já tem `openHouseAuction`)
 
-**Resultado:** `npm run dev` = uma partida **local** jogável de ponta a ponta (um cliente; multiplayer fica para M3).
+**Resultado:** `bun run dev` = uma partida **local** jogável de ponta a ponta (um cliente; multiplayer fica para M3).
 
 ---
 
