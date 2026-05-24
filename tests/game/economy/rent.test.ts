@@ -70,19 +70,13 @@ describe('Aluguel — resolução (US2)', () => {
     expect(g.resolution).toEqual({ kind: 'purchase', pos: 1 })
   })
 
-  it('FR-016: caixa insuficiente sinaliza insolvência e não fica negativo', () => {
+  it('FR-016: caixa insuficiente abre dívida pendente (não fica negativo)', () => {
     const g = createSeedState(['p1', 'p2'])
     g.titles[1].ownerId = 'p2'
     g.players[0].cash = 1 // < aluguel base 2
-    let signalled: [string, number, string | null] | null = null
-    economyResolve({
-      playerId: 'p1',
-      square: BOARD[1],
-      roll: null,
-      ports: { ...ports, onInsolvency: (p, a, c) => { signalled = [p, a, c] } },
-      state: g,
-    })
-    expect(signalled).toEqual(['p1', 2, 'p2'])
+    const out = economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports, state: g })
+    expect(out).toEqual({ done: false, blocksFinalize: true })
+    expect(g.resolution).toEqual({ kind: 'debt', amount: 2, creditorId: 'p2' }) // dívida (008)
     expect(g.players[0].cash).toBe(1) // não debitou
   })
 })
