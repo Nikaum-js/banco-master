@@ -22,15 +22,16 @@ import { placeBid, passBid, closeAuction } from './economy/auction'
 import { buildHouse, sellBuilding } from './economy/construction'
 import { openHouseAuction, declareBuildInterest, placeHouseBid, closeHouseAuction } from './economy/houseAuction'
 import { mortgageProperty, unmortgageProperty } from './economy/mortgage'
+import { goBonus, payToCenter, collectCenter } from './balancing/balancing'
 import { deckCardIds } from './cards/catalog'
 import { shuffle } from './cards/decks'
 import { cardResolve, playHandCard, resolveCardDiscard, resolveCardShortcut } from './cards/draw'
 
 // Portas default — placeholders até as specs irmãs (Balanceamento, Falência).
 export const defaultPorts: TurnPorts = {
-  onPassGo: () => 200,
-  onPayToCenter: () => {},
-  onCollectCenter: () => 0,
+  onPassGo: (state, id) => goBonus(state, id), // GO Progressivo (007)
+  onPayToCenter: (state, amount) => payToCenter(state, amount), // pote (007)
+  onCollectCenter: (state, id) => collectCenter(state, id), // Free Parking (007)
   isEliminated: () => false,
   onInsolvency: () => {},
 }
@@ -76,6 +77,7 @@ export function createSeedState(playerIds: string[]): GameState {
     resolution: null,
     bank: { houses: 40, hotels: 16 }, // D-017
     decks: { acaso: deckCardIds('acaso'), tesouro: deckCardIds('tesouro') }, // 006 — embaralhar no store
+    centerPot: 500, // 007 — Free Parking
   }
   startTurn(state)
   return state
