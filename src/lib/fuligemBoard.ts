@@ -153,10 +153,10 @@ export const FULIGEM_BOARD: readonly Square[] = [
   { pos: 23, kind: 'acaso', name: 'Acaso' },
   { pos: 24, kind: 'property', group: 'red', name: 'Marmelo', capital: 'Guilhermina', price: 380, rent: 16, icon: 'gear' },
   { pos: 25, kind: 'airport', name: 'Estação Cascata', short: 'Cascata', iata: 'CSC', price: 200, rent: 25 },
-  { pos: 26, kind: 'property', group: 'yellow', name: 'Piraí', capital: 'Alto do Desvio', price: 410, rent: 17, icon: 'switch' },
-  { pos: 27, kind: 'property', group: 'yellow', name: 'Engenho', capital: 'Alto do Desvio', price: 460, rent: 17, icon: 'switch' },
+  { pos: 26, kind: 'property', group: 'yellow', name: 'Piraí', capital: 'Alto do Desvio', price: 410, rent: 17, icon: 'mountain' },
+  { pos: 27, kind: 'property', group: 'yellow', name: 'Engenho', capital: 'Alto do Desvio', price: 460, rent: 17, icon: 'mountain' },
   { pos: 28, kind: 'mine', name: 'Mina de Estanho', short: 'Estanho', metal: 'estanho', price: 220 },
-  { pos: 29, kind: 'property', group: 'yellow', name: 'Quinze', capital: 'Alto do Desvio', price: 520, rent: 17, icon: 'switch' },
+  { pos: 29, kind: 'property', group: 'yellow', name: 'Quinze', capital: 'Alto do Desvio', price: 520, rent: 17, icon: 'mountain' },
 
   // ---------- canto superior direito ----------
   { pos: 30, kind: 'corner-gotojail', name: 'Vá para Prisão', short: 'Vá pra Prisão' },

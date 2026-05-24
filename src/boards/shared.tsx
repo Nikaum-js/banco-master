@@ -111,12 +111,16 @@ function FlagAvatar({ square, side }: { square: PropertySquare; side: Side }) {
         // cor do grupo, o bairro se lê de relance, que é o papel que a faixa colorida
         // cumpre no Monopoly. O disco também ganha o halo da cor, para o contraste não
         // depender só do traço.
+        // SEM `artRotation` AQUI, e a ausência é a regra: `artRotation` existe para a
+        // BANDEIRA, cuja base deve apontar para o nome no lado externo. Ícone de OBJETO tem
+        // cima absoluto — montanha, forno, bigorna e carretel não giram porque a casa está no
+        // topo ou na lateral do tabuleiro. Girava: 180° em cima e ±90° nas laterais, o que
+        // punha a montanha de cabeça para baixo e o forno deitado. Ficou invisível por meses
+        // porque os primeiros ícones do conjunto (engrenagem, losango, chaminé) são simétricos
+        // ou quase — a montanha foi o primeiro com cima e baixo inequívocos.
         <span
           className="board-flag-avatar__art w-full h-full grid place-items-center"
-          style={{
-            transform: `rotate(${artRotation}deg)`,
-            color: GROUP_COLOR[square.group] ?? 'var(--color-brass)',
-          }}
+          style={{ color: GROUP_COLOR[square.group] ?? 'var(--color-brass)' }}
         >
           <PropertyIconArt icon={square.icon ?? 'building'} size={19} />
         </span>

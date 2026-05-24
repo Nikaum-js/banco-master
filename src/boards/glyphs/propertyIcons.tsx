@@ -19,10 +19,15 @@ const ICON_PATHS: Record<PropertyIconId, React.ReactNode> = {
       <path d="M6 10V5h2.6v6.6" />
     </>
   ),
+  // BIGORNA — a assimetria É o ícone. A versão anterior era simétrica (bloco largo afunilando
+  // num pé), e por isso lia como CÁLICE ou troféu: sem o CHIFRE de um lado, nada distingue uma
+  // bigorna de uma taça. Agora são três marcas — bloco com chifre à esquerda, cintura estreita,
+  // pé alargado — e a silhueta fecha o reconhecimento sozinha.
   anvil: (
     <>
-      <path d="M4 8h13c-1 2.4-3 3.6-5.6 3.9V15h2v3H8v-3h2v-3C6.8 12 4.8 10.6 4 8Z" />
-      <path d="M6 20h10" />
+      <path d="M19.6 7.4H6.6L2 10l4.6 2.6h13z" />
+      <path d="M11.4 12.6h4.2v2.2l2.9 3.4H8.5l2.9-3.4z" />
+      <path d="M6.4 19.8h11.2" />
     </>
   ),
   crane: (
@@ -41,11 +46,16 @@ const ICON_PATHS: Record<PropertyIconId, React.ReactNode> = {
       <path d="M10.3 19v-4.6h3.4V19" />
     </>
   ),
+  // ENGRENAGEM — DENTES, não raios. A versão anterior tinha um aro fino com oito linhas
+  // radiando para fora, e isso é a receita de um SOL: raio aponta para longe do centro,
+  // dente é um bloco curto colado no aro. Trocar linha por tacão resolve sem mudar o
+  // referente. Cubo vazado no meio, que nenhum sol tem.
   gear: (
     <>
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 5.6V3.4M12 20.6v-2.2M18.4 12h2.2M3.4 12h2.2M16.5 7.5 18 6M6 18l1.5-1.5M16.5 16.5 18 18M6 6l1.5 1.5" />
-      <circle cx="12" cy="12" r="6.4" opacity="0.55" />
+      <circle cx="12" cy="12" r="6.4" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M12 3.4v2.4M12 18.2v2.4M3.4 12h2.4M18.2 12h2.4" strokeWidth="2.8" />
+      <path d="m6.1 6.1 1.7 1.7m8.4 8.4 1.7 1.7m0-11.8-1.7 1.7M7.8 16.2l-1.7 1.7" strokeWidth="2.4" />
     </>
   ),
   clock: (
@@ -103,15 +113,17 @@ const ICON_PATHS: Record<PropertyIconId, React.ReactNode> = {
       <path d="M9.6 4.2c1-.8 1.8.5 2.8-.2M14.4 4.6c-.9-.7-1.7.4-2.6-.2" opacity="0.7" />
     </>
   ),
-  // TEAR — a armação com os fios da urdidura esticados e a lançadeira cruzando. É o
-  // instrumento da tecelagem; `factory` servia a qualquer fábrica do mapa.
+  // CARRETEL DE LINHA — a tecelagem da Vila Bonfim. Substitui o desenho de TEAR, que era a
+  // máquina certa e o ícone errado: a armação com os fios da urdidura lia como CERCA ou ábaco,
+  // porque a 20px uma grade de linhas paralelas é só uma grade. O carretel ganha por SILHUETA —
+  // os dois flanges e a cintura fazem um contorno que nenhum outro objeto do conjunto tem, e
+  // silhueta sobrevive ao tamanho que o detalhe interno não sobrevive.
   loom: (
     <>
-      <path d="M5 4.5v15M19 4.5v15" />
-      <path d="M4 6.5h16M4 17.5h16" />
-      <path d="M8.5 6.5v11M12 6.5v11M15.5 6.5v11" opacity="0.6" />
-      <path d="M6.5 12h11" />
-      <path d="M9.6 10.6h4.8l1.2 1.4-1.2 1.4H9.6L8.4 12Z" />
+      <path d="M6.4 4.2h11.2v3.2H6.4z" />
+      <path d="M6.4 16.6h11.2v3.2H6.4z" />
+      <path d="M9.6 7.4h4.8v9.2H9.6z" />
+      <path d="M9.6 10.6h4.8M9.6 13.6h4.8" opacity="0.55" />
     </>
   ),
   // DESVIO (chave/agulha) — o trilho que se BIFURCA. Três marcas só: a linha que passa,
@@ -125,20 +137,28 @@ const ICON_PATHS: Record<PropertyIconId, React.ReactNode> = {
       <path d="M4.5 20.4v-4M8 20.4v-4M11.5 20.4v-4" opacity="0.6" />
     </>
   ),
-  // USINA — o raio sobre a água: energia HIDRELÉTRICA, que é o que o bairro "Salto" é de
-  // fato (as casas dele são Represa e Riacho). Duas formas só, e o raio vai PREENCHIDO
-  // para sobreviver a 20px.
-  //
-  // Duas tentativas anteriores morreram aqui e vale registrar por quê: o galpão-com-turbina
-  // tinha marca demais e lia como "caixa com antenas"; a torre de transmissão, com as pernas
-  // convergindo no topo e as travessas horizontais, lia como CONE DE TRÂNSITO. Silhueta
-  // externa manda mais que detalhe interno — se o contorno geral coincide com outro objeto,
-  // nenhum detalhe salva. Roda-d'água foi descartada por colidir com a `gear` da Guilhermina.
+  // MONTANHA — o "ALTO" do Alto do Desvio. Duas marcas: a silhueta de picos gêmeos e a calota
+  // de neve. Substitui o `switch` (a agulha ferroviária) no bairro: a agulha era precisa como
+  // ofício, mas a 20px lia como rabisco, e o nome do bairro já anuncia altura. Ícone que não
+  // se reconhece não informa nada — precisão que não sobrevive ao tamanho é desperdício.
+  mountain: (
+    <>
+      <path d="M1.8 19.6 9.4 5.6l5.2 7.9 3.1-4.4 4.7 10.5Z" />
+      <path d="M6.6 13.6 9.4 9.4l2.8 4.2" />
+    </>
+  ),
+  // USINA / LUZ ELÉTRICA — a LÂMPADA incandescente, com rosca e raios. Terceira tentativa neste
+  // slot, e as duas anteriores ensinaram a mesma coisa: silhueta manda mais que referente. O
+  // galpão-com-turbina lia como "caixa com antenas"; a torre de transmissão, com pernas
+  // convergindo e travessas horizontais, lia como CONE DE TRÂNSITO; o raio sobre a água era
+  // abstrato demais a 19px. A lâmpada é o símbolo de eletricidade que ninguém precisa decifrar,
+  // e é da época certa (Edison, 1879, dentro da janela do mapa). `lamp` continua sendo o
+  // lampião a GÁS — a tecnologia que este bairro substituiu; são objetos diferentes de propósito.
   powerhouse: (
     <>
-      <path d="M13.2 3.4 8.5 11.2h3.3l-1 4.4 5.2-8.4h-3.3Z" fill="currentColor" stroke="none" />
-      <path d="M2.8 17.6q3-1.6 6 0t6 0 6 0" />
-      <path d="M2.8 20.6q3-1.6 6 0t6 0 6 0" />
+      <path d="M8.4 10.4a3.6 3.6 0 1 1 7.2 0c0 1.9-1.4 2.7-1.6 4.2h-4c-.2-1.5-1.6-2.3-1.6-4.2Z" />
+      <path d="M10.1 16.6h3.8M10.7 18.8h2.6" />
+      <path d="M12 3.4V2M5.9 6.1 4.9 5.1M18.1 6.1l1-1" opacity="0.7" />
     </>
   ),
 }

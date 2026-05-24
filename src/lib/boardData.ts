@@ -66,7 +66,7 @@ export interface SquareBase {
 export type PropertyIconId =
   | 'chimney' | 'factory' | 'anvil' | 'crane' | 'house'
   | 'gear' | 'clock' | 'train' | 'lamp' | 'building' | 'bank' | 'mansion'
-  | 'kiln' | 'loom' | 'switch' | 'powerhouse'
+  | 'kiln' | 'loom' | 'switch' | 'powerhouse' | 'mountain'
 
 export interface PropertySquare extends SquareBase {
   kind: 'property'
