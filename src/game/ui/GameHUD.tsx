@@ -34,6 +34,8 @@ export function GameHUD() {
   const discardCard = useGameStore((s) => s.discardCard)
   const placeBid = useGameStore((s) => s.placeBid)
   const passBid = useGameStore((s) => s.passBid)
+  const payDebt = useGameStore((s) => s.payDebt)
+  const declareBankruptcy = useGameStore((s) => s.declareBankruptcy)
 
   const active = game.players[game.turnOrder[game.activeSeat]]
   const turn = game.turn
@@ -42,7 +44,18 @@ export function GameHUD() {
   const here = BOARD[active.pos]
 
   let actions: ReactNode = null
-  if (res?.kind === 'purchase') {
+  if (game.phase === 'ended') {
+    const winner = game.players.find((p) => !p.eliminated)
+    actions = <span className="text-gold font-bold">🏆 Fim de jogo — vencedor: {winner?.id ?? '—'}</span>
+  } else if (res?.kind === 'debt') {
+    actions = (
+      <>
+        <span>💸 Dívida ${res.amount} {res.creditorId ? `a ${res.creditorId}` : 'ao banco'} — venda/hipoteque e pague, ou faleça</span>
+        <Btn onClick={payDebt}>Pagar</Btn>
+        <Btn onClick={declareBankruptcy}>Falir</Btn>
+      </>
+    )
+  } else if (res?.kind === 'purchase') {
     actions = (
       <>
         <span>
