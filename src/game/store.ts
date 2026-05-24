@@ -14,6 +14,7 @@ import {
   chooseBusMove,
   chooseTripleDest,
   useBusTicket,
+  chooseBusRide,
   startTurn,
   activePlayer,
   dismissNotice,
@@ -33,7 +34,7 @@ import { executeTrade, proposeTrade, acceptTrade, rejectTrade, type Trade } from
 import { tickImmunities } from './economy/imunidade'
 import { tickTempEffects } from './economy/tempEffects'
 import { deckCardIds } from './cards/catalog'
-import { shuffle } from './cards/decks'
+import { weightedShuffle } from './cards/decks'
 import { cardRevealResolve, confirmCardReveal, playHandCard, resolveCardDiscard, resolveCardShortcut } from './cards/draw'
 import { taxBunkerResolve, respondReaction } from './cards/reacao'
 
@@ -117,6 +118,7 @@ interface GameStore {
   chooseBusMove(opt: 'die0' | 'die1' | 'sum'): void
   chooseTripleDest(pos: number): void
   useBusTicket(dest: number): void
+  chooseBusRide(dest: number): void
   buyProperty(): void
   declineProperty(): void
   placeBid(playerId: string, amount: number): void
@@ -175,8 +177,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     game: (() => {
       const g = createSeedState(['p1', 'p2'])
       const rng = (): number => Math.random()
-      g.decks.acaso = shuffle(g.decks.acaso, rng) // embaralhar no início (FR-001)
-      g.decks.tesouro = shuffle(g.decks.tesouro, rng)
+      g.decks.acaso = weightedShuffle(g.decks.acaso, rng) // embaralha (FR-001): eventos comuns, cartas raras
+      g.decks.tesouro = weightedShuffle(g.decks.tesouro, rng)
       return g
     })(),
     ctx: {
@@ -195,6 +197,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     chooseBusMove: (opt) => set((st) => ({ game: chooseBusMove(st.game, opt, st.ctx) })),
     chooseTripleDest: (pos) => set((st) => ({ game: chooseTripleDest(st.game, pos, st.ctx) })),
     useBusTicket: (dest) => set((st) => ({ game: useBusTicket(st.game, dest, st.ctx) })),
+    chooseBusRide: (dest) => set((st) => ({ game: chooseBusRide(st.game, dest, st.ctx) })),
     buyProperty: () => set((st) => ({ game: buyProperty(st.game) })),
     declineProperty: () => {
       set((st) => ({ game: declineProperty(st.game, st.ctx.now!()) }))
@@ -217,7 +220,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     playHandCard: (cardId, target, targetPlayer) =>
       set((st) => ({ game: playHandCard(st.game, activePlayer(st.game).id, cardId, st.ctx.ports, target, targetPlayer) })),
     discardCard: (cardId) => set((st) => ({ game: resolveCardDiscard(st.game, cardId) })),
-    chooseCardShortcut: (dir) => set((st) => ({ game: resolveCardShortcut(st.game, dir, st.ctx.ports) })),
+    chooseCardShortcut: (dir) => set((st) => ({ game: resolveCardShortcut(st.game, dir, st.ctx) })),
     confirmCardReveal: () => set((st) => ({ game: confirmCardReveal(st.game, st.ctx.ports) })), // 025
     payDebt: () => set((st) => ({ game: payDebt(st.game) })),
     declareBankruptcy: () => set((st) => ({ game: declareBankruptcy(st.game, st.ctx) })),
