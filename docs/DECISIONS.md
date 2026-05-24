@@ -28,6 +28,8 @@
 - [D-016](#d-016--desconexo-pausa-partida) — Desconexão pausa a partida, sem perda de propriedades
 - [D-017](#d-017--tabuleiro-de-48-casas) — Tabuleiro expandido para 48 casas (inspirado no Mega Edition)
 - [D-018](#d-018--termo-canônico-acaso-antes-surpresa) — Termo canônico "Acaso" (antes "Surpresa")
+- [D-019](#d-019--autenticação-anônima-por-link-sem-contas-no-v1) — Autenticação anônima por link (sem contas no v1)
+- [D-020](#d-020--modelo-de-autoridade--sincronização-host-autoritativo--realtime--snapshot) — Modelo de autoridade & sync: host-autoritativo + Realtime + snapshot
 
 ### Rejeitadas
 - [D-R01](#d-r01--sistema-de-draft-rejeitada) — Sistema de draft de propriedades no início
@@ -134,6 +136,18 @@
 - **Feito agora:** `spec.md` (002) FR-010; glossário SRS §17 (registro do termo canônico); constitution Princípio III (clarificação de termo, bump PATCH 1.0.0 → 1.0.1).
 - **Deferido para a spec de Sistema de Cartas:** find-replace de "Surpresa" → "Acaso" em SRS §2.1/§4.6/§10/§13.4 e em `docs/CARTAS.md` (a spec reescreve §10 de qualquer forma).
 - O **001** (spec/data-model/research) fica como histórico; não reabrir (aprovada).
+
+### D-019 — Autenticação anônima por link (sem contas no v1)
+**Data:** 2026-05-24 · **Status:** aceita
+**Decisão:** No v1 não há sistema de contas/login. A identidade do jogador é **anônima por link**: ao entrar numa sala (§11.1/§11.2), o cliente gera/guarda um **token de sessão** (no `localStorage`) e o jogador escolhe **nome + token visual** no lobby. O **link da sala é a credencial** — quem tem o link entra. Sem e-mail, sem senha, sem perfil persistente entre partidas.
+**Por quê:** Resolve o item em aberto do SRS §16 ("a definir se auth anônima ou por e-mail"). Entrada sem fricção espelha o Richup.io e é coerente com [D-001](#d-001--multiplayer-online-exclusivo) (social/competitivo, humanos) e [D-002](#d-002--at-8-jogadores-por-sala). Zero PII = menos superfície legal/segurança no v1. Contas/e-mail/perfis ficam candidatos a v2 (SRS §16).
+**Como aplicar:** o token de sessão (UUID no `localStorage`) identifica o jogador na sala e **viabiliza a reconexão** ([D-016](#d-016--desconexo-pausa-partida) / §11.4): reabrir o link com o mesmo token re-anexa ao assento. A associação assento↔token vive no estado da sala (servidor). O `GameState` não ganha PII — só ids de jogador (já serializáveis, princípio VII).
+
+### D-020 — Modelo de autoridade & sincronização: host-autoritativo + Realtime + snapshot
+**Data:** 2026-05-24 · **Status:** aceita (revisável)
+**Decisão:** No v1 a partida é **host-autoritativa**: o cliente **host** roda o reducer puro (o motor M1); os demais clientes **enviam comandos** por canal Supabase Realtime; o host **aplica** o comando e **difunde o snapshot** resultante do `GameState`; após cada comando aceito, o snapshot (JSON) é **persistido** no Postgres (linha da partida). Os critérios de validade já existentes (ex.: `validateTrade`, `canAcquire`, gates de resolução) validam os comandos — sem caminho de regra novo. O reducer permanece **puro/serializável** para poder migrar a **server-autoritativo** (Edge Function rodando o mesmo módulo) depois, sem reescrever regra.
+**Por quê:** o motor já é `(state) → state` puro e o `GameState` é JSON puro (M1, princípio VII) — host-autoritativo é a casca de **menor infra** que aproveita isso. Autoridade única **lineariza** os comandos (sem merge/conflito). Casa naturalmente com [D-016](#d-016--desconexo-pausa-partida)/§11.3: **host desconectado → partida pausa indefinidamente, sem transferência de host** (o host É a autoridade). A persistência por snapshot dá a resiliência/recarregamento (§11.4) sem log de eventos.
+**Como aplicar:** definir uma interface de **transporte de comandos** + **persistência de snapshot**; a store Zustand atual segue sendo o reducer no host; clientes não-host viram "magros" (enviam comando, renderizam o snapshot recebido). **Trade-offs:** (a) vantagem/latência do host — mitigável com UI otimista local validada pelos mesmos gates; (b) host como ponto único — aceito no v1 por simplicidade e por já ser o modelo de pausa do §11.3; reavaliar server-autoritativo se virar problema. É a base das fatias 1–2 do M3.
 
 ---
 
