@@ -36,3 +36,4 @@ export type ResolutionSlice =
   | { kind: 'house-auction'; auction: HouseAuction } // leilão de casas em escassez (004)
   | { kind: 'card-discard'; deckId: DeckId; drawnId: string } // mão cheia: escolher descarte (006)
   | { kind: 'card-shortcut'; deckId: DeckId; cardId: string } // Atalho: escolher ±3 (006)
+  | { kind: 'debt'; amount: number; creditorId: string | null } // dívida pendente: pagar/falir (008)
