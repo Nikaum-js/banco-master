@@ -16,6 +16,7 @@ import {
   useBusTicket,
   startTurn,
   activePlayer,
+  dismissNotice,
   type TurnCtx,
 } from './turn/turnMachine'
 import { economyResolve } from './economy/resolveRentable'
@@ -100,6 +101,7 @@ export function createSeedState(playerIds: string[]): GameState {
     pendingTrade: null, // 024 — proposta de troca pendente
     houseAuction: null, // 026 — leilão de casas (evento autônomo)
     tradeHistory: [], // 027 — histórico de trocas aceitas
+    notice: null, // 030 — notificação informativa (Free Parking / Aquisição Hostil)
   }
   startTurn(state)
   return state
@@ -141,6 +143,7 @@ interface GameStore {
   acceptTrade(): void
   rejectTrade(): void
   respondReaction(use: boolean): void
+  dismissNotice(): void
   setPaused(p: boolean): void
 }
 
@@ -226,6 +229,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     acceptTrade: () => set((st) => ({ game: acceptTrade(st.game) })),
     rejectTrade: () => set((st) => ({ game: rejectTrade(st.game) })),
     respondReaction: (use) => set((st) => ({ game: respondReaction(st.game, use, st.ctx.ports) })), // 017
+    dismissNotice: () => set((st) => ({ game: dismissNotice(st.game) })), // 030
     setPaused: (p) => {
       set((st) => ({ game: { ...st.game, paused: p } }))
       rearmAuction()
