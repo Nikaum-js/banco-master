@@ -107,6 +107,9 @@ function Side({
   immunities,
   onAddImmunity,
   onRemoveImmunity,
+  transferPool,
+  transfers,
+  onToggleTransfer,
 }: {
   title: string
   ownerCash: number
@@ -119,6 +122,9 @@ function Side({
   immunities: ImmunityGrant[]
   onAddImmunity: (g: ImmunityGrant) => void
   onRemoveImmunity: (pos: number) => void
+  transferPool: { pos: number; laps: number | null }[]
+  transfers: Set<number>
+  onToggleTransfer: (pos: number) => void
 }) {
   const [immPos, setImmPos] = useState<number | ''>('')
   const [immLaps, setImmLaps] = useState(2)
@@ -185,6 +191,30 @@ function Side({
           </div>
         )}
       </div>
+
+      {/* Transferir imunidade EXISTENTE de que este lado já é beneficiário (028, §8.4) */}
+      {transferPool.length > 0 && (
+        <div className="flex flex-col gap-1 border-t border-coffee-500/50 pt-2">
+          <p className="label text-cream-muted" style={{ fontSize: '9px' }}>Transferir imunidade (que possui)</p>
+          {transferPool.map((im) => {
+            const on = transfers.has(im.pos)
+            return (
+              <button
+                key={im.pos}
+                type="button"
+                onClick={() => onToggleTransfer(im.pos)}
+                className={cn(
+                  'flex items-center gap-2 w-full px-2 py-1 rounded-[var(--radius-sharp)] text-left text-xs transition-colors border',
+                  on ? 'bg-gold/20 border-gold text-cream' : 'bg-coffee-900 border-coffee-500 text-cream-muted hover:border-gold/50',
+                )}
+              >
+                <span className={cn('w-3 h-3 rounded-sm shrink-0 border', on ? 'bg-gold border-gold' : 'border-coffee-500')} />
+                <span className="flex-1 min-w-0 truncate">🛡️ {propName(im.pos)} · {lapsLabel(im.laps)}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -203,11 +233,14 @@ function Composer({ onClose }: { onClose: () => void }) {
   const [toCash, setToCash] = useState(0)
   const [fromImm, setFromImm] = useState<ImmunityGrant[]>([])
   const [toImm, setToImm] = useState<ImmunityGrant[]>([])
+  const [fromTransfers, setFromTransfers] = useState<Set<number>>(new Set())
+  const [toTransfers, setToTransfers] = useState<Set<number>>(new Set())
 
   // Trocar de destinatário reseta o que dependia dele.
   useEffect(() => {
     setRequested(new Set())
     setToImm([])
+    setToTransfers(new Set())
   }, [toId])
 
   const recipient = others.find((p) => p.id === toId)
@@ -216,6 +249,10 @@ function Composer({ onClose }: { onClose: () => void }) {
   // Imunidade só sobre propriedade MANTIDA (não nas oferecidas/pedidas).
   const myKept = myProps.filter((p) => !offered.has(p))
   const theirKept = theirProps.filter((p) => !requested.has(p))
+  // Imunidades existentes das quais cada lado é beneficiário (028) — transferíveis.
+  const immOf = (id: string) => game.immunities.filter((i) => i.beneficiaryId === id).map((i) => ({ pos: i.pos, laps: i.lapsRemaining }))
+  const myImmunities = immOf(me.id)
+  const theirImmunities = recipient ? immOf(recipient.id) : []
 
   const toggle = (set: Set<number>, setter: (s: Set<number>) => void, pos: number) => {
     const next = new Set(set)
@@ -232,8 +269,11 @@ function Composer({ onClose }: { onClose: () => void }) {
     toCash,
     fromImmunities: fromImm.length ? fromImm : undefined,
     toImmunities: toImm.length ? toImm : undefined,
+    fromImmunityTransfers: fromTransfers.size ? [...fromTransfers] : undefined,
+    toImmunityTransfers: toTransfers.size ? [...toTransfers] : undefined,
   }
-  const nonEmpty = offered.size || requested.size || fromCash > 0 || toCash > 0 || fromImm.length || toImm.length
+  const nonEmpty =
+    offered.size || requested.size || fromCash > 0 || toCash > 0 || fromImm.length || toImm.length || fromTransfers.size || toTransfers.size
   const canPropose = !!recipient && !!nonEmpty && validateTrade(game, trade)
 
   return (
@@ -261,6 +301,9 @@ function Composer({ onClose }: { onClose: () => void }) {
           immunities={fromImm}
           onAddImmunity={(g) => setFromImm((xs) => [...xs.filter((x) => x.pos !== g.pos), g])}
           onRemoveImmunity={(pos) => setFromImm((xs) => xs.filter((x) => x.pos !== pos))}
+          transferPool={myImmunities}
+          transfers={fromTransfers}
+          onToggleTransfer={(pos) => setFromTransfers((s) => { const n = new Set(s); n.has(pos) ? n.delete(pos) : n.add(pos); return n })}
         />
         <Side
           title={`${recipient?.id ?? '—'} dá`}
@@ -274,6 +317,9 @@ function Composer({ onClose }: { onClose: () => void }) {
           immunities={toImm}
           onAddImmunity={(g) => setToImm((xs) => [...xs.filter((x) => x.pos !== g.pos), g])}
           onRemoveImmunity={(pos) => setToImm((xs) => xs.filter((x) => x.pos !== pos))}
+          transferPool={theirImmunities}
+          transfers={toTransfers}
+          onToggleTransfer={(pos) => setToTransfers((s) => { const n = new Set(s); n.has(pos) ? n.delete(pos) : n.add(pos); return n })}
         />
       </div>
 
@@ -286,8 +332,8 @@ function Composer({ onClose }: { onClose: () => void }) {
 }
 
 // Resumo de um lado no modal recebido.
-function Terms({ label, props, cash, immunities }: { label: string; props: number[]; cash: number; immunities?: ImmunityGrant[] }) {
-  const empty = props.length === 0 && cash === 0 && !(immunities && immunities.length)
+function Terms({ label, props, cash, immunities, transfers }: { label: string; props: number[]; cash: number; immunities?: ImmunityGrant[]; transfers?: number[] }) {
+  const empty = props.length === 0 && cash === 0 && !(immunities && immunities.length) && !(transfers && transfers.length)
   return (
     <div className="flex-1 min-w-0 p-3">
       <p className="label text-gold mb-1.5" style={{ fontSize: '10px' }}>{label}</p>
@@ -298,6 +344,9 @@ function Terms({ label, props, cash, immunities }: { label: string; props: numbe
       {cash > 0 && <p className="text-gold-glow text-xs">💰 ${cash}</p>}
       {immunities?.map((g) => (
         <p key={g.pos} className="text-cream text-xs truncate">🛡️ {propName(g.pos)} · {lapsLabel(g.laps)}</p>
+      ))}
+      {transfers?.map((pos) => (
+        <p key={`t${pos}`} className="text-cream text-xs truncate">🛡️➡️ transfere {propName(pos)}</p>
       ))}
     </div>
   )
@@ -313,8 +362,8 @@ function Received({ trade }: { trade: Trade }) {
       <Header title="Proposta de negociação" subtitle={`${trade.fromId} propõe a ${trade.toId}`} />
       <div className="flex-1 overflow-auto flex divide-x divide-coffee-500/50">
         {/* Para o destinatário (toId): recebe o que `from` oferece; dá o que `from` pede. */}
-        <Terms label={`${trade.toId} recebe`} props={trade.fromProps} cash={trade.fromCash} immunities={trade.fromImmunities} />
-        <Terms label={`${trade.toId} dá`} props={trade.toProps} cash={trade.toCash} immunities={trade.toImmunities} />
+        <Terms label={`${trade.toId} recebe`} props={trade.fromProps} cash={trade.fromCash} immunities={trade.fromImmunities} transfers={trade.fromImmunityTransfers} />
+        <Terms label={`${trade.toId} dá`} props={trade.toProps} cash={trade.toCash} immunities={trade.toImmunities} transfers={trade.toImmunityTransfers} />
       </div>
       {!stillValid && <p className="px-4 text-logo text-xs">Proposta inválida agora (estado mudou) — recuse.</p>}
       <div className="px-4 py-3 border-t-2 border-coffee-950 shrink-0 flex gap-2">
