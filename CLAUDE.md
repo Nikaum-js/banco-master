@@ -98,5 +98,5 @@ Detalhe em [`docs/DECISIONS.md`](./docs/DECISIONS.md).
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-[`specs/028-transferir-imunidade/plan.md`](./specs/028-transferir-imunidade/plan.md)
+[`specs/029-jogar-cartas-mao/plan.md`](./specs/029-jogar-cartas-mao/plan.md)
 <!-- SPECKIT END -->
