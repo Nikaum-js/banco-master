@@ -20,7 +20,7 @@ describe('Efeitos de carta (US1)', () => {
 
   it('SC-004: Honorários e Crise pagam ao centro', () => {
     let center = 0
-    const p = ports({ onPayToCenter: (a) => { center += a } })
+    const p = ports({ onPayToCenter: (_s, a) => { center += a } })
     const g = createSeedState(['p1', 'p2'])
     applyEffect('honorarios', g, 'p1', p)
     expect(g.players[0].cash).toBe(1950)

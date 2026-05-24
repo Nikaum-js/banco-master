@@ -28,7 +28,7 @@ describe('Turno de Prisão (US2)', () => {
     expect(g.players[0].jail.attempts).toBe(2)
 
     g = jailDecision(g, 'try', ctx) // tentativa 3 → forçado
-    expect(ports.onPayToCenter).toHaveBeenCalledWith(50)
+    expect(ports.onPayToCenter).toHaveBeenCalledWith(expect.anything(), 50)
     expect(g.players[0].jail.inJail).toBe(false)
     expect(g.players[0].pos).toBe(17) // 12 + 5
     expect(g.turn.state).toBe('casa-a-resolver')
@@ -47,7 +47,7 @@ describe('Turno de Prisão (US2)', () => {
     let g = jailedSinglePlayer()
     const ports = mockPorts()
     g = jailDecision(g, 'pay', { rng: rngFromDice([1, 1]), ports })
-    expect(ports.onPayToCenter).toHaveBeenCalledWith(50)
+    expect(ports.onPayToCenter).toHaveBeenCalledWith(expect.anything(), 50)
     expect(g.players[0].jail.inJail).toBe(false)
     expect(g.turn.state).toBe('aguardando-rolagem')
   })
