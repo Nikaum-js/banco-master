@@ -53,14 +53,14 @@ const handlers: Record<string, Handler> = {
   },
   honorarios: (s, id, ports) => {
     pl(s, id).cash -= 50
-    ports.onPayToCenter(50)
+    ports.onPayToCenter(s, 50)
   },
   criseImobiliaria: (s, _id, ports) => {
     for (const p of s.players) {
       if (p.eliminated) continue
       const amt = Math.round(netWorth(s, p.id) * 0.05)
       p.cash -= amt
-      ports.onPayToCenter(amt)
+      ports.onPayToCenter(s, amt)
     }
   },
   consertoImoveis: (s, id, ports) => {
@@ -71,13 +71,13 @@ const handlers: Record<string, Handler> = {
     }
     if (total > 0) {
       pl(s, id).cash -= total
-      ports.onPayToCenter(total)
+      ports.onPayToCenter(s, total)
     }
   },
   voltaGo: (s, id, ports) => {
     const p = pl(s, id)
     p.pos = 0
-    ports.onPassGo(p.id)
+    p.cash += ports.onPassGo(s, p.id)
     p.completouPrimeiraVolta = true
   },
   vaPrisao: (s, id) => {
@@ -85,7 +85,7 @@ const handlers: Record<string, Handler> = {
     p.pos = JAIL_POS
     p.jail = { inJail: true, attempts: 0 }
   },
-  avance3: (s, id, ports) => advance(pl(s, id), 3, ports),
+  avance3: (s, id, ports) => advance(s, pl(s, id), 3, ports),
   volte3: (s, id) => {
     const p = pl(s, id)
     p.pos = (p.pos - 3 + 48) % 48 // ré: sem bônus de GO (SRS §10.6)

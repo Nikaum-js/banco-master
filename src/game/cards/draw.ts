@@ -71,7 +71,7 @@ export function resolveCardShortcut(state: GameState, dir: 'frente' | 'tras', po
   const { deckId, cardId } = state.resolution
   const s = structuredClone(state)
   const player = activePlayer(s)
-  if (dir === 'frente') advance(player, 3, ports)
+  if (dir === 'frente') advance(s, player, 3, ports)
   else player.pos = (player.pos - 3 + BOARD_SIZE) % BOARD_SIZE
   s.decks[deckId].push(cardId)
   completeResolution(s)

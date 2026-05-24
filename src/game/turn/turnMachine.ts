@@ -33,19 +33,19 @@ function countsAsDouble(roll: Roll): boolean {
 
 // Avança `steps` casas (horário); credita GO ao cruzar/parar no índice 0 (FR-008).
 // Exportado para reuso por cartas de movimento (006).
-export function advance(player: Player, steps: number, ports: TurnPorts): void {
+export function advance(state: GameState, player: Player, steps: number, ports: TurnPorts): void {
   if (steps <= 0) return
   const passedGo = player.pos + steps >= BOARD_SIZE
   player.pos = (player.pos + steps) % BOARD_SIZE
   if (passedGo) {
-    ports.onPassGo(player.id)
+    player.cash += ports.onPassGo(state, player.id) // GO Progressivo creditado (007)
     player.completouPrimeiraVolta = true // Speed Die a partir da próxima rolagem (clarify Q2)
   }
 }
 
 // Teleporte do triple: move à frente até `dest`; GO se o caminho cruzar o 0.
-function teleport(player: Player, dest: number, ports: TurnPorts): void {
-  advance(player, (dest - player.pos + BOARD_SIZE) % BOARD_SIZE, ports)
+function teleport(state: GameState, player: Player, dest: number, ports: TurnPorts): void {
+  advance(state, player, (dest - player.pos + BOARD_SIZE) % BOARD_SIZE, ports)
 }
 
 function sendToJail(player: Player): void {
@@ -140,14 +140,14 @@ export function rollDice(state: GameState, ctx: TurnCtx): GameState {
 
   // Mr. Banco Master: move o normal e depois até a próxima comprável (FR-024).
   if (roll.special === 'mr-banco') {
-    advance(player, roll.move, ctx.ports)
-    advance(player, nextBuyableSteps(player.pos), ctx.ports)
+    advance(s, player,roll.move, ctx.ports)
+    advance(s, player,nextBuyableSteps(player.pos), ctx.ports)
     land(turn, player, roll)
     return finishIfEnded(s, ctx)
   }
 
   // Movimento normal/numérico.
-  advance(player, roll.move, ctx.ports)
+  advance(s, player,roll.move, ctx.ports)
   land(turn, player, roll)
   return finishIfEnded(s, ctx)
 }
@@ -161,7 +161,7 @@ export function chooseBusMove(state: GameState, opt: 'die0' | 'die1' | 'sum', ct
   const [d0, d1] = turn.lastRoll!.white
   const steps = opt === 'die0' ? d0 : opt === 'die1' ? d1 : d0 + d1
   turn.awaitingChoice = null
-  advance(player, steps, ctx.ports)
+  advance(s, player,steps, ctx.ports)
   land(turn, player, turn.lastRoll) // dupla pelos brancos não é quebrada pelo Ônibus (FR-025)
   return finishIfEnded(s, ctx)
 }
@@ -173,7 +173,7 @@ export function chooseTripleDest(state: GameState, dest: number, ctx: TurnCtx): 
   const turn = s.turn
   const player = activePlayer(s)
   turn.awaitingChoice = null
-  teleport(player, dest, ctx.ports)
+  teleport(s, player, dest, ctx.ports)
   land(turn, player, turn.lastRoll) // triple não dá re-roll (FR-026)
   return finishIfEnded(s, ctx)
 }
@@ -228,7 +228,8 @@ export function jailDecision(state: GameState, decision: 'pay' | 'card' | 'try',
   const player = activePlayer(s)
 
   if (decision === 'pay') {
-    ctx.ports.onPayToCenter(JAIL_FINE) // $50 → centro
+    player.cash -= JAIL_FINE // débito real (007 — antes era no-op)
+    ctx.ports.onPayToCenter(s, JAIL_FINE) // $50 → pote
     player.jail = { inJail: false, attempts: 0 }
     turn.state = 'aguardando-rolagem'
     return s
@@ -244,16 +245,17 @@ export function jailDecision(state: GameState, decision: 'pay' | 'card' | 'try',
   turn.lastRoll = roll
   if (roll.isDouble) {
     player.jail = { inJail: false, attempts: 0 }
-    advance(player, roll.move, ctx.ports)
+    advance(s, player,roll.move, ctx.ports)
     land(turn, player, null) // sair com dupla NÃO dá nova rolagem (FR-019)
     return finishIfEnded(s, ctx)
   }
   // sem dupla
   player.jail.attempts += 1
   if (player.jail.attempts >= 3) {
-    ctx.ports.onPayToCenter(JAIL_FINE) // 3ª tentativa: paga obrigatoriamente e move (FR-018)
+    player.cash -= JAIL_FINE // débito real (007)
+    ctx.ports.onPayToCenter(s, JAIL_FINE) // 3ª tentativa: paga obrigatoriamente e move (FR-018)
     player.jail = { inJail: false, attempts: 0 }
-    advance(player, roll.move, ctx.ports)
+    advance(s, player,roll.move, ctx.ports)
     land(turn, player, null)
     return finishIfEnded(s, ctx)
   }

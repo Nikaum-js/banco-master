@@ -12,9 +12,9 @@ import type { Square } from '@/lib/boardData'
 import type { Roll, GameState } from './types'
 
 export interface TurnPorts {
-  onPassGo(playerId: string): number // valor do bônus (UI mostra só o número — princípio IV)
-  onPayToCenter(amount: number): void // imposto/multa/$50 prisão → centro (FR-011)
-  onCollectCenter(playerId: string): number // Free Parking: coleta do pote
+  onPassGo(state: GameState, playerId: string): number // bônus do GO; advance credita o retorno (007)
+  onPayToCenter(state: GameState, amount: number): void // imposto/multa/$50 prisão → pote (007)
+  onCollectCenter(state: GameState, playerId: string): void // Free Parking: coleta o pote (007)
   isEliminated(playerId: string): boolean
   onInsolvency?(playerId: string, amount: number, creditorId: string | null): void // → Falência (003)
 }
@@ -46,12 +46,16 @@ export const resolutionRegistry: Record<Square['kind'], ResolutionHandler> = {
   tesouro: stub,
   'bus-ticket': stub,
   // Roteados pelo turno:
-  tax: ({ square, ports }) => {
-    if (square.kind === 'tax') ports.onPayToCenter(square.amount) // FR-011
+  tax: ({ square, ports, state, playerId }) => {
+    if (square.kind === 'tax') {
+      const p = state.players.find((x) => x.id === playerId)
+      if (p) p.cash -= square.amount // débito real (007 — antes era no-op)
+      ports.onPayToCenter(state, square.amount) // → pote
+    }
     return { done: true }
   },
-  'corner-parking': ({ playerId, ports }) => {
-    ports.onCollectCenter(playerId)
+  'corner-parking': ({ playerId, ports, state }) => {
+    ports.onCollectCenter(state, playerId) // coleta o pote e reseta $500
     return { done: true }
   },
   'corner-go': () => ({ done: true }), // crédito de GO já disparado no movimento
