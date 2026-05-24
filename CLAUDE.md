@@ -98,5 +98,5 @@ Detalhe em [`docs/DECISIONS.md`](./docs/DECISIONS.md).
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-[`specs/007-balanceamento-catchup/plan.md`](./specs/007-balanceamento-catchup/plan.md)
+[`specs/008-falencia-fim-jogo/plan.md`](./specs/008-falencia-fim-jogo/plan.md)
 <!-- SPECKIT END -->
