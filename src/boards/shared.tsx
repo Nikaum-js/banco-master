@@ -11,6 +11,7 @@ import { cityLevel } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
 import { deedView } from '@/game/ui/deed/deedView'
 import { useTradeUI } from '@/game/ui/trade/TradeLayer'
+import { HandPanel } from '@/game/ui/cards/HandPanel'
 import { tradesView } from '@/game/ui/trade/tradesView'
 import type { GameState } from '@/game/turn/types'
 import type { TempEffect, Trade, ImmunityGrant } from '@/game/economy/types'
@@ -1767,6 +1768,8 @@ export function ActionsPanel() {
           </div>
         </div>
       </div>
+
+      <HandPanel />
 
       <div className="side-panel-section">
         <div className="flex items-baseline justify-between mb-3">
