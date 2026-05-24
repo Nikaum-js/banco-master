@@ -53,6 +53,7 @@ export function acquire(state: GameState, attackerId: string, pos: number): bool
   attacker.cash -= price + fee
   ownerP.cash += price // compensação ao dono (a taxa de hipoteca vai ao banco)
   state.titles[pos].ownerId = attackerId // mortgaged acompanha
+  state.notice = { kind: 'hostile-takeover', victimId: owner, attackerId, pos } // 030, §12.2
   return true
 }
 

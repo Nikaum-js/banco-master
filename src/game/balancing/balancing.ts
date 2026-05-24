@@ -28,6 +28,10 @@ export function payToCenter(state: GameState, amount: number): void {
 
 export function collectCenter(state: GameState, playerId: string): void {
   const p = state.players.find((x) => x.id === playerId)
-  if (p) p.cash += state.centerPot
+  const amount = state.centerPot // valor coletado (antes do reabastecimento)
+  if (p) {
+    p.cash += amount
+    state.notice = { kind: 'free-parking', playerId, amount } // 030, §12.2
+  }
   state.centerPot = PARKING_SEED
 }
