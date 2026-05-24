@@ -64,7 +64,8 @@ O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o 
 - ✅ **Polimento de fluidez** (glue, fora do SDD): **cor real do dono** na célula comprada (`ClassicSquare` lê `game.titles`); **token = `PlayerFace`** (rosto) de volta no `LiveTokens`; HUD de prisão explicita a 3ª tentativa; **feedback de caixa** (delta flutuante no `PlayerRow`); painel **"Efeitos ativos" real** (`tempEffects`) + **`EffectMark`** pulsante nas casas afetadas (apagão/greve/boicote/imunidade-temp); dado já anima (3D no `DiceArena`)
 - ✅ **025** — **Revelação de carta sacada**: `card-reveal` (ResolutionSlice) + `cardRevealResolve` (peek) + `confirmCardReveal` (saca via `cardResolve` intacto); modal central (nome/deck/raridade/descrição + "Continuar"). _Acabamento visual a confirmar no `bun run dev`._
 - ✅ **026** — **Leilão de casas em escassez** (§5.4): evento autônomo `GameState.houseAuction` (saiu da resolução de turno) + `HouseAuctionLayer` + botão "Leilão de casas" (gatilho manual; auto-disparo = M3). `house-auction` de resolução removido (código morto).
-- [ ] Painel **Trades** ao vivo (Histórico já é real; resto do log — construção/hipoteca/trade/loan/reação — é adição futura one-liner)
+- ✅ **027** — **Painel Trades ao vivo**: `GameState.tradeHistory` (bounded) + `acceptTrade` registra/loga; `tradesView` (puro) + painel real (pendente + histórico); mock removido.
+- **M2 (UI jogável) essencialmente completo** — falta só validação visual (`bun run dev`) e tuning. Próximo grande passo: **M3 (multiplayer/sessão)**.
 
 **Resultado:** `bun run dev` = uma partida **local** jogável de ponta a ponta (um cliente; multiplayer fica para M3).
 

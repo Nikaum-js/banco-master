@@ -9,7 +9,7 @@ Saímos da discovery e entramos em **implementação ativa**, feature a feature,
 
 **Como verificar:**
 ```bash
-bunx vitest run tests/game  # 223 testes (motor + playersView + log + activeModal + deedView + negociação) — projeto usa BUN, não npm/npx
+bunx vitest run tests/game  # 228 testes (motor + playersView + log + activeModal + deedView + negociação) — projeto usa BUN, não npm/npx
 bun run build               # tsc -b + vite (deve passar, exit 0)
 bun run dev                 # demo local jogável (HUD na barra de baixo)
 ```
@@ -43,6 +43,7 @@ bun run dev                 # demo local jogável (HUD na barra de baixo)
 | 023 | `construcao-hipoteca-ui` | **(M2 fatia 4)** gestão de propriedade pelo tabuleiro. Motor: predicados puros `canBuildHouse`/`canSellBuilding`/`canBuildHangar`/`canSellHangar` (`construction.ts`) + `canMortgage`/`canUnmortgage` (`mortgage.ts`) — comandos delegam (refactor sem mudança; 004/005/011 verdes). UI: `src/game/ui/deed/deedView.ts` (`deedView(game,pos)`, puro, 12 casos em `tests/game/ui/deedView.test.ts`) + `DeedActions` nos popovers (construir/vender/hangar/hipotecar/deshipotecar, só p/ dono da vez, com motivo do bloqueio) + `BuildingMark`/`MortgageMark` lendo `game.titles`. |
 | 024 | `negociacao-ui` | **(M2 fatia 5)** negociação propor/aceitar/recusar. Motor: `Trade`/`ImmunityGrant` movidos p/ `economy/types.ts`; `validateTrade` extraído (`executeTrade` delega — **013 verde**) + `tradableProps`; `GameState.pendingTrade`; reducers `proposeTrade`/`acceptTrade`/`rejectTrade` + comandos (`tests/game/economy/negociacao-ui.test.ts`, 12 casos). UI: `src/game/ui/trade/TradeLayer.tsx` (compositor 2 colunas: propriedades+dinheiro+imunidades §8.4; modal recebido aceitar/recusar) + `useTradeUI` (store de abertura) + botão "Negociar" no `PlayersPanel`. Não gated por turno; `pendingTrade` serializável (VII); cartas/Bus Tickets fora do payload (VI). **Falta: confirmar acabamento visual no `bun run dev` (T015).** |
 | 025 | `revelacao-carta` | **(M2 fatia 6)** revelação de carta sacada. `card-reveal` (ResolutionSlice) + `cardRevealResolve` (peek do topo, não muta) substitui `cardResolve` no `ctx.resolve`; `confirmCardReveal` saca/processa via o `cardResolve` **inalterado** (006 verde). Modal `card-reveal` no `ModalLayer`/`activeModal` (nome/deck/raridade/`CARD_DESC` + "Continuar"). 7 casos em `tests/game/cards/revelacao.test.ts`. **Falta: T010 visual.** |
+| 027 | `trades-ao-vivo` | **(M2 fatia 8)** painel Trades real: `GameState.tradeHistory: Trade[]` (bounded 12); `acceptTrade` registra a troca + loga "fromId ↔ toId: troca aceita" (`executeTrade` intacto). `src/game/ui/trade/tradesView.ts` (`{pending, history}`, puro, testado). Painel "Trades" (em `ActionsPanel`) consome `tradesView` (pendente ativo + histórico, resumo); "+ Nova proposta" → `useTradeUI.show()`; `MOCK_TRADES`/tipo mock/`playerByName` removidos. **Falta: T009 visual.** |
 | 026 | `leilao-casas-escassez` | **(M2 fatia 7)** leilão de casas (§5.4) como **evento autônomo** `GameState.houseAuction` (refactor: saiu da `ResolutionSlice` — era código morto/bugado). `economy/houseAuction.ts` reescrito p/ o campo: `openHouseAuction`/`placeHouseBid`/`closeHouseAuction` (sem `now`, sem timer; `close` transfere casas+lance **sem** tocar no turno; `declareBuildInterest` removido). `HouseAuctionLayer` (modal, seletor de licitante) + botão "🏘 Leilão de casas" no `PlayersPanel` (gatilho manual; auto-disparo = M3). `house-auction` removido de `activeModal`/`ModalLayer`/`activeModal.test`. 6 casos em `houseAuction.test.ts`. **Falta: T011 visual.** |
 | — | UI wiring | `src/game/ui/` — `GameHUD` (controle do turno; inclui seletor de Bus Ticket e pedir/quitar empréstimo) + `LiveTokens`; montados no `App.tsx`/`Board01Classic.tsx`. **Construção (004/011) não está no HUD** (M2) |
 
@@ -83,16 +84,16 @@ bun run dev                 # demo local jogável (HUD na barra de baixo)
 - **160 commits**, todos em `main` (o projeto não usa branches de feature — trabalha em `main`); incluem até o 017.
 - Histórico criado via skill **`/micro-commits`** (datas backdatadas aleatórias **espalhadas** pelos últimos 6 meses, identidade `Nikolas Santana <nikolasdssantana@gmail.com>`, mensagens em **inglês** emoji+conventional).
 - **NÃO foi feito push** — o usuário faz o push manualmente (`git push origin main`).
-- **018–026 ainda NÃO commitados** — working tree sujo (até o 017 commitado, 160 commits). Rodar `/micro-commits` quando o usuário pedir.
+- **018–027 ainda NÃO commitados** — working tree sujo (até o 017 commitado, 160 commits). Rodar `/micro-commits` quando o usuário pedir.
 - ⚠️ **Usar `bun`**, nunca npm/npx (rodar npm gera `package-lock.json` indevido — já existe um commitado, o usuário optou por mantê-lo).
 
 ## Como continuar (workflow desta sessão)
 
 1. **Por feature:** `/speckit-specify` → (clarify quando houver ambiguidade real, via perguntas) → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`. Tudo confirmado pelo usuário ("pode continuar" = conduza o pipeline inteiro).
-2. **`.specify/feature.json`** rastreia a feature ativa (hoje aponta para `026`); o marcador `<!-- SPECKIT -->` no `CLAUDE.md` aponta para o `plan.md` ativo.
+2. **`.specify/feature.json`** rastreia a feature ativa (hoje aponta para `027`); o marcador `<!-- SPECKIT -->` no `CLAUDE.md` aponta para o `plan.md` ativo.
 3. **Regra crítica (CLAUDE.md):** antes de `/speckit-specify`, ler constitution + SRS (seção da feature) + DECISIONS + specs dependentes.
 4. **Commits:** ao final, rodar `/micro-commits` (backdated, **sem push**) quando o usuário pedir.
-5. **Numeração de specs:** sequencial; a próxima é `027`.
+5. **Numeração de specs:** sequencial; a próxima é `028`.
 
 **Motor (M1): COMPLETO. M2 (UI) iniciado** (020 = painéis ao vivo; 021 = log/Histórico real; 022 = modais centrais dirigidos por resolução). **Próximas fatias do M2** (impacto): **token animado** (`LiveTokens` a partir de `player.pos`) · **construção/hipoteca/negociação na UI** (iniciadas pelo jogador) · **revelação de carta imediata** (exige novo estado no motor) · painel **Trades** ao vivo · (log: estender `logEvent` a construção/hipoteca/trade/loan/reação — one-liner cada). Depois: **Multiplayer/Sessão (M3)** · gaps (§8.4, rebalance). **UI precisa de validação visual no `bun run dev`** (não tenho como ver a tela) — pendente o acabamento dos modais 022.
 

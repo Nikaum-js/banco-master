@@ -98,5 +98,5 @@ Detalhe em [`docs/DECISIONS.md`](./docs/DECISIONS.md).
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-[`specs/026-leilao-casas-escassez/plan.md`](./specs/026-leilao-casas-escassez/plan.md)
+[`specs/027-trades-ao-vivo/plan.md`](./specs/027-trades-ao-vivo/plan.md)
 <!-- SPECKIT END -->
