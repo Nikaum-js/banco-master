@@ -64,4 +64,5 @@ export interface GameState {
   resolution: ResolutionSlice | null // interação transitória de compra/leilão (003)
   bank: BankStock // estoque global de construção (004)
   decks: Record<DeckId, string[]> // ids de cartas por deck; topo = índice 0 (006)
+  centerPot: number // pote do Free Parking (007); semente/reabastecimento $500
 }
