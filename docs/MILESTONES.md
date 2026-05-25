@@ -18,10 +18,10 @@
 
 ---
 
-## M1 — Motor de jogo (lógica) ✅ (gaps menores)
+## M1 — Motor de jogo (lógica) ✅ (single-player; 2 regras multiplayer movidas ao M3)
 
 Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vitest). Cada item abaixo é uma feature SDD completa (`spec→plan→tasks→implement`).
-**Estado: 234 testes verdes (`bunx vitest run tests/game`). Motor M1 completo (regras + tema + §9.4 + §8.4 transferência de imunidade — sem gaps de regra). M2 (UI) em andamento: dado central + auto-avanço, modais de resolução, Histórico ao vivo, token animado, gestão de propriedade (construção/hipoteca) e negociação (trade + transferência de imunidade) pelo tabuleiro.**
+**Estado: 234 testes verdes (`bunx vitest run tests/game`). Motor completo para uma partida single-player (turno, economia, construção, cartas — 0 no-op, tema, §8.4, §9.3/§9.4). Auditoria SRS×código (2026-05-24) confirmou as regras de turno/economia/cartas; restam 2 regras que só fazem sentido com vários jogadores ao mesmo tempo — leilão dos bens do falido-ao-banco (§9.2) e auto-disparo do leilão de casas em escassez (§5.4) — realocadas para o M3 (eram "simplificações documentadas" no HANDOVER).**
 
 ### Feito
 
@@ -46,7 +46,9 @@ Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vite
 - ✅ **019 Limpeza na eliminação** (§9.4) — `declareBankruptcy` remove imunidades concedidas/recebidas e `tempEffects` originados pelo eliminado; `Immunity` ganha `granterId`. **M1 (motor) completo.**
 
 ### Pendente (engine)
-- ✅ **Transferência de imunidade existente** (§8.4 "transferíveis") — entregue no **028** (re-atribui beneficiário, preserva voltas/`granterId`). **Sem mais gaps de regra no motor.**
+- ✅ **Transferência de imunidade existente** (§8.4 "transferíveis") — entregue no **028** (re-atribui beneficiário, preserva voltas/`granterId`).
+- ⤳ **Leilão dos bens do falido-ao-banco** (§9.2): hoje as propriedades voltam **direto** ao banco (grátis); o SRS pede **leilão**. Precisa de licitantes = vários jogadores → **movido ao M3**.
+- ⤳ **Auto-disparo do leilão de casas em escassez** (§5.4): o mecanismo existe (026), mas só é aberto **manualmente**; o gatilho automático pressupõe **demanda concorrente** (vários querendo construir) → **movido ao M3**.
 - [ ] **Rebalanceamento pós-playtest** (tuning dos knobs em `theme.ts`).
 
 ---
@@ -65,21 +67,45 @@ O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o 
 - ✅ **025** — **Revelação de carta sacada**: `card-reveal` (ResolutionSlice) + `cardRevealResolve` (peek) + `confirmCardReveal` (saca via `cardResolve` intacto); modal central (nome/deck/raridade/descrição + "Continuar"). _Acabamento visual a confirmar no `bun run dev`._
 - ✅ **026** — **Leilão de casas em escassez** (§5.4): evento autônomo `GameState.houseAuction` (saiu da resolução de turno) + `HouseAuctionLayer` + botão "Leilão de casas" (gatilho manual; auto-disparo = M3). `house-auction` de resolução removido (código morto).
 - ✅ **027** — **Painel Trades ao vivo**: `GameState.tradeHistory` (bounded) + `acceptTrade` registra/loga; `tradesView` (puro) + painel real (pendente + histórico); mock removido.
-- ✅ **028** — **Transferência de imunidade existente** (§8.4): `Trade += fromImmunityTransfers?`/`toImmunityTransfers?` (posições); `validateTrade` exige `hasImmunity(ofertante, pos)`; `executeTrade` re-atribui o `beneficiaryId` (preserva voltas + `granterId`), antes das concessões novas. Compositor ganha seção "Transferir imunidade" por lado; modal recebido lista 🛡️➡️. _Acabamento visual a confirmar no `bun run dev`._ **Fecha o último gap de regra do motor.**
-- **M2 (UI jogável) essencialmente completo** — falta só validação visual (`bun run dev`) e tuning. Próximo grande passo: **M3 (multiplayer/sessão)**.
+- ✅ **028** — **Transferência de imunidade existente** (§8.4): `Trade += fromImmunityTransfers?`/`toImmunityTransfers?` (posições); `validateTrade` exige `hasImmunity(ofertante, pos)`; `executeTrade` re-atribui o `beneficiaryId` (preserva voltas + `granterId`), antes das concessões novas. Compositor ganha seção "Transferir imunidade" por lado; modal recebido lista 🛡️➡️. _Acabamento visual a confirmar no `bun run dev`._
 
-**Resultado:** `bun run dev` = uma partida **local** jogável de ponta a ponta (um cliente; multiplayer fica para M3).
+- ✅ **029** — **Painel "Minhas Cartas" + jogar cartas da mão** (§12.4): fecha o gap mais grave do M2. Seletores puros `handCardsView(game, playerId)` (lista + `playable`/`reason` por timing) e `cardTargets(game, playerId, cardId)` (alvos válidos reusando `reactorFor`/`canAudit`/`ownerOf`); `HandPanel` (cor de raridade, nome, efeito, "Usar" gated + motivo, contador X/3) no `ActionsPanel`; `HandCardLayer` + `useHandCardUI` (seletor de alvo) → `playHandCard`. Mapas de rótulo/cor extraídos p/ `cardMeta.ts` (ModalLayer importa; modais inalterados). Reação (Diplomacia/Bunker) listada mas desabilitada (dispara pelo prompt do HUD). 11 casos em `tests/game/ui/handView.test.ts`. **Zero mudança de motor.** _Acabamento visual a confirmar no `bun run dev`._
+
+### Pendente (UI single-player)
+
+> Jogáveis **agora** (motor pronto), mas cada um precisa de um **evento detectável no motor** / é per-cliente → ficam para uma fatia futura ou o M3.
+
+- [ ] **Notificação "Aquisição Hostil sofrida"** (§12.2) — a vítima não vê que perdeu a propriedade (só no log); per-cliente, melhor no M3.
+- [ ] **Modal "Free Parking coletado"** (§12.2) — o pote é mostrado estático no painel; falta o modal ao **parar** em Férias e coletar (precisa de hook de evento no motor).
+- [ ] Acabamento visual de todos os modais/painéis no `bun run dev` (não tenho como ver a tela).
+
+**Resultado:** `bun run dev` = uma partida **local** jogável de ponta a ponta, **incluindo jogar cartas de mão**. Faltam só dois modais informativos (acima) e validação visual; o grande próximo passo é o **M3 (multiplayer/sessão)**.
 
 ---
 
 ## M3 — Multiplayer, Sala & Sessão (Supabase)
 
-- [ ] Plan de **Estado/Sync**: snapshot serializável (o motor já é) → canais Supabase, autoridade, resolução de conflito
-- [ ] Setup Supabase (projeto, env, migrations) + cliente realtime
-- [ ] Autenticação (anônima vs. e-mail — decisão pendente)
-- [ ] **Lobby & Sala**: criar (host + link), entrar/escolher nome e token, lista em tempo real, host kicka/inicia, rolagem de ordem inicial
-- [ ] **Sessão & Resiliência** (D-016): detecção de desconexão → pausa global, reconexão pelo mesmo link, reload sem perda, host desconectado sem transferência
-- [ ] Roteamento: home → criar/entrar → lobby → partida → fim
+> **Não é opcional.** O SRS §16 descarta hotseat/local: a entrega do v1 é **multiplayer online via sala**. O `bun run dev` de hoje (um cliente) é andaime de M2, não o produto.
+>
+> **A favor:** o `GameState` já é JSON puro e os reducers são `(state) → state` (princípio VII). Falta só a **camada de transporte/autoridade/persistência** em volta — nenhuma regra de jogo muda.
+
+### Decisões a travar primeiro (viram ADR antes de qualquer código)
+
+- [ ] **D-019 — Autenticação** (SRS §16 "a definir"): **proposta = anônima por link** (sem contas; identidade = id de sessão + nome/token escolhidos no lobby). Email/contas fica fora do v1. Sem isso o lobby não fecha.
+- [ ] **D-020 — Modelo de autoridade & sync**: quem aplica o reducer e como o estado se propaga. Opções: **(a) host-autoritativo** — o host roda o reducer e difunde o snapshot via Supabase Realtime; clientes enviam *comandos* e renderizam o snapshot recebido (mais simples; casa com §11.3 "host cai → pausa indefinida, sem transferência"). **(b) server-autoritativo** — Edge Function (Deno) importa o **mesmo** módulo puro e aplica os comandos (sem dependência do host, mais infra). **Proposta = (a) para o v1**, com o reducer pronto p/ migrar a (b) depois. Define também **persistência**: snapshot do `GameState` (JSON) gravado a cada comando aceito → reload/reconexão recarregam do servidor (princípio VII).
+
+### Sequência de features (cada uma é uma fatia SDD)
+
+1. [ ] **Infra Supabase** — projeto + env; schema `rooms`/`games`/`players` (estado = coluna JSON do snapshot); RLS; cliente Realtime. Fundação das demais.
+2. [ ] **Transporte de comandos + sync de estado** — o núcleo do M3: enviar comando do cliente → aplicar no lado autoritativo (D-020) → difundir snapshot → **persistir**. O motor não muda; isto é a casca em volta dele.
+3. [ ] **Lobby & Sala** (§11.1/§11.2) — criar sala (host + link único); entrar com **nome + token único** (§12.5); lista de jogadores em tempo real (Realtime presence); host **kicka**/**inicia** (≥2); rolagem da ordem inicial.
+4. [ ] **Sessão & Resiliência** (§11.3/§11.4, D-016, princípio VII) — desconexão de **qualquer** jogador → **pausa global** + aviso a todos; reconexão pelo mesmo link recarrega do servidor; **reload sem perda**; **host desconectado pausa indefinidamente, sem transferência** (§16); propriedades do desconectado **não** vão ao banco. Status de desconectados no HUD (§12.3).
+5. [ ] **Roteamento** — home → criar/entrar → lobby → partida → fim de jogo.
+
+### Regras que estavam "simplificadas" e voltam aqui (precisam de vários jogadores)
+
+6. [ ] **Leilão dos bens do falido-ao-banco** (§9.2) — ao falir **devendo ao banco**, as propriedades (sem construções) vão a **leilão** entre os demais, em vez de voltar grátis. Reusa o motor de leilão (003/026).
+7. [ ] **Auto-disparo do leilão de casas em escassez** (§5.4) — quando há **demanda concorrente** e o estoque do banco não cobre, abrir `openHouseAuction` automaticamente (hoje só botão manual).
 
 ---
 

@@ -1,15 +1,15 @@
 # HANDOVER — Banco Master
 
 > Estado para continuar em um **chat novo**. Snapshot de 2026-05-24.
-> Leitura de partida: este arquivo → `CLAUDE.md` → `docs/MILESTONES.md` → a spec ativa (`specs/028-.../plan.md`).
+> Leitura de partida: este arquivo → `CLAUDE.md` → `docs/MILESTONES.md` → a spec ativa (`specs/029-.../plan.md`).
 
 ## Onde estamos
 
-Saímos da discovery e entramos em **implementação ativa**, feature a feature, via GitHub Spec Kit (`spec → plan → tasks → implement`, com testes). O **motor de jogo (M1) está completo e testado** (`src/game/`, regras + tema oficial + §9.4 + §8.4) + uma **UI mínima jogável**. Falta: **UI completa (M2)**, **multiplayer (M3)** e tuning pós-playtest. **Sem mais gaps de regra no motor** (a transferência de imunidade §8.4 foi entregue no 028).
+Saímos da discovery e entramos em **implementação ativa**, feature a feature, via GitHub Spec Kit (`spec → plan → tasks → implement`, com testes). O **motor de jogo (M1) está completo e testado** (`src/game/`, regras + tema oficial + §9.4 + §8.4) + uma **UI jogável** (incl. jogar cartas de mão). Auditoria SRS×código (2026-05-24): motor sem gaps de regra **single-player** — duas regras inerentemente multiplayer (§9.2 leilão do falido-ao-banco, §5.4 auto-disparo do leilão de casas) **movidas ao M3**. Falta: 2 modais informativos do M2, **multiplayer (M3)** e tuning pós-playtest.
 
 **Como verificar:**
 ```bash
-bunx vitest run tests/game  # 234 testes (motor + playersView + log + activeModal + deedView + negociação/transferência) — projeto usa BUN, não npm/npx
+bunx vitest run tests/game  # 245 testes (motor + playersView + log + activeModal + deedView + negociação/transferência + handView) — projeto usa BUN, não npm/npx
 bun run build               # tsc -b + vite (deve passar, exit 0)
 bun run dev                 # demo local jogável (HUD na barra de baixo)
 ```
@@ -46,6 +46,7 @@ bun run dev                 # demo local jogável (HUD na barra de baixo)
 | 027 | `trades-ao-vivo` | **(M2 fatia 8)** painel Trades real: `GameState.tradeHistory: Trade[]` (bounded 12); `acceptTrade` registra a troca + loga "fromId ↔ toId: troca aceita" (`executeTrade` intacto). `src/game/ui/trade/tradesView.ts` (`{pending, history}`, puro, testado). Painel "Trades" (em `ActionsPanel`) consome `tradesView` (pendente ativo + histórico, resumo); "+ Nova proposta" → `useTradeUI.show()`; `MOCK_TRADES`/tipo mock/`playerByName` removidos. **Falta: T009 visual.** |
 | 026 | `leilao-casas-escassez` | **(M2 fatia 7)** leilão de casas (§5.4) como **evento autônomo** `GameState.houseAuction` (refactor: saiu da `ResolutionSlice` — era código morto/bugado). `economy/houseAuction.ts` reescrito p/ o campo: `openHouseAuction`/`placeHouseBid`/`closeHouseAuction` (sem `now`, sem timer; `close` transfere casas+lance **sem** tocar no turno; `declareBuildInterest` removido). `HouseAuctionLayer` (modal, seletor de licitante) + botão "🏘 Leilão de casas" no `PlayersPanel` (gatilho manual; auto-disparo = M3). `house-auction` removido de `activeModal`/`ModalLayer`/`activeModal.test`. 6 casos em `houseAuction.test.ts`. **Falta: T011 visual.** |
 | 028 | `transferir-imunidade` | **(§8.4 — último gap de regra)** transferir imunidade EXISTENTE numa troca (re-atribuir beneficiário, não conceder nova). `Trade += fromImmunityTransfers?: number[]`/`toImmunityTransfers?: number[]`. `validImmunityTransfers` (reusa `hasImmunity`) → `validateTrade` exige que o ofertante seja beneficiário ativo da pos. `executeTrade` re-atribui o `beneficiaryId` (from→to / to→from) **antes** das concessões novas, preservando `lapsRemaining` + `granterId`. Concessão de novas (014) inalterada. UI: `TradeLayer` ganha seção "Transferir imunidade" por lado (toggle das imunidades que o lado possui) + 🛡️➡️ no modal recebido. 6 casos novos em `negociacao-ui.test.ts`. **Falta: T007 visual.** |
+| 029 | `jogar-cartas-mao` | **(M2 — fecha o gap mais grave)** painel "Minhas Cartas" + jogar cartas da mão (§12.4). **Zero mudança de motor.** Seletores puros em `src/game/ui/cards/handView.ts`: `handCardsView(game, playerId)` (lista + `playable`/`reason` por timing: reação/só-no-turno/só-preso/sem-alvo) e `cardTargets(game, playerId, cardId)` (alvos válidos reusando `reactorFor` p/ aquisição/despejo/boicote, `canAudit` p/ auditoria, `ownerOf` p/ imunidade; sem alvo → `null`). `cardMeta.ts` (RARITY_COLOR/CARD_LABEL/cardLabel/CARD_DESC) extraído do `ModalLayer` (que passa a importar). `HandPanel` (em `ActionsPanel`): cor de raridade, nome, efeito, "Usar" gated + motivo, contador X/3. `HandCardLayer` + `useHandCardUI` (overlay seletor de alvo) → `playHandCard(id, target?, targetPlayer?)`; Diplomacia já interceptada pelo motor (017). Reação (Diplomacia/Bunker) listada mas desabilitada (prompt no HUD). 11 casos em `tests/game/ui/handView.test.ts`. **Falta: T011 visual.** |
 | — | UI wiring | `src/game/ui/` — `GameHUD` (controle do turno; inclui seletor de Bus Ticket e pedir/quitar empréstimo) + `LiveTokens`; montados no `App.tsx`/`Board01Classic.tsx`. **Construção (004/011) não está no HUD** (M2) |
 
 **Loop single-player local completo:** comprar → aluguel → construir → hipotecar → GO/Férias → dívida → falir → vencedor.
@@ -77,24 +78,24 @@ bun run dev                 # demo local jogável (HUD na barra de baixo)
 - **Empréstimo — juros no GO sem caixa** (010): se o juro de GO excede o caixa pós-bônus, abre `debt` ao credor; no overlap raro de também pousar em aluguel impagável no mesmo GO-pass, o slot único fica com a dívida de juros e a casa de pouso não é re-resolvida (research R5). Credor eliminado antes da quitação → empréstimo perdoado (R8).
 
 **Produto:**
-- **UI completa** (só HUD mínimo hoje).
-- **Multiplayer / Supabase / Lobby / Sessão & Resiliência** (M3 do MILESTONES) — nada começado.
+- **M2 (UI jogável): ~fechado** — painéis ao vivo, modais de resolução, token animado, construção/hipoteca/negociação pelo tabuleiro e **jogar cartas de mão** (029) prontos. Faltam só 2 modais informativos (notificação de Aquisição Hostil sofrida; Free Parking coletado — ver MILESTONES) + validação visual no `bun run dev`.
+- **Multiplayer / Supabase / Lobby / Sessão & Resiliência** (M3 do MILESTONES, **redesenhado** 2026-05-24) — nada começado; precisa travar 2 ADRs antes (D-019 auth anônima por link; D-020 modelo de autoridade/sync) + infra Supabase (credenciais/projeto = você). Inclui §9.2/§5.4 (regras multiplayer).
 
 ## Estado do Git
 
 - **160 commits**, todos em `main` (o projeto não usa branches de feature — trabalha em `main`); incluem até o 017.
 - Histórico criado via skill **`/micro-commits`** (datas backdatadas aleatórias **espalhadas** pelos últimos 6 meses, identidade `Nikolas Santana <nikolasdssantana@gmail.com>`, mensagens em **inglês** emoji+conventional).
 - **NÃO foi feito push** — o usuário faz o push manualmente (`git push origin main`).
-- **018–028 ainda NÃO commitados** — working tree sujo (até o 017 commitado, 160 commits). Rodar `/micro-commits` quando o usuário pedir.
+- **018–029 ainda NÃO commitados** — working tree sujo (até o 017 commitado, 160 commits). Rodar `/micro-commits` quando o usuário pedir.
 - ⚠️ **Usar `bun`**, nunca npm/npx (rodar npm gera `package-lock.json` indevido — já existe um commitado, o usuário optou por mantê-lo).
 
 ## Como continuar (workflow desta sessão)
 
 1. **Por feature:** `/speckit-specify` → (clarify quando houver ambiguidade real, via perguntas) → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`. Tudo confirmado pelo usuário ("pode continuar" = conduza o pipeline inteiro).
-2. **`.specify/feature.json`** rastreia a feature ativa (hoje aponta para `028`); o marcador `<!-- SPECKIT -->` no `CLAUDE.md` aponta para o `plan.md` ativo.
+2. **`.specify/feature.json`** rastreia a feature ativa (hoje aponta para `029`); o marcador `<!-- SPECKIT -->` no `CLAUDE.md` aponta para o `plan.md` ativo.
 3. **Regra crítica (CLAUDE.md):** antes de `/speckit-specify`, ler constitution + SRS (seção da feature) + DECISIONS + specs dependentes.
 4. **Commits:** ao final, rodar `/micro-commits` (backdated, **sem push**) quando o usuário pedir.
-5. **Numeração de specs:** sequencial; a próxima é `029`.
+5. **Numeração de specs:** sequencial; a próxima é `030`.
 
 **Motor (M1): COMPLETO. M2 (UI) iniciado** (020 = painéis ao vivo; 021 = log/Histórico real; 022 = modais centrais dirigidos por resolução). **Próximas fatias do M2** (impacto): **token animado** (`LiveTokens` a partir de `player.pos`) · **construção/hipoteca/negociação na UI** (iniciadas pelo jogador) · **revelação de carta imediata** (exige novo estado no motor) · painel **Trades** ao vivo · (log: estender `logEvent` a construção/hipoteca/trade/loan/reação — one-liner cada). Depois: **Multiplayer/Sessão (M3)** · rebalance pós-playtest (motor sem gaps de regra — §8.4 fechado no 028). **UI precisa de validação visual no `bun run dev`** (não tenho como ver a tela) — pendente o acabamento dos modais/compositor.
 
