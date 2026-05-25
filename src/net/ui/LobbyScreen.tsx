@@ -16,7 +16,7 @@ import {
 } from '@/net/room'
 import { NAME_MAX, recallPlayerName, rememberPlayerName } from '@/net/session'
 import { EntryPanel, EntryStage, EntryHeader } from './entryShell'
-import { AvatarConceptLab } from './AvatarConceptLab'
+import { AvatarPickers, AvatarPreview } from './AvatarConceptLab'
 
 const JOIN_ERROR_TEXT: Record<JoinError, string> = {
   'room-full': `Sala cheia — o limite é ${MAX_SEATS} jogadores.`,
@@ -117,27 +117,19 @@ export function IdentityForm({
           mesma composição mapa + ação da home. */}
       <section className="identity-passport">
         <div className="identity-passport__head">
-          <p className="home-map-panel__eyebrow">Seu marcador de viagem</p>
+          <p className="home-map-panel__eyebrow">Seu personagem</p>
           <span aria-hidden>BM · 01</span>
         </div>
-        <AvatarConceptLab
+        <AvatarPreview
           color={chosen || 'var(--color-ink-400)'}
           avatar={avatar}
           skin={skin}
-          onAvatarChange={setAvatar}
-          onSkinChange={setSkin}
         />
         <div className="identity-passport__name">
           <p className={name.trim() ? 'text-starlight' : 'text-starlight-muted/70'}>
             {name.trim() || 'Viajante sem nome'}
           </p>
         </div>
-        <div className="identity-passport__route" aria-hidden>
-          <i />
-          <i />
-          <i />
-        </div>
-        <p className="identity-passport__hint">5 formatos · 8 skins · combine do seu jeito</p>
       </section>
 
       <section className="identity-controls">
@@ -173,9 +165,19 @@ export function IdentityForm({
           </div>
         </div>
 
+        <AvatarPickers
+          className="identity-avatar-pickers"
+          color={chosen || 'var(--color-ink-400)'}
+          avatar={avatar}
+          skin={skin}
+          onAvatarChange={setAvatar}
+          onSkinChange={setSkin}
+        />
+
         {message && <p className="text-signal-glow text-sm leading-snug">{message}</p>}
 
         <Button
+          variant="ghost"
           className="identity-submit py-3 text-sm"
           disabled={!name.trim() || !chosen || busy}
           onClick={() => {
@@ -231,6 +233,10 @@ export function RoomLobby({
 
   const faltam = MIN_SEATS - room.seats.length
   const openingMode = room.openingMode ?? 'sealed-bid'
+  const compactLink = link.replace(/^https?:\/\//, '')
+  const waitingCopy = faltam === 1
+    ? 'Falta 1 jogador para liberar a largada'
+    : `Faltam ${faltam} jogadores para liberar a largada`
 
   return (
     <Frame
@@ -247,45 +253,76 @@ export function RoomLobby({
       {/* 1. Convite — o PRIMEIRO bloco da tela. Numa sala recém-criada não há nada a fazer
           além de chamar gente; deixar o link abaixo da lista de assentos enterrava a única
           ação que importa naquele momento. */}
-      <div className="flex flex-col gap-1.5">
-        <span className="label text-brass">Convide seus amigos</span>
-        <div className="flex gap-2">
-          <input
-            readOnly
-            value={link}
-            aria-label="Link da sala"
-            onFocus={(e) => e.currentTarget.select()}
-            className="entry-input flex-1 min-w-0 text-sm text-starlight-muted"
-          />
-          <Button variant="secondary" onClick={copy}>
-            {copied ? 'Copiado' : 'Copiar'}
-          </Button>
+      <div className="lobby-section">
+        <div className="lobby-section-heading">
+          <span className="label text-brass">Convite da sala</span>
+          <span className="lobby-section-meta">Sala {room.id.toUpperCase()}</span>
         </div>
-        {/* Frase, não rótulo: `.label` versaleta e alarga o espaçamento — bom para "Link da
-            sala", ilegível para uma linha inteira de texto. */}
-        <p className="text-[0.8rem] text-starlight-muted leading-snug">
-          {faltam > 0 ? `Pelo menos ${MIN_SEATS} jogadores para começar.` : `Cabem até ${MAX_SEATS} jogadores.`}
-        </p>
+        <div className="lobby-invite">
+          <span className="lobby-invite__mark" aria-hidden>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+              <path d="M10.5 13.5a4 4 0 0 0 5.66 0l2.34-2.34a4 4 0 0 0-5.66-5.66L11.5 6.84" />
+              <path d="M13.5 10.5a4 4 0 0 0-5.66 0L5.5 12.84a4 4 0 0 0 5.66 5.66l1.34-1.34" />
+            </svg>
+          </span>
+          <span className="lobby-invite__copy">
+            <strong>Link pronto para compartilhar</strong>
+            <code title={link}>{compactLink}</code>
+          </span>
+          <button
+            type="button"
+            className="lobby-copy-action"
+            onClick={copy}
+            aria-label={copied ? 'Link da sala copiado' : 'Copiar link da sala'}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+              {copied ? (
+                <path d="m5 12 4 4L19 6" />
+              ) : (
+                <>
+                  <rect x="8" y="8" width="11" height="11" rx="1.5" />
+                  <path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-10A1.5 1.5 0 0 0 3 5.5v10A1.5 1.5 0 0 0 4.5 17H8" />
+                </>
+              )}
+            </svg>
+            {copied ? 'Copiado' : 'Copiar link'}
+          </button>
+        </div>
       </div>
 
       {/* 2. Quem já está na sala. Assento vazio não é informação: a capacidade está no
           contador, e uma lista de oito placeholders faz uma sala de 1 parecer deserta. */}
-      <div className="flex flex-col gap-1.5">
-        <span className="label text-brass">
-          Jogadores ({room.seats.length}/{MAX_SEATS})
-        </span>
-        {room.seats.map((s) => (
+      <div className="lobby-section">
+        <div className="lobby-section-heading">
+          <span className="label text-brass">Jogadores</span>
+          <span className="lobby-section-meta">
+            <strong>{room.seats.length}</strong> de {MAX_SEATS}
+          </span>
+        </div>
+        <div className="lobby-roster">
+        {room.seats.map((s, index) => (
           <div
             key={s.uid}
-            className="lobby-seat flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-card)]"
+            className="lobby-player"
           >
-            <PlayerFace color={s.color} avatar={s.avatar} skin={s.skin} size={30} />
-            <span className="text-starlight truncate flex-1 inline-flex items-center gap-2 min-w-0">
-              <span className="truncate">{s.name}</span>
+            <span className="lobby-player__number" aria-hidden>
+              {String(index + 1).padStart(2, '0')}
             </span>
-            {s.uid === myUid && <Chip tone="gold">você</Chip>}
-            {s.isHost && <Chip>host</Chip>}
-            {!s.connected && <Chip tone="alert">offline</Chip>}
+            <PlayerFace color={s.color} avatar={s.avatar} skin={s.skin} size={34} />
+            <span className="lobby-player__identity">
+              <strong>{s.name}</strong>
+              <small>
+                {s.uid === myUid ? 'Seu assento' : `Jogador ${index + 1}`}
+                {s.isHost ? ' · Host' : ''}
+              </small>
+            </span>
+            <span
+              className={`lobby-player__connection ${s.connected ? 'lobby-player__connection--online' : ''}`}
+              title={s.connected ? `${s.name} está online` : `${s.name} está offline`}
+            >
+              <i aria-hidden />
+              <span className="sr-only">{s.connected ? 'online' : 'offline'}</span>
+            </span>
             {isHost && !s.isHost && onKick && (
               <button
                 type="button"
@@ -302,16 +339,26 @@ export function RoomLobby({
             )}
           </div>
         ))}
+        </div>
       </div>
       </section>
 
       <section className="lobby-column lobby-column--launch">
-      <fieldset className="flex flex-col gap-1.5">
-        <legend className="label text-brass mb-1">Ritual de Largada</legend>
+      <fieldset className="lobby-launch-fieldset">
+        <legend className="label text-brass">Ritual de largada</legend>
+        <p className="lobby-launch-intro">Escolha como a primeira posição será definida.</p>
         <div className="opening-mode-picker">
           {([
-            { mode: 'sealed-bid', label: 'Leilão secreto', detail: 'Lances lacrados' },
-            { mode: 'dice-roll', label: 'Maior dado', detail: 'Sem custo' },
+            {
+              mode: 'sealed-bid',
+              label: 'Leilão secreto',
+              detail: 'Lances definem a ordem e abastecem a Loteria.',
+            },
+            {
+              mode: 'dice-roll',
+              label: 'Maior dado',
+              detail: 'Dois dados definem a ordem, sem custo.',
+            },
           ] as const).map((option) => {
             const selected = openingMode === option.mode
             return (
@@ -328,6 +375,9 @@ export function RoomLobby({
                   <strong>{option.label}</strong>
                   <small>{option.detail}</small>
                 </span>
+                <span className="opening-mode-option__radio" aria-hidden>
+                  <i />
+                </span>
               </button>
             )
           })}
@@ -338,15 +388,19 @@ export function RoomLobby({
           botão apagado não dizia o que faltava. */}
       {isHost ? (
         <Button
+          variant="ghost"
+          className="lobby-start-cta"
           disabled={faltam > 0 || starting}
           title={faltam > 0 ? `São necessários pelo menos ${MIN_SEATS} jogadores para começar` : undefined}
           onClick={onStart}
         >
           {starting
             ? 'Iniciando…'
-            : openingMode === 'sealed-bid'
-              ? 'Abrir leilão'
-              : 'Rolar e iniciar'}
+            : faltam > 0
+              ? waitingCopy
+              : openingMode === 'sealed-bid'
+                ? 'Abrir leilão'
+                : 'Rolar e iniciar'}
         </Button>
       ) : (
         <p className="label text-starlight-muted text-center">Aguardando o host iniciar a partida…</p>
