@@ -1,15 +1,15 @@
 # HANDOVER — Banco Master
 
 > Estado para continuar em um **chat novo**. Snapshot de 2026-05-24.
-> Leitura de partida: este arquivo → `CLAUDE.md` → `docs/MILESTONES.md` → a spec ativa (`specs/020-.../plan.md`).
+> Leitura de partida: este arquivo → `CLAUDE.md` → `docs/MILESTONES.md` → a spec ativa (`specs/028-.../plan.md`).
 
 ## Onde estamos
 
-Saímos da discovery e entramos em **implementação ativa**, feature a feature, via GitHub Spec Kit (`spec → plan → tasks → implement`, com testes). O **motor de jogo (M1) está completo e testado** (`src/game/`, regras + tema oficial + §9.4) + uma **UI mínima jogável**. Falta: **UI completa (M2)**, **multiplayer (M3)** e tuning pós-playtest. Gaps de regra: só a transferência de imunidade (§8.4).
+Saímos da discovery e entramos em **implementação ativa**, feature a feature, via GitHub Spec Kit (`spec → plan → tasks → implement`, com testes). O **motor de jogo (M1) está completo e testado** (`src/game/`, regras + tema oficial + §9.4 + §8.4) + uma **UI mínima jogável**. Falta: **UI completa (M2)**, **multiplayer (M3)** e tuning pós-playtest. **Sem mais gaps de regra no motor** (a transferência de imunidade §8.4 foi entregue no 028).
 
 **Como verificar:**
 ```bash
-bunx vitest run tests/game  # 228 testes (motor + playersView + log + activeModal + deedView + negociação) — projeto usa BUN, não npm/npx
+bunx vitest run tests/game  # 234 testes (motor + playersView + log + activeModal + deedView + negociação/transferência) — projeto usa BUN, não npm/npx
 bun run build               # tsc -b + vite (deve passar, exit 0)
 bun run dev                 # demo local jogável (HUD na barra de baixo)
 ```
@@ -45,6 +45,7 @@ bun run dev                 # demo local jogável (HUD na barra de baixo)
 | 025 | `revelacao-carta` | **(M2 fatia 6)** revelação de carta sacada. `card-reveal` (ResolutionSlice) + `cardRevealResolve` (peek do topo, não muta) substitui `cardResolve` no `ctx.resolve`; `confirmCardReveal` saca/processa via o `cardResolve` **inalterado** (006 verde). Modal `card-reveal` no `ModalLayer`/`activeModal` (nome/deck/raridade/`CARD_DESC` + "Continuar"). 7 casos em `tests/game/cards/revelacao.test.ts`. **Falta: T010 visual.** |
 | 027 | `trades-ao-vivo` | **(M2 fatia 8)** painel Trades real: `GameState.tradeHistory: Trade[]` (bounded 12); `acceptTrade` registra a troca + loga "fromId ↔ toId: troca aceita" (`executeTrade` intacto). `src/game/ui/trade/tradesView.ts` (`{pending, history}`, puro, testado). Painel "Trades" (em `ActionsPanel`) consome `tradesView` (pendente ativo + histórico, resumo); "+ Nova proposta" → `useTradeUI.show()`; `MOCK_TRADES`/tipo mock/`playerByName` removidos. **Falta: T009 visual.** |
 | 026 | `leilao-casas-escassez` | **(M2 fatia 7)** leilão de casas (§5.4) como **evento autônomo** `GameState.houseAuction` (refactor: saiu da `ResolutionSlice` — era código morto/bugado). `economy/houseAuction.ts` reescrito p/ o campo: `openHouseAuction`/`placeHouseBid`/`closeHouseAuction` (sem `now`, sem timer; `close` transfere casas+lance **sem** tocar no turno; `declareBuildInterest` removido). `HouseAuctionLayer` (modal, seletor de licitante) + botão "🏘 Leilão de casas" no `PlayersPanel` (gatilho manual; auto-disparo = M3). `house-auction` removido de `activeModal`/`ModalLayer`/`activeModal.test`. 6 casos em `houseAuction.test.ts`. **Falta: T011 visual.** |
+| 028 | `transferir-imunidade` | **(§8.4 — último gap de regra)** transferir imunidade EXISTENTE numa troca (re-atribuir beneficiário, não conceder nova). `Trade += fromImmunityTransfers?: number[]`/`toImmunityTransfers?: number[]`. `validImmunityTransfers` (reusa `hasImmunity`) → `validateTrade` exige que o ofertante seja beneficiário ativo da pos. `executeTrade` re-atribui o `beneficiaryId` (from→to / to→from) **antes** das concessões novas, preservando `lapsRemaining` + `granterId`. Concessão de novas (014) inalterada. UI: `TradeLayer` ganha seção "Transferir imunidade" por lado (toggle das imunidades que o lado possui) + 🛡️➡️ no modal recebido. 6 casos novos em `negociacao-ui.test.ts`. **Falta: T007 visual.** |
 | — | UI wiring | `src/game/ui/` — `GameHUD` (controle do turno; inclui seletor de Bus Ticket e pedir/quitar empréstimo) + `LiveTokens`; montados no `App.tsx`/`Board01Classic.tsx`. **Construção (004/011) não está no HUD** (M2) |
 
 **Loop single-player local completo:** comprar → aluguel → construir → hipotecar → GO/Férias → dívida → falir → vencedor.
@@ -63,8 +64,8 @@ bun run dev                 # demo local jogável (HUD na barra de baixo)
 
 **Regras do motor:**
 - **Sistema de cartas: COMPLETO** — **0 cartas no-op** no catálogo (todas as 32 implementadas após 015/016/017). Deferido: Bunker sobre "Auditoria recebida" (Diplomacia já cobre) e o **timer de 10s** da reação (UI/M2).
-- **Negociação: COMPLETA** (troca no 013 + imunidade no 014). **Deferido:** transferência de imunidade existente para novo beneficiário (§8.4 "transferíveis", FR-009 do 014).
-- **Transferência de imunidade existente** (§8.4 "transferíveis"): re-atribuir o beneficiário de uma imunidade ativa numa nova troca — deferida. (A limpeza §9.4 foi feita no 019.)
+- **Negociação: COMPLETA** (troca no 013 + concessão de imunidade no 014 + **transferência de imunidade existente no 028**).
+- **Transferência de imunidade existente** (§8.4 "transferíveis"): **ENTREGUE no 028** — `Trade.fromImmunityTransfers`/`toImmunityTransfers` re-atribuem o `beneficiaryId` de uma imunidade ativa preservando voltas + `granterId`. **Não há mais gaps de regra no motor.**
 - **Balanceamento: COMPLETO** (Speed Die, GO Progressivo, Free Parking, Bus Tickets, Hangar, Skyscraper, 2º hotel, Tax Man — todos entregues).
 - **Tema "Cidades do Mundo": OFICIALIZADO** (018) — knobs centralizados em `src/game/theme.ts` (tunável num ponto só); ficha em `docs/TEMA.md`. Rebalanceamento real fica como tuning pós-playtest (editar `theme.ts`).
 
@@ -84,18 +85,18 @@ bun run dev                 # demo local jogável (HUD na barra de baixo)
 - **160 commits**, todos em `main` (o projeto não usa branches de feature — trabalha em `main`); incluem até o 017.
 - Histórico criado via skill **`/micro-commits`** (datas backdatadas aleatórias **espalhadas** pelos últimos 6 meses, identidade `Nikolas Santana <nikolasdssantana@gmail.com>`, mensagens em **inglês** emoji+conventional).
 - **NÃO foi feito push** — o usuário faz o push manualmente (`git push origin main`).
-- **018–027 ainda NÃO commitados** — working tree sujo (até o 017 commitado, 160 commits). Rodar `/micro-commits` quando o usuário pedir.
+- **018–028 ainda NÃO commitados** — working tree sujo (até o 017 commitado, 160 commits). Rodar `/micro-commits` quando o usuário pedir.
 - ⚠️ **Usar `bun`**, nunca npm/npx (rodar npm gera `package-lock.json` indevido — já existe um commitado, o usuário optou por mantê-lo).
 
 ## Como continuar (workflow desta sessão)
 
 1. **Por feature:** `/speckit-specify` → (clarify quando houver ambiguidade real, via perguntas) → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`. Tudo confirmado pelo usuário ("pode continuar" = conduza o pipeline inteiro).
-2. **`.specify/feature.json`** rastreia a feature ativa (hoje aponta para `027`); o marcador `<!-- SPECKIT -->` no `CLAUDE.md` aponta para o `plan.md` ativo.
+2. **`.specify/feature.json`** rastreia a feature ativa (hoje aponta para `028`); o marcador `<!-- SPECKIT -->` no `CLAUDE.md` aponta para o `plan.md` ativo.
 3. **Regra crítica (CLAUDE.md):** antes de `/speckit-specify`, ler constitution + SRS (seção da feature) + DECISIONS + specs dependentes.
 4. **Commits:** ao final, rodar `/micro-commits` (backdated, **sem push**) quando o usuário pedir.
-5. **Numeração de specs:** sequencial; a próxima é `028`.
+5. **Numeração de specs:** sequencial; a próxima é `029`.
 
-**Motor (M1): COMPLETO. M2 (UI) iniciado** (020 = painéis ao vivo; 021 = log/Histórico real; 022 = modais centrais dirigidos por resolução). **Próximas fatias do M2** (impacto): **token animado** (`LiveTokens` a partir de `player.pos`) · **construção/hipoteca/negociação na UI** (iniciadas pelo jogador) · **revelação de carta imediata** (exige novo estado no motor) · painel **Trades** ao vivo · (log: estender `logEvent` a construção/hipoteca/trade/loan/reação — one-liner cada). Depois: **Multiplayer/Sessão (M3)** · gaps (§8.4, rebalance). **UI precisa de validação visual no `bun run dev`** (não tenho como ver a tela) — pendente o acabamento dos modais 022.
+**Motor (M1): COMPLETO. M2 (UI) iniciado** (020 = painéis ao vivo; 021 = log/Histórico real; 022 = modais centrais dirigidos por resolução). **Próximas fatias do M2** (impacto): **token animado** (`LiveTokens` a partir de `player.pos`) · **construção/hipoteca/negociação na UI** (iniciadas pelo jogador) · **revelação de carta imediata** (exige novo estado no motor) · painel **Trades** ao vivo · (log: estender `logEvent` a construção/hipoteca/trade/loan/reação — one-liner cada). Depois: **Multiplayer/Sessão (M3)** · rebalance pós-playtest (motor sem gaps de regra — §8.4 fechado no 028). **UI precisa de validação visual no `bun run dev`** (não tenho como ver a tela) — pendente o acabamento dos modais/compositor.
 
 ## Ponteiros
 

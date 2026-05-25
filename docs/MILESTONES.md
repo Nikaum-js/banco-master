@@ -21,7 +21,7 @@
 ## M1 — Motor de jogo (lógica) ✅ (gaps menores)
 
 Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vitest). Cada item abaixo é uma feature SDD completa (`spec→plan→tasks→implement`).
-**Estado: 214 testes verdes (`bunx vitest run tests/game`). Motor M1 completo (regras + tema + §9.4). M2 (UI) em andamento: dado central + auto-avanço, modais de resolução, Histórico ao vivo, token animado, gestão de propriedade (construção/hipoteca) e negociação (trade) pelo tabuleiro.**
+**Estado: 234 testes verdes (`bunx vitest run tests/game`). Motor M1 completo (regras + tema + §9.4 + §8.4 transferência de imunidade — sem gaps de regra). M2 (UI) em andamento: dado central + auto-avanço, modais de resolução, Histórico ao vivo, token animado, gestão de propriedade (construção/hipoteca) e negociação (trade + transferência de imunidade) pelo tabuleiro.**
 
 ### Feito
 
@@ -38,15 +38,15 @@ Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vite
 - ✅ **011 Construção avançada** — 2º hotel (§14, escassez de estoque), Hangar (§13.6, dobra aluguel do aeroporto), Skyscraper (§13.7, grupo completo, aluguel fixo + ×3 no grupo); ladder 0–7
 - ✅ **012 Tax Man** (§13.8) — Fiscal do banco move a cada turno (porta em `advanceSeat`) e cobra do dono o aluguel da casa onde para (removido da economia); catch-up discreto. **Fecha as mecânicas de balanceamento.**
 - ✅ **013 Negociação — troca** (§8.1–§8.3) — `executeTrade`: trocar propriedades (incl. hipotecadas, taxa de 10%) + caixa entre dois jogadores, a qualquer momento; cartas/Bus Tickets/construções não-negociáveis
-- ✅ **014 Imunidade de aluguel** (§8.4 / D-010) — concedida na troca, por N voltas ou permanente; beneficiário não paga (pessoal); expira no GO; visível no HUD. **Negociação completa** (transferência de imunidade existente deferida)
+- ✅ **014 Imunidade de aluguel** (§8.4 / D-010) — concedida na troca, por N voltas ou permanente; beneficiário não paga (pessoal); expira no GO; visível no HUD. **Negociação completa** (transferência de imunidade existente entregue no 028)
 - ✅ **015 Cartas — efeitos temporários** (§10.6) — Apagão (Hangares off), Greve (utilidades $0), Boicote (propriedade sem aluguel), Imunidade Temporária (não-alvo); `GameState.tempEffects` + expiração no GO; respeitado por aluguel e Tax Man
 - ✅ **016 Cartas ofensivas com alvo** (§10.6) — Aquisição Hostil (força venda, ×1,5 aeroporto/utilidade), Despejo (demole casa), Auditoria Fiscal (10% do patrimônio ao pote); respeitam Imunidade Temporária
 - ✅ **017 Cartas de reação** (§10.6/§12.4) — Diplomacia (cancela ofensiva; atacante perde a carta) e Bunker Fiscal (cancela imposto); interrupção via `resolution`. **Sistema de cartas COMPLETO — 0 cartas no-op.**
 - ✅ **018 Tema "Cidades do Mundo"** — valores oficiais centralizados em `src/game/theme.ts` (fonte única, tunável); nomes de casa únicos; ficha em `docs/TEMA.md`.
 - ✅ **019 Limpeza na eliminação** (§9.4) — `declareBankruptcy` remove imunidades concedidas/recebidas e `tempEffects` originados pelo eliminado; `Immunity` ganha `granterId`. **M1 (motor) completo.**
 
-### Pendente (engine — gaps menores)
-- [ ] **Transferência de imunidade existente** (§8.4 "transferíveis").
+### Pendente (engine)
+- ✅ **Transferência de imunidade existente** (§8.4 "transferíveis") — entregue no **028** (re-atribui beneficiário, preserva voltas/`granterId`). **Sem mais gaps de regra no motor.**
 - [ ] **Rebalanceamento pós-playtest** (tuning dos knobs em `theme.ts`).
 
 ---
@@ -65,6 +65,7 @@ O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o 
 - ✅ **025** — **Revelação de carta sacada**: `card-reveal` (ResolutionSlice) + `cardRevealResolve` (peek) + `confirmCardReveal` (saca via `cardResolve` intacto); modal central (nome/deck/raridade/descrição + "Continuar"). _Acabamento visual a confirmar no `bun run dev`._
 - ✅ **026** — **Leilão de casas em escassez** (§5.4): evento autônomo `GameState.houseAuction` (saiu da resolução de turno) + `HouseAuctionLayer` + botão "Leilão de casas" (gatilho manual; auto-disparo = M3). `house-auction` de resolução removido (código morto).
 - ✅ **027** — **Painel Trades ao vivo**: `GameState.tradeHistory` (bounded) + `acceptTrade` registra/loga; `tradesView` (puro) + painel real (pendente + histórico); mock removido.
+- ✅ **028** — **Transferência de imunidade existente** (§8.4): `Trade += fromImmunityTransfers?`/`toImmunityTransfers?` (posições); `validateTrade` exige `hasImmunity(ofertante, pos)`; `executeTrade` re-atribui o `beneficiaryId` (preserva voltas + `granterId`), antes das concessões novas. Compositor ganha seção "Transferir imunidade" por lado; modal recebido lista 🛡️➡️. _Acabamento visual a confirmar no `bun run dev`._ **Fecha o último gap de regra do motor.**
 - **M2 (UI jogável) essencialmente completo** — falta só validação visual (`bun run dev`) e tuning. Próximo grande passo: **M3 (multiplayer/sessão)**.
 
 **Resultado:** `bun run dev` = uma partida **local** jogável de ponta a ponta (um cliente; multiplayer fica para M3).
