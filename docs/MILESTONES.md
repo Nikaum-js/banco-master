@@ -53,7 +53,7 @@ Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vite
 
 ---
 
-## M2 — UI jogável (wiring motor ↔ tela) 🟡 em andamento
+## M2 — UI jogável (wiring motor ↔ tela) ✅ (falta validação visual)
 
 O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o store e dirige o turno (rolar/comprar/leilão/dívida/cartas/reação/Bus Ticket/empréstimo). Fatias por feature SDD:
 
@@ -71,15 +71,14 @@ O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o 
 
 - ✅ **029** — **Painel "Minhas Cartas" + jogar cartas da mão** (§12.4): fecha o gap mais grave do M2. Seletores puros `handCardsView(game, playerId)` (lista + `playable`/`reason` por timing) e `cardTargets(game, playerId, cardId)` (alvos válidos reusando `reactorFor`/`canAudit`/`ownerOf`); `HandPanel` (cor de raridade, nome, efeito, "Usar" gated + motivo, contador X/3) no `ActionsPanel`; `HandCardLayer` + `useHandCardUI` (seletor de alvo) → `playHandCard`. Mapas de rótulo/cor extraídos p/ `cardMeta.ts` (ModalLayer importa; modais inalterados). Reação (Diplomacia/Bunker) listada mas desabilitada (dispara pelo prompt do HUD). 11 casos em `tests/game/ui/handView.test.ts`. **Zero mudança de motor.** _Acabamento visual a confirmar no `bun run dev`._
 
+- ✅ **030** — **Modais informativos** (§12.2, fecha o §12): "Free Parking coletado" e "Aquisição Hostil sofrida". Evento autônomo `GameState.notice` (padrão `pendingTrade`/`houseAuction`, serializável, **não** bloqueia o turno); hook mínimo no motor — `collectCenter` (007) e `acquire` (016) registram; `dismissNotice` limpa. `NoticeLayer` (overlay + "OK"). 5 casos em `tests/game/economy/notice.test.ts`; 007/016 intactos. _Acabamento visual a confirmar no `bun run dev`._
+
 ### Pendente (UI single-player)
 
-> Jogáveis **agora** (motor pronto), mas cada um precisa de um **evento detectável no motor** / é per-cliente → ficam para uma fatia futura ou o M3.
-
-- [ ] **Notificação "Aquisição Hostil sofrida"** (§12.2) — a vítima não vê que perdeu a propriedade (só no log); per-cliente, melhor no M3.
-- [ ] **Modal "Free Parking coletado"** (§12.2) — o pote é mostrado estático no painel; falta o modal ao **parar** em Férias e coletar (precisa de hook de evento no motor).
 - [ ] Acabamento visual de todos os modais/painéis no `bun run dev` (não tenho como ver a tela).
+- [ ] Roteamento **per-cliente** das notificações (a "Aquisição Hostil sofrida" é, conceitualmente, da vítima) — depende do M3.
 
-**Resultado:** `bun run dev` = uma partida **local** jogável de ponta a ponta, **incluindo jogar cartas de mão**. Faltam só dois modais informativos (acima) e validação visual; o grande próximo passo é o **M3 (multiplayer/sessão)**.
+**Resultado:** **M2 fechado.** `bun run dev` = uma partida **local** jogável de ponta a ponta — turno, economia, construção/hipoteca, negociação, **cartas de mão** e os modais do §12 completos. Falta só validação visual; o grande próximo passo é o **M3 (multiplayer/sessão)**.
 
 ---
 
@@ -89,10 +88,10 @@ O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o 
 >
 > **A favor:** o `GameState` já é JSON puro e os reducers são `(state) → state` (princípio VII). Falta só a **camada de transporte/autoridade/persistência** em volta — nenhuma regra de jogo muda.
 
-### Decisões a travar primeiro (viram ADR antes de qualquer código)
+### Decisões travadas (ADR — 2026-05-24) ✅
 
-- [ ] **D-019 — Autenticação** (SRS §16 "a definir"): **proposta = anônima por link** (sem contas; identidade = id de sessão + nome/token escolhidos no lobby). Email/contas fica fora do v1. Sem isso o lobby não fecha.
-- [ ] **D-020 — Modelo de autoridade & sync**: quem aplica o reducer e como o estado se propaga. Opções: **(a) host-autoritativo** — o host roda o reducer e difunde o snapshot via Supabase Realtime; clientes enviam *comandos* e renderizam o snapshot recebido (mais simples; casa com §11.3 "host cai → pausa indefinida, sem transferência"). **(b) server-autoritativo** — Edge Function (Deno) importa o **mesmo** módulo puro e aplica os comandos (sem dependência do host, mais infra). **Proposta = (a) para o v1**, com o reducer pronto p/ migrar a (b) depois. Define também **persistência**: snapshot do `GameState` (JSON) gravado a cada comando aceito → reload/reconexão recarregam do servidor (princípio VII).
+- ✅ **[D-019](./DECISIONS.md#d-019--autenticação-anônima-por-link-sem-contas-no-v1) — Autenticação anônima por link**: sem contas no v1; identidade = token de sessão (`localStorage`) + nome/token visual escolhidos no lobby; o link da sala é a credencial; o token viabiliza reconexão (§11.4). E-mail/perfis = v2.
+- ✅ **[D-020](./DECISIONS.md#d-020--modelo-de-autoridade--sincronização-host-autoritativo--realtime--snapshot) — Autoridade & sync: host-autoritativo + Realtime + snapshot**: o host roda o reducer puro; clientes enviam **comandos**; host aplica e **difunde o snapshot**; snapshot do `GameState` **persistido** a cada comando (resiliência §11.4). Autoridade única lineariza (sem conflito) e casa com §11.3 (host cai → pausa, sem transferência). Reducer puro pronto p/ migrar a server-autoritativo depois.
 
 ### Sequência de features (cada uma é uma fatia SDD)
 
