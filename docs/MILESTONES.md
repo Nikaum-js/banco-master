@@ -75,6 +75,10 @@ O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o 
 
 - ✅ **031** — **Leilão de escassez de terrenos** (D-023 / SRS §7.3): pregão **simultâneo** dos últimos terrenos livres. Evento autônomo `GameState.landAuction` (+ `landAuctionArmed`); `economy/landAuction.ts` — `maybeOpenLandAuction` (gatilho 1≤livres≤3 + ≥2 vivos + trava de episódio), `placeLandBid` (§7.2 + **trava de solvência** `committedCash`), `closeLandAuction` (líder paga banco+escritura; sem lance fica livre). Cronômetro próprio no store (padrão/`deadline` do 003). `LandAuctionLayer` no `App`. 13 casos em `landAuction.test.ts`. _Acabamento visual a confirmar no `bun run dev`._
 
+- ✅ **032** — **Rebalanceamento de economia** (D-024 / SRS §2.3/§5.1): **custo de casa = tier por grupo** ($40→$240, remove proporcional) + **aluguel = multiplicador por grupo** (curva clássica, hotel-topo $360→$1.800, sweet spot laranja/vermelho) + **rebalance do board** (laranja→3: Hamburgo entra, Salvador sai; verde premium 4). `theme.ts` (`HOUSE_COST`/`RENT_MULT`), `rentLadder` (FONTE ÚNICA engine↔UI), `buildCost` tier, `boardData`. SRS §2.3 reconciliado (9 grupos reais). 9 casos novos (`rebalance.test.ts` + `board.test.ts`); 267 testes verdes. Construção segue ilimitada (D-022).
+
+- ✅ **033** — **Distrito super-luxo (Emirados)** (D-025 / SRS §2.3): novo **10º grupo** `platinum` (Abu Dhabi $550 / Dubai $650, 1 país) no clímax do tabuleiro — armadilha de prestígio (Dubai hotel ~$2.300, arranha ~$3.600, tier de casa $300, ROI < orange/red). Cor própria (ônix `#26233a`) nas 3 fontes (`GROUPS`/`GROUP_COLOR`/`--color-group-platinum`). Board: verde 4→3 (Chicago sai), França 3→2 (Lyon sai) → **10 grupos, 28 cidades, 48 casas**. Reusa `rentLadder` (motor inalterado). 4 casos novos; 271 testes verdes. _Cor a confirmar no `bun run dev`._
+
 ### Pendente (UI single-player)
 
 - [ ] Acabamento visual de todos os modais/painéis no `bun run dev` (não tenho como ver a tela).
