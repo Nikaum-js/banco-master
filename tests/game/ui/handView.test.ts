@@ -56,7 +56,7 @@ describe('handCardsView — jogável por timing (US1)', () => {
     g.titles[7].ownerId = 'p2' // alvo válido p/ ficar jogável
     const v = find(g, 'p1', 'boicote-1')
     expect(v.label).toBe('Boicote')
-    expect(v.rarityColor).toBe(RARITY_COLOR.rara) // rara = azul (token do tema)
+    expect(v.rarityColor).toBe(RARITY_COLOR.epica) // Boicote virou épica na D-075: roxo (token do tema)
     expect(v.desc.length).toBeGreaterThan(0)
     expect(v.playable).toBe(true)
   })

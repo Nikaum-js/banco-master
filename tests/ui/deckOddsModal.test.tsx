@@ -11,6 +11,7 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { DeckOddsModal } from '@/game/ui/cards/DeckOddsModal'
+import { RARITY_LABEL, RARITY_PIPS } from '@/game/ui/cards/cardMeta'
 import { deckOdds } from '@/game/ui/cards/deckOdds'
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 
@@ -53,6 +54,21 @@ describe('DeckOddsModal — conteúdo e ordem', () => {
     expect(dupla.textContent).toContain('2 cartas')
     const unica = screen.getByRole('button', { name: /Aquisição Hostil/ })
     expect(unica.textContent).not.toContain('cartas')
+  })
+
+  it('exibe os quatro níveis com rótulo e quantidade correta de losangos', () => {
+    render(<DeckOddsModal deck="acaso" onClose={() => {}} />)
+    const rows = deckOdds('acaso').rows
+    const botoes = triggers()
+
+    expect([...new Set(rows.map((row) => row.rarity))].sort())
+      .toEqual(['comum', 'epica', 'lendaria', 'rara'])
+
+    for (const [index, row] of rows.entries()) {
+      expect(botoes[index].textContent).toContain(RARITY_LABEL[row.rarity])
+      expect(botoes[index].querySelectorAll('.deck-odds-row__pips i'))
+        .toHaveLength(RARITY_PIPS[row.rarity])
+    }
   })
 })
 

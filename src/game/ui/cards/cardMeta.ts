@@ -4,24 +4,28 @@
 import type { Rarity } from '@/game/cards/types'
 import { activeCatalog } from '@/game/ui/theme/boardTheme'
 
-// Raridade → cor (SRS §10.2: laranja/azul/verde; lendária > rara > comum).
+// Raridade → cor (SRS §10.2: laranja/roxo/azul/verde; lendária > épica > rara > comum).
 export const RARITY_COLOR: Record<Rarity, string> = {
   lendaria: 'var(--color-rarity-lendaria)', // laranja
+  epica: 'var(--color-rarity-epica)', // roxo
   rara: 'var(--color-rarity-rara)', // azul
   comum: 'var(--color-rarity-comum)', // verde
 }
 
 export const RARITY_LABEL: Record<Rarity, string> = {
   lendaria: 'Lendária',
+  epica: 'Épica',
   rara: 'Rara',
   comum: 'Comum',
 }
 
 // Losangos do selo de raridade na carta revelada. Existem para a hierarquia
-// (lendária > rara > comum) não depender SÓ de cor: laranja e verde a 4.5:1 num
-// fundo de tinta continuam sendo duas cores para quem não as distingue.
+// (lendária > épica > rara > comum) não depender SÓ de cor: laranja e verde a 4.5:1 num
+// fundo de tinta continuam sendo duas cores para quem não as distingue — e o quarto nível
+// da D-075 só piora essa conta, porque roxo e azul são vizinhos de matiz.
 export const RARITY_PIPS: Record<Rarity, number> = {
-  lendaria: 3,
+  lendaria: 4,
+  epica: 3,
   rara: 2,
   comum: 1,
 }

@@ -69,7 +69,7 @@ describe('activeModal — decisões de carta (US3)', () => {
       kind: 'card-discard',
       playerId: 'p1',
       cards: [
-        { id: 'boicote-1', rarity: 'rara', effect: 'boicote' },
+        { id: 'boicote-1', rarity: 'epica', effect: 'boicote' },
         { id: 'atalho-1', rarity: 'comum', effect: 'atalho' },
         { id: 'aquisicao-hostil-1', rarity: 'lendaria', effect: 'aquisicaoHostil' },
         { id: 'imunidade-1', rarity: 'lendaria', effect: 'imunidade' },

@@ -72,8 +72,11 @@
   --color-group-purple:  #a76bf5;
   --color-group-platinum: #c4c9d2; /* Alta Roda (super-luxo) — prata/platina (033; onyx original não destacava sobre a tinta escura) */
 
-  /* ---------- Raridade de carta (SRS §10.2: laranja/azul/verde) ---------- */
+  /* ---------- Raridade de carta (SRS §10.2: laranja/roxo/azul/verde) ---------- */
+  /* Quatro níveis desde a D-075. O roxo da épica é o mesmo `group-purple` do tabuleiro: */
+  /* a paleta de grupos já é a fonte das cores de raridade desde a auditoria do DS. */
   --color-rarity-lendaria: var(--color-group-orange);
+  --color-rarity-epica: var(--color-group-purple);
   --color-rarity-rara: var(--color-group-navy);
   --color-rarity-comum: var(--color-group-green);
 
@@ -7387,7 +7390,7 @@
 
   /* Selo de raridade — carimba QUANDO a virada termina (delay = duração do flip),
      na mesma gramática do selo de lance travado do leilão. Os losangos contam a
-     raridade sem depender de cor: 1 comum, 2 rara, 3 lendária. */
+     raridade sem depender de cor: 1 comum, 2 rara, 3 épica, 4 lendária. */
   .card-reveal__seal {
     display: grid;
     place-items: center;
@@ -7887,7 +7890,11 @@
 
   .deck-odds-row__trigger {
     display: grid;
-    grid-template-columns: 1.25rem auto 1fr auto;
+    /* A coluna dos losangos é FIXA (4 × 5px + 3 × 2px de gap), não `auto`. Cada linha é um grid
+       próprio, então uma coluna elástica se dimensiona pela própria linha e os nomes entram em x
+       diferentes conforme a raridade — o que já incomodava com três níveis e piorou com o quarto
+       (D-075). Largura do caso máximo, e a lista volta a ter uma única margem de leitura. */
+    grid-template-columns: 1.25rem 26px 1fr auto;
     align-items: center;
     gap: 0.6rem;
     width: 100%;

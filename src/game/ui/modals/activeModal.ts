@@ -9,7 +9,7 @@ import { activeBoard } from '@/game/ui/theme/boardTheme'
 
 export interface HandCardView {
   id: string // id da carta na mão — alvo do comando discardCard
-  rarity: Rarity // laranja/azul/verde (SRS §10.2) — cor no descarte
+  rarity: Rarity // laranja/roxo/azul/verde (SRS §10.2) — cor no descarte
   effect: string // EffectId — base do rótulo legível (mapa de apresentação no ModalLayer)
 }
 
