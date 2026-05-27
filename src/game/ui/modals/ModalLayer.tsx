@@ -23,6 +23,7 @@ import { buildCost } from '@/game/economy/construction'
 import { GavelIcon, CoinIcon, HouseIcon, HotelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
+import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 
 // Botão de ação do modal — casca fina sobre o primitivo Button (flex-1).
@@ -92,6 +93,7 @@ const MODAL_WAITING = {
 } as const
 
 export function ModalLayer() {
+  const { reduced } = useMotion()
   const game = useGameStore((s) => s.game)
   const dispatch = useGameStore((s) => s.dispatch)
   const placeBid = (playerId: string, amount: number): void => dispatch({ kind: 'place-bid', playerId, amount })
@@ -199,10 +201,10 @@ export function ModalLayer() {
 
           {view.kind === 'card-reveal' && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 10, rotateZ: -2 }}
+              initial={reduced ? false : { opacity: 0, scale: 0.9, y: 10, rotateZ: -2 }}
               animate={{ opacity: 1, scale: 1, y: 0, rotateZ: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 10 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+              exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 10 }}
+              transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 26 }}
               onClick={(e) => e.stopPropagation()}
               className="w-[300px] max-w-[90vw] bg-coffee-800 rounded-[var(--radius-modal)] overflow-hidden border-2"
               style={{ borderColor: RARITY_COLOR[view.rarity], boxShadow: `var(--shadow-dropdown), 0 0 22px color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 45%, transparent)` }}
@@ -299,6 +301,7 @@ export function ModalLayer() {
 // movimento acontece. Layout fluido (células flex, posição em %): nunca estoura
 // a largura do modal — sem scroll horizontal.
 function BusLine({ fromPos, onPick, onBoard }: { fromPos: number; onPick: (pos: number) => void; onBoard?: () => void }) {
+  const { reduced } = useMotion()
   const players = useGameStore((s) => s.game.players)
   const turnOrder = useGameStore((s) => s.game.turnOrder)
   const activeSeat = useGameStore((s) => s.game.activeSeat)
@@ -345,6 +348,7 @@ function BusLine({ fromPos, onPick, onBoard }: { fromPos: number; onPick: (pos: 
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 4 }}
+                transition={{ duration: reduced ? 0 : MOTION.fast, ease: EASE.standard }}
                 className="block label text-nano text-coffee-950 bg-gold-glow rounded-full px-2 py-0.5 whitespace-nowrap shadow-[var(--shadow-card)]"
               >
                 {departing != null
@@ -584,6 +588,7 @@ function AuctionCard({
   activeId: string
   placeBid: (playerId: string, amount: number) => void
 }) {
+  const { reduced } = useMotion()
   const cash = useGameStore((s) => s.game.players.find((p) => p.id === activeId)?.cash ?? 0)
   // Quem já passou não é mais licitante (`auction.ts:26` recusa o lance). Antes a view não
   // trazia `activeBidders`, então a tela oferecia três botões que o motor descartava.
@@ -625,9 +630,9 @@ function AuctionCard({
             <p className="label text-cream-muted">Lance atual</p>
             <motion.p
               key={view.currentBid}
-              initial={{ scale: 1.14 }}
+              initial={reduced ? false : { scale: 1.14 }}
               animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 16 }}
+              transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 16 }}
               className="currency text-5xl leading-none mt-2 origin-left"
               style={{
                 backgroundImage: 'var(--gradient-brass-shine)',

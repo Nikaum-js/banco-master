@@ -24,7 +24,9 @@ import { isBankrupt } from '@/game/falencia/falencia'
 import { eligibleLenders, interestOf, loanShortfall } from '@/game/emprestimos/emprestimos'
 import { activeHudView } from '@/game/ui/panels/activeHudView'
 import { EndGameScreen } from '@/game/ui/EndGameScreen'
-import { Button, Chip } from '@/game/ui/primitives'
+import { Button, Chip, MoneyPulse } from '@/game/ui/primitives'
+import { useMoneyPulse } from '@/game/ui/useMoneyPulse'
+import { useMotion } from '@/game/ui/motion'
 import type { LoanRequest } from '@/game/economy/types'
 import { money as fmt } from '@/lib/money'
 
@@ -107,12 +109,13 @@ function CardFrame({
   width = 420,
   children,
 }: { accent: string; glow: string; width?: number; children: ReactNode }) {
+  const { reduced } = useMotion()
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9, y: 14 }}
+      initial={reduced ? false : { opacity: 0, scale: 0.9, y: 14 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.92, y: 8 }}
-      transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+      exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.92, y: 8 }}
+      transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 360, damping: 26 }}
       className="pointer-events-auto relative max-w-[94vw] bg-coffee-800 rounded-[var(--radius-modal)] overflow-hidden"
       style={{
         width,
@@ -147,6 +150,11 @@ export function GameHUD() {
   const active = game.players[game.turnOrder[game.activeSeat]]
   const view = useLocalView() // spec 038: controles só do assento local (FR-002)
   const online = useRoomStore((s) => s.room !== null)
+  const { reduced } = useMotion()
+  // Feedback de caixa (044/T020 — FR-029): a tela de dívida mostra o caixa do devedor
+  // mudando ao vivo (hipoteca/venda pra cobrir a fatura) sem NENHUM aviso; mesmo pulso que
+  // `PlayerRow`/`PotCard` já usam (`primitives.tsx`), não um vocabulário novo.
+  const cashPulse = useMoneyPulse(active.cash)
   // PRECEDÊNCIA das cinco telas do HUD vem de `activeHudView` (testada), não da ordem dos
   // `return` abaixo. Adicionar uma sexta tela é editar a tabela, não adivinhar a posição.
   const hud = activeHudView(game)
@@ -289,24 +297,34 @@ export function GameHUD() {
                   </span>
                 </div>
 
-                {/* Trilho de fluxo com seta animada do devedor → credor */}
+                {/* Trilho de fluxo com seta animada do devedor → credor. Loop ambiente de
+                    1.1s, fora do vocabulário por design (D7 — coreografia de urgência da
+                    "conta vencida", mesma categoria da exceção do fim de jogo); some sob
+                    movimento reduzido — a seta parada ainda comunica o sentido do fluxo. */}
                 <div className="relative flex-1 h-px my-4">
                   <div className="absolute inset-0 top-1/2 -translate-y-1/2 h-[2px] bg-coffee-500" />
-                  <motion.div
-                    className="absolute top-1/2 -translate-y-1/2 h-[2px]"
-                    style={{ background: 'linear-gradient(90deg, transparent, var(--color-signal-glow))' }}
-                    initial={{ width: '0%' }}
-                    animate={{ width: '100%' }}
-                    transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-                  />
-                  <motion.span
-                    className="absolute top-1/2 -translate-y-1/2 text-signal-glow text-lg leading-none"
-                    initial={{ left: '0%', opacity: 0 }}
-                    animate={{ left: '92%', opacity: [0, 1, 1, 0] }}
-                    transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-                  >
-                    →
-                  </motion.span>
+                  {!reduced && (
+                    <>
+                      <motion.div
+                        className="absolute top-1/2 -translate-y-1/2 h-[2px]"
+                        style={{ background: 'linear-gradient(90deg, transparent, var(--color-signal-glow))' }}
+                        initial={{ width: '0%' }}
+                        animate={{ width: '100%' }}
+                        transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                      <motion.span
+                        className="absolute top-1/2 -translate-y-1/2 text-signal-glow text-lg leading-none"
+                        initial={{ left: '0%', opacity: 0 }}
+                        animate={{ left: '92%', opacity: [0, 1, 1, 0] }}
+                        transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+                      >
+                        →
+                      </motion.span>
+                    </>
+                  )}
+                  {reduced && (
+                    <span className="absolute top-1/2 -translate-y-1/2 left-[92%] text-signal-glow text-lg leading-none">→</span>
+                  )}
                 </div>
 
                 {/* Credor — PlayerFace na cor do assento, ou banco */}
@@ -322,16 +340,22 @@ export function GameHUD() {
                 </div>
               </div>
 
-              {/* Valor devido — número enorme em cobre, com pulso de glow contínuo */}
+              {/* Valor devido — número enorme em cobre, com pulso de glow contínuo. Outro
+                  loop ambiente fora do vocabulário (D7); sem ele sob movimento reduzido, o
+                  glow fica fixo no ponto médio — o valor (o FATO) nunca deixou de aparecer. */}
               <motion.p
                 className="text-center currency leading-none mt-4"
                 style={{ fontSize: 46, ...SIGNAL_TEXT }}
-                animate={{ filter: [
-                  'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 40%, transparent))',
-                  'drop-shadow(0 3px 20px color-mix(in srgb, var(--color-signal) 70%, transparent))',
-                  'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 40%, transparent))',
-                ] }}
-                transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                animate={reduced ? {
+                  filter: 'drop-shadow(0 3px 17px color-mix(in srgb, var(--color-signal) 55%, transparent))',
+                } : {
+                  filter: [
+                    'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 40%, transparent))',
+                    'drop-shadow(0 3px 20px color-mix(in srgb, var(--color-signal) 70%, transparent))',
+                    'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 40%, transparent))',
+                  ],
+                }}
+                transition={reduced ? { duration: 0 } : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
               >
                 {fmt(hud.amount)}
               </motion.p>
@@ -352,8 +376,9 @@ export function GameHUD() {
                   />
                 </div>
                 <div className="flex items-center justify-between mt-1.5">
-                  <span className="label text-cream-muted">
+                  <span className="label text-cream-muted relative inline-block">
                     Caixa <span className="text-cream currency">{fmt(active.cash)}</span>
+                    <MoneyPulse pulse={cashPulse} className="left-1/2 -translate-x-1/2 -top-4" />
                   </span>
                   {shortfall > 0 && (
                     <span className="label text-signal-glow">

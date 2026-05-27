@@ -4,6 +4,7 @@
 import { type ReactNode } from 'react'
 import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
+import { useMotion } from '@/game/ui/motion'
 
 // Overlay padrão: véu de tinta com VINHETA (centro mais claro, bordas mais
 // fundas — foco no cartão) + blur leve, sempre o MESMO. Só o z-index varia
@@ -20,12 +21,12 @@ export function Overlay({
   className?: string
   children: ReactNode
 }) {
+  const { fade } = useMotion() // freio de graça: quem usa Overlay não precisa lembrar disso
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
+      initial={fade.initial}
+      animate={fade.animate}
+      exit={fade.exit}
       onClick={onClick}
       style={{
         zIndex: z,
@@ -45,12 +46,17 @@ export function Overlay({
 // dropdown, entrada com spring e clique interno protegido (não fecha pelo
 // backdrop). Tema-aware: tudo via var(--color-*).
 export function ModalShell({ className, children }: { className?: string; children: ReactNode }) {
+  // A entrada é um SPRING, não um dos três tokens (D7 do plan: divergiu de propósito da
+  // tabela — é a "personalidade" do cartão de modal, preservada como exceção documentada,
+  // igual à do fim de jogo). O freio de `prefers-reduced-motion` não mexe na curva: some
+  // com `initial={false}`, então a entrada vira aparecer direto, sem o spring rodar.
+  const { reduced } = useMotion()
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.93, y: 8 }}
+      initial={reduced ? false : { opacity: 0, scale: 0.93, y: 8 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.93, y: 8 }}
-      transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+      exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.93, y: 8 }}
+      transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 360, damping: 28 }}
       onClick={(e) => e.stopPropagation()}
       style={{
         background: [

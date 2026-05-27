@@ -23,6 +23,7 @@ import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
 import { CoinIcon } from '@/game/ui/icons'
 import { Button, EmptyState } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
+import { useMotion } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n))
@@ -377,6 +378,12 @@ function TradeScale({
   rightCash: number
   rightTickets?: number
 }) {
+  // Os springs de inclinação abaixo (fiel, travessão, pratos) são fora do vocabulário
+  // por design (D7 do plan, mesma categoria da exceção do fim de jogo): simulam uma
+  // balança FÍSICA respondendo ao valor da proposta em tempo real — não são um enter/exit
+  // de tela, então não há fade/pop/slideUp que os substitua sem perder o efeito. Só o
+  // pulso ambiente do fecho (quando os pratos empatam) segue o freio de movimento reduzido.
+  const { reduced } = useMotion()
   const lv = faceValue(leftPositions, leftCash)
   const rv = faceValue(rightPositions, rightCash)
   const total = lv + rv
@@ -432,8 +439,8 @@ function TradeScale({
         </motion.div>
         {/* joia do fulcro — pulsa quando a balança fecha */}
         <motion.span
-          animate={balanced ? { scale: [1, 1.25, 1], opacity: [1, 0.85, 1] } : { scale: 1, opacity: 1 }}
-          transition={balanced ? { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } : { type: 'spring', stiffness: 120, damping: 14 }}
+          animate={balanced && !reduced ? { scale: [1, 1.25, 1], opacity: [1, 0.85, 1] } : { scale: 1, opacity: 1 }}
+          transition={balanced && !reduced ? { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } : { type: 'spring', stiffness: 120, damping: 14 }}
           className={cn(
             'absolute left-1/2 -translate-x-1/2 top-[10px] w-2 h-2 rounded-full bg-brass-glow z-20',
             balanced ? 'shadow-[0_0_14px_var(--color-brass-glow)]' : 'shadow-[0_0_8px_var(--color-brass-glow)]',

@@ -2,7 +2,9 @@
 // (cabeçalho, chip de status, estado vazio) compartilhado por Pote, Cartas,
 // Negociações e Efeitos. Só JSX + classes; nenhum estado de jogo entra aqui.
 import { type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { cn } from '@/lib/utils'
+import { useMotion, MOTION } from '@/game/ui/motion'
 
 // Botão canônico do jogo — quatro variantes com a MESMA régua de padding,
 // fonte, hover e estado desabilitado. Toda superfície (HUD, modais, trade,
@@ -77,6 +79,53 @@ export function Chip({
     >
       {children}
     </span>
+  )
+}
+
+// ---------------------------------------------------------------------
+// Delta de caixa flutuante (024.1; extraído em 044/T020) — vocabulário único pra "esse
+// valor de dinheiro acabou de mudar": sobe, esmaece, some. Existia duplicado em PlayerRow
+// e PotCard (`boards/shared.tsx`); GameHUD (caixa na tela de dívida) reusa daqui em vez de
+// reinventar (FR-029 pede feedback de mudança material; "reusar a linguagem" é a regra).
+// O hook que guarda o pulso (`useMoneyPulse`) mora em `useMoneyPulse.ts` — export de hook
+// ao lado de componente quebra o Fast Refresh (`react-refresh/only-export-components`).
+// ---------------------------------------------------------------------
+
+// Casca visual do pulso — span absoluto (o chamador posiciona via className), cor por
+// sinal, formatado em pt-BR. Sob movimento reduzido, a subida vira aparecer/sumir no
+// lugar: o texto (o FATO — quanto mudou) fica visível pelo mesmo tempo, só sem o passeio.
+export function MoneyPulse({
+  pulse,
+  className,
+  tone = 'cash',
+}: {
+  pulse: { id: number; d: number } | null
+  className?: string
+  // 'cash' (padrão, PlayerRow/dívida): ganho em verde. 'gold' (PotCard): pote sobe em
+  // dourado — combina com a moldura da Loteria. Perda é sempre `text-logo` nos dois.
+  tone?: 'cash' | 'gold'
+}) {
+  const { reduced } = useMotion()
+  const duration = reduced ? 0 : MOTION.slow
+  return (
+    <AnimatePresence>
+      {pulse && pulse.d !== 0 && (
+        <motion.span
+          key={pulse.id}
+          initial={{ opacity: 0, y: 2 }}
+          animate={{ opacity: 1, y: reduced ? 2 : -16, transition: { duration } }}
+          exit={{ opacity: 0, y: reduced ? 2 : -26, transition: { duration } }}
+          className={cn(
+            'absolute currency text-sm font-bold pointer-events-none z-10',
+            pulse.d > 0 ? (tone === 'gold' ? 'text-gold-glow' : 'text-group-green') : 'text-logo',
+            className,
+          )}
+          style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
+        >
+          {pulse.d > 0 ? '+' : '−'}R${Math.abs(pulse.d).toLocaleString('pt-BR')}
+        </motion.span>
+      )}
+    </AnimatePresence>
   )
 }
 

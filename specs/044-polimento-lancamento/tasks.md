@@ -51,12 +51,12 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 
 **Meta**: um lugar decide duração, curva e freio. Vem **antes** da acessibilidade porque as duas frentes tocam `shell.tsx`.
 
-- [ ] **T016** [P] `src/index.css`: tokens `--motion-fast/base/slow`, `--ease-standard/emphasis`; bloco `@media (prefers-reduced-motion: reduce)` zerando as durações ([D7 do plan](./plan.md#d7--vocabulário-de-movimento-tokens-em-css--motionts-freio-embutido)).
-- [ ] **T017** [P] `src/game/ui/motion.ts` (FR-021, FR-028): mesmos números em TS + variantes `fade`/`pop`/`slideUp` + `useMotion()` que consulta `useReducedMotion` e devolve variantes já freadas.
-- [ ] **T018** [test-first] `tests/ui/motion.test.tsx`: `useMotion()` devolve duração zero com movimento reduzido ativo e as durações do vocabulário sem ele; as variantes exportadas usam exclusivamente os tokens (nenhum número mágico).
-- [ ] **T019** Migrar as animações existentes para o vocabulário: `shell.tsx` (`Overlay`, `ModalShell`), `GameHUD` (fim de jogo), `ModalLayer`, `TradeLayer`, `LandAuctionLayer`, `HandCardLayer`, `NoticeLayer`, `boards/shared.tsx`, `LiveTokens`. Os 7 usos avulsos de `useReducedMotion` passam a vir de `useMotion()`.
-- [ ] **T020** [US5] Feedback de mudança material que hoje não existe (FR-029): transferência de posse na célula e delta de caixa nas linhas que ainda não têm. Reusar o que o `PlayerRow` já faz — não inventar linguagem nova.
-- [ ] **T021** [test-first] `tests/ui/motion.test.tsx` (caso adicional; FR-031, FR-032 — nenhum prazo, comando ou decisão espera animação): com movimento reduzido, o **fato** continua no DOM (resultado do dado, novo dono, novo saldo) — o que some é a transição, não a informação (FR-030).
+- [x] **T016** [P] `src/index.css`: tokens `--motion-fast/base/slow`, `--ease-standard/emphasis`; bloco `@media (prefers-reduced-motion: reduce)` zerando as durações ([D7 do plan](./plan.md#d7--vocabulário-de-movimento-tokens-em-css--motionts-freio-embutido)).
+- [x] **T017** [P] `src/game/ui/motion.ts` (FR-021, FR-028): mesmos números em TS + variantes `fade`/`pop`/`slideUp` + `useMotion()` que consulta `useReducedMotion` e devolve variantes já freadas.
+- [x] **T018** [test-first] `tests/ui/motion.test.tsx`: `useMotion()` devolve duração zero com movimento reduzido ativo e as durações do vocabulário sem ele; as variantes exportadas usam exclusivamente os tokens (nenhum número mágico).
+- [x] **T019** Migrar as animações existentes para o vocabulário: `shell.tsx` (`Overlay`, `ModalShell`), `GameHUD` (fim de jogo), `ModalLayer`, `TradeLayer`, `LandAuctionLayer`, `HandCardLayer`, `NoticeLayer`, `boards/shared.tsx`, `LiveTokens`. Os 7 usos avulsos de `useReducedMotion` passam a vir de `useMotion()`.
+- [x] **T020** [US5] Feedback de mudança material que hoje não existe (FR-029): transferência de posse na célula e delta de caixa nas linhas que ainda não têm. Reusar o que o `PlayerRow` já faz — não inventar linguagem nova.
+- [x] **T021** [test-first] `tests/ui/motion.test.tsx` (caso adicional; FR-031, FR-032 — nenhum prazo, comando ou decisão espera animação): com movimento reduzido, o **fato** continua no DOM (resultado do dado, novo dono, novo saldo) — o que some é a transição, não a informação (FR-030).
 
 **Checkpoint**: **SC-011** provado headless. Nenhum `transition={{ duration: … }}` com número literal sobrou no caminho de jogo.
 

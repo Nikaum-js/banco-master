@@ -19,6 +19,7 @@ import { CoinIcon, HouseIcon, HotelIcon, GavelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 import { THEME } from '@/game/theme'
+import { MOTION, useMotion } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 
 const INCREMENTS = [10, 50, 100] as const
@@ -135,7 +136,7 @@ function LotCard(props: { lot: LandLot; now: number; cashAvail: number; onBid: (
           <span className={`label leading-none ${baixo ? 'text-signal' : 'text-cream-muted'}`}>{secs}s</span>
         </div>
         <div className="h-2 rounded-full bg-coffee-950/60 overflow-hidden">
-          <motion.div className={`h-full rounded-full ${baixo ? 'bg-signal' : 'bg-gold'}`} animate={{ width: `${frac * 100}%` }} transition={{ ease: 'linear', duration: 0.25 }} />
+          <motion.div className={`h-full rounded-full ${baixo ? 'bg-signal' : 'bg-gold'}`} animate={{ width: `${frac * 100}%` }} transition={{ ease: 'linear', duration: MOTION.base }} />
         </div>
       </div>
 
@@ -163,6 +164,7 @@ function LotCard(props: { lot: LandLot; now: number; cashAvail: number; onBid: (
 }
 
 export function LandAuctionLayer() {
+  const { reduced } = useMotion()
   const auction = useGameStore((s) => s.game.landAuction)
   const players = useGameStore((s) => s.game.players)
   const game = useGameStore((s) => s.game)
@@ -239,9 +241,9 @@ export function LandAuctionLayer() {
               <CoinIcon size={15} className="text-gold" />
               <motion.span
                 key={available}
-                initial={{ scale: 1.18 }}
+                initial={reduced ? false : { scale: 1.18 }}
                 animate={{ scale: 1 }}
-                transition={{ duration: 0.25 }}
+                transition={{ duration: MOTION.base }}
                 className="currency text-sm tabular-nums leading-none text-gold"
               >
                 {money(available)}

@@ -3,12 +3,13 @@
 // FR-005) — nunca a do jogador da vez, senão a tela de todo mundo viraria a dele a cada
 // turno. Sem sala (cliente único), o assento local é o jogador ativo, que é o comportamento
 // de sempre. Demais jogadores aparecem só como contador (PlayersPanel, §12.3/FR-006).
-import { motion, AnimatePresence, useReducedMotion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
 import { useLocalView } from '@/net/roomStore'
 import { handCardsView } from './handView'
 import { useHandCardUI } from './handCardUI'
+import { useMotion } from '@/game/ui/motion'
 import { Button, SectionHeader, EmptyState } from '@/game/ui/primitives'
 
 function LockGlyph({ size = 11 }: { size?: number }) {
@@ -60,7 +61,7 @@ function HandSlots({ count }: { count: number }) {
 export function HandPanel() {
   const game = useGameStore((s) => s.game)
   const dispatch = useGameStore((s) => s.dispatch)
-  const reduced = useReducedMotion()
+  const { reduced } = useMotion()
   const view = useLocalView()
   // Assento local; sem sala, o dono da tela é o jogador da vez (cliente único).
   const myId = view.seatId ?? game.players[game.turnOrder[game.activeSeat]]?.id

@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import { Bus, Crown } from 'lucide-react'
-import { AnimatePresence, motion, useAnimate, useReducedMotion } from 'motion/react'
+import { motion, useAnimate } from 'motion/react'
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare } from '@/lib/boardData'
@@ -26,8 +26,10 @@ import { diceArenaView } from '@/game/ui/panels/diceArenaView'
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 import { HandPanel } from '@/game/ui/cards/HandPanel'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
+import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import { ShopIcon, GavelIcon, DiceIcon, CoinIcon, HouseIcon } from '@/game/ui/icons'
-import { Button, SectionHeader, Chip, EmptyState } from '@/game/ui/primitives'
+import { Button, SectionHeader, Chip, EmptyState, MoneyPulse } from '@/game/ui/primitives'
+import { useMoneyPulse } from '@/game/ui/useMoneyPulse'
 import type { TempEffect, Trade } from '@/game/economy/types'
 import { money } from '@/lib/money'
 import { describeLogEntry } from '@/game/ui/log/describeLog'
@@ -111,6 +113,10 @@ export function ClassicSquare({
   })
   // Tema ativo — decide o TRATAMENTO da casa (não só cor): posse, chip etc.
   const boardTheme = useBoardTheme((t) => t.theme)
+  // Feedback de posse (044, T020/FR-029): a troca de dono da célula não tinha NENHUM
+  // aviso visual — cor aparecia/sumia de golpe. `key={ownerColor}` remonta o grupo a cada
+  // transferência (compra, leilão, aquisição hostil) e o `pop` do vocabulário entra por cima.
+  const { pop: ownerPop } = useMotion()
   // Propriedade COMPRADA não exibe valor — a posse é comunicada pela stripe
   // colorida do jogador. Só propriedade À VENDA (sem dono) mostra o preço.
 
@@ -123,35 +129,45 @@ export function ClassicSquare({
             Atlas — a cidade ACENDE: luz interna na cor do dono + fio de néon
             na borda, como cidade iluminada vista do alto à noite.
             Café — tratamento clássico de papel: tint + moldura na cor do dono. */}
-      {ownerColor && (boardTheme === 'atlas' ? (
-        <>
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: `radial-gradient(ellipse 95% 75% at 50% 50%, color-mix(in srgb, ${ownerColor} 30%, transparent) 0%, transparent 78%)`,
-            }}
-          />
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              boxShadow: `inset 0 0 0 1.5px ${ownerColor}, inset 0 0 12px color-mix(in srgb, ${ownerColor} 45%, transparent)`,
-            }}
-          />
-        </>
-      ) : (
-        <>
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{ background: ownerColor, opacity: 0.14 }}
-          />
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              boxShadow: `inset 0 0 0 2px ${ownerColor}, inset 0 0 0 3px color-mix(in srgb, var(--color-ink-950) 55%, transparent)`,
-            }}
-          />
-        </>
-      ))}
+      {ownerColor && (
+        <motion.div
+          key={ownerColor}
+          className="absolute inset-0 pointer-events-none"
+          initial={ownerPop.initial}
+          animate={ownerPop.animate}
+          aria-hidden
+        >
+          {boardTheme === 'atlas' ? (
+            <>
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: `radial-gradient(ellipse 95% 75% at 50% 50%, color-mix(in srgb, ${ownerColor} 30%, transparent) 0%, transparent 78%)`,
+                }}
+              />
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  boxShadow: `inset 0 0 0 1.5px ${ownerColor}, inset 0 0 12px color-mix(in srgb, ${ownerColor} 45%, transparent)`,
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{ background: ownerColor, opacity: 0.14 }}
+              />
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  boxShadow: `inset 0 0 0 2px ${ownerColor}, inset 0 0 0 3px color-mix(in srgb, var(--color-ink-950) 55%, transparent)`,
+                }}
+              />
+            </>
+          )}
+        </motion.div>
+      )}
       {/* Bandeira-avatar do país — fincada na borda INTERNA (voltada
           pro centro do tabuleiro); metade dentro da célula, metade
           transbordando sobre o centro. */}
@@ -625,6 +641,16 @@ export function EffectMark({ pos }: { pos: number }) {
     else if (e.kind === 'imunidade-temp' && e.pos === pos) badge = { tag: 'I', tone: 'gold', title: 'Imunidade temporária' }
   }
   if (!badge) return null
+  return <EffectMarkBadge badge={badge} />
+}
+
+// Extraído do corpo de `EffectMark` só para poder chamar `useMotion()` condicionalmente
+// ao `badge` existir (hooks não podem vir depois de um `return` antecipado).
+function EffectMarkBadge({ badge }: { badge: { tag: string; tone: 'logo' | 'gold'; title: string } }) {
+  // Pulso pra chamar atenção (024.1) — não tinha freio (achado desta spec, T019): pulsava
+  // sem parar mesmo com `prefers-reduced-motion`. `EffectBadge` (painel lateral, mesma
+  // letra/tom) já freava; aqui ficou de fora até agora.
+  const { reduced } = useMotion()
   return (
     <motion.div
       className={cn(
@@ -633,7 +659,7 @@ export function EffectMark({ pos }: { pos: number }) {
       )}
       style={{ width: 13, height: 13, fontSize: 'var(--text-micro)', boxShadow: 'var(--shadow-card)' }}
       title={badge.title}
-      animate={{ opacity: [0.6, 1, 0.6] }}
+      animate={reduced ? undefined : { opacity: [0.6, 1, 0.6] }}
       transition={{ duration: 1.6, repeat: Infinity }}
     >
       {badge.tag}
@@ -661,7 +687,7 @@ function effectRow(e: TempEffect, i: number): {
 // Badge circular do efeito — mesma letra e tom do EffectMark na casa, pra
 // leitura cruzada painel ⇄ tabuleiro. Pulsa junto (salvo reduced-motion).
 function EffectBadge({ tag, tone, size = 20 }: { tag: string; tone: 'logo' | 'gold'; size?: number }) {
-  const reduced = useReducedMotion()
+  const { reduced } = useMotion()
   return (
     <motion.span
       className={cn(
@@ -794,20 +820,9 @@ export function PlayersPanel() {
 }
 
 function PlayerRow({ player: p }: { player: Player }) {
-  // Feedback de caixa (024.1): delta flutuante quando o saldo muda.
-  const [pulse, setPulse] = useState<{ id: number; d: number } | null>(null)
-  const prevMoney = useRef(p.money)
-  const pulseId = useRef(0)
-  useEffect(() => {
-    if (p.money !== prevMoney.current) {
-      const d = p.money - prevMoney.current
-      prevMoney.current = p.money
-      pulseId.current += 1
-      setPulse({ id: pulseId.current, d })
-      const t = setTimeout(() => setPulse(null), 1200)
-      return () => clearTimeout(t)
-    }
-  }, [p.money])
+  // Feedback de caixa (024.1; extraído em 044/T020 pra `primitives.tsx` — mesmo pulso
+  // que PotCard usa e que a tela de dívida do GameHUD passou a reusar).
+  const pulse = useMoneyPulse(p.money)
 
   return (
     <div
@@ -820,24 +835,7 @@ function PlayerRow({ player: p }: { player: Player }) {
         p.bankrupt && 'opacity-50',
       )}
     >
-      <AnimatePresence>
-        {pulse && pulse.d !== 0 && (
-          <motion.span
-            key={pulse.id}
-            initial={{ opacity: 0, y: 2 }}
-            animate={{ opacity: 1, y: -16 }}
-            exit={{ opacity: 0, y: -26 }}
-            transition={{ duration: 0.45 }}
-            className={cn(
-              'absolute right-3 top-1.5 currency text-sm font-bold pointer-events-none z-10',
-              pulse.d > 0 ? 'text-group-green' : 'text-logo',
-            )}
-            style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
-          >
-            {pulse.d > 0 ? '+' : '−'}R${Math.abs(pulse.d).toLocaleString('pt-BR')}
-          </motion.span>
-        )}
-      </AnimatePresence>
+      <MoneyPulse pulse={pulse} className="right-3 top-1.5" />
       <PlayerFace color={p.color} active={p.active} asleep={p.bankrupt} size={40} />
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-1.5">
@@ -1156,21 +1154,9 @@ function LoanPanel() {
 // loteria vira marca-d'água; mudanças de valor ganham pop + delta flutuante.
 // ---------------------------------------------------------------------
 function PotCard({ pot }: { pot: number }) {
-  const reduced = useReducedMotion()
-  const prev = useRef(pot)
-  const pulseId = useRef(0)
-  const [pulse, setPulse] = useState<{ id: number; d: number } | null>(null)
-
-  useEffect(() => {
-    if (pot !== prev.current) {
-      const d = pot - prev.current
-      prev.current = pot
-      pulseId.current += 1
-      setPulse({ id: pulseId.current, d })
-      const t = setTimeout(() => setPulse(null), 1400)
-      return () => clearTimeout(t)
-    }
-  }, [pot])
+  const { reduced } = useMotion()
+  // Feedback de caixa (024.1; extraído em 044/T020 — mesmo pulso de `PlayerRow`).
+  const pulse = useMoneyPulse(pot, 1400)
 
   return (
     <section
@@ -1206,24 +1192,7 @@ function PotCard({ pot }: { pot: number }) {
         {pot > 0 ? 'Pare em Loteria e leve tudo' : 'Impostos e multas acumulam aqui'}
       </p>
 
-      <AnimatePresence>
-        {pulse && pulse.d !== 0 && (
-          <motion.span
-            key={pulse.id}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: -14 }}
-            exit={{ opacity: 0, y: -24 }}
-            transition={{ duration: 0.5 }}
-            className={cn(
-              'absolute right-4 top-3 currency text-sm font-bold pointer-events-none',
-              pulse.d > 0 ? 'text-gold-glow' : 'text-logo',
-            )}
-            style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
-          >
-            {pulse.d > 0 ? '+' : '−'}R$ {Math.abs(pulse.d).toLocaleString('pt-BR')}
-          </motion.span>
-        )}
-      </AnimatePresence>
+      <MoneyPulse pulse={pulse} className="right-4 top-3" tone="gold" />
     </section>
   )
 }
@@ -1276,7 +1245,7 @@ export function ActionsPanel() {
 }
 
 function TradeRow({ trade, done, colorById }: { trade: Trade; done: boolean; colorById: Record<string, string> }) {
-  const reduced = useReducedMotion()
+  const { reduced } = useMotion()
   return (
     <div
       className={cn(
@@ -1531,7 +1500,7 @@ function LogSentenceView({ sentence }: { sentence: ReturnType<typeof describeLog
 function CenterLog() {
   const log = useGameStore((s) => s.game.log)
   const room = useRoomStore((s) => s.room)
-  const reduced = useReducedMotion()
+  const { reduced } = useMotion()
   const history = [...log].reverse()
   const colorOf = (who: string): string => (who === 'bank' ? 'var(--color-signal)' : identityOf(room, who).color)
   return (
@@ -1567,7 +1536,7 @@ function CenterLog() {
                 key={idx}
                 initial={reduced ? false : { opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
+                transition={{ duration: MOTION.base, ease: EASE.standard }}
                 className={cn(
                   'relative flex items-start gap-2 py-1.5 pl-0.5 pr-1 rounded-[var(--radius-sharp)]',
                   latest && 'my-0.5',
