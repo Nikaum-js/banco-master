@@ -77,14 +77,12 @@
 .property-rent-tier__identity {
   grid-area: identity;
   min-width: 0;
-  overflow: hidden;
   color: var(--color-starlight-muted);
   font-family: var(--font-sans);
   font-size: 0.59rem;
   font-weight: 680;
-  line-height: 1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.05;
+  white-space: normal;
 }
 
 .property-rent-tier[data-active] .property-rent-tier__identity {

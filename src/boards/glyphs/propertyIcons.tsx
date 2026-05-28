@@ -92,6 +92,55 @@ const ICON_PATHS: Record<PropertyIconId, React.ReactNode> = {
       <path d="M4 20h16" />
     </>
   ),
+  // FORNO DE OLARIA — a fornalha abobadada de tijolo, com a boca de fogo e a fumaça
+  // saindo pelo topo. Diz "olaria", que `chimney` (só a chaminé) não dizia.
+  kiln: (
+    <>
+      <path d="M6 20v-6.5a6 6 0 0 1 12 0V20Z" />
+      <path d="M4.5 20h15" />
+      <path d="M10 20v-3.2a2 2 0 0 1 4 0V20" />
+      <path d="M12 7.5V5" />
+      <path d="M9.6 4.2c1-.8 1.8.5 2.8-.2M14.4 4.6c-.9-.7-1.7.4-2.6-.2" opacity="0.7" />
+    </>
+  ),
+  // TEAR — a armação com os fios da urdidura esticados e a lançadeira cruzando. É o
+  // instrumento da tecelagem; `factory` servia a qualquer fábrica do mapa.
+  loom: (
+    <>
+      <path d="M5 4.5v15M19 4.5v15" />
+      <path d="M4 6.5h16M4 17.5h16" />
+      <path d="M8.5 6.5v11M12 6.5v11M15.5 6.5v11" opacity="0.6" />
+      <path d="M6.5 12h11" />
+      <path d="M9.6 10.6h4.8l1.2 1.4-1.2 1.4H9.6L8.4 12Z" />
+    </>
+  ),
+  // DESVIO (chave/agulha) — o trilho que se BIFURCA. Três marcas só: a linha que passa,
+  // a que se desgarra e um trio de dormentes para dizer "ferrovia" em vez de "seta".
+  // A versão anterior tinha oito marcas em 24px (trilho + 4 dormentes + diagonal + haste
+  // + bola da alavanca) e a 20px virava rabisco. Menos marca lê mais.
+  switch: (
+    <>
+      <path d="M2.5 17.5h19" />
+      <path d="M9 17.5c4 0 6-4.4 11.5-9" />
+      <path d="M4.5 20.4v-4M8 20.4v-4M11.5 20.4v-4" opacity="0.6" />
+    </>
+  ),
+  // USINA — o raio sobre a água: energia HIDRELÉTRICA, que é o que o bairro "Salto" é de
+  // fato (as casas dele são Represa e Riacho). Duas formas só, e o raio vai PREENCHIDO
+  // para sobreviver a 20px.
+  //
+  // Duas tentativas anteriores morreram aqui e vale registrar por quê: o galpão-com-turbina
+  // tinha marca demais e lia como "caixa com antenas"; a torre de transmissão, com as pernas
+  // convergindo no topo e as travessas horizontais, lia como CONE DE TRÂNSITO. Silhueta
+  // externa manda mais que detalhe interno — se o contorno geral coincide com outro objeto,
+  // nenhum detalhe salva. Roda-d'água foi descartada por colidir com a `gear` da Guilhermina.
+  powerhouse: (
+    <>
+      <path d="M13.2 3.4 8.5 11.2h3.3l-1 4.4 5.2-8.4h-3.3Z" fill="currentColor" stroke="none" />
+      <path d="M2.8 17.6q3-1.6 6 0t6 0 6 0" />
+      <path d="M2.8 20.6q3-1.6 6 0t6 0 6 0" />
+    </>
+  ),
 }
 
 /** Só a arte do ícone (sem disco) — para caber dentro de círculos que já existem,

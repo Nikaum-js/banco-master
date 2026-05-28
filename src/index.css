@@ -927,11 +927,18 @@
 }
 
 /* A Fuligem tem 40 casas e usa a faixa mais profunda para exibir topônimos completos.
-   O nome pode quebrar em linhas, mas nunca no meio de uma palavra. */
+   O nome pode quebrar em linhas, mas nunca no meio de uma palavra.
+
+   `line-height` era 0.88, o que a 14px dá caixa de linha de 12,3px — MENOR que o glifo.
+   Numa linha só ninguém nota; em duas, as linhas encostam e os acentos da de baixo (Ã, Ç,
+   Á de TREZE DE MAIO, ESTAÇÃO, BARRO PRETO) invadem a de cima. Nome de duas palavras é
+   caso comum aqui, não exceção, então a entrelinha tem de servir a ele: 1.2 dá 16,8px de
+   caixa, com folga acima do glifo. Cabe de sobra — duas linhas gastam ~30px dos 142px de
+   profundidade da casa. Apertar entrelinha nunca comprou espaço que faltasse. */
 :root[data-board-theme="fuligem"] .cell-text--fuligem,
 :root[data-board-theme="fuligem"] .board-square-content--fuligem .board-square-label {
   max-width: 94%;
-  line-height: 0.88 !important;
+  line-height: 1.2 !important;
   overflow-wrap: normal;
   word-break: keep-all;
   hyphens: manual;

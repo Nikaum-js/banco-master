@@ -126,8 +126,10 @@ describe('FULIGEM_TOPOLOGY', () => {
     expect(count).toEqual({ bottom: 9, left: 9, top: 9, right: 9, corner: 4 })
   })
 
-  it('usa uma faixa periférica mais profunda que o Atlas', () => {
-    expect(FULIGEM_TRACK_TEMPLATE).toContain('2.5fr')
+  it('mantém os cantos em 2fr para ampliar as nove propriedades por lado', () => {
+    expect(FULIGEM_TRACK_TEMPLATE).toBe(
+      'minmax(0, 2fr) repeat(9, minmax(0, 1fr)) minmax(0, 2fr)',
+    )
     expect(FULIGEM_TRACK_TEMPLATE).not.toBe(CLASSIC_TOPOLOGY.trackTemplate)
   })
 })

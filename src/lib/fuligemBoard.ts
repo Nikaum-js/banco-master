@@ -21,9 +21,8 @@
 //      (`THEME.UTILITY_MULT`) desaparece da Fuligem — segue vivo e intacto no
 //      Atlas. Foi o que sobrou de escolha: com 40 casas fixas não havia quatro
 //      vagas sem cortar propriedade (o que quebraria um bairro) ou carta.
-//   2. O MAPA NÃO TEM MAIS IMPOSTO. Isso incomoda menos do que parece: a Taxa de
-//      Fumaça (D-070) já é o ralo de dinheiro do mapa, e ela é MELHOR que um
-//      imposto porque o dinheiro vai ao pote em vez de sumir no banco.
+//   2. O MAPA NÃO TEM MAIS IMPOSTO. A D-072 também removeu a Taxa de Fumaça:
+//      construção usa somente seu custo normal, sem ralo exclusivo deste mapa.
 //
 // Como o cobre não tem mais utilidade para dobrar, o passivo dele mudou de alvo —
 // ver `THEME.MINE_BONUS`.
@@ -43,8 +42,8 @@
 // é o preço, é a POSIÇÃO.
 //
 // Com a prisão em 10, a faixa quente é 16–19. A Fuligem coloca ali:
-//   16 Estação Alto da Serra (ferrovia) · 17 CARBONÍFERA SANTA RITA (mina de carvão)
-//   18 Praça do Chafariz · 19 Rua Treze de Maio (Colônia Nova)
+//   16 Estação Serra (ferrovia) · 17 MINA DE CARVÃO
+//   18 União · 19 Treze de Maio (Colônia Nova)
 // Ou seja: a casa no pico exato do dado é a mina cujo passivo aumenta o aluguel de
 // ferrovia — e ela fica a 1 passo de uma ferrovia. Quem toma as duas leva a faixa
 // mais pisada do tabuleiro. Nenhuma regra nova produz isso; só o layout.
@@ -58,14 +57,43 @@
 // comprável no meio é layout de Monopoly legítimo: no tabuleiro original a
 // Electric Company corta o grupo roxo.
 //
-// NOMES: lugar de verdade nunca se chama pelo que se faz nele. Os nomes aqui
-// vêm de quem mandou construir (Coronel Amaro, Barão de Itamonte, Marechal
-// Deodoro, Visconde), do que estava ali antes e já não está (a olaria, a
-// capela, a bica, o marmeleiro, a Estação Velha, o gasômetro) ou da data que
-// batizou a rua (Treze de Maio, Sete de Setembro) — os três padrões reais da
-// toponímia brasileira. A versão anterior era `[via] + da/dos + [substantivo
-// industrial]` nas 22 casas (Rua da Fumaça, Rua do Ferro, Rua das
-// Engrenagens…): fórmula, não nome.
+// NOMES: CADA PALAVRA CURTA, E O ÍCONE CARREGA O OFÍCIO.
+//
+// As duas versões anteriores falharam pelo MESMO motivo, e vale registrar porque é fácil
+// recair nele. A primeira era `[via] + da/dos + [substantivo industrial]` (Rua da Fumaça,
+// Rua do Ferro, Rua das Engrenagens). A segunda dizia estar consertando isso, mas 15 dos
+// 22 nomes eram a mesma fórmula com o substantivo trocado por um pitoresco: Rua do Barão,
+// Largo do Marmelo, Praça do Chafariz, Pátio da Bica, Beco da Capela, Travessa do
+// Realejo… Trocar a palavra não desmonta a fórmula. O sintoma é que todos os nomes soam
+// iguais e nenhum funciona como marca.
+//
+// O conserto separa dois canais que antes disputavam a mesma string:
+//
+//   o ÍCONE diz o OFÍCIO do bairro   (forno, tear, bigorna, casa, engrenagem, desvio…)
+//   o NOME diz o LUGAR               (Barro Preto, Glória, Bica, Aurora, Brás…)
+//
+// Nenhum dos dois precisa fazer o trabalho do outro, e é por isso que o nome pode voltar a
+// ser um lugar em vez de um rótulo de função. Os topônimos seguem os padrões reais do
+// Brasil — acidente do terreno (Barro Preto, Riacho, Represa), devoção (Glória, Piedade,
+// Lapa), bairro industrial histórico (Brás, Mooca, Barreto), entroncamento ferroviário
+// (Piraí, Engenho), figura (Deodoro, Barão) e data/ideia republicana (Treze de Maio,
+// União, Aurora — nomes de vila operária pós-abolição).
+//
+// O TETO É POR PALAVRA, NÃO POR NOME — e é de DADO, não de CSS. A casa mede ~63px por
+// linha a 14px fixos e o rótulo mostra o nome COMPLETO (spec 056: "nomes completos sem
+// truncamento programático", podendo quebrar em linhas). Medido, uma PALAVRA cabe em ~45px,
+// ou seja 7 letras em caixa alta; a partir de 8 ela toma a linha toda e fica estranha.
+// Nome de duas ou três palavras é livre desde que cada uma respeite o teto — "Treze de
+// Maio" cabe, "Liberdade" não. Quem inventar nome novo aqui mede a PALAVRA MAIS LONGA
+// antes, não o nome.
+//
+// Cuidado com HOMONÍMIA entre casas de tipos diferentes: a propriedade da pos 6 já se
+// chamou "Bonfim" ao lado da ferrovia "Estação Bonfim" (pos 5) — duas casas vizinhas, com
+// regras distintas, dizendo a mesma palavra no tabuleiro.
+//
+// As QUATRO ferrovias são `Estação + topônimo`, sem preposição no meio: Bonfim, Serra,
+// Cascata, Vale. O "da"/"do" gastava uma linha inteira do rótulo para não dizer nada —
+// e deixava as quatro desalinhadas entre si, que é o oposto do que um grupo precisa.
 // =====================================================================
 import type { GroupKey, Square } from './boardData'
 
@@ -91,56 +119,56 @@ export const FULIGEM_BOARD: readonly Square[] = [
   { pos: 0, kind: 'corner-go', name: 'GO', short: 'GO' },
 
   // ---------- lado SUL (direita → esquerda) — Olaria + Vila Bonfim ----------
-  { pos: 1, kind: 'property', group: 'brown', name: 'Ladeira do Barreiro', short: 'Barreiro', capital: 'Olaria', price: 90, rent: 6, icon: 'chimney' },
+  { pos: 1, kind: 'property', group: 'brown', name: 'Barro Preto', capital: 'Olaria', price: 90, rent: 6, icon: 'kiln' },
   { pos: 2, kind: 'acaso', name: 'Acaso' },
-  { pos: 3, kind: 'property', group: 'brown', name: 'Vila Sabão', capital: 'Olaria', price: 100, rent: 6, icon: 'chimney' },
+  { pos: 3, kind: 'property', group: 'brown', name: 'Caieira', capital: 'Olaria', price: 100, rent: 6, icon: 'kiln' },
   { pos: 4, kind: 'mine', name: 'Mina de Ferro', short: 'Ferro', metal: 'ferro', price: 220 },
   { pos: 5, kind: 'airport', name: 'Estação Bonfim', short: 'Bonfim', iata: 'BFM', price: 200, rent: 25 },
-  { pos: 6, kind: 'property', group: 'skyblue', name: 'Largo do Tear', short: 'Tear', capital: 'Vila Bonfim', price: 120, rent: 10, icon: 'factory' },
+  { pos: 6, kind: 'property', group: 'skyblue', name: 'Glória', capital: 'Vila Bonfim', price: 120, rent: 10, icon: 'loom' },
   { pos: 7, kind: 'tesouro', name: 'Tesouro' },
-  { pos: 8, kind: 'property', group: 'skyblue', name: 'Rua dos Fiandeiros', short: 'Fiandeiros', capital: 'Vila Bonfim', price: 130, rent: 10, icon: 'factory' },
-  { pos: 9, kind: 'property', group: 'skyblue', name: 'Beco da Capela', short: 'Capela', capital: 'Vila Bonfim', price: 150, rent: 10, icon: 'building' },
+  { pos: 8, kind: 'property', group: 'skyblue', name: 'Piedade', capital: 'Vila Bonfim', price: 130, rent: 10, icon: 'loom' },
+  { pos: 9, kind: 'property', group: 'skyblue', name: 'Lapa', capital: 'Vila Bonfim', price: 150, rent: 10, icon: 'loom' },
 
   // ---------- canto inferior esquerdo ----------
   { pos: 10, kind: 'corner-jail', name: 'Prisão · Visita', short: 'Prisão' },
 
   // ---------- lado OESTE (baixo → cima) — Fundição + Colônia Nova ----------
   // A faixa 16–19 é a mais pisada do tabuleiro (6 a 9 passos da prisão).
-  { pos: 11, kind: 'property', group: 'pink', name: 'Rua Coronel Amaro', short: 'Cel. Amaro', capital: 'Fundição', price: 160, rent: 14, icon: 'anvil' },
-  { pos: 12, kind: 'property', group: 'pink', name: 'Ponte dos Ingleses', short: 'Ingleses', capital: 'Fundição', price: 180, rent: 14, icon: 'anvil' },
-  { pos: 13, kind: 'property', group: 'pink', name: 'Pátio da Bica', short: 'Bica', capital: 'Fundição', price: 200, rent: 14, icon: 'anvil' },
+  { pos: 11, kind: 'property', group: 'pink', name: 'Bica', capital: 'Fundição', price: 160, rent: 14, icon: 'anvil' },
+  { pos: 12, kind: 'property', group: 'pink', name: 'Vila Inglesa', capital: 'Fundição', price: 180, rent: 14, icon: 'anvil' },
+  { pos: 13, kind: 'property', group: 'pink', name: 'Barreto', capital: 'Fundição', price: 200, rent: 14, icon: 'anvil' },
   { pos: 14, kind: 'bus-ticket', name: 'Bilhete de Trem', short: 'Bilhete' },
-  { pos: 15, kind: 'property', group: 'orange', name: 'Travessa do Realejo', short: 'Realejo', capital: 'Colônia Nova', price: 220, rent: 14, icon: 'house' },
-  { pos: 16, kind: 'airport', name: 'Estação da Serra', short: 'Serra', iata: 'SRA', price: 200, rent: 25 }, // +6 da prisão
+  { pos: 15, kind: 'property', group: 'orange', name: 'Aurora', capital: 'Colônia Nova', price: 220, rent: 14, icon: 'house' },
+  { pos: 16, kind: 'airport', name: 'Estação Serra', short: 'Serra', iata: 'SRA', price: 200, rent: 25 }, // +6 da prisão
   { pos: 17, kind: 'mine', name: 'Mina de Carvão', short: 'Carvão', metal: 'carvao', price: 220 }, // +7 da prisão: o pico do 2d6
-  { pos: 18, kind: 'property', group: 'orange', name: 'Praça do Chafariz', short: 'Chafariz', capital: 'Colônia Nova', price: 250, rent: 14, icon: 'house' },
-  { pos: 19, kind: 'property', group: 'orange', name: 'Rua Treze de Maio', short: 'Treze de Maio', capital: 'Colônia Nova', price: 280, rent: 14, icon: 'house' },
+  { pos: 18, kind: 'property', group: 'orange', name: 'União', capital: 'Colônia Nova', price: 250, rent: 14, icon: 'house' },
+  { pos: 19, kind: 'property', group: 'orange', name: 'Treze de Maio', capital: 'Colônia Nova', price: 280, rent: 14, icon: 'house' },
 
   // ---------- canto superior esquerdo ----------
   { pos: 20, kind: 'corner-parking', name: 'Sorte Grande', short: 'Sorte Grande' },
 
   // ---------- lado NORTE (esquerda → direita) — Guilhermina + Alto do Desvio ----------
-  { pos: 21, kind: 'property', group: 'red', name: 'Rua do Barão', short: 'Barão', capital: 'Guilhermina', price: 300, rent: 16, icon: 'gear' },
-  { pos: 22, kind: 'property', group: 'red', name: 'Largo do Marmelo', short: 'Marmelo', capital: 'Guilhermina', price: 340, rent: 16, icon: 'gear' },
+  { pos: 21, kind: 'property', group: 'red', name: 'Brás', capital: 'Guilhermina', price: 300, rent: 16, icon: 'gear' },
+  { pos: 22, kind: 'property', group: 'red', name: 'Mooca', capital: 'Guilhermina', price: 340, rent: 16, icon: 'gear' },
   { pos: 23, kind: 'acaso', name: 'Acaso' },
-  { pos: 24, kind: 'property', group: 'red', name: 'Rua da Boa Morte', short: 'Boa Morte', capital: 'Guilhermina', price: 380, rent: 16, icon: 'gear' },
-  { pos: 25, kind: 'airport', name: 'Estação Cachoeira', short: 'Cachoeira', iata: 'CCH', price: 200, rent: 25 },
-  { pos: 26, kind: 'property', group: 'yellow', name: 'Estação Velha', capital: 'Alto do Desvio', price: 410, rent: 17, icon: 'train' },
-  { pos: 27, kind: 'property', group: 'yellow', name: 'Rua Quinze', short: 'Quinze', capital: 'Alto do Desvio', price: 460, rent: 17, icon: 'train' },
+  { pos: 24, kind: 'property', group: 'red', name: 'Marmelo', capital: 'Guilhermina', price: 380, rent: 16, icon: 'gear' },
+  { pos: 25, kind: 'airport', name: 'Estação Cascata', short: 'Cascata', iata: 'CSC', price: 200, rent: 25 },
+  { pos: 26, kind: 'property', group: 'yellow', name: 'Piraí', capital: 'Alto do Desvio', price: 410, rent: 17, icon: 'switch' },
+  { pos: 27, kind: 'property', group: 'yellow', name: 'Engenho', capital: 'Alto do Desvio', price: 460, rent: 17, icon: 'switch' },
   { pos: 28, kind: 'mine', name: 'Mina de Estanho', short: 'Estanho', metal: 'estanho', price: 220 },
-  { pos: 29, kind: 'property', group: 'yellow', name: 'Morro do Sino', short: 'Sino', capital: 'Alto do Desvio', price: 520, rent: 17, icon: 'clock' },
+  { pos: 29, kind: 'property', group: 'yellow', name: 'Quinze', capital: 'Alto do Desvio', price: 520, rent: 17, icon: 'switch' },
 
   // ---------- canto superior direito ----------
   { pos: 30, kind: 'corner-gotojail', name: 'Vá para Prisão', short: 'Vá pra Prisão' },
 
   // ---------- lado LESTE (cima → baixo) — Salto + Serrano ----------
-  { pos: 31, kind: 'property', group: 'green', name: 'Avenida Marechal Deodoro', short: 'Deodoro', capital: 'Salto', price: 560, rent: 23, icon: 'lamp' },
+  { pos: 31, kind: 'property', group: 'green', name: 'Deodoro', capital: 'Salto', price: 560, rent: 23, icon: 'powerhouse' },
   { pos: 32, kind: 'tesouro', name: 'Tesouro' },
-  { pos: 33, kind: 'property', group: 'green', name: 'Alameda das Palmeiras', short: 'Palmeiras', capital: 'Salto', price: 630, rent: 23, icon: 'lamp' },
+  { pos: 33, kind: 'property', group: 'green', name: 'Represa', capital: 'Salto', price: 630, rent: 23, icon: 'powerhouse' },
   { pos: 34, kind: 'mine', name: 'Mina de Cobre', short: 'Cobre', metal: 'cobre', price: 220 },
-  { pos: 35, kind: 'property', group: 'green', name: 'Rua do Gasômetro', short: 'Gasômetro', capital: 'Salto', price: 710, rent: 23, icon: 'lamp' },
-  { pos: 36, kind: 'airport', name: 'Estação do Vale', short: 'Vale', iata: 'VAL', price: 200, rent: 25 },
+  { pos: 35, kind: 'property', group: 'green', name: 'Riacho', capital: 'Salto', price: 710, rent: 23, icon: 'powerhouse' },
+  { pos: 36, kind: 'airport', name: 'Estação Vale', short: 'Vale', iata: 'VAL', price: 200, rent: 25 },
   { pos: 37, kind: 'acaso', name: 'Acaso' },
-  { pos: 38, kind: 'property', group: 'platinum', name: 'Solar do Visconde', short: 'Visconde', capital: 'Serrano', price: 800, rent: 44, icon: 'mansion' },
-  { pos: 39, kind: 'property', group: 'platinum', name: 'Alto do Cristal', short: 'Cristal', capital: 'Serrano', price: 940, rent: 44, icon: 'mansion' },
+  { pos: 38, kind: 'property', group: 'platinum', name: 'Barão', capital: 'Serrano', price: 800, rent: 44, icon: 'mansion' },
+  { pos: 39, kind: 'property', group: 'platinum', name: 'Cristal', capital: 'Serrano', price: 940, rent: 44, icon: 'mansion' },
 ]

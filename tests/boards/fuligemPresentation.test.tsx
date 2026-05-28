@@ -29,12 +29,12 @@ function setTheme(theme: 'atlas' | 'fuligem') {
 }
 
 describe('apresentação por mapa (055)', () => {
-  it('a casa 1 é Ladeira do Barreiro com ícone (sem bandeira) na Fuligem; Roma com bandeira no Atlas', () => {
+  it('a casa 1 é Barro Preto com ícone (sem bandeira) na Fuligem; Roma com bandeira no Atlas', () => {
     setTheme('fuligem')
     const fuligemSquare = catalogOf('fuligem').board.find((s) => s.pos === 1)!
     const first = render(<ClassicSquare square={fuligemSquare} side="bottom" />)
     // A topologia de 40 casas usa a área extra para o topônimo completo.
-    expect(screen.getByText('Ladeira do Barreiro')).toBeTruthy()
+    expect(screen.getByText('Barro Preto')).toBeTruthy()
     // Sem bandeira: nenhuma arte de bandeira dentro do avatar da casa.
     expect(first.container.querySelector('.board-flag-avatar svg[data-flag]')).toBeNull()
     first.unmount()

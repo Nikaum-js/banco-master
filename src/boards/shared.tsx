@@ -314,6 +314,13 @@ export function ClassicSquare({
                     // variação de tamanho lia como inconsistência). Nomes
                     // compostos quebram em 2 linhas; nas laterais o maxWidth
                     // ≈ altura da casa (cqmin) deixa o nome girado quebrar.
+                    //
+                    // Os DOIS mapas mostram o nome CHEIO, e nenhum precisa de `short` para
+                    // isso: os nomes nascem curtos no dado (Roma, Veneza, Londres no Atlas;
+                    // Barro Preto, Glória, Brás na Fuligem). Cortar para o `short` na hora de
+                    // desenhar joga fora o que identifica a casa — "Estação da Serra" virava
+                    // "Serra" — e a spec 056 proíbe truncamento programático. Nome que não
+                    // cabe se resolve encurtando o DADO, nunca o rótulo.
                     fontSize: '14px',
                     fontWeight: 700,
                     ...(side === 'left' || side === 'right' ? { maxWidth: '94cqmin' } : {}),
@@ -374,18 +381,30 @@ export function ClassicSquare({
 
       {/* Conteúdo das casas NÃO-propriedade — aeroporto, utility, tax,
           acaso, tesouro. Ícone + label no centro da célula.
-          Leste/oeste: gira o bloco inteiro 90° (igual o nome das propriedades)
-          + encolhe um pouco pra o label girado caber na altura. */}
+          Leste/oeste: gira o bloco inteiro 90° (igual o nome das propriedades).
+
+          A rotação de 90° TROCA os eixos, então o bloco precisa nascer com as medidas
+          trocadas: `inset-0` girado devolvia um bloco tão alto quanto a célula é larga
+          (142px de conteúdo dentro de 71px de altura), e a sobra vazava metade para cima e
+          metade para baixo, por cima do nome das casas vizinhas — era daí que saía o
+          "MINA DE CARVÃO" empilhado no "ESTAÇÃO DA SERRA" na coluna da esquerda.
+          Com 100cqmin de largura e 100cqmax de altura antes de girar, o bloco fecha
+          exatamente na célula: o texto corre no eixo curto (a faixa de 1fr) e as linhas se
+          empilham ao longo do eixo comprido, que é o que sobra de espaço. */}
       {!isProperty && (
         <div
           className={cn(
-            'absolute inset-0 flex flex-col items-center text-center gap-1 justify-center p-1',
+            'absolute flex flex-col items-center text-center gap-1 justify-center p-1',
+            side === 'left' || side === 'right' ? 'left-1/2 top-1/2' : 'inset-0',
             fuligemMap && 'board-square-content--fuligem',
           )}
           style={{
+            ...(side === 'left' || side === 'right'
+              ? { width: '100cqmin', height: '100cqmax' }
+              : {}),
             transform:
-              side === 'left'  ? 'rotate(90deg)' :
-              side === 'right' ? 'rotate(-90deg)' : undefined,
+              side === 'left'  ? 'translate(-50%, -50%) rotate(90deg)' :
+              side === 'right' ? 'translate(-50%, -50%) rotate(-90deg)' : undefined,
           }}
         >
           {(isAirport || isUtility || isMine || isCard || isTax || isBus) && (

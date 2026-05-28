@@ -185,7 +185,7 @@ describe('mapCatalog — vocabulário da Fuligem', () => {
   it('ferrovias nomeadas por LUGAR, nunca por bússola', () => {
     const rails = board.filter((s) => s.kind === 'airport').map((s) => s.name)
     expect(rails).toEqual([
-      'Estação Bonfim', 'Estação da Serra', 'Estação Cachoeira', 'Estação do Vale',
+      'Estação Bonfim', 'Estação Serra', 'Estação Cascata', 'Estação Vale',
     ])
     // Bússola é descrição, não nome — e o Monopoly original nunca fez isso
     // (Reading, Pennsylvania, B&O, Short Line são todos lugares).

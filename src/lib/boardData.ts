@@ -57,10 +57,16 @@ export interface SquareBase {
   short?: string
 }
 
-/** Ícone de apresentação de propriedade em mapas SEM bandeira (055/D-069). */
+/** Ícone de apresentação de propriedade em mapas SEM bandeira (055/D-069).
+ *
+ * Os quatro últimos (`kiln`…`powerhouse`) existem porque o ÍCONE é o que declara o ofício
+ * do bairro, e para isso ele precisa ser específico: `chimney` e `factory` servem a
+ * qualquer indústria, `train` colide com a locomotiva das ferrovias e `lamp` é iluminação
+ * a GÁS num bairro que o mapa define como elétrico. Genérico e errado leem igual de longe. */
 export type PropertyIconId =
   | 'chimney' | 'factory' | 'anvil' | 'crane' | 'house'
   | 'gear' | 'clock' | 'train' | 'lamp' | 'building' | 'bank' | 'mansion'
+  | 'kiln' | 'loom' | 'switch' | 'powerhouse'
 
 export interface PropertySquare extends SquareBase {
   kind: 'property'

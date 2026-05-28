@@ -150,11 +150,25 @@ export const CLASSIC_TOPOLOGY: BoardTopology = {
 export const FULIGEM_CORNERS = [0, 10, 20, 30] as const
 
 /**
- * Faixas da grade 11×11. Os cantos/perímetro usam 2,5fr: com 40 casas, a Fuligem
- * transforma a redução do circuito em profundidade real para nome completo e ícone,
- * em vez de deixar o miolo crescer e conservar células visualmente iguais ao Atlas.
+ * Faixas da grade 11×11. O canto usa 2fr — o MESMO fator do Atlas —, e é essa igualdade
+ * que faz a redução de 48 → 40 casas chegar na propriedade em vez de parar no canto.
+ *
+ * A conta: com canto `c`, o total é `2c + 9` faixas, a propriedade mede `1/(2c+9)` do
+ * lado e o canto `c/(2c+9)`. Com c=2,5 a propriedade ficava em 1/14 = 7,14% contra 6,67%
+ * do Atlas (1/15) — só 7% maior —, enquanto o canto saltava de 13,3% para 17,9%, +34%.
+ * O espaço dos 8 quadrados que a Fuligem não tem ia quase todo para as quatro esquinas, e
+ * os nomes completos (`square.name`, não `short`) continuavam quebrando em 3 linhas.
+ *
+ * Com c=2: propriedade em 1/13 = 7,69% e canto em 15,4%. O ganho de ~40% sobre o Atlas em
+ * cada eixo (71×142 contra 50×102) vai para as duas dimensões na proporção 1:2 que o
+ * layout do rótulo já assumia, em vez de virar profundidade que o nome não usa.
+ *
+ * Por que a largura da faixa de 1fr é o que importa nos QUATRO lados: em cima/baixo ela é
+ * a largura da célula, onde o nome corre na horizontal; nos laterais o nome é rotacionado
+ * 90°, então o comprimento da linha passa a ser limitado pela ALTURA da célula — que é a
+ * mesma faixa de 1fr. Alargar aqui é o único lever que ajuda todo nome do perímetro.
  */
-export const FULIGEM_TRACK_TEMPLATE = 'minmax(0, 2.5fr) repeat(9, minmax(0, 1fr)) minmax(0, 2.5fr)'
+export const FULIGEM_TRACK_TEMPLATE = 'minmax(0, 2fr) repeat(9, minmax(0, 1fr)) minmax(0, 2fr)'
 
 function fuligemSideOf(pos: number): Side {
   if ((FULIGEM_CORNERS as readonly number[]).includes(pos)) return 'corner'
