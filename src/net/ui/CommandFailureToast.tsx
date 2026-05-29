@@ -4,20 +4,22 @@
 // visível, porque só ela é surpresa: regra o jogador já devia esperar.
 import { AnimatePresence, motion } from 'motion/react'
 import { useRoomStore } from '@/net/roomStore'
+import { useMotion } from '@/game/ui/motion'
 
 export function CommandFailureToast() {
   const failure = useRoomStore((s) => s.commandFailure)
+  const { reduced } = useMotion()
 
   return (
     <AnimatePresence>
       {failure && (
         <motion.div
           key="command-failure-toast"
-          initial={{ opacity: 0, y: 16 }}
+          initial={reduced ? false : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 16 }}
-          transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-          className="fixed bottom-4 right-4 z-[76] px-4 py-2.5 rounded-[var(--radius-card)] border-2 border-red-500/50 bg-coffee-900/97 shadow-[var(--shadow-dropdown)] backdrop-blur-sm max-w-[92vw]"
+          exit={reduced ? { opacity: 0 } : { opacity: 0, y: 16 }}
+          transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 28 }}
+          className="system-banner system-banner--signal fixed bottom-4 right-4 z-[76] max-w-[92vw]"
           role="status"
           aria-live="polite"
         >

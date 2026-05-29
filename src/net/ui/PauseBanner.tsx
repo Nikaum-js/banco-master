@@ -9,27 +9,29 @@ import { useGameStore } from '@/game/store'
 import { useRoomStore } from '@/net/roomStore'
 import { pauseBannerView } from './pauseBannerView'
 import { PlayerName } from './PlayerName'
+import { useMotion } from '@/game/ui/motion'
 
 export function PauseBanner() {
   const game = useGameStore((s) => s.game)
   const room = useRoomStore((s) => s.room)
   const view = pauseBannerView(game, room)
+  const { reduced } = useMotion()
 
   return (
     <AnimatePresence>
       {view && (
         <motion.div
           key="pause-banner"
-          initial={{ opacity: 0, y: -16 }}
+          initial={reduced ? false : { opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -16 }}
-          transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-[75] px-5 py-3 rounded-[var(--radius-card)] border-2 border-gold/50 bg-coffee-900/97 shadow-[var(--shadow-dropdown)] backdrop-blur-sm max-w-[92vw]"
+          exit={reduced ? { opacity: 0 } : { opacity: 0, y: -16 }}
+          transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 28 }}
+          className="system-banner system-banner--brass fixed top-4 left-1/2 -translate-x-1/2 z-[75] max-w-[92vw]"
           role="status"
           aria-live="polite"
         >
           <div className="flex items-center gap-3">
-            <PauseGlyph />
+            <PauseGlyph reduced={reduced} />
             <div className="min-w-0">
               <p className="display text-gold leading-none">Partida pausada</p>
               <p className="label text-cream-muted mt-1.5 leading-snug">
@@ -54,12 +56,12 @@ export function PauseBanner() {
   )
 }
 
-function PauseGlyph() {
+function PauseGlyph({ reduced }: { reduced: boolean }) {
   return (
     <motion.span
-      className="shrink-0 w-9 h-9 rounded-full grid place-items-center border-2 border-gold/40 bg-gold/10"
-      animate={{ opacity: [1, 0.55, 1] }}
-      transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+      className="system-banner__glyph shrink-0"
+      animate={reduced ? undefined : { opacity: [1, 0.55, 1] }}
+      transition={reduced ? undefined : { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
       aria-hidden
     >
       <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" className="text-gold">
