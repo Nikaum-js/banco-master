@@ -12,7 +12,6 @@ import { AudioControl } from '@/game/ui/sound/AudioControl'
 import { ThemeControl } from '@/game/ui/theme/ThemeControl'
 import { SoundBoard } from '@/game/ui/sound/SoundBoard'
 import { DebugLogger } from '@/game/ui/DebugLogger'
-import { OrientationGate } from '@/game/ui/OrientationGate'
 import { OnlineGate } from '@/net/ui/OnlineGate'
 import { PauseBanner } from '@/net/ui/PauseBanner'
 import { ConnectionBanner } from '@/net/ui/ConnectionBanner'
@@ -33,15 +32,14 @@ import '@/game/ui/e2eScenario'
 // segue idêntico. Com esses params, ele monta a sala online e só libera o tabuleiro
 // quando o estado da partida chega do host.
 //
-// `OrientationGate` (044/T034 — D6 do plan) envolve TUDO, por FORA do `OnlineGate` — nunca
-// por dentro. Girar o celular não pode desmontar o `OnlineGate`: desmontá-lo dispararia o
-// `dispose()` da sessão e a mesa registraria uma saída, pausando a partida de todo mundo só
-// por causa de uma rotação. O gate não desmonta nada por baixo; só sobrepõe um aviso.
+// `OrientationGate` é montado pelo `OnlineGate` só quando o TABULEIRO existe. A home e o
+// lobby funcionam em retrato; durante a partida, o gate continua sem desmontar a sessão
+// (só sobrepõe um aviso por cima dos mesmos filhos).
 export default function App() {
   // `?sons` abre o board de auditoria dos SFX (dev) no lugar do jogo.
   if (new URLSearchParams(window.location.search).has('sons')) return <SoundBoard />
   return (
-    <OrientationGate>
+    <>
       <OnlineGate>
         <Board01Classic />
         <GameDriver />
@@ -65,6 +63,6 @@ export default function App() {
           filhos, e o alternador de tema precisa existir na home também — é lá que a troca
           se vê inteira (a tela de entrada é parte do tema). */}
       <ThemeControl />
-    </OrientationGate>
+    </>
   )
 }

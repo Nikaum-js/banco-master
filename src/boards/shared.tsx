@@ -67,7 +67,7 @@ function FlagAvatar({ iso2, side }: { iso2: string; side: Side }) {
     side === 'left' ? 90 : side === 'right' ? -90 : side === 'top' ? 180 : 0
   return (
     <div
-      className="absolute rounded-full border-2 border-coffee-950 bg-coffee-900 overflow-hidden pointer-events-none z-40"
+      className="board-flag-avatar absolute rounded-full border-2 border-coffee-950 bg-coffee-900 overflow-hidden pointer-events-none z-40"
       style={{
         ...position,
         width: size,
@@ -220,7 +220,7 @@ export function ClassicSquare({
                     dourado resolve pelo tema via var(). */}
                 {!ownerColor && (
                   <div
-                    className="absolute currency leading-none whitespace-nowrap"
+                    className="board-square-price absolute currency leading-none whitespace-nowrap"
                     style={{
                       ...moneyPos,
                       fontSize: '11px',
@@ -315,13 +315,13 @@ export function ClassicSquare({
           }}
         >
           {(isAirport || isUtility || isCard || isTax || isBus) && (
-            <div style={{ fontSize: 32 }} className="leading-none">
+            <div style={{ fontSize: 32 }} className="board-square-icon leading-none">
               <SquareIcon square={square} size="1em" />
             </div>
           )}
           {isAirport && (
             <p
-              className="display mt-1 text-cream leading-none tracking-wider"
+              className="board-square-label display mt-1 text-cream leading-none tracking-wider"
               style={{ fontSize: '14px' }}
             >
               {(square as AirportSquare).name}
@@ -329,7 +329,7 @@ export function ClassicSquare({
           )}
           {isUtility && (
             <p
-              className="display mt-1 text-cream leading-none tracking-wide"
+              className="board-square-label display mt-1 text-cream leading-none tracking-wide"
               style={{ fontSize: '14px' }}
             >
               {(() => {
@@ -340,27 +340,27 @@ export function ClassicSquare({
           )}
           {isTax && (
             <>
-              <p className="display mt-1 text-cream leading-none" style={{ fontSize: '14px' }}>
+              <p className="board-square-label display mt-1 text-cream leading-none" style={{ fontSize: '14px' }}>
                 Taxa
               </p>
-              <p className="currency text-logo leading-none" style={{ fontSize: '14px' }}>
+              <p className="board-square-label currency text-logo leading-none" style={{ fontSize: '14px' }}>
                 <span className="text-cream-muted text-[0.7em] mr-0.5">R$</span>
                 {(square as TaxSquare).amount}
               </p>
             </>
           )}
           {isAcaso && (
-            <p className="display mt-1 text-cream leading-none" style={{ fontSize: '14px' }}>
+            <p className="board-square-label display mt-1 text-cream leading-none" style={{ fontSize: '14px' }}>
               Acaso
             </p>
           )}
           {isTesouro && (
-            <p className="display mt-1 text-cream leading-none" style={{ fontSize: '14px' }}>
+            <p className="board-square-label display mt-1 text-cream leading-none" style={{ fontSize: '14px' }}>
               Tesouro
             </p>
           )}
           {isBus && (
-            <p className="display mt-1 text-cream leading-none tracking-wide text-center" style={{ fontSize: '14px' }}>
+            <p className="board-square-label display mt-1 text-cream leading-none tracking-wide text-center" style={{ fontSize: '14px' }}>
               Bus Ticket
             </p>
           )}
@@ -392,11 +392,11 @@ export function CornerSquare({ square, accent = 'cream' }:
         isGo && 'bg-coffee-700',
       )}
     >
-      <div className="leading-none" style={{ fontSize: 56 }}>
+      <div className="board-corner-icon leading-none" style={{ fontSize: 56 }}>
         <SquareIcon square={square} size="1em" />
       </div>
       <p
-        className="display mt-1 text-cream leading-none"
+        className="board-square-label display mt-1 text-cream leading-none"
         style={{ fontSize: '14px' }}
       >
         {label}
@@ -774,7 +774,7 @@ export function PlayersPanel() {
           meta={effects.length > 0 ? <Chip tone="neutral">{effects.length}</Chip> : undefined}
         />
         {effects.length === 0 ? (
-          <EmptyState icon={<CalmGlyph />} title="Tabuleiro em paz" hint="Nenhum efeito ativo no momento" />
+          <EmptyState icon={<CalmGlyph />} title="Tabuleiro em paz" />
         ) : (
           <ul className="flex flex-col gap-1.5">
             {effects.map((e) => (
@@ -813,10 +813,10 @@ function PlayerRow({ player: p }: { player: Player }) {
   return (
     <div
       className={cn(
-        'relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-card)]',
+        'player-row relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-card)]',
         'border transition-colors',
         p.active
-          ? 'bg-coffee-700 border-gold shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-brass)_30%,transparent)]'
+          ? 'player-row--active bg-coffee-700 border-gold shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-brass)_30%,transparent)]'
           : 'bg-coffee-800/60 border-coffee-500',
         // 044/T073: era `opacity-50` — mediu abaixo de 4,5:1 pro texto "Falido"/valor
         // desta linha. Sobe o piso pra manter o texto legível; a linha ainda fica
@@ -826,18 +826,9 @@ function PlayerRow({ player: p }: { player: Player }) {
     >
       <MoneyPulse pulse={pulse} className="right-3 top-1.5" />
       <PlayerFace color={p.color} active={p.active} asleep={p.bankrupt} size={40} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-1.5">
-          <p className="display display--tight text-cream text-[17px] leading-none truncate">{p.name}</p>
-          {/* 044/T030 (D-039 ponto 3): "jogador da vez" tinha só borda/fundo diferentes —
-              cor sem segundo canal. A DiceArena já diz o nome de quem joga em texto; esta
-              é a mesma informação na lista lateral, mesmo padrão de tag do "VOCÊ"/"$$"/"IMU". */}
-          {p.active      && <span title="Turno atual" className="label !text-gold">VEZ</span>}
-          {p.you         && <span title="Seu assento" className="label !text-gold">VOCÊ</span>}
-          {p.loanActive  && <span title="Empréstimo ativo" className="label !text-logo">$$</span>}
-          {p.immune      && <span title="Imunidade ativa"  className="label !text-gold">IMU</span>}
-        </div>
-        <div className="flex items-center gap-2 mt-1">
+      <div className="player-row__identity flex-1 min-w-0">
+        <p className="display display--tight text-cream text-[17px] leading-none truncate">{p.name}</p>
+        <div className="player-row__meta flex items-center gap-2 mt-1">
           {p.bankrupt ? (
             <span className="label text-cream-muted">Falido</span>
           ) : p.connected === false ? (
@@ -852,11 +843,19 @@ function PlayerRow({ player: p }: { player: Player }) {
               {p.cardsInHand}/3
             </span>
           )}
+          {/* Estado do assento fica na segunda linha para preservar o nome completo.
+              A cor continua acompanhada de texto: não depende só do filete ativo. */}
+          <span className="flex items-center gap-1.5 ml-auto">
+            {p.active      && <span title="Turno atual" className="label !text-gold">VEZ</span>}
+            {p.you         && <span title="Seu assento" className="label !text-gold">VOCÊ</span>}
+            {p.loanActive  && <span title="Empréstimo ativo" className="label !text-logo">$$</span>}
+            {p.immune      && <span title="Imunidade ativa"  className="label !text-gold">IMU</span>}
+          </span>
         </div>
       </div>
       <p
         className={cn(
-          'currency text-right shrink-0',
+          'player-row__money currency text-right shrink-0',
           p.bankrupt ? 'text-cream-muted line-through' : 'text-gold-glow',
         )}
         style={{ fontSize: '16px' }}
@@ -1035,7 +1034,7 @@ export function DiceArena() {
   const { isDoubleReroll, status } = v
 
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="dice-arena flex flex-col items-center gap-3">
       {/* Jogador da vez — carinha + nome acima dos dados. Anel pisca quando é
           hora de rolar (turno ativo no demo local de 1 cliente). */}
       <div className="flex flex-col items-center gap-1.5">
@@ -1256,7 +1255,9 @@ export function ActionsPanel() {
           onClick={() => useTradeUI.getState().show()}
           className="w-full mt-3 label text-gold text-[0.625rem]"
         >
-          <PlusGlyph size={11} /> Nova negociação
+          <PlusGlyph size={11} />
+          <span className="side-action-label">Nova negociação</span>
+          <span className="side-action-label--compact">Propor</span>
         </Button>
       </div>
     </aside>
@@ -1536,7 +1537,7 @@ function CenterLog() {
   const history = [...log].reverse()
   const colorOf = (who: string): string => (who === 'bank' ? 'var(--color-signal)' : identityOf(room, who).color)
   return (
-    <div className="flex-1 min-h-0 w-full max-w-[88%] flex flex-col rounded-[var(--radius-card)] border border-coffee-500/60 bg-coffee-900/55 backdrop-blur-[1px] overflow-hidden">
+    <div className="center-log flex-1 min-h-0 w-full flex flex-col rounded-[var(--radius-card)] border overflow-hidden">
       {/* Cabeçalho: título + contador de lançamentos (primitivo padrão) */}
       <SectionHeader
         className="px-3 pt-2 pb-1.5 mb-0 shrink-0 border-b border-coffee-500/40"
@@ -1549,10 +1550,9 @@ function CenterLog() {
       />
       {history.length === 0 ? (
         <EmptyState
-          className="flex-1 m-3"
+          className="center-log-empty flex-1 m-3"
           icon={<DiceIcon size={20} />}
           title="Nada registrado ainda"
-          hint="Role os dados pra começar. Cada jogada aparece aqui."
         />
       ) : (
         <AccessoryErrorBoundary label="Histórico">

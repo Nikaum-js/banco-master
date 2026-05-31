@@ -31,7 +31,7 @@ export function SessionBadge({ link }: { link: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-[74] px-3 py-1.5 rounded-full border border-coffee-500 bg-coffee-900/80 text-cream-muted/85 text-xs hover:text-cream hover:border-gold/40 transition-colors"
+        className="session-access__trigger fixed bottom-4 right-4 z-[74] min-h-11 px-4 rounded-full text-xs"
       >
         Link e código
       </button>
@@ -39,17 +39,17 @@ export function SessionBadge({ link }: { link: string }) {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-[74] w-64 p-3 rounded-[var(--radius-card)] border border-coffee-500 bg-coffee-900/97 shadow-[var(--shadow-dropdown)] flex flex-col gap-2">
+    <div className="session-access fixed bottom-4 right-4 z-[74] w-72 max-w-[calc(100vw-2rem)] p-3 flex flex-col gap-1">
       <div className="flex items-center justify-between">
         <span className="label text-gold">Seu acesso</span>
-        <button type="button" onClick={() => setOpen(false)} aria-label="Recolher" className="text-cream-muted/85 hover:text-cream text-xs">
+        <button type="button" onClick={() => setOpen(false)} aria-label="Recolher" className="w-11 h-11 -mr-2 -my-2 grid place-items-center text-cream-muted/85 hover:text-cream text-xs">
           ✕
         </button>
       </div>
-      <button type="button" onClick={() => copy('link', link)} title={link} className="text-left text-xs text-cream-muted truncate hover:text-cream">
+      <button type="button" onClick={() => copy('link', link)} title={link} className="session-access__row min-h-11 text-left text-xs text-cream-muted truncate hover:text-cream">
         {copied === 'link' ? 'Link copiado!' : `Link: ${link}`}
       </button>
-      <button type="button" onClick={() => copy('code', myReentryCode)} className="text-left text-sm tracking-[0.25em] text-cream font-mono hover:text-gold">
+      <button type="button" onClick={() => copy('code', myReentryCode)} className="session-access__row min-h-11 text-left text-sm tracking-[0.25em] text-cream font-mono hover:text-gold">
         {copied === 'code' ? 'Código copiado!' : myReentryCode}
       </button>
       <p className="text-cream-muted/85" style={{ fontSize: 10 }}>

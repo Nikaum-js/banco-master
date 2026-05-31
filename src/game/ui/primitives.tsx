@@ -24,18 +24,20 @@ export function Button({
   return (
     <button
       type={type}
+      data-variant={variant}
       className={cn(
-        'px-3 py-2 rounded-[var(--radius-sharp)] font-bold text-sm leading-none',
+        'ui-button min-h-11 px-3 py-2 rounded-[var(--radius-card)] border font-bold text-sm leading-none',
         'inline-flex items-center justify-center gap-1.5 whitespace-nowrap',
-        'transition-all active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed disabled:active:translate-y-0',
+        'touch-manipulation transition-[transform,filter,background-color,border-color,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-press)]',
+        'hover:-translate-y-px active:translate-y-px active:scale-[0.985] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:active:translate-y-0 disabled:active:scale-100',
         variant === 'primary' &&
-          'bg-gold text-coffee-950 hover:brightness-110 disabled:hover:brightness-100',
+          'bg-gold text-coffee-950 border-gold-glow/55 hover:brightness-105 disabled:hover:brightness-100',
         variant === 'secondary' &&
-          'bg-coffee-700 text-cream border border-coffee-500 hover:border-gold/60 hover:bg-coffee-600 disabled:hover:bg-coffee-700 disabled:hover:border-coffee-500',
+          'bg-gradient-to-b from-coffee-700 to-coffee-800 text-cream border-coffee-500 hover:border-gold/60 hover:from-coffee-600 hover:to-coffee-700 disabled:hover:from-coffee-700 disabled:hover:to-coffee-800 disabled:hover:border-coffee-500',
         variant === 'ghost' &&
-          'bg-gold/[0.06] text-gold border border-gold/40 hover:bg-gold/15 hover:border-gold/70 disabled:hover:bg-gold/[0.06]',
+          'bg-gold/[0.06] text-gold border-gold/40 hover:bg-gold/15 hover:border-gold/70 disabled:hover:bg-gold/[0.06]',
         variant === 'danger' &&
-          'bg-transparent text-signal-glow border border-signal hover:bg-signal hover:text-cream disabled:hover:bg-transparent disabled:hover:text-signal-glow',
+          'bg-transparent text-signal-glow border-signal hover:bg-signal hover:text-cream disabled:hover:bg-transparent disabled:hover:text-signal-glow',
         className,
       )}
       {...props}
@@ -47,7 +49,7 @@ export function Button({
 // (contador, chip, slots). Mesmo ritmo visual em todas as seções.
 export function SectionHeader({ title, meta, className }: { title: string; meta?: ReactNode; className?: string }) {
   return (
-    <div className={cn('flex items-center justify-between gap-2 mb-3', className)}>
+    <div className={cn('panel-section-header flex items-center justify-between gap-2 mb-3', className)}>
       <p className="label text-gold">{title}</p>
       {meta}
     </div>
@@ -138,18 +140,18 @@ export function EmptyState({ icon, title, hint, className }: { icon?: ReactNode;
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center gap-1.5 px-3 py-5 rounded-[var(--radius-card)] border border-dashed border-coffee-500 bg-coffee-800/40 text-center',
+        'panel-empty-state flex flex-col items-center justify-center gap-1.5 px-3 py-4 rounded-[var(--radius-card)] border border-coffee-500 bg-coffee-800/40 text-center',
         className,
       )}
     >
       {icon && (
-        <span className="text-cream-muted/50" aria-hidden>
+        <span className="panel-empty-state__icon text-cream-muted/55" aria-hidden>
           {icon}
         </span>
       )}
       <p className="label text-cream-muted leading-snug">{title}</p>
       {hint && (
-        <p className="text-cream-muted/85 leading-snug" style={{ fontSize: '10px' }}>
+        <p className="panel-empty-state__hint text-cream-muted/85 leading-snug" style={{ fontSize: '10px' }}>
           {hint}
         </p>
       )}

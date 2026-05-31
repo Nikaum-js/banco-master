@@ -110,7 +110,7 @@ export function IdentityForm({
   return (
     <Frame title={title} subtitle={subtitle}>
       {/* Preview vivo — o token REAL do tabuleiro com a cor escolhida, respirando. */}
-      <div className="flex items-center gap-3.5 px-4 py-3 rounded-[var(--radius-card)] bg-ink-950/50 border border-ink-500">
+      <div className="identity-preview flex items-center gap-3.5 px-4 py-3 rounded-[var(--radius-card)]">
         <PlayerFace color={chosen || 'var(--color-ink-400)'} size={46} active skin={skin} />
         <div className="min-w-0 flex-1">
           <p className={`font-semibold leading-tight truncate ${name.trim() ? 'text-starlight' : 'text-starlight-muted/70'}`}>
@@ -148,7 +148,7 @@ export function IdentityForm({
               aria-label={`Cor ${c}`}
               aria-pressed={c === chosen}
               style={{ background: c }}
-              className={`w-8 h-8 rounded-full border border-ink-950/60 transition-all ${
+              className={`w-11 h-11 rounded-full border border-ink-950/60 transition-all ${
                 c === chosen
                   ? 'ring-2 ring-brass ring-offset-2 ring-offset-ink-800 scale-105'
                   : 'opacity-80 hover:opacity-100 hover:scale-105'
@@ -169,7 +169,7 @@ export function IdentityForm({
               aria-label={`Visual ${s.label}`}
               aria-pressed={s.id === skin}
               title={s.label}
-              className={`py-1.5 rounded-[var(--radius-card)] border grid place-items-center gap-0.5 transition-all ${
+              className={`min-h-16 py-1.5 rounded-[var(--radius-card)] border grid place-items-center gap-0.5 transition-all ${
                 s.id === skin
                   ? 'border-brass/80 bg-brass/10 text-brass-glow shadow-[var(--shadow-glow)]'
                   : 'border-ink-500 bg-ink-900/60 text-starlight-muted hover:text-starlight hover:border-ink-300'
@@ -283,7 +283,7 @@ export function RoomLobby({
         {room.seats.map((s) => (
           <div
             key={s.uid}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-card)] bg-ink-800/70 border border-ink-500"
+            className="lobby-seat flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-card)]"
           >
             <PlayerFace color={s.color} size={30} />
             <span className="text-starlight truncate flex-1 inline-flex items-center gap-2 min-w-0">
@@ -298,7 +298,7 @@ export function RoomLobby({
                 onClick={() => onKick(s.uid)}
                 title={`Remover ${s.name} da sala`}
                 aria-label={`Remover ${s.name} da sala`}
-                className="shrink-0 w-6 h-6 rounded-full grid place-items-center text-starlight-muted/60 hover:text-signal-glow hover:bg-signal/15 transition-colors"
+                className="shrink-0 w-11 h-11 -my-2 -mr-2 rounded-full grid place-items-center text-starlight-muted/60 hover:text-signal-glow hover:bg-signal/15 transition-colors"
               >
                 <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden>
                   <path d="M18 6 6 18" />

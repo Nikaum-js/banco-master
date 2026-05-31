@@ -39,6 +39,7 @@ export default function Board01Classic() {
       <div
         className="
           board-frame
+          board-frame--tactile
           bg-coffee-950 border border-coffee-500
           rounded-[var(--radius-card)]
           shadow-[var(--shadow-lift),0_0_0_1px_color-mix(in_srgb,var(--color-brass)_22%,transparent)]
@@ -57,7 +58,7 @@ export default function Board01Classic() {
           <div
             className="
               relative
-              bg-gradient-to-br from-coffee-900 via-coffee-800 to-coffee-950
+              board-center
               border border-coffee-500
             "
             style={{ gridRow: '2 / 13', gridColumn: '2 / 13' }}
@@ -105,7 +106,7 @@ export default function Board01Classic() {
                       e.stopPropagation()
                       setSelectedPos((cur) => (cur === square.pos ? null : square.pos))
                     }}
-                    className="relative block w-full h-full text-left cursor-pointer"
+                    className="board-square-button relative block w-full h-full text-left cursor-pointer"
                   >
                     {squareContent}
                   </button>
