@@ -12,7 +12,7 @@ import { buildingFamily } from '@/boards/glyphs/buildingFamily'
 import { BOARD as ENGINE_BOARD, type GroupKey } from '@/lib/boardData'
 import { useGameStore } from '@/game/store'
 import { useLocalView, useRoomStore } from '@/net/roomStore'
-import { cityLevel, smokeTaxFor } from '@/game/economy/construction'
+import { cityLevel } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
 import { deedView, type BuildBlock } from '@/game/ui/deed/deedView'
 import { deedPresentation } from '@/game/ui/deed/presentation'
@@ -1923,12 +1923,6 @@ function DeedActions({ pos }: { pos: number }) {
         : `Hipotecar por $${dv.mortgageValue}`
     : `Hipotecar por $${dv.mortgageValue}`
 
-  // Taxa de Fumaça (D-070): `smokeTax` é 0 no Atlas, então nada disto aparece lá.
-  // `smokeTaxDue` = a PRÓXIMA construção já é fábrica ou acima (nível atual ≥ 4).
-  const activePlayerId = game.players[game.turnOrder[game.activeSeat]].id
-  const smokeTax = smokeTaxFor(game, activePlayerId, 5)
-  const smokeTaxDue = dv.kind === 'property' && smokeTaxFor(game, activePlayerId, dv.level + 1) > 0
-
   return (
     <div className="deed-actions">
       <p className="property-deed__section-label">Gerenciar</p>
@@ -1938,23 +1932,11 @@ function DeedActions({ pos }: { pos: number }) {
           <span>{blockMsg}</span>
         </p>
       )}
-      {/* TAXA DE FUMAÇA anunciada ANTES da cobrança (D-070). A lição do taxMan: dinheiro
-          que sai sem aviso lê como bug, não como regra. Aqui o jogador vê o valor no
-          botão e o motivo na legenda, então quando o caixa cai ele já sabia. */}
-      {dv.kind === 'property' && smokeTax > 0 && (
-        <p className="deed-actions__note deed-actions__note--smoke">
-          <i aria-hidden>≈</i>
-          <span>
-            {capLabel(activeLabels().hotel)} ou acima paga <strong>R$ {fmtMoney(smokeTax)}</strong> de
-            Taxa de Fumaça para o pote da {activeLabels().lottery}.
-          </span>
-        </p>
-      )}
       <div className="deed-actions__grid" data-kind={dv.kind}>
         {dv.kind === 'property' && (
           <>
             <DeedBtn variant="primary" icon={<HouseIcon size={13} />} disabled={!flags.podeConstruir} onClick={() => buildHouse(pos)} title={blockMsg}>
-              {smokeTaxDue ? `Construir +R$ ${fmtMoney(smokeTax)}` : 'Construir'}
+              Construir
             </DeedBtn>
             <DeedBtn disabled={!flags.podeVender} onClick={() => sellBuilding(pos)}>Vender</DeedBtn>
           </>

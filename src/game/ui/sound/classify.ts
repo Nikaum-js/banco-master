@@ -163,7 +163,7 @@ export function classifyLogEntry(e: LogEntry): SoundCue | null {
     //   sell-to-bank (§6.4/D-062) → o Canal 1 já soa pelo delta de `mortgaged`, que CAI aqui.
     // Os demais: sem cue apropriado nesta fatia — decisão explícita, não esquecimento (SC-009).
     case 'build':
-    case 'smoke-tax': // D-070: o Canal 1 já soa o delta de caixa da construção
+    case 'smoke-tax': // D-072: somente log histórico; não re-toca ao carregar snapshot
     case 'rail-hop': // D-070: o movimento do peão já tem o próprio som de passo
     case 'build-hangar':
     case 'sell-building':

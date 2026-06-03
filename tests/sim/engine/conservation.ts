@@ -29,7 +29,6 @@ import { isBankrupt, liquidatorOf } from '@/game/falencia/falencia'
 import { validateTrade } from '@/game/economy/trade'
 import { reactorFor, findReactionCard } from '@/game/cards/reacao'
 import { THEME } from '@/game/theme'
-import { activeRules } from '@/lib/mapCatalog'
 import type { SimAction } from './types'
 import type { Violation } from './invariants'
 
@@ -559,12 +558,6 @@ function checkDirectAction(prev: GameState, next: GameState, action: SimAction, 
         ? 0
         : Math.round(buildCost(sq) * (ownsMine(prev, 'ferro', actor.id) ? THEME.MINE_BONUS.ferro : 1))
       addCash(ledger, actor.id, -buildAmount) // Obra Relâmpago (D-064) + Mina de Ferro
-      const smokeTax = activeRules().smokeTax
-      if (smokeTax > 0 && cityLevel(prev.titles[action.pos]) + 1 >= 5) {
-        const taxAmount = discountedByTin(prev, actor.id, smokeTax)
-        addCash(ledger, actor.id, -taxAmount)
-        addPot(ledger, taxAmount)
-      }
       mark(ledger, 'build-house')
       return
     }

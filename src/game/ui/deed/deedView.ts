@@ -88,7 +88,7 @@ function buildBlock(game: GameState, pos: number): BuildBlock {
   if (cur >= buildLevelLimit(cities.length, size)) return 'limite-posse'
   const cash = game.players.find((pl) => pl.id === owner)?.cash ?? 0
   const player = game.players.find((pl) => pl.id === owner)
-  if (cash < buildPaymentFor(game, sq, owner, cur + 1, player?.nextBuildFree === true)) return 'caixa'
+  if (cash < buildPaymentFor(game, sq, owner, player?.nextBuildFree === true)) return 'caixa'
   return null
 }
 

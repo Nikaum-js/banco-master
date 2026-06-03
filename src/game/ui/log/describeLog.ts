@@ -162,7 +162,7 @@ export function describeLogEntry(entry: LogEntry, room: Room | null): LogSentenc
       // D-070 (mapa Fuligem): embarque entre ferrovias próprias — movimento, não dinheiro.
       return [who(room, entry.who), text(' embarcou em '), place(entry.from), text(' e desceu em '), place(entry.to)]
     case 'smoke-tax':
-      // D-070 (mapa Fuligem): a fumaça da fábrica é cobrada, e o dinheiro vai ao pote.
+      // D-072: somente compatibilidade com logs persistidos antes da remoção da regra.
       return [who(room, entry.who), text(' pagou '), money(entry.amount), text(' de Taxa de Fumaça em '), place(entry.pos)]
     case 'build-hangar':
       // O nome da melhoria vem do MAPA (Hangar / Estação de Carga). Era o literal

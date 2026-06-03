@@ -43,7 +43,6 @@ describe('mapCatalog — o Atlas segue intacto (o mapa novo é aditivo)', () => 
   it('atlas não declara regra própria — joga como sempre jogou', () => {
     expect(catalogOf('atlas').rules).toEqual(DEFAULT_RULES)
     expect(catalogOf('atlas').rules.railHop).toBe(false)
-    expect(catalogOf('atlas').rules.smokeTax).toBe(0)
   })
 })
 
@@ -259,9 +258,9 @@ describe('mapCatalog — vocabulário da Fuligem', () => {
   })
 })
 
-describe('mapCatalog — as duas mecânicas da Fuligem', () => {
-  it('declara Desvio pela Ferrovia e Taxa de Fumaça', () => {
-    expect(catalogOf('fuligem').rules).toEqual({ railHop: true, smokeTax: 50 })
+describe('mapCatalog — regra própria da Fuligem', () => {
+  it('declara somente o Desvio pela Ferrovia', () => {
+    expect(catalogOf('fuligem').rules).toEqual({ railHop: true })
   })
 })
 

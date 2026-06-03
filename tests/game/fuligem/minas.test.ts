@@ -7,7 +7,7 @@
 // Como sempre, cada afirmação vem em par: ligada na Fuligem, ausente no Atlas.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createSeedState, defaultPorts } from '@/game/setup'
-import { buildCost, buildCostFor, buildHouse } from '@/game/economy/construction'
+import { buildCost, buildCostFor } from '@/game/economy/construction'
 import { rentDue, ownsMine } from '@/game/economy/rent'
 import { economyResolve } from '@/game/economy/resolveRentable'
 import { audit } from '@/game/cards/ofensivas'
@@ -194,24 +194,6 @@ describe('minas — Mina de Estanho: impostos e aluguéis pagos −15%', () => {
 
     expect(g.players[0].cash).toBe(2_000 - 200)
     expect(g.players[1].cash).toBe(2_000 + 200)
-  })
-
-  it('reduz a Taxa de Fumaça de R$50 para R$43', () => {
-    const positions = BOARD
-      .filter((s): s is PropertySquare => s.kind === 'property' && s.group === 'brown')
-      .map((s) => s.pos)
-    const g = withOwned([...positions, MINES.estanho])
-    for (const pos of positions) forceLevel(g, pos, 4)
-    const potBefore = g.centerPot
-    const cashBefore = g.players[0].cash
-
-    const after = buildHouse(g, positions[0])
-
-    expect(after.centerPot).toBe(potBefore + 43)
-    expect(cashBefore - after.players[0].cash).toBe(
-      buildCostFor(g, BOARD[positions[0]] as PropertySquare, me(g)) + 43,
-    )
-    expect(after.log).toContainEqual(expect.objectContaining({ kind: 'smoke-tax', amount: 43 }))
   })
 
   it('reduz o Imposto Federal em 25%', () => {

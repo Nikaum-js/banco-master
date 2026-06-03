@@ -58,26 +58,19 @@ export interface CardTextOverride {
 }
 
 /**
- * Regras próprias do mapa (D-070). O default é o comportamento do Atlas, então um mapa
- * que não declara nada joga exatamente como sempre — a Fuligem liga as duas dela.
+ * Regras próprias do mapa (D-070/D-072). O default é o comportamento do Atlas, então um
+ * mapa que não declara nada joga exatamente como sempre.
  */
 export interface MapRules {
   /**
    * Desvio pela Ferrovia: cair numa ferrovia SUA permite embarcar até outra ferrovia
    * sua (mínimo 2 no seu nome), resolvendo a casa de destino normalmente e SEM o bônus
    * de GO. Zero mudança em preço ou aluguel — é uma escolha, no seu turno.
-   */
+  */
   railHop: boolean
-  /**
-   * Taxa de Fumaça: valor que vai ao pote central (`centerPot`) a cada construção de
-   * FÁBRICA OU ACIMA — `cityLevel >= 5`, ou seja fábrica/Complexo/Torre de Ferro, nunca
-   * oficina. 0 = desligado. Quem constrói grande engorda um pote que qualquer um pode
-   * levar: freio no líder que é sorte pura, portanto discreto (Princípio IV).
-   */
-  smokeTax: number
 }
 
-export const DEFAULT_RULES: MapRules = { railHop: false, smokeTax: 0 }
+export const DEFAULT_RULES: MapRules = { railHop: false }
 
 // REGRAS DO MAPA ATIVO — mesmo desenho de `setActiveBoard` em `boardData.ts` e pela mesma
 // razão: o motor precisa consultá-las sem importar da camada de UI (onde vive o store do
@@ -205,8 +198,8 @@ const FULIGEM: MapCatalog = {
     group: 'bairro',
   },
   cardText: FULIGEM_CARD_TEXT,
-  // As duas mecânicas próprias do mapa (D-070). Ver `MapRules` para o contrato.
-  rules: { railHop: true, smokeTax: 50 },
+  // D-072 removeu a Taxa de Fumaça; o Desvio é a única regra própria restante.
+  rules: { railHop: true },
 }
 
 const CATALOGS: Record<BoardId, MapCatalog> = { atlas: ATLAS, fuligem: FULIGEM }

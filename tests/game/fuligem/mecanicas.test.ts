@@ -1,9 +1,7 @@
-// Spec 056 (D-070) — as duas mecânicas próprias do mapa Cidade da Fuligem.
+// Spec 056 (D-070/D-072) — mecânicas próprias do mapa Cidade da Fuligem.
 //
-// O contrato central destes testes é a SIMETRIA: cada mecânica é provada ligada na
-// Fuligem E desligada no Atlas. Sem o segundo lado, um `smokeTax` que vazasse para o
-// Atlas passaria o teste — e o mapa novo deixaria de ser aditivo, que é a única razão
-// pela qual ele pôde existir sem rebalancear o jogo inteiro.
+// A D-072 removeu a Taxa de Fumaça: construir na Fuligem usa somente o custo normal.
+// O Desvio pela Ferrovia continua exclusivo do mapa e desligado no Atlas.
 import { beforeEach, afterEach, describe, expect, it } from 'vitest'
 import { createSeedState } from '@/game/setup'
 import { buildCostFor, buildHouse, cityLevel } from '@/game/economy/construction'
@@ -37,7 +35,7 @@ function forceLevel(g: GameState, pos: number, level: number): void {
   t.skyscraper = level >= 7
 }
 
-describe('Taxa de Fumaça (D-070)', () => {
+describe('Taxa de Fumaça removida (D-072)', () => {
   /** Dá ao jogador ativo o bairro inteiro e caixa de sobra, e devolve as posições. */
   function ownWholeGroup(g: GameState, group: string): number[] {
     const positions = BOARD
@@ -48,61 +46,37 @@ describe('Taxa de Fumaça (D-070)', () => {
     return positions
   }
 
-  it('na Fuligem, subir para FÁBRICA joga a taxa no pote', () => {
+  it('subir para Fábrica debita somente a construção e não alimenta o pote', () => {
     useMap('fuligem')
     const g = createSeedState(['p1'])
     const [first, ...rest] = ownWholeGroup(g, 'brown') // Olaria: 2 casas
-    // Todas a 4 oficinas: o próximo nível de `first` é fábrica, e a uniformidade permite.
-    for (const pos of [first, ...rest]) forceLevel(g, pos, 4)
-    const potBefore = g.centerPot
-
-    const after = buildHouse(g, first)
-
-    expect(cityLevel(after.titles[first])).toBe(5) // virou fábrica
-    expect(after.centerPot).toBe(potBefore + 50)
-    expect(after.log.some((e) => e.kind === 'smoke-tax')).toBe(true)
-  })
-
-  it('na Fuligem, subir OFICINA (níveis 1–4) não paga taxa nenhuma', () => {
-    useMap('fuligem')
-    const g = createSeedState(['p1'])
-    const positions = ownWholeGroup(g, 'brown')
-    const potBefore = g.centerPot
-
-    const after = buildHouse(g, positions[0])
-
-    expect(cityLevel(after.titles[positions[0]])).toBe(1) // oficina
-    expect(after.centerPot).toBe(potBefore)
-    expect(after.log.some((e) => e.kind === 'smoke-tax')).toBe(false)
-  })
-
-  it('a taxa sai do CAIXA de quem constrói e entra no POTE — não evapora', () => {
-    useMap('fuligem')
-    const g = createSeedState(['p1'])
-    const [first, ...rest] = ownWholeGroup(g, 'brown')
     for (const pos of [first, ...rest]) forceLevel(g, pos, 4)
     const cashBefore = g.players[0].cash
     const potBefore = g.centerPot
 
     const after = buildHouse(g, first)
 
-    // O caixa cai pelo custo da construção; o pote sobe pela taxa. A lição do taxMan é
-    // que dinheiro não pode sumir sem destino visível — aqui o destino é o pote.
-    const spent = cashBefore - after.players[0].cash
-    expect(spent).toBe(buildCostFor(g, BOARD[first] as PropertySquare, g.players[0].id) + 50)
-    expect(after.centerPot - potBefore).toBe(50)
+    expect(cityLevel(after.titles[first])).toBe(5)
+    expect(cashBefore - after.players[0].cash).toBe(
+      buildCostFor(g, BOARD[first] as PropertySquare, g.players[0].id),
+    )
+    expect(after.centerPot).toBe(potBefore)
+    expect(after.log.some((e) => e.kind === 'smoke-tax')).toBe(false)
   })
 
-  it('no Atlas a mecânica está DESLIGADA — o pote não se mexe', () => {
-    useMap('atlas')
+  it('Obra Relâmpago torna a Fábrica realmente gratuita, sem cobrança residual', () => {
+    useMap('fuligem')
     const g = createSeedState(['p1'])
-    const [first, ...rest] = ownWholeGroup(g, 'brown') // Itália: 3 cidades
+    const [first, ...rest] = ownWholeGroup(g, 'brown')
     for (const pos of [first, ...rest]) forceLevel(g, pos, 4)
+    g.players[0].nextBuildFree = true
+    const cashBefore = g.players[0].cash
     const potBefore = g.centerPot
 
     const after = buildHouse(g, first)
 
-    expect(cityLevel(after.titles[first])).toBe(5) // virou hotel
+    expect(cityLevel(after.titles[first])).toBe(5)
+    expect(after.players[0].cash).toBe(cashBefore)
     expect(after.centerPot).toBe(potBefore)
     expect(after.log.some((e) => e.kind === 'smoke-tax')).toBe(false)
   })
