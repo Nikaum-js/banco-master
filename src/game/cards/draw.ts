@@ -1,14 +1,15 @@
 // Saque e uso de cartas. cardResolve preenche a porta de resolução de acaso/tesouro (002).
 import type { ResolveCtx, ResolutionOutcome, TurnPorts } from '../turn/resolution'
 import type { GameState } from '../turn/types'
-import type { DeckId } from './types'
+import type { CardSlot, DeckId } from './types'
 import { cardById } from './catalog'
 import { applyEffect } from './effects'
 import { activePlayer, completeResolution, advance, land, finishIfEnded, BOARD_SIZE, type TurnCtx } from '../turn/turnMachine'
 import { BOARD } from '@/lib/boardData'
 import { ownerOf } from '../economy/titles'
 import { addTempEffect } from '../economy/tempEffects'
-import { reactorFor, findReactionCard, applyOffensive } from './reacao'
+import { reactorFor, applyOffensive } from './reacao'
+import { removeFromHand } from './hand'
 import { logEvent } from '../log'
 
 // Nome legível a partir do id da carta ('investidor-anjo-2' → 'Investidor Anjo').
@@ -22,12 +23,32 @@ function cardNameFromId(id: string): string {
 }
 
 // Resolver de carta — composto com o economyResolve no ctx.resolve do store.
-export function cardResolve(rctx: ResolveCtx): ResolutionOutcome | null {
+//
+// `predrawn` (043, D8/T029): quando o CHAMADOR já sacou pela porta (`cardRevealResolve`, que
+// precisa decidir mao-vs-imediato ANTES de aplicar), passa o valor aqui em vez de deixar
+// `cardResolve` sacar de novo — sacar duas vezes corromperia o deck e gravaria dois valores
+// no lugar de um. Chamadores que não passam nada (todo o resto, inclusive os testes que
+// chamam `cardResolve` direto) continuam sacando por conta própria — comportamento inalterado.
+export function cardResolve(rctx: ResolveCtx, predrawn?: CardSlot): ResolutionOutcome | null {
   const { square, state, playerId, ports } = rctx
   if (square.kind !== 'acaso' && square.kind !== 'tesouro') return null
   const deckId: DeckId = square.kind
-  const id = state.decks[deckId].shift()
-  if (!id) return { done: true } // nunca esgota na prática (imediatas reciclam)
+  const id = predrawn !== undefined ? predrawn : ports.draw(state, deckId)
+
+  // Slot OCULTO (043, D7/D8): só ocorre para carta de MÃO alheia — a imediata nunca chega
+  // redigida (D9/D10, é sempre pública). Regra única dos dois lados: comprimento é a verdade
+  // pública; não sabemos (nem precisamos saber) qual carta é.
+  if (id === null) {
+    logEvent(state, { kind: 'card-draw', who: playerId, deck: deckId }) // FR-015: sem carta nem raridade
+    const player = state.players.find((p) => p.id === playerId)!
+    player.hand.push(null)
+    if (player.hand.length > 3) {
+      state.resolution = { kind: 'card-discard', deckId, drawnId: null } // 4ª → descarte forçado
+      return { done: false }
+    }
+    return { done: true }
+  }
+
   const card = cardById(id)
   // 021/022.1 — carta de mão: privada, só o deck (§10.3). Carta imediata: efeito
   // público, anuncia o nome (§12.2 "anúncio público").
@@ -69,26 +90,39 @@ export function cardResolve(rctx: ResolveCtx): ResolutionOutcome | null {
 // 025 — Revelação: substitui cardResolve no ctx.resolve. SÓ carta de MÃO abre a tela
 // (peek + pausa em `card-reveal`; o confirm saca/processa). Carta IMEDIATA não abre
 // modal — processa na hora e só registra no log (cardResolve), por pedido de UX.
+//
+// 043, D8/T029: o "peek" saca DE VERDADE, pela porta (`ports.draw`) — nunca um `state.decks[..][0]`
+// cru. Um peek cru funcionaria na autoridade (deck sempre real ali) mas devolveria `null`
+// SEMPRE na perspectiva de um cliente (deck oculto), quebrando a convergência: o cliente
+// nunca abriria `card-reveal` para a própria carta, nem para a alheia. Sacando pela porta, o
+// valor é gravado/reproduzido como qualquer outro não-determinismo — e um retorno `null` aqui
+// só pode significar "carta de mão alheia" (a imediata nunca vem oculta), então dá pra montar
+// a resolução sem saber QUAL carta é.
 export function cardRevealResolve(rctx: ResolveCtx): ResolutionOutcome | null {
-  const { square, state } = rctx
+  const { square, state, ports } = rctx
   if (square.kind !== 'acaso' && square.kind !== 'tesouro') return null
   const deckId: DeckId = square.kind
-  const cardId = state.decks[deckId][0] // peek (determinístico)
-  if (!cardId) return { done: true } // deck vazio (não ocorre na prática)
-  if (cardById(cardId).mode === 'imediato') return cardResolve(rctx) // saca, aplica e loga — sem tela
+  const cardId = ports.draw(state, deckId)
+  if (cardId === null) {
+    state.resolution = { kind: 'card-reveal', deckId, cardId: null } // slot oculto — não é minha
+    return { done: false }
+  }
+  if (cardById(cardId).mode === 'imediato') return cardResolve(rctx, cardId) // já sacada — aplica direto, sem tela
   state.resolution = { kind: 'card-reveal', deckId, cardId } // só carta de mão revela
   return { done: false }
 }
 
 // 025 — Confirma a revelação: limpa o card-reveal e chama o cardResolve EXISTENTE
-// (saca de verdade + processa). Reusa toda a regra de carta; sem duplicação.
+// (processa a carta JÁ sacada por `cardRevealResolve` — não saca de novo). Reusa toda a
+// regra de carta; sem duplicação.
 export function confirmCardReveal(state: GameState, ports: TurnPorts): GameState {
   if (state.resolution?.kind !== 'card-reveal') return state
+  const { cardId } = state.resolution
   const s: GameState = structuredClone(state)
   s.resolution = null
   const player = activePlayer(s)
   const rctx: ResolveCtx = { playerId: player.id, square: BOARD[player.pos], roll: s.turn.lastRoll, ports, state: s }
-  const outcome = cardResolve(rctx) // saca + processa (pode abrir card-discard/card-shortcut)
+  const outcome = cardResolve(rctx, cardId) // processa a carta JÁ sacada (pode abrir card-discard/card-shortcut)
   if (outcome?.done) {
     s.turn.pendingResolve = false
     s.turn.state = 'aguardando-finalizacao'
@@ -107,7 +141,12 @@ export function playHandCard(
   targetPlayer?: string,
 ): GameState {
   const player = state.players.find((p) => p.id === playerId)
-  if (!player || !player.hand.includes(cardId)) return state
+  // 043, D7: quem replica o comando (host.ts já validou e aceitou) pode ver a própria mão de
+  // `playerId` REDIGIDA — um slot oculto no lugar da carta, se `playerId` não for o dono desta
+  // perspectiva (ex.: o cliente do PRÓPRIO host aplicando a jogada de outro assento). `includes`
+  // cru quebraria a convergência: rejeitaria localmente uma jogada que o host já aceitou. Um
+  // slot oculto (`null`) é aceito no lugar do id real — mesma tolerância de `removeFromHand`.
+  if (!player || !(player.hand.includes(cardId) || player.hand.includes(null))) return state
   const card = cardById(cardId)
   if (card.mode !== 'mao') return state
   const isActive = activePlayer(state).id === playerId
@@ -127,10 +166,13 @@ export function playHandCard(
   if (card.effect === 'boicote' || card.effect === 'aquisicaoHostil' || card.effect === 'despejo' || card.effect === 'auditoriaFiscal') {
     const reactor = reactorFor(state, card.effect, playerId, target ?? null, targetPlayer ?? null)
     if (!reactor) return state // jogada inválida → no-op
-    if (findReactionCard(state, reactor, 'diplomacia')) {
+    // 043: `ports.hasReaction` (gravado/reproduzido, D11) — quem ataca não vê a mão de quem
+    // defende, e esta decisão vira `state.resolution` PÚBLICA e estrutural (mesmo motivo de
+    // `taxBunkerResolve`).
+    if (ports.hasReaction(state, reactor, 'diplomacia') !== null) {
       const s = structuredClone(state)
       const me = s.players.find((p) => p.id === playerId)!
-      me.hand = me.hand.filter((h) => h !== cardId) // ofensiva "em voo" (sai da mão do atacante)
+      me.hand = removeFromHand(me.hand, cardId) // ofensiva "em voo" (sai da mão do atacante)
       s.resolution = {
         kind: 'reaction-diplomacia',
         reactorId: reactor,
@@ -156,19 +198,27 @@ export function playHandCard(
 // Remove a carta jogada da mão e recicla ao fundo do deck.
 function discardPlayed(s: GameState, playerId: string, cardId: string, deck: DeckId): GameState {
   const p = s.players.find((x) => x.id === playerId)!
-  p.hand = p.hand.filter((h) => h !== cardId)
+  p.hand = removeFromHand(p.hand, cardId)
   s.decks[deck].push(cardId)
   return s
 }
 
 // Conclui o descarte forçado (mão cheia): a carta escolhida vai ao fundo.
-export function resolveCardDiscard(state: GameState, cardId: string): GameState {
+//
+// 043, T029/D10: `cardId` chega como `CardSlot` — `null` na perspectiva de quem NÃO é o dono
+// do assento que descarta (a ação difundida em `:play` vem redigida). `removeFromHand`
+// resolve os dois casos com a MESMA regra (T030): remove o id se visível, um slot oculto
+// caso contrário — o comprimento da MÃO nunca diverge entre perspectivas.
+//
+// `deck` chega SEPARADO (nunca redigido — já é público desde o saque, `card-draw` loga
+// `{who, deck}`): sem ele, quem só vê `cardId: null` não saberia em qual dos dois baralhos
+// devolver o slot oculto, e o comprimento DAQUELE baralho divergiria entre perspectivas.
+export function resolveCardDiscard(state: GameState, cardId: CardSlot, deck: DeckId): GameState {
   if (state.resolution?.kind !== 'card-discard') return state
-  if (!activePlayer(state).hand.includes(cardId)) return state
   const s = structuredClone(state)
   const player = activePlayer(s)
-  player.hand = player.hand.filter((h) => h !== cardId)
-  s.decks[cardById(cardId).deck].push(cardId)
+  player.hand = removeFromHand(player.hand, cardId)
+  s.decks[deck].push(cardId) // `cardId` real ou `null` — o slot oculto preserva o comprimento igual a qualquer outro
   completeResolution(s)
   return s
 }

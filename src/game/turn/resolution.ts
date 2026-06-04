@@ -10,6 +10,7 @@
 import type { Square } from '@/lib/boardData'
 import type { Roll, GameState } from './types'
 import type { RNG } from './dice'
+import type { CardSlot, DeckId } from '../cards/types'
 import { logEvent } from '../log'
 
 export interface TurnPorts {
@@ -18,6 +19,22 @@ export interface TurnPorts {
   onCollectCenter(state: GameState, playerId: string): void // Free Parking: coleta o pote (007)
   afterPassGo?(state: GameState, playerId: string): void // → juros de empréstimo no GO (010)
   taxMan?(state: GameState, rng: RNG): void // → Fiscal move 1×/turno e cobra o dono (012)
+  // Porta de saque (043, D8) — não-determinismo gravado, mesmo mecanismo de `rng`/`now` desde
+  // a 037: o host consome pelo `recordingCtx` (shift real → grava o valor); o cliente consome
+  // pelo `replayCtx` (shift local, que já é `null` na perspectiva alheia → devolve o valor
+  // gravado). A implementação PADRÃO (buildPorts) só faz `state.decks[deckId].shift() ?? null`
+  // — é o recorder que decide se o valor é real ou reproduzido.
+  draw(state: GameState, deckId: DeckId): CardSlot
+
+  // 043, achado ao implementar D11: abrir (ou não) a janela de reação é uma decisão PÚBLICA
+  // (`state.resolution` — D11 do plan) que depende de olhar a mão do ALVO/reator — visível
+  // para o host e para o próprio reator, oculta para o atacante e para qualquer outro
+  // cliente. Sem gravar essa checagem, quem processa `play-hand-card`/o imposto de casa por
+  // REPLAY sem enxergar a mão do reator chegaria a uma resolução DIFERENTE do host — a
+  // convergência quebraria bem antes de a UI mostrar qualquer coisa. Mesmo mecanismo do
+  // saque: grava-se o resultado (a carta do reator, ou `null` se ele não tem), nunca a
+  // pergunta em si.
+  hasReaction(state: GameState, playerId: string, effect: 'diplomacia' | 'bunkerFiscal'): CardSlot
 }
 
 export interface ResolveCtx {

@@ -8,11 +8,39 @@ import { createRoom, joinRoom, startGame, SEAT_COLORS, type Room } from '@/net/r
 import type { Transport } from '@/net/transport'
 import type { PlayerAction } from '@/game/commands'
 import type { RNG } from '@/game/turn/dice'
-import type { PauseCause, PauseState } from '@/game/turn/types'
+import type { GameState, PauseCause, PauseState } from '@/game/turn/types'
+import type { DeckId } from '@/game/cards/types'
 import { enumerateActions } from '../sim/engine/actions'
 import { pickAction } from '../sim/engine/agent'
 import type { SimSession } from '../sim/engine/driver'
 import { mulberry32 } from '../sim/engine/rng'
+
+// Projeção PÚBLICA (043, D7) — mesma redação de `perspective.splitSnapshot`, mas uniforme (não
+// por dono): qualquer mão/deck vira `null` no MESMO comprimento. É o nivelamento certo para
+// comparar host×cliente nas suítes que não são SOBRE perspectiva — a autoridade nunca tem
+// `null` no próprio `GameState` (D7), então uma comparação crua sempre divergiria a partir do
+// 1º snapshot (decks nascem embaralhados com ids reais). O que essas suítes provam continua de
+// pé: convergência do que É público. `tests/net/perspective-cards.test.ts` é quem prova a
+// redação de verdade (por dono).
+export function publicView(g: GameState): GameState {
+  // `state.resolution` também carrega carta OCULTA por dono enquanto a tela de revelação/
+  // descarte está aberta (`card-reveal.cardId`, `card-discard.drawnId` — data-model §4): quem
+  // não é o dono replica um `null` gravado (D9/D10), então a projeção pública redige os dois
+  // do MESMO jeito que a mão/o deck.
+  const resolution = g.resolution
+  const publicResolution =
+    resolution?.kind === 'card-reveal' ? { ...resolution, cardId: null }
+    : resolution?.kind === 'card-discard' ? { ...resolution, drawnId: null }
+    : resolution
+  return {
+    ...g,
+    players: g.players.map((p) => ({ ...p, hand: p.hand.map(() => null) })),
+    decks: Object.fromEntries(
+      Object.entries(g.decks).map(([deckId, cards]) => [deckId, cards.map(() => null)]),
+    ) as Record<DeckId, GameState['decks'][DeckId]>,
+    resolution: publicResolution,
+  }
+}
 
 // Monta um `PauseState` para suítes que montam estado diretamente (041, T004) — um lugar
 // só para o literal `paused: true` de antes, para não envelhecer em doze velocidades.
@@ -89,8 +117,13 @@ export async function setupGame(playerCount: number, seed = 1): Promise<NetGame>
       clock.t += ms
       host.tick()
     },
+    // 043: projeção PÚBLICA (`publicView`) — a autoridade nunca tem `null` na própria mão/deck
+    // (D7), então uma comparação crua divergiria por construção a partir do 1º snapshot.
     serialized(): string[] {
-      return [JSON.stringify(host.game()), ...players.map((p) => JSON.stringify(p.client.game()))]
+      return [
+        JSON.stringify(publicView(host.game())),
+        ...players.map((p) => { const g = p.client.game(); return JSON.stringify(g && publicView(g)) }),
+      ]
     },
     dropChannel(playerId: string): void {
       hub.dropChannel(players.find((p) => p.playerId === playerId)!.uid)

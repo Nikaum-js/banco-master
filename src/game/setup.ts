@@ -30,7 +30,7 @@ import { rollTaxMan } from './balancing/taxMan'
 import { deckCardIds } from './cards/catalog'
 import { weightedShuffle } from './cards/decks'
 import { cardRevealResolve } from './cards/draw'
-import { taxBunkerResolve } from './cards/reacao'
+import { taxBunkerResolve, findReactionCard } from './cards/reacao'
 
 function seedTitles(): Record<number, Title> {
   const titles: Record<number, Title> = {}
@@ -96,8 +96,12 @@ export function createSeedState(playerIds: string[]): GameState {
 // então o embaralho não precisa ser gravado pelo recorder.
 export function buildInitialGame(playerIds: string[], rng: RNG): GameState {
   const g = createSeedState(playerIds)
-  g.decks.acaso = weightedShuffle(g.decks.acaso, rng)
-  g.decks.tesouro = weightedShuffle(g.decks.tesouro, rng)
+  // `createSeedState` acabou de popular os dois baralhos com ids REAIS (`deckCardIds`) — é a
+  // construção do estado da AUTORIDADE, antes de qualquer perspectiva existir. `weightedShuffle`
+  // continua tipada em `string[]` de propósito (043): ela só embaralha carta CONHECIDA, nunca
+  // um slot oculto — o cast reflete essa garantia, não a contorna.
+  g.decks.acaso = weightedShuffle(g.decks.acaso as string[], rng)
+  g.decks.tesouro = weightedShuffle(g.decks.tesouro as string[], rng)
   return g
 }
 
@@ -116,6 +120,15 @@ export function buildPorts(overrides: Partial<TurnPorts> = {}): TurnPorts {
       tickTempEffects(state, id) // expira efeitos temporários por volta do originador (015)
     },
     taxMan: (s, rng) => rollTaxMan(s, rng), // Fiscal (012)
+    // 043, D8 — implementação PADRÃO: shift local. No host (decks sempre reais) devolve o
+    // id de verdade; num cliente (decks nulos na perspectiva alheia) devolve `null` — o
+    // `recordingCtx`/`replayCtx` em `recorder.ts` decide se esse valor é gravado ou substituído
+    // pelo reproduzido.
+    draw: (state, deckId) => state.decks[deckId].shift() ?? null,
+    // 043 — implementação PADRÃO: delega ao mesmo lookup puro que já existia (`findReactionCard`).
+    // No host (mão sempre real) devolve a carta de verdade; num cliente que não é o reator
+    // (mão oculta) devolve `null` — gravado/reproduzido do mesmo jeito que `draw`.
+    hasReaction: (state, playerId, effect) => findReactionCard(state, playerId, effect) ?? null,
     ...overrides,
   }
 }

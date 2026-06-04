@@ -7,6 +7,7 @@ import { createHost, type Host } from '@/net/host'
 import { LocalHub, localTransport } from '@/net/localTransport'
 import { createRoom, SEAT_COLORS } from '@/net/room'
 import { mulberry32 } from '../sim/engine/rng'
+import { publicView } from './harness'
 
 const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0))
 
@@ -103,7 +104,8 @@ describe('lobby sobre a rede (FR-001..006)', () => {
     expect(host.room().status).toBe('playing')
     for (const c of [hostClient, ana, bob]) {
       expect(c.game()).not.toBeNull()
-      expect(JSON.stringify(c.game())).toBe(JSON.stringify(host.game()))
+      // 043: projeção PÚBLICA (D7) — ana/bob não são a autoridade, recebem só a própria mão.
+      expect(JSON.stringify(publicView(c.game()!))).toBe(JSON.stringify(publicView(host.game())))
     }
     // Ordem de turno = ordem de entrada (host primeiro).
     expect(host.game().players.map((p) => p.id)).toEqual(['p1', 'p2', 'p3'])
@@ -146,7 +148,7 @@ describe('lobby sobre a rede (FR-001..006)', () => {
 
     expect(again.playerId()).toBe(meuAssento)
     expect(host.room().seats).toHaveLength(2)
-    expect(JSON.stringify(again.game())).toBe(JSON.stringify(host.game()))
+    expect(JSON.stringify(publicView(again.game()!))).toBe(JSON.stringify(publicView(host.game())))
   })
 
   it('host que recarrega a página reassume a autoridade pelo snapshot (FR-015)', async () => {

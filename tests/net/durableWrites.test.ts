@@ -7,7 +7,7 @@ import type { PersistedSnapshot, Transport } from '@/net/transport'
 import type { Room } from '@/net/room'
 
 function snap(seq: number): PersistedSnapshot {
-  return { seq, game: {} as never, room: {} as never }
+  return { seq, game: {} as never, secrets: { hands: {}, decks: {} }, room: {} as never }
 }
 
 function stubTransport() {

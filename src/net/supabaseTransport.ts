@@ -20,6 +20,7 @@
 // só enxerga o próprio tópico, e é assim que deveria ser: ele nunca precisou ver a presença
 // alheia, só a autoridade precisa reconciliar `seats[].connected` (FR-021 da 041).
 import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
+import { mergeSnapshot, type Secrets } from './perspective'
 import { toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
 import { normalizeLog } from '@/game/log'
 import type { PauseState } from '@/game/turn/types'
@@ -337,7 +338,8 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         status: snap.room.status,
         seats: snap.room.seats,
         seq: snap.seq,
-        game: snap.game,
+        game: snap.game, // 043, T034/T037: já a parte PÚBLICA (host.ts separa via `splitSnapshot`)
+        secrets: snap.secrets,
       })
       if (error) throw error
     },
@@ -347,13 +349,20 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     onWriteExhausted: () => () => {},
     onWriteRecovered: () => () => {},
 
+    // 043, T037 — leitura por RPC (D6): `read_snapshot` já filtra `secrets` por chave no
+    // servidor (íntegro para a autoridade, só a própria entrada de `hands` para os demais).
+    // `mergeSnapshot` aqui é o mesmo TypeScript puro que remonta a visão local — nenhum
+    // `select` direto na tabela sobrevive para o snapshot (D5).
     async loadSnapshot(): Promise<PersistedSnapshot | null> {
-      const { data, error } = await supabase.from('rooms').select('id,status,seats,seq,game').eq('id', roomId).maybeSingle()
+      const { data, error } = await supabase.rpc('read_snapshot', { room_id: roomId })
       if (error) throw error
-      if (!data || data.game == null || data.seq < 0) return null
-      const room: Room = { id: data.id, status: data.status as Room['status'], seats: data.seats }
-      const game = normalizeSnapshot(data.game)
-      return { seq: data.seq, game, room }
+      if (!data) return null
+      const row = data as { id: string; status: Room['status']; seats: Room['seats']; seq: number; game: unknown; secrets: Secrets }
+      if (row.game == null || row.seq < 0) return null
+      const room: Room = { id: row.id, status: row.status, seats: row.seats }
+      const publicGame = normalizeSnapshot(row.game as PersistedSnapshot['game'])
+      const game = mergeSnapshot(publicGame, row.secrets, room)
+      return { seq: row.seq, game, secrets: row.secrets, room }
     },
   }
 }

@@ -47,7 +47,7 @@ function stubTransport() {
 function snapOf(seq: number): PersistedSnapshot {
   const game: GameState = createSeedState(['p1', 'p2'])
   const room = createRoom('r1', { uid: 't-a', name: 'Ana', color: SEAT_COLORS[0] })
-  return { seq, game, room }
+  return { seq, game, secrets: { hands: {}, decks: {} }, room }
 }
 
 describe('client.resync — espera crescente, uma em voo, desistência honesta (041)', () => {
@@ -107,7 +107,7 @@ describe('client.resync — espera crescente, uma em voo, desistência honesta (
     loadSnapshot.mockReturnValueOnce(new Promise((r) => { resolveSnap = r }))
     emitStatus('connected')
 
-    broadcastCb!({ seq: 4, action: { kind: 'finalize' }, resolved: { rng: [], now: [] } }) // vira seq+1 sobre o snapshot ainda por vir → buffer
+    broadcastCb!({ seq: 4, action: { kind: 'finalize' }, resolved: { rng: [], now: [], draws: [], reactions: [] } }) // vira seq+1 sobre o snapshot ainda por vir → buffer
     resolveSnap(snapOf(3))
 
     await vi.waitFor(() => expect(client.seq()).toBe(4)) // a difusão bufferizada foi drenada, não perdida

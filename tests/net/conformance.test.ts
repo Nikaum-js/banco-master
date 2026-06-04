@@ -60,7 +60,7 @@ const ADAPTERS: [string, () => Fixture][] = [
 ]
 
 const ROOM: Room = { id: 'sala1', status: 'lobby', seats: [] }
-const ACCEPTED: AcceptedCommand = { seq: 1, action: { kind: 'roll' }, resolved: { rng: [], now: [] } }
+const ACCEPTED: AcceptedCommand = { seq: 1, action: { kind: 'roll' }, resolved: { rng: [], now: [], draws: [], reactions: [] } }
 const seat = (uid: string, isHost: boolean, i = 0): Seat => ({
   uid, playerId: `p${i + 1}`, name: uid, color: '#fff', isHost, connected: true, reentryCode: '',
 })
@@ -334,7 +334,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     await t.connect()
     // `log: []` e `paused: null` — supabaseTransport normaliza os dois no load (040/041).
     const game = { marcador: 'estado-da-partida', log: [], paused: null } as never
-    await t.saveSnapshot({ seq: 7, game, room: { ...ROOM, status: 'playing' } })
+    await t.saveSnapshot({ seq: 7, game, secrets: { hands: {}, decks: {} }, room: { ...ROOM, status: 'playing' } })
 
     // Uma mudança de ASSENTOS no meio da partida não pode zerar `game`/`seq`.
     await t.saveRoom({ ...ROOM, status: 'playing', seats: [] })
@@ -493,7 +493,7 @@ describe.each(ADAPTERS)('contrato de Transport (041/043) — %s', (_name, fixtur
 
   describe('§4 gravação — durabilidade, ordem e monotonia', () => {
     const ROOM_STUB: Room = { id: 'sala1', status: 'playing', seats: [] }
-    const snap = (seq: number): PersistedSnapshot => ({ seq, game: { marcador: seq } as never, room: ROOM_STUB })
+    const snap = (seq: number): PersistedSnapshot => ({ seq, game: { marcador: seq } as never, secrets: { hands: {}, decks: {} }, room: ROOM_STUB })
 
     async function tick(n = 15): Promise<void> {
       for (let i = 0; i < n; i++) await Promise.resolve()

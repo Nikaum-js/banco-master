@@ -13,6 +13,7 @@ import { BOARD, type PropertySquare } from '@/lib/boardData'
 import { busSideOf, canUseBusTicket } from '@/game/turn/turnMachine'
 import { AUCTION_WINDOW } from '@/game/economy/purchase'
 import { RARITY_COLOR, RARITY_LABEL, cardLabel, CARD_DESC } from '@/game/ui/cards/cardMeta'
+import { cardById } from '@/game/cards/catalog'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { PlayerFace } from '@/boards/shared'
 import { GROUP_COLOR } from '@/boards/groupColors'
@@ -95,7 +96,9 @@ export function ModalLayer() {
   const game = useGameStore((s) => s.game)
   const dispatch = useGameStore((s) => s.dispatch)
   const placeBid = (playerId: string, amount: number): void => dispatch({ kind: 'place-bid', playerId, amount })
-  const discardCard = (cardId: string): void => dispatch({ kind: 'discard-card', cardId })
+  // O `deck` vem do CATÁLOGO, não do estado — quem descarta sempre vê a própria carta
+  // (nunca oculta), então `cardById` é seguro aqui (043, D10).
+  const discardCard = (cardId: string): void => dispatch({ kind: 'discard-card', cardId, deck: cardById(cardId).deck })
   const chooseCardShortcut = (dir: 'frente' | 'tras'): void => dispatch({ kind: 'choose-card-shortcut', dir })
   const chooseBusMove = (opt: 'die0' | 'die1' | 'sum'): void => dispatch({ kind: 'choose-bus-move', opt })
   const chooseTripleDest = (dest: number): void => dispatch({ kind: 'choose-triple-dest', dest })
@@ -197,7 +200,9 @@ export function ModalLayer() {
             </Card>
           )}
 
-          {view.kind === 'card-reveal' && (
+          {/* `mineModal` já garante que só quem decide chega aqui — a mão nunca tem oculto
+              na perspectiva de quem decide (043); o `!== null` só estreita o tipo pro TS. */}
+          {view.kind === 'card-reveal' && view.cardId !== null && view.rarity !== null && view.effect !== null && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 10, rotateZ: -2 }}
               animate={{ opacity: 1, scale: 1, y: 0, rotateZ: 0 }}

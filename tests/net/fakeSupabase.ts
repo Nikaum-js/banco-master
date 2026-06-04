@@ -316,6 +316,24 @@ export function fakeSupabase(): FakeSupabase {
             const redacted = seats.map((s) => (s.uid === uid ? s : { ...s, reentryCode: undefined }))
             return Promise.resolve({ data: { id: row.id, status: row.status, seats: redacted }, error: null })
           }
+          // 043, T036/T037 — espelho de `read_snapshot`: `secrets` filtrado por chave (D6). A
+          // autoridade (uid do assento `isHost`) recebe tudo; qualquer outro só a própria
+          // entrada de `secrets.hands`, nunca `decks`.
+          if (fn === 'read_snapshot') {
+            if (broker.readFails) return Promise.resolve({ data: null, error: new Error('injected read failure') })
+            const row = broker.rows.get(`rooms:${roomId}`)
+            if (!row) return Promise.resolve({ data: null, error: null })
+            const seats = (row.seats as { uid: string; isHost: boolean }[]) ?? []
+            const isHost = seats.find((s) => s.uid === uid)?.isHost ?? false
+            const secrets = (row.secrets as { hands?: Record<string, unknown>; decks?: Record<string, unknown> } | undefined) ?? { hands: {}, decks: {} }
+            const scoped = isHost
+              ? secrets
+              : { hands: uid in (secrets.hands ?? {}) ? { [uid]: secrets.hands![uid] } : {}, decks: {} }
+            return Promise.resolve({
+              data: { id: row.id, status: row.status, seats: row.seats, seq: row.seq, game: row.game, secrets: scoped },
+              error: null,
+            })
+          }
           return Promise.resolve({ data: null, error: new Error(`rpc desconhecida no fake: ${fn}`) })
         },
       }

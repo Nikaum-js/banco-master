@@ -24,6 +24,10 @@ export function mockPorts(): TurnPorts {
     onPassGo: vi.fn(() => 200),
     onPayToCenter: vi.fn(),
     onCollectCenter: vi.fn(() => 0),
+    // 043 — suítes que não mexem com cartas não precisam de deck/reação de verdade; quem
+    // precisa usa `buildPorts()` (setup.ts) ou sobrescreve via `ctxWith(values, { ports: {...mockPorts(), draw: ...} })`.
+    draw: vi.fn(() => null),
+    hasReaction: vi.fn(() => null),
   }
 }
 

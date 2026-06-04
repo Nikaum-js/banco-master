@@ -9,6 +9,7 @@
 // de ESTADO, nos mesmos pontos em que o store o chama.
 import type { GameState, PauseCause } from './turn/types'
 import type { TurnCtx } from './turn/turnMachine'
+import type { CardSlot, DeckId } from './cards/types'
 import {
   rollDice,
   resolvePending,
@@ -59,7 +60,12 @@ export type PlayerAction =
   | { kind: 'unmortgage'; pos: number }
   // Cartas — ator = jogador ativo (mão) ou reator (resolução pendente).
   | { kind: 'play-hand-card'; cardId: string; target?: number; targetPlayer?: string }
-  | { kind: 'discard-card'; cardId: string }
+  // 043, D-037/D10: `cardId` vira `CardSlot` — a difusão pública redige pra `null` quando
+  // quem recebe não é o dono (descartar não revela nada no SRS). `deck` fica FORA da
+  // redação de propósito: já é público desde o saque (`card-draw` loga `{who, deck}`), e sem
+  // ele um bystander não saberia em qual baralho devolver o slot oculto (FR-011 continuaria
+  // valendo pro comprimento da MÃO, mas o comprimento de CADA baralho divergiria).
+  | { kind: 'discard-card'; cardId: CardSlot; deck: DeckId }
   | { kind: 'choose-card-shortcut'; dir: 'frente' | 'tras' }
   | { kind: 'confirm-card-reveal' }
   | { kind: 'respond-reaction'; use: boolean }
@@ -165,7 +171,7 @@ export function applyCommand(state: GameState, action: GameAction, ctx: TurnCtx)
     case 'unmortgage': next = unmortgageProperty(state, action.pos); break
     // — cartas —
     case 'play-hand-card': next = playHandCard(state, activePlayer(state).id, action.cardId, ctx.ports, action.target, action.targetPlayer); break
-    case 'discard-card': next = resolveCardDiscard(state, action.cardId); break
+    case 'discard-card': next = resolveCardDiscard(state, action.cardId, action.deck); break
     case 'choose-card-shortcut': next = resolveCardShortcut(state, action.dir, ctx); break
     case 'confirm-card-reveal': next = confirmCardReveal(state, ctx.ports); break
     case 'respond-reaction': next = respondReaction(state, action.use, ctx.ports); break

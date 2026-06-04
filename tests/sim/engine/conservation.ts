@@ -400,7 +400,7 @@ function checkResolvePending(prev: GameState, next: GameState, ledger: Ledger): 
 
   if (sq.kind === 'tax') {
     // Bunker Fiscal na mão → abre reação em vez de cobrar (taxBunkerResolve tem prioridade).
-    const hasBunker = actor.hand.some((id) => cardById(id).effect === 'bunkerFiscal')
+    const hasBunker = actor.hand.some((id) => id !== null && cardById(id).effect === 'bunkerFiscal')
     if (hasBunker) {
       mark(ledger, 'tax-bunker-open')
       return

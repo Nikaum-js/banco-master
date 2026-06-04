@@ -2,7 +2,7 @@
 // na sequência e se recupera SOZINHO lendo o snapshot atual, convergindo de volta.
 import { describe, expect, it } from 'vitest'
 import { mulberry32 } from '../sim/engine/rng'
-import { setupGame, stepOnce } from './harness'
+import { publicView, setupGame, stepOnce } from './harness'
 
 const flush = (): Promise<void> => new Promise((res) => setTimeout(res, 0)) // drena o resync assíncrono (loadSnapshot)
 
@@ -14,7 +14,7 @@ describe('recuperação por lacuna de sequência (FR-012)', () => {
     const guest = net.players[1].client
 
     for (let i = 0; i < 15; i++) stepOnce(net, pick) // aquecimento — ambos convergidos
-    expect(JSON.stringify(guest.game())).toBe(JSON.stringify(net.host.game()))
+    expect(JSON.stringify(publicView(guest.game()!))).toBe(JSON.stringify(publicView(net.host.game())))
     const seqAtDrop = guest.seq()
 
     // Rede instável: o convidado para de receber difusões.
@@ -32,6 +32,6 @@ describe('recuperação por lacuna de sequência (FR-012)', () => {
     await flush()
 
     expect(guest.seq()).toBe(net.host.seq()) // reconvergiu
-    expect(JSON.stringify(guest.game())).toBe(JSON.stringify(net.host.game()))
+    expect(JSON.stringify(publicView(guest.game()!))).toBe(JSON.stringify(publicView(net.host.game())))
   })
 })

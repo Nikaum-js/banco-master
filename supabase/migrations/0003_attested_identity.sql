@@ -24,8 +24,9 @@ comment on column public.rooms.seats is
   'Assentos: playerId/uid/nome/cor/peça/host/connected/reentryCode (043: uid substitui token — '
   'D-035). jsonb sem schema fixo; a forma vive em src/net/room.ts.';
 comment on column public.rooms.secrets is
-  '043, D-037: { "<uid>": { hand: CardSlot[] }, "deck": { acaso, tesouro } }. O servidor nunca '
-  'interpreta — só seleciona chave (read_snapshot, Fase 5). Split/merge em src/net/perspective.ts.';
+  '043, D-037: { hands: { "<uid>": CardId[] }, decks: { acaso: CardId[], tesouro: CardId[] } }. '
+  'O servidor nunca interpreta — só seleciona chave (read_snapshot, Fase 5). '
+  'Split/merge em src/net/perspective.ts.';
 
 -- 3) Tabela `rooms` — nada de `select` direto (D5): toda leitura passa por função
 -- (`room_preview`/`read_snapshot`, Fases 4/5). `insert` continua aberto a qualquer sessão
@@ -258,6 +259,48 @@ as $$
       ), '[]'::jsonb)
       from jsonb_array_elements(r.seats) as seat
     )
+  )
+  from public.rooms r
+  where r.id = room_id;
+$$;
+
+-- ============================================================================================
+-- FASE 5 (T036) — a mão para de trafegar. `read_snapshot` é a ÚNICA leitura do snapshot
+-- (D6): seleciona `game` (já público — `host.ts` grava via `perspective.splitSnapshot`) e
+-- filtra `secrets` por CHAVE, sem conhecer o formato de `hand`/`deck` por dentro —
+-- `jsonb_build_object`/`->` bastam. Anfitrião (uid do assento `isHost`) recebe `secrets`
+-- inteiro; qualquer outro recebe só a própria entrada de `secrets.hands`, nunca `decks`
+-- (ninguém além da autoridade tem por que saber a ordem real de um baralho). O merge de volta
+-- num `GameState` — `perspective.mergeSnapshot` — é TypeScript, do lado do cliente (T037).
+-- ============================================================================================
+
+create or replace function public.read_snapshot(room_id text) returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'id', r.id,
+    'status', r.status,
+    'seats', r.seats,
+    'seq', r.seq,
+    'game', r.game,
+    'secrets', case
+      when exists (
+        select 1 from jsonb_array_elements(r.seats) as seat
+        where (seat->>'isHost')::boolean and seat->>'uid' = (select auth.uid())::text
+      )
+      then r.secrets
+      else jsonb_build_object(
+        'hands', case
+          when r.secrets->'hands' ? (select auth.uid())::text
+          then jsonb_build_object((select auth.uid())::text, r.secrets->'hands'->(select auth.uid())::text)
+          else '{}'::jsonb
+        end,
+        'decks', '{}'::jsonb
+      )
+    end
   )
   from public.rooms r
   where r.id = room_id;

@@ -4,6 +4,7 @@
 // `tests/net/` e prova SC-001/003/004/005 sem infra. O `supabaseTransport` implementa a mesma
 // porta sobre Realtime/Postgres.
 import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
+import { mergeSnapshot, type Secrets } from './perspective'
 import { reattachByCode, toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
 
 type SubmitCb = (cmd: CommandEnvelope, fromUid: string) => void
@@ -434,13 +435,23 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
       return hub.saveSnapshot(snap)
     },
 
+    // 043, D6/T037: espelha `read_snapshot` — seleção de chave por uid. A autoridade (uid do
+    // assento `isHost` NA SALA DO PRÓPRIO SNAPSHOT — não a `currentHostUid()` do hub, que
+    // reflete a sala mais recente e pode já ter avançado) recebe `secrets` inteiro; qualquer
+    // outro recebe só a própria entrada de `hands`, nunca o deck.
+    async loadSnapshot(): Promise<PersistedSnapshot | null> {
+      const snap = await hub.loadSnapshot()
+      if (!snap) return null
+      const isHost = snap.room.seats.find((s) => s.uid === uid)?.isHost ?? false
+      const mySecrets: Secrets = isHost
+        ? snap.secrets
+        : { hands: uid in snap.secrets.hands ? { [uid]: snap.secrets.hands[uid] } : {}, decks: {} }
+      return { ...snap, game: mergeSnapshot(snap.game, mySecrets, snap.room) }
+    },
+
     // O adapter CRU não repete sozinho, então nunca esgota — quem sobrescreve isto é o
     // decorator `durableWrites` (041, D8), único ponto de montagem de produção.
     onWriteExhausted: () => () => {},
     onWriteRecovered: () => () => {},
-
-    loadSnapshot(): Promise<PersistedSnapshot | null> {
-      return hub.loadSnapshot()
-    },
   }
 }

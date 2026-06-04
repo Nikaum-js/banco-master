@@ -22,6 +22,7 @@
 import type { GameAction, PlayerAction } from '@/game/commands'
 import type { GameState } from '@/game/turn/types'
 import type { Resolved } from './recorder'
+import type { Secrets } from './perspective'
 import type { JoinError, PieceId, PublicRoom, Room } from './room'
 
 // Comando em trânsito guest→host: carrega o `playerId` DECLARADO pelo remetente. O host
@@ -41,9 +42,18 @@ export interface AcceptedCommand {
 }
 
 // Snapshot persistido — 1 linha por partida (upsert, FR-013). Lido só ao entrar/reconectar.
+//
+// 043, D6/T034: `game` é a parte PÚBLICA (mãos/decks redigidos, `perspective.splitSnapshot`);
+// `secrets` é a parte reservada (`rooms.secrets`). Quem GRAVA (host.ts) sempre manda as duas
+// já separadas. Quem LÊ recebe de volta um `game` já REMENTADO para a própria perspectiva — o
+// adapter aplica `perspective.mergeSnapshot` internamente antes de devolver (seleção de chave
+// no servidor, D6): o dono vê a própria mão, a autoridade vê tudo, e ninguém mais precisa
+// saber que a separação existe. `secrets` no valor de retorno é só a fatia usada no merge —
+// nenhum chamador de `loadSnapshot()` precisa lê-la.
 export interface PersistedSnapshot {
   seq: number
   game: GameState
+  secrets: Secrets
   room: Room
 }
 

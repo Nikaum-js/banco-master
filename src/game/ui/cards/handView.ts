@@ -60,11 +60,16 @@ function targetsEmpty(t: CardTargets): boolean {
 }
 
 // A mão do jogador como cartões apresentáveis + se cada um é jogável agora (e por quê não).
+//
+// 043, T038: `player.hand` pode carregar slot OCULTO (`null`) — mas este painel ("Minhas
+// Cartas") só é chamado para a PRÓPRIA mão do jogador local, que nunca tem oculto (D7). O
+// filtro é defensivo, não um `if (multiplayer)`: se algum dia isto for chamado fora da
+// própria perspectiva, degrada mostrando menos cartas em vez de estourar.
 export function handCardsView(game: GameState, playerId: string): HandCard[] {
   const player = game.players.find((p) => p.id === playerId)
   if (!player) return []
   const isActive = activeId(game) === playerId
-  return player.hand.map((id) => {
+  return player.hand.filter((id) => id !== null).map((id) => {
     const card = cardById(id)
     const targets = cardTargets(game, playerId, id)
     const needsTarget = targets !== null

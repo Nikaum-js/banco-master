@@ -6,7 +6,11 @@ import type { TurnPorts } from '@/game/turn/resolution'
 import { BOARD } from '@/lib/boardData'
 
 function ports(): TurnPorts {
-  return { onPassGo: () => 200, onPayToCenter: () => {}, onCollectCenter: () => 0 }
+  return {
+    onPassGo: () => 200, onPayToCenter: () => {}, onCollectCenter: () => 0,
+    draw: (state, deckId) => state.decks[deckId].shift() ?? null, // 043 — igual ao default de produção (setup.ts)
+    hasReaction: () => null,
+  }
 }
 
 describe('Mão (US2)', () => {
@@ -19,7 +23,7 @@ describe('Mão (US2)', () => {
     expect(g.players[0].hand.length).toBe(4)
     expect(g.resolution?.kind).toBe('card-discard')
 
-    const after = resolveCardDiscard(g, 'imunidade-1')
+    const after = resolveCardDiscard(g, 'imunidade-1', 'tesouro')
     expect(after.players[0].hand.length).toBe(3)
     expect(after.players[0].hand).not.toContain('imunidade-1')
     expect(after.resolution).toBeNull()

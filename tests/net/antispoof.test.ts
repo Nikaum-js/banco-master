@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import { localTransport } from '@/net/localTransport'
 import { supabaseTransport } from '@/net/supabaseTransport'
-import { setupGame } from './harness'
+import { publicView, setupGame } from './harness'
 import { fakeSupabase } from './fakeSupabase'
 
 describe('anti-spoof de identidade (SC-005)', () => {
@@ -33,8 +33,8 @@ describe('anti-spoof de identidade (SC-005)', () => {
     // p1 (jogador ativo) rola pelo próprio id → aceito e difundido.
     net.players[0].client.send({ kind: 'roll' })
     expect(net.host.seq()).toBe(seqBefore + 1)
-    // Convergência preservada: a visão de p2 acompanha.
-    expect(JSON.stringify(net.players[1].client.game())).toBe(JSON.stringify(net.host.game()))
+    // Convergência preservada: a visão de p2 acompanha (043: projeção pública — D7).
+    expect(JSON.stringify(publicView(net.players[1].client.game()!))).toBe(JSON.stringify(publicView(net.host.game())))
   })
 })
 

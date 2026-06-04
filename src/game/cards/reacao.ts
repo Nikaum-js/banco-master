@@ -5,18 +5,25 @@ import type { ResolveCtx, ResolutionOutcome, TurnPorts } from '../turn/resolutio
 import type { GameState } from '../turn/types'
 import { completeResolution } from '../turn/turnMachine'
 import { cardById } from './catalog'
+import { removeFromHand } from './hand'
 import { ownerOf } from '../economy/titles'
 import { isTempImmune, addTempEffect } from '../economy/tempEffects'
 import { acquire, evict, audit, canAcquire, canEvict, canAudit } from './ofensivas'
 
-// id da carta na mão do jogador cujo efeito é a reação procurada (privado: não revela ao atacante).
+// id da carta na mão do jogador cujo efeito é a reação procurada (privado: não revela ao
+// atacante). 043, T031 — ignora slot OCULTO: numa mão alheia (perspectiva de quem não é
+// `playerId`), `hand` é só `null`, e `cardById(null)` estouraria. `null` aqui não significa
+// "sem a carta" — significa "não sei"; é por isso que a decisão que IMPORTA (abrir ou não a
+// janela) passa por `ports.hasReaction` (gravado/reproduzido — D11), não por esta função
+// direto. `findReactionCard` continua correta na perspectiva de quem TEM a mão visível: o
+// próprio reator, ou o host.
 export function findReactionCard(
   state: GameState,
   playerId: string,
   effect: 'diplomacia' | 'bunkerFiscal',
 ): string | undefined {
   const p = state.players.find((x) => x.id === playerId)
-  return p?.hand.find((id) => cardById(id).effect === effect)
+  return p?.hand.find((id): id is string => id !== null && cardById(id).effect === effect)
 }
 
 // Quem pode reagir (Diplomacia) a esta ofensiva, SE ela for válida; senão null.
@@ -55,15 +62,25 @@ export function applyOffensive(
 }
 
 // Imposto de casa + pagador com Bunker → abre reação (em vez de cobrar). Composto no ctx.resolve.
+//
+// 043: `ports.hasReaction` (gravado/reproduzido — D11), não `findReactionCard` direto — esta
+// decisão vira `state.resolution`, PÚBLICA e estrutural; perguntando a mão do reator direto,
+// cada perspectiva sem visão dela (todo mundo, exceto o próprio reator e o host) chegaria a
+// uma resposta diferente e a convergência quebraria.
 export function taxBunkerResolve(rctx: ResolveCtx): ResolutionOutcome | null {
-  const { square, state, playerId } = rctx
+  const { square, state, playerId, ports } = rctx
   if (square.kind !== 'tax') return null
-  if (!findReactionCard(state, playerId, 'bunkerFiscal')) return null
+  if (ports.hasReaction(state, playerId, 'bunkerFiscal') === null) return null
   state.resolution = { kind: 'reaction-bunker', reactorId: playerId, amount: square.amount }
   return { done: false }
 }
 
 // Responde a reação pendente (Diplomacia/Bunker): usar (cancela) ou recusar (aplica). Puro.
+//
+// 043, T031: a remoção da carta do reator tolera slot oculto (`removeFromHand`) — em quem NÃO
+// é o reator, `findReactionCard` não encontra nada (mão alheia é só `null`), mas uma carta FOI
+// gasta mesmo assim; `dip ?? null` preserva o comprimento da mão e do baralho em toda
+// perspectiva, sem nomear qual carta era.
 export function respondReaction(state: GameState, use: boolean, ports: TurnPorts): GameState {
   const res = state.resolution
   if (res?.kind !== 'reaction-diplomacia' && res?.kind !== 'reaction-bunker') return state
@@ -74,9 +91,9 @@ export function respondReaction(state: GameState, use: boolean, ports: TurnPorts
   if (r.kind === 'reaction-diplomacia') {
     const reactor = s.players.find((p) => p.id === r.reactorId)
     if (use) {
-      const dip = findReactionCard(s, r.reactorId, 'diplomacia') // cancela: gasta a Diplomacia
-      if (reactor && dip) {
-        reactor.hand = reactor.hand.filter((h) => h !== dip)
+      const dip = findReactionCard(s, r.reactorId, 'diplomacia') ?? null // cancela: gasta a Diplomacia
+      if (reactor) {
+        reactor.hand = removeFromHand(reactor.hand, dip)
         s.decks.tesouro.push(dip)
       }
     } else {
@@ -90,11 +107,9 @@ export function respondReaction(state: GameState, use: boolean, ports: TurnPorts
   if (r.kind !== 'reaction-bunker') return state // narrowing p/ o TS (inalcançável: já filtrado acima)
   const reactor = s.players.find((p) => p.id === r.reactorId)!
   if (use) {
-    const bunker = findReactionCard(s, r.reactorId, 'bunkerFiscal') // cancela o imposto
-    if (bunker) {
-      reactor.hand = reactor.hand.filter((h) => h !== bunker)
-      s.decks.tesouro.push(bunker)
-    }
+    const bunker = findReactionCard(s, r.reactorId, 'bunkerFiscal') ?? null // cancela o imposto
+    reactor.hand = removeFromHand(reactor.hand, bunker)
+    s.decks.tesouro.push(bunker)
     completeResolution(s)
   } else if (reactor.cash >= r.amount) {
     reactor.cash -= r.amount // recusou: paga o imposto

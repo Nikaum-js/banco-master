@@ -13,6 +13,12 @@ export interface HandCardView {
   effect: string // EffectId — base do rótulo legível (mapa de apresentação no ModalLayer)
 }
 
+// 043, D-037/T038: `player.hand`/`res.cardId` agora podem carregar slot OCULTO (`null`). Este
+// seletor roda para TODO participante (inclusive quem não decide — `ModalLayer` só renderiza
+// o conteúdo para quem `mayAct`, os demais veem um `WaitingBar` sem detalhe nenhum), então
+// precisa devolver algo sem estourar mesmo quando a carta não é visível aqui. Nenhum `if
+// (multiplayer)` novo: o `null` já é tratado pelo tipo, não por um ramo de modo de jogo.
+
 export type ModalView =
   // compra NÃO é mais modal — vira ação inline embaixo dos dados (DiceArena)
   | {
@@ -31,7 +37,10 @@ export type ModalView =
     }
   | { kind: 'card-discard'; playerId: string; cards: HandCardView[] }
   | { kind: 'card-shortcut' }
-  | { kind: 'card-reveal'; deckId: DeckId; cardId: string; rarity: Rarity; effect: string; mode: CardMode }
+  // `cardId`/`rarity`/`effect`/`mode` são `null` juntos quando o slot é oculto nesta
+  // perspectiva (bystander) — `ModalLayer` nunca renderiza o conteúdo nesse caso (`mineModal`
+  // já filtra por `mayAct`), então isto só precisa não estourar, não ficar bonito.
+  | { kind: 'card-reveal'; deckId: DeckId; cardId: string | null; rarity: Rarity | null; effect: string | null; mode: CardMode | null }
   // Escolhas do Speed Die (turn.awaitingChoice) — também decisões centrais (022.1)
   | { kind: 'bus-move'; pos: number; white: [number, number]; playerId: string }
   | { kind: 'triple-dest'; pos: number; playerId: string }
@@ -73,15 +82,23 @@ export function activeModal(game: GameState): ModalView | null {
     case 'card-discard': {
       const id = activeId(game)
       const player = game.players.find((p) => p.id === id)!
-      const cards: HandCardView[] = player.hand.map((cid) => {
-        const c = cardById(cid)
-        return { id: cid, rarity: c.rarity, effect: c.effect }
-      })
+      // Slots ocultos não entram na lista — o descarte só é MEU modal quando é minha mão
+      // (`mayAct`), e nela nunca há oculto; num bystander (que nunca renderiza isto) o filtro
+      // só evita o `cardById(null)`.
+      const cards: HandCardView[] = player.hand
+        .filter((cid) => cid !== null)
+        .map((cid) => {
+          const c = cardById(cid)
+          return { id: cid, rarity: c.rarity, effect: c.effect }
+        })
       return { kind: 'card-discard', playerId: id, cards }
     }
     case 'card-shortcut':
       return { kind: 'card-shortcut' }
     case 'card-reveal': {
+      if (res.cardId === null) {
+        return { kind: 'card-reveal', deckId: res.deckId, cardId: null, rarity: null, effect: null, mode: null }
+      }
       const c = cardById(res.cardId)
       return { kind: 'card-reveal', deckId: res.deckId, cardId: res.cardId, rarity: c.rarity, effect: c.effect, mode: c.mode }
     }

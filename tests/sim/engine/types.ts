@@ -1,5 +1,6 @@
 // Tipos do harness de simulação (036) — dev-only. Nada aqui é importado por `src/`.
 import type { Trade } from '@/game/economy/trade'
+import type { DeckId } from '@/game/cards/types'
 import type { WealthSample } from './wealth'
 
 export type SimAction =
@@ -29,7 +30,7 @@ export type SimAction =
   | { kind: 'unmortgage'; pos: number }
   // Cartas (draw.ts/reacao.ts) — jogador ativo (mão) ou reator (resolução pendente).
   | { kind: 'play-hand-card'; cardId: string; target?: number; targetPlayer?: string }
-  | { kind: 'discard-card'; cardId: string }
+  | { kind: 'discard-card'; cardId: string; deck: DeckId } // 043 — `deck` explícito, espelha `GameAction`
   | { kind: 'choose-card-shortcut'; dir: 'frente' | 'tras' }
   | { kind: 'confirm-card-reveal' }
   | { kind: 'respond-reaction'; use: boolean }

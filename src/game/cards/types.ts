@@ -2,6 +2,11 @@
 // (evita ciclo: turn/types e economy/types importam DAQUI).
 
 export type DeckId = 'acaso' | 'tesouro'
+// 043, D-037/data-model §4 — id de carta e o slot que a representa numa perspectiva alheia:
+// `null` = "há uma carta aqui, e ela não é minha". Nem cor, nem efeito, nem deck de origem
+// além daquele em que está (FR-027) — `null` é `null`.
+export type CardId = string
+export type CardSlot = CardId | null
 export type Rarity = 'lendaria' | 'rara' | 'comum'
 export type CardMode = 'imediato' | 'mao'
 export type Timing = 'proprio-turno' | 'reacao' | 'preso'

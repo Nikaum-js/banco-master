@@ -1,11 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import { applyEffect, netWorth } from '@/game/cards/effects'
 import { playHandCard } from '@/game/cards/draw'
+import { findReactionCard } from '@/game/cards/reacao'
 import { createSeedState } from '@/game/setup'
 import type { TurnPorts } from '@/game/turn/resolution'
 
 function ports(extra?: Partial<TurnPorts>): TurnPorts {
-  return { onPassGo: () => 200, onPayToCenter: () => {}, onCollectCenter: () => 0, ...extra }
+  return {
+    onPassGo: () => 200, onPayToCenter: () => {}, onCollectCenter: () => 0,
+    draw: (state, deckId) => state.decks[deckId].shift() ?? null, // 043 — igual ao default de produção (setup.ts)
+    hasReaction: (state, playerId, effect) => findReactionCard(state, playerId, effect) ?? null,
+    ...extra,
+  }
 }
 
 describe('Efeitos de carta (US1)', () => {

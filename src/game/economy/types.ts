@@ -1,6 +1,6 @@
 // Tipos da economia (Compra & Aluguel, spec 003). Autocontido (só primitivos) para
 // evitar ciclo de imports — `turn/types.ts` importa daqui, não o contrário.
-import type { DeckId } from '../cards/types'
+import type { CardSlot, DeckId } from '../cards/types'
 
 export interface Title {
   ownerId: string | null // null = banco (livre)
@@ -153,9 +153,12 @@ export interface Trade {
 export type ResolutionSlice =
   | { kind: 'purchase'; pos: number }
   | { kind: 'auction'; auction: Auction }
-  | { kind: 'card-reveal'; deckId: DeckId; cardId: string } // carta sacada revelada, aguardando "Continuar" (025)
-  | { kind: 'card-discard'; deckId: DeckId; drawnId: string } // mão cheia: escolher descarte (006)
-  | { kind: 'card-shortcut'; deckId: DeckId; cardId: string } // Atalho: escolher ±3 (006)
+  // 043, D-037: `cardId`/`drawnId` viram `CardSlot` — carta de MÃO alheia chega como `null`
+  // (slot oculto, FR-027); `card-shortcut` fica `string` puro porque Atalho é IMEDIATO e
+  // imediata nunca é redigida (D9/D10 do plan da 043).
+  | { kind: 'card-reveal'; deckId: DeckId; cardId: CardSlot } // carta sacada revelada, aguardando "Continuar" (025)
+  | { kind: 'card-discard'; deckId: DeckId; drawnId: CardSlot } // mão cheia: escolher descarte (006)
+  | { kind: 'card-shortcut'; deckId: DeckId; cardId: string } // Atalho: escolher ±3 (006) — imediato, nunca oculto
   // Dívida pendente: pagar/falir (008). `origin: 'loan-interest'` marca dívida nascida FORA
   // da resolução da casa (juros no GO, §15.4) — quitar NÃO conclui a casa onde o jogador pousou.
   | { kind: 'debt'; amount: number; creditorId: string | null; origin?: 'loan-interest' }

@@ -24,13 +24,13 @@ const rctx = (g: GameState, pos: number) => ({
 })
 
 describe('cardRevealResolve — peek + pausa (US1)', () => {
-  it('SC-001: carta de MÃO seta card-reveal com o topo, sem mutar deck/mão', () => {
+  it('SC-001: carta de MÃO seta card-reveal com o topo, e saca de verdade (043: peek pela porta)', () => {
     const g = onCard('tesouro', ['saia-prisao-1', 'diplomacia-1'], 2) // topo = carta de mão
     const out = cardRevealResolve(rctx(g, 2))
     expect(out).toEqual({ done: false })
     expect(g.resolution).toEqual({ kind: 'card-reveal', deckId: 'tesouro', cardId: 'saia-prisao-1' })
-    expect(g.decks.tesouro).toEqual(['saia-prisao-1', 'diplomacia-1']) // deck intacto
-    expect(g.players[0].hand).toEqual([]) // mão intacta
+    expect(g.decks.tesouro).toEqual(['diplomacia-1']) // saiu do deck (draw real via ports.draw, D8/T029)
+    expect(g.players[0].hand).toEqual([]) // só entra na mão no confirm
   })
 
   it('carta IMEDIATA não abre tela — processa e loga na hora (sem card-reveal)', () => {
@@ -46,7 +46,8 @@ describe('cardRevealResolve — peek + pausa (US1)', () => {
 
 describe('confirmCardReveal — saca e processa (US1)', () => {
   it('SC-002: carta imediata aplica o efeito, saca do deck e finaliza', () => {
-    const g = onCard('tesouro', ['erro-banco-1', 'aniversario-1'], 2)
+    // 043: o draw real já aconteceu no reveal (D8/T029) — o deck de entrada aqui já não tem o topo.
+    const g = onCard('tesouro', ['aniversario-1'], 2)
     g.resolution = { kind: 'card-reveal', deckId: 'tesouro', cardId: 'erro-banco-1' }
     const r = confirmCardReveal(g, defaultPorts)
     expect(r.resolution).toBeNull()
@@ -56,7 +57,7 @@ describe('confirmCardReveal — saca e processa (US1)', () => {
   })
 
   it('SC-002: carta de mão que cabe entra na mão e finaliza', () => {
-    const g = onCard('tesouro', ['saia-prisao-1'], 2)
+    const g = onCard('tesouro', [], 2) // 043: já sacada no reveal
     g.resolution = { kind: 'card-reveal', deckId: 'tesouro', cardId: 'saia-prisao-1' }
     const r = confirmCardReveal(g, defaultPorts)
     expect(r.players[0].hand).toEqual(['saia-prisao-1'])
@@ -65,7 +66,7 @@ describe('confirmCardReveal — saca e processa (US1)', () => {
   })
 
   it('mão cheia ao confirmar → abre card-discard', () => {
-    const g = onCard('tesouro', ['diplomacia-1'], 2)
+    const g = onCard('tesouro', [], 2) // 043: já sacada no reveal
     g.players[0].hand = ['saia-prisao-1', 'imunidade-1', 'bunker-fiscal-1'] // 3 (de mão)
     g.resolution = { kind: 'card-reveal', deckId: 'tesouro', cardId: 'diplomacia-1' }
     const r = confirmCardReveal(g, defaultPorts)
@@ -73,7 +74,7 @@ describe('confirmCardReveal — saca e processa (US1)', () => {
   })
 
   it('Atalho ao confirmar → abre card-shortcut', () => {
-    const g = onCard('acaso', ['atalho-1'], 8)
+    const g = onCard('acaso', [], 8) // 043: já sacada no reveal
     g.resolution = { kind: 'card-reveal', deckId: 'acaso', cardId: 'atalho-1' }
     const r = confirmCardReveal(g, defaultPorts)
     expect(r.resolution?.kind).toBe('card-shortcut')

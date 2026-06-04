@@ -30,7 +30,10 @@ function sameSideDestinations(pos: number): number[] {
 
 function handCardActions(game: GameState, active: Player): SimAction[] {
   const out: SimAction[] = []
+  // A simulação roda num processo só, sem perspectiva de rede — `hand` nunca tem slot oculto
+  // aqui de verdade; o filtro só estreita o tipo pro TS (043).
   for (const cardId of active.hand) {
+    if (cardId === null) continue
     const card = cardById(cardId)
     if (card.mode !== 'mao') continue
     if (card.timing === 'reacao') continue // só via respond-reaction, nunca jogada proativamente
@@ -186,7 +189,10 @@ export function enumerateActions(session: SimSession): DecisionPoint[] {
     }
   } else if (res?.kind === 'card-discard') {
     const p = activePlayer(game)
-    points.push({ actorId: p.id, mandatory: true, actions: p.hand.map((cardId) => ({ kind: 'discard-card' as const, cardId })) })
+    const actions = p.hand
+      .filter((cardId) => cardId !== null)
+      .map((cardId) => ({ kind: 'discard-card' as const, cardId, deck: cardById(cardId).deck }))
+    points.push({ actorId: p.id, mandatory: true, actions })
   } else if (res?.kind === 'card-shortcut') {
     points.push({
       actorId: activePlayer(game).id,

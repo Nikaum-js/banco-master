@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { createClient } from '@/net/client'
 import { localTransport } from '@/net/localTransport'
 import { mulberry32 } from '../sim/engine/rng'
-import { setupGame, stepOnce } from './harness'
+import { publicView, setupGame, stepOnce } from './harness'
 
 describe('reconexão sem perda (SC-003)', () => {
   it('convidado dá F5, reabre o mesmo link e volta ao assento com estado íntegro', async () => {
@@ -23,8 +23,12 @@ describe('reconexão sem perda (SC-003)', () => {
 
     expect(net.host.game().paused).toBeNull() // reconexão retomou automaticamente (FR-018)
     expect(fresh.playerId()).toBe('p2') // mesmo assento (FR-004)
-    expect(JSON.stringify(fresh.game())).toBe(expected) // estado idêntico, zero perda (FR-015)
-    // A visão do outro cliente também segue convergida.
+    // 043: `fresh` não é a autoridade — compara pela projeção PÚBLICA (D7); a própria mão do
+    // convidado é redigida na LEITURA do snapshot IGUAL antes da queda, então "zero perda"
+    // continua provado, só que pela parte que é dela de verdade (o público).
+    expect(JSON.stringify(publicView(fresh.game()!))).toBe(JSON.stringify(publicView(net.host.game())))
+    // A visão do outro cliente também segue convergida — este É a autoridade (uid `tok-0`,
+    // `isHost`), então recebe o snapshot íntegro e compara cru com `expected`.
     expect(JSON.stringify(net.players[0].client.game())).toBe(expected)
   })
 

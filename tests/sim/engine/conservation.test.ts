@@ -36,6 +36,8 @@ function ports(): TurnPorts {
       p.cash += s.centerPot
       s.centerPot = 500
     },
+    draw: (state, deckId) => state.decks[deckId].shift() ?? null, // 043 — igual ao default de produção (setup.ts)
+    hasReaction: () => null,
   }
 }
 

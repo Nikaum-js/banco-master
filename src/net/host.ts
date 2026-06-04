@@ -6,9 +6,10 @@
 import type { RNG } from '@/game/turn/dice'
 import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
-import { actorOf, applyCommand, type GameAction, type SystemAction } from '@/game/commands'
+import { actorOf, applyCommand, type GameAction, type PlayerAction, type SystemAction } from '@/game/commands'
 import { buildGameCtx, buildInitialGame } from '@/game/setup'
 import { recordingCtx } from './recorder'
+import { redactAccepted, splitSnapshot } from './perspective'
 import {
   anyDisconnected,
   joinRoom,
@@ -24,6 +25,12 @@ import {
   type Room,
 } from './room'
 import type { AcceptedCommand, CommandEnvelope, JoinRequest, PresenceChange, Transport, Unsubscribe } from './transport'
+
+// Ações de sistema nunca carregam carta — `actorOf` (D9/T034) só existe para `PlayerAction`.
+const SYSTEM_KINDS = new Set<GameAction['kind']>(['close-auction', 'close-land-lots', 'close-land-auction', 'pause', 'resume'])
+function isPlayerAction(action: GameAction): action is PlayerAction {
+  return !SYSTEM_KINDS.has(action.kind)
+}
 
 export interface HostOptions {
   rng?: RNG // padrão Math.random; injetável nos testes (seed)
@@ -70,11 +77,20 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     watchedUids = current
   }
 
+  // Grava o snapshot em duas partes (043, D6/T034): `splitSnapshot` separa o `game` real (só
+  // existe aqui, na autoridade) em público (redigido) + segredo (`rooms.secrets`) — o adapter
+  // é quem remonta a visão de cada leitor depois (`loadSnapshot`, T037).
+  function persistSnapshot(): void {
+    if (!game) return
+    const { publicGame, secrets } = splitSnapshot(game, room)
+    void transport.saveSnapshot({ seq, game: publicGame, secrets, room })
+  }
+
   // Publica a sala para todos e a persiste. Com partida em curso, a sala vive DENTRO do
   // snapshot (uma linha só); no lobby, `saveRoom` escreve apenas as colunas de sala.
   function publishAndPersistRoom(): void {
     transport.publishRoom(toPublicRoom(room))
-    if (game) void transport.saveSnapshot({ seq, game, room })
+    if (game) persistSnapshot()
     else void transport.saveRoom(room)
     notify()
   }
@@ -85,13 +101,31 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   function accept(action: GameAction): boolean {
     if (!game) return false
     const { ctx, drain } = recordingCtx(baseCtx)
+    // ANTES da mutação (043, T034) — quem recebe a cópia privada, se houver uma a recortar.
+    const ownerId = isPlayerAction(action) ? actorOf(game, action) : null
     const next = applyCommand(game, action, ctx)
     if (next === game) return false // no-op / inválido → descarta (FR-009)
     game = next
     seq += 1
     const cmd: AcceptedCommand = { seq, action, resolved: drain() }
-    void transport.saveSnapshot({ seq, game, room }) // FR-013 (upsert)
-    transport.broadcast(cmd) // FR-010/011
+    persistSnapshot() // FR-013 (upsert)
+    // 043, D9/D10: a cópia PRIVADA (íntegra) vai ANTES da pública (redigida) — o dono aplica a
+    // sua primeiro e avança `seq`; a pública que chega depois vira no-op pelo guard de `seq`
+    // que `client.ts` já tem. Sem isto, a ordem inverte e o dono fica preso na versão redigida
+    // até a próxima ressincronização.
+    const pub = redactAccepted(cmd)
+    if (pub !== cmd) {
+      // O DONO da carta vê a própria — e o ANFITRIÃO vê tudo (SRS §10.3, exceção conhecida:
+      // o navegador dele roda a autoridade e por isso já conhece baralho e mãos por inteiro —
+      // isto só torna a visão do PRÓPRIO client dele consistente com o que `loadSnapshot` já
+      // lhe dá num resync, em vez de ficar redigida até o próximo). Ambas ANTES da pública —
+      // mesma ordem/motivo do comentário acima.
+      const ownerSeat = ownerId ? room.seats.find((s) => s.playerId === ownerId) : undefined
+      if (ownerSeat) transport.broadcastPrivate(ownerSeat.uid, cmd)
+      const hostSeat = room.seats.find((s) => s.isHost)
+      if (hostSeat && hostSeat.uid !== ownerSeat?.uid) transport.broadcastPrivate(hostSeat.uid, cmd)
+    }
+    transport.broadcast(pub) // FR-010/011
     return true
   }
 
@@ -221,7 +255,8 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     await ensureOpen()
     game = buildInitialGame(playerIdsInOrder(room), rng)
     seq = 0
-    await transport.saveSnapshot({ seq, game, room }) // 1º snapshot (FR-006/013): clientes leem ao entrar
+    const { publicGame, secrets } = splitSnapshot(game, room)
+    await transport.saveSnapshot({ seq, game: publicGame, secrets, room }) // 1º snapshot (FR-006/013): clientes leem ao entrar
     transport.publishRoom(toPublicRoom(room)) // status já 'playing' (definido por startGame antes de criar o host)
     notify()
   }
