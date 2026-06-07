@@ -162,11 +162,11 @@ export const FULIGEM_BOARD: readonly Square[] = [
   { pos: 30, kind: 'corner-gotojail', name: 'Vá para Prisão', short: 'Vá pra Prisão' },
 
   // ---------- lado LESTE (cima → baixo) — Salto + Serrano ----------
-  { pos: 31, kind: 'property', group: 'green', name: 'Deodoro', capital: 'Salto', price: 560, rent: 23, icon: 'powerhouse' },
+  { pos: 31, kind: 'property', group: 'green', name: 'Deodoro', capital: 'Salto', price: 560, rent: 23, icon: 'dam' },
   { pos: 32, kind: 'tesouro', name: 'Tesouro' },
-  { pos: 33, kind: 'property', group: 'green', name: 'Represa', capital: 'Salto', price: 630, rent: 23, icon: 'powerhouse' },
+  { pos: 33, kind: 'property', group: 'green', name: 'Represa', capital: 'Salto', price: 630, rent: 23, icon: 'dam' },
   { pos: 34, kind: 'mine', name: 'Mina de Cobre', short: 'Cobre', metal: 'cobre', price: 220 },
-  { pos: 35, kind: 'property', group: 'green', name: 'Riacho', capital: 'Salto', price: 710, rent: 23, icon: 'powerhouse' },
+  { pos: 35, kind: 'property', group: 'green', name: 'Riacho', capital: 'Salto', price: 710, rent: 23, icon: 'dam' },
   { pos: 36, kind: 'airport', name: 'Estação Vale', short: 'Vale', iata: 'VAL', price: 200, rent: 25 },
   { pos: 37, kind: 'acaso', name: 'Acaso' },
   { pos: 38, kind: 'property', group: 'platinum', name: 'Barão', capital: 'Serrano', price: 800, rent: 44, icon: 'mansion' },

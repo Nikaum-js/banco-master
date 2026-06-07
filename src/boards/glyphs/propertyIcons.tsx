@@ -147,18 +147,21 @@ const ICON_PATHS: Record<PropertyIconId, React.ReactNode> = {
       <path d="M6.6 13.6 9.4 9.4l2.8 4.2" />
     </>
   ),
-  // USINA / LUZ ELÉTRICA — a LÂMPADA incandescente, com rosca e raios. Terceira tentativa neste
-  // slot, e as duas anteriores ensinaram a mesma coisa: silhueta manda mais que referente. O
-  // galpão-com-turbina lia como "caixa com antenas"; a torre de transmissão, com pernas
-  // convergindo e travessas horizontais, lia como CONE DE TRÂNSITO; o raio sobre a água era
-  // abstrato demais a 19px. A lâmpada é o símbolo de eletricidade que ninguém precisa decifrar,
-  // e é da época certa (Edison, 1879, dentro da janela do mapa). `lamp` continua sendo o
-  // lampião a GÁS — a tecnologia que este bairro substituiu; são objetos diferentes de propósito.
-  powerhouse: (
+  // BARRAGEM — o paredão com a água represada em cima e o vertedouro despejando embaixo.
+  //
+  // Quarta tentativa neste slot, e a única que respeita o que o DADO diz. As três primeiras
+  // (galpão-com-turbina, torre de transmissão, raio-sobre-água) e a lâmpada erravam todas pelo
+  // mesmo motivo, e não era desenho: eu estava ilustrando "eletricidade", que é uma INFERÊNCIA
+  // minha sobre o bairro. O que está escrito no tabuleiro é água — o grupo se chama SALTO
+  // (cachoeira) e as casas são Deodoro, REPRESA e RIACHO. Lâmpada na escritura da Represa põe os
+  // dois canais brigando, que é o oposto do desenho: o ícone diz o ofício, o nome diz o lugar, e
+  // eles têm de concordar. Barragem serve às três casas e ao nome do bairro.
+  dam: (
     <>
-      <path d="M8.4 10.4a3.6 3.6 0 1 1 7.2 0c0 1.9-1.4 2.7-1.6 4.2h-4c-.2-1.5-1.6-2.3-1.6-4.2Z" />
-      <path d="M10.1 16.6h3.8M10.7 18.8h2.6" />
-      <path d="M12 3.4V2M5.9 6.1 4.9 5.1M18.1 6.1l1-1" opacity="0.7" />
+      <path d="M2.6 6.2q2.5-1.5 5 0t5 0 5 0" opacity="0.75" />
+      <path d="M2.2 9.4h19.6" />
+      <path d="M5 9.4 7 16h10l2-6.6" />
+      <path d="M9.6 16v3.8M12 16v4.4M14.4 16v3.8" opacity="0.85" />
     </>
   ),
 }
