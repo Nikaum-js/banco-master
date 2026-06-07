@@ -8,6 +8,7 @@
 import { useMemo } from 'react'
 import { create } from 'zustand'
 import { useGameStore } from '@/game/store'
+import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 import type { ConnectionState } from './client'
 import { identityOf, type PlayerIdentity } from './identity'
 import { localView, type LocalView } from './localView'
@@ -40,7 +41,12 @@ export const useRoomStore = create<RoomState>((set) => ({
   clockOffsetMs: 0,
   myReentryCode: null,
   commandFailure: null,
-  setRoom: (room) => set({ room }),
+  setRoom: (room) => {
+    set({ room })
+    // 055/D-069: o mapa autoritativo da sala dirige o catálogo e o tema visual de TODOS os
+    // participantes — convidado por link, reload e reconexão convergem por este ponto.
+    if (room) useBoardTheme.getState().setTheme(room.boardId ?? 'atlas')
+  },
   setSession: (myUid) => set({ myUid }),
   setConnection: (connection) => set({ connection }),
   setMyReentryCode: (myReentryCode) => set({ myReentryCode }),

@@ -1,6 +1,6 @@
 // Casca das telas de ENTRADA (home, identidade, sala, reentrada). O cenário acompanha o
 // tema do app: Atlas recebe uma carta de ESPAÇO AÉREO (rotas, pista e aeronaves);
-// Neon reutiliza sua metrópole arcade. Essa escolha acontece aqui porque as telas depois
+// Fuligem reutiliza seu pátio de fábricas. Essa escolha acontece aqui porque as telas depois
 // da home também passam por `EntryStage` — deixar o palco fixo no Atlas vazava um tema no
 // outro.
 import { createContext, useContext, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { useMotion } from '@/game/ui/motion'
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 import { AtlasCityscape } from './home/AtlasCityscape'
-import { NeonBackdrop } from './home/NeonBackdrop'
+import { FuligemBackdrop } from './home/FuligemBackdrop'
 
 const RUNWAY_LIGHTS = [578, 628, 680, 734, 790, 848] as const
 
@@ -287,13 +287,13 @@ export function EntryStage({ children }: { children: ReactNode }) {
     <div
       className={cn(
         'fixed inset-0 z-[70] overflow-y-auto overscroll-contain',
-        theme === 'neon' && 'neon-stage',
+        theme === 'fuligem' && 'fuligem-stage',
       )}
       onPointerMove={track}
     >
       <ParallaxCtx.Provider value={theme === 'atlas' && !reduced ? { x: px, y: py } : null}>
-        {theme === 'neon' ? (
-          <NeonBackdrop />
+        {theme === 'fuligem' ? (
+          <FuligemBackdrop />
         ) : (
           <div
             className="pointer-events-none fixed inset-0 overflow-hidden"

@@ -1,10 +1,8 @@
 import { AnimatePresence, motion } from 'motion/react'
 import {
-  ArrowLeft,
   ArrowRight,
   Globe2,
   Link2,
-  LockKeyhole,
   Map,
   Ticket,
 } from 'lucide-react'
@@ -20,43 +18,47 @@ import {
   type HomeForm,
 } from './homeShared'
 
-type HomeMapSkin = 'atlas' | 'neon'
+type HomeMapSkin = 'atlas' | 'fuligem'
 
 function CityNetwork({ skin }: { skin: HomeMapSkin }) {
-  if (skin === 'neon') {
+  if (skin === 'fuligem') {
+    // Prévia da Cidade da Fuligem: o complexo fabril em silhueta, a linha férrea
+    // costurando os bairros e os nós de propriedade — mesmo vocabulário de nós do Atlas.
     return (
       <svg
         viewBox="0 0 280 190"
-        className="home-map-panel__network home-map-panel__network--neon"
+        className="home-map-panel__network home-map-panel__network--fuligem"
         fill="none"
         aria-hidden="true"
       >
-        <path className="home-map-panel__neon-horizon" d="M18 55H262" />
-        <g className="home-map-panel__neon-grid">
-          <path d="M140 55 16 178M140 55 57 178M140 55 99 178M140 55v123M140 55l41 123M140 55l83 123M140 55l124 123" />
-          <path d="M49 84h182M34 108h212M24 139h232M16 178h248" />
+        <path className="home-map-panel__fuligem-ground" d="M14 152H266" />
+        <g className="home-map-panel__fuligem-mills">
+          <path d="M30 152v-44h16l8 -10v10h10l8 -10v10h12v44Z" />
+          <path d="M104 152v-34h34l10 -12v12h10v34Z" />
+          <path d="M188 152v-52h14v-16h10v16h14v52Z" />
+          <path d="M226 100l3 -26h6l3 26" />
+          <path d="M96 84l2.4 -22h5l2.4 22" />
         </g>
-        <g className="home-map-panel__neon-blocks">
-          <path d="m52 91 20-11 20 11v27l-20 11-20-11Z" />
-          <path d="m111 69 29-16 29 16v37l-29 16-29-16Z" />
-          <path d="m189 95 20-11 20 11v25l-20 11-20-11Z" />
-          <path d="m92 135 17-9 17 9v21l-17 9-17-9Z" />
-          <path d="m151 139 18-10 18 10v22l-18 10-18-10Z" />
+        <g className="home-map-panel__fuligem-windows">
+          <rect x="40" y="120" width="8" height="6" />
+          <rect x="58" y="120" width="8" height="6" />
+          <rect x="114" y="130" width="8" height="6" />
+          <rect x="132" y="130" width="8" height="6" />
+          <rect x="198" y="116" width="8" height="6" />
+          <rect x="212" y="132" width="8" height="6" />
         </g>
-        <path className="home-map-panel__route home-map-panel__route--flow" d="M28 153 72 104l68-35 69 38 45 46" />
+        <path className="home-map-panel__fuligem-rail" d="M14 166H266M26 160l8 12M62 160l8 12M98 160l8 12M134 160l8 12M170 160l8 12M206 160l8 12M242 160l8 12" />
+        <path className="home-map-panel__route home-map-panel__route--flow" d="M28 140 78 96l62 -24 66 22 46 44" />
         {[
-          [28, 153],
-          [72, 104],
-          [140, 69],
-          [209, 107],
-          [254, 153],
+          [28, 140],
+          [78, 96],
+          [140, 72],
+          [206, 94],
+          [252, 138],
         ].map(([cx, cy], index) => (
           <g key={`${cx}-${cy}`} className={index === 2 ? 'home-map-panel__node--active' : undefined}>
             <circle cx={cx} cy={cy} r="10" className="home-map-panel__node-halo" />
-            <path
-              d={`M${cx} ${cy - 6} ${cx + 6} ${cy} ${cx} ${cy + 6} ${cx - 6} ${cy}Z`}
-              className="home-map-panel__node-core"
-            />
+            <circle cx={cx} cy={cy} r="4.5" className="home-map-panel__node-core" />
           </g>
         ))}
       </svg>
@@ -167,35 +169,31 @@ export function HomeMapPanel({
   mapChanging: boolean
 }) {
   const theme: BoardTheme = skin
-  const nextTheme: BoardTheme = theme === 'atlas' ? 'neon' : 'atlas'
+  const nextTheme: BoardTheme = theme === 'atlas' ? 'fuligem' : 'atlas'
   const map = HOME_MAPS[theme]
   const nextMap = HOME_MAPS[nextTheme]
   const fieldId = `${skin}-home-invite`
-  const inputClass = skin === 'neon'
-    ? 'neon-input min-w-0 flex-1 tracking-normal normal-case text-left'
-    : 'entry-input min-w-0 flex-1'
+  const inputClass = 'entry-input min-w-0 flex-1'
 
   return (
     <EntryPanel
       className={cn(
         'home-map-panel max-w-[47rem]',
-        skin === 'neon' && 'home-map-panel--neon',
+        skin === 'fuligem' && 'home-map-panel--fuligem',
       )}
     >
       <div className="grid md:grid-cols-[0.92fr_1.08fr]">
         <section className="home-map-panel__canvas">
           <div className="home-map-panel__map-head">
             <div>
-              <p className="home-map-panel__eyebrow">
-                {map.playable ? 'Mapa selecionado' : 'Prévia de mapa'}
-              </p>
+              <p className="home-map-panel__eyebrow">Mapa selecionado</p>
               <h2>{map.name}</h2>
             </div>
             <button
               type="button"
               className="home-map-panel__theme-button"
-              title={`${nextMap.playable ? 'Selecionar' : 'Pré-visualizar'} ${nextMap.name}`}
-              aria-label={`${nextMap.playable ? 'Selecionar' : 'Pré-visualizar'} o mapa ${nextMap.name}`}
+              title={`Selecionar ${nextMap.name}`}
+              aria-label={`Selecionar o mapa ${nextMap.name}`}
               disabled={mapChanging}
               onClick={() => onChangeMap(nextTheme)}
             >
@@ -206,27 +204,16 @@ export function HomeMapPanel({
           <div className="home-map-panel__preview">
             <CityNetwork skin={skin} />
             <span className="home-map-panel__preview-index" aria-hidden>
-              {theme === 'atlas' ? 'MAPA 01' : 'CONCEITO 02'}
+              {theme === 'atlas' ? 'MAPA 01' : 'MAPA 02'}
             </span>
           </div>
 
-          {map.playable ? (
-            <MapFacts mapName={map.name} facts={map.facts} />
-          ) : (
-            <div className="home-map-panel__availability">
-              <LockKeyhole aria-hidden />
-              <div>
-                <strong>Em desenvolvimento</strong>
-                <span>Criação de salas bloqueada</span>
-              </div>
-            </div>
-          )}
+          <MapFacts mapName={map.name} facts={map.facts} />
         </section>
 
-        {map.playable ? (
-          <section className="home-map-panel__form">
+        <section className="home-map-panel__form">
             <p className="home-map-panel__eyebrow">Prepare a partida</p>
-            <h2>Entre na disputa por cidades</h2>
+            <h2>{skin === 'fuligem' ? 'Entre na disputa pelos bairros' : 'Entre na disputa por cidades'}</h2>
             <p className="home-map-panel__intro">
               Defina seu nome para criar uma sala e convidar seus amigos.
             </p>
@@ -320,24 +307,7 @@ export function HomeMapPanel({
                 </motion.div>
               )}
             </AnimatePresence>
-          </section>
-        ) : (
-          <section className="home-map-panel__form home-map-panel__locked">
-            <p className="home-map-panel__eyebrow">Mapa em desenvolvimento</p>
-            <h2>Metrópole Neon ainda não aceita partidas</h2>
-            <p className="home-map-panel__intro">
-              Esta é uma prévia visual. Para criar uma sala agora, volte ao mapa Cidades do Mundo.
-            </p>
-            <Button
-              onClick={() => onChangeMap('atlas')}
-              disabled={mapChanging}
-              className="home-map-panel__primary mt-6"
-            >
-              <ArrowLeft size={16} aria-hidden />
-              Selecionar Cidades do Mundo
-            </Button>
-          </section>
-        )}
+        </section>
       </div>
     </EntryPanel>
   )

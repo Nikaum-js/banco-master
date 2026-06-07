@@ -38,8 +38,18 @@ import { OrientationGate } from '@/game/ui/OrientationGate'
 import type { AvatarId } from '@/boards/playerAvatarCatalog'
 import type { SkinId } from '@/boards/playerSkinCatalog'
 import { recallRoomPreset, rememberRoomPreset } from '@/net/roomPresets'
+import { useBoardTheme } from '@/game/ui/theme/boardTheme'
+import { coerceBoardId, type BoardId } from '@/lib/mapCatalog'
 
 const TICK_MS = 250 // o host fecha prazos vencidos (soft-close de leilão, janela de reação)
+
+// 055/D-069: `?map=fuligem` carrega a escolha da home até `session.create` (a navegação
+// troca `location.search`, então o valor viaja pela URL) e também é a seleção EXPLÍCITA
+// da partida local de desenvolvimento. Sem o parâmetro, `null` — e o fallback é atlas.
+function mapParam(search: string): BoardId | null {
+  const value = new URLSearchParams(search).get('map')
+  return value === null ? null : coerceBoardId(value)
+}
 
 export function OnlineGate({ children }: { children: ReactNode }) {
   const [link, setLink] = useState(() => parseRoomLink(window.location.search))
@@ -55,6 +65,13 @@ export function OnlineGate({ children }: { children: ReactNode }) {
     window.history.pushState(null, '', `${window.location.pathname}${search}`)
     setLink(parseRoomLink(search))
   }, [])
+
+  // Partida local com seleção explícita de mapa (D-069): `?map=` aplica o catálogo/tema.
+  // Nas rotas de sala o valor de verdade continua sendo a sala publicada (roomStore).
+  useEffect(() => {
+    const selected = mapParam(window.location.search)
+    if (selected) useBoardTheme.getState().setTheme(selected)
+  }, [local, link])
 
   // Back/forward continua sendo navegação real, mas sem recarregar todo o bundle nem
   // reconstruir a home antes da próxima tela de entrada.
@@ -80,7 +97,12 @@ export function OnlineGate({ children }: { children: ReactNode }) {
     // Porta de entrada de verdade (FR-021): ninguém precisa saber o que é `?host=1`.
     return (
       <HomeScreen
-        onCreate={() => navigateEntry('?host=1')}
+        // O mapa selecionado na home vive no store do tema (é o mesmo eixo, D-069); a
+        // navegação o carrega na URL para sobreviver ao remonte da rota de criação.
+        onCreate={() => {
+          const map = useBoardTheme.getState().theme
+          navigateEntry(map === 'atlas' ? '?host=1' : `?host=1&map=${map}`)
+        }}
         onJoin={(roomId) => navigateEntry(`?room=${encodeURIComponent(roomId)}`)}
         onLocal={() => setLocal(true)}
       />
@@ -122,6 +144,7 @@ function OnlineRoom({
       telemetry: resolveTelemetry(), // 044: nulo sem env/DEV — nenhuma requisição sai (FR-038)
       initialRoomPreset: recallRoomPreset(),
       onRoomPresetSelected: rememberRoomPreset,
+      initialBoardId: mapParam(window.location.search) ?? undefined,
     }),
   )
   const state = useSyncExternalStore(session.subscribe, session.getState)

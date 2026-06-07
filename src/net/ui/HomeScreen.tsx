@@ -9,32 +9,32 @@
 // (`rememberPlayerName`) e chega preenchido na tela de identidade. O campo de link some por
 // padrão: quem recebe um convite clica no link, não cola.
 //
-// A PELE vem do tema do app (`game/ui/theme/boardTheme.ts`), não de um seletor próprio: a
-// tela de entrada é parte do tema, e trocar de visual no ícone do mapa
-// troca a home junto — Atlas da Meia-Noite ou Fliperama Neon, cada uma com palco, painel e
-// movimento próprios. A lógica (nome lembrado, extração do id da sala, colar do clipboard)
-// mora em `home/homeShared.ts`, uma vez só: as duas desenham o mesmo formulário de jeitos
-// diferentes.
+// A PELE vem do mapa ativo (`game/ui/theme/boardTheme.ts`), que é o MESMO eixo do mapa
+// jogável (055/D-069): selecionar o mapa na home troca palco, painel e movimento — e é o
+// valor que `OnlineGate` carrega até a criação da sala. A lógica (nome lembrado, extração
+// do id da sala, colar do clipboard) mora em `home/homeShared.ts`, uma vez só: as duas
+// homes desenham o mesmo formulário de jeitos diferentes.
 import { motion } from 'motion/react'
 import { Activity, useEffect, useState } from 'react'
 import { Map } from 'lucide-react'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
-import type { BoardTheme } from '@/game/ui/theme/boardTheme'
+import { useBoardTheme, type BoardTheme } from '@/game/ui/theme/boardTheme'
 import { HomeAtlas } from './home/HomeAtlas'
-import { HomeNeonArcade } from './home/HomeNeonArcade'
+import { HomeFuligem } from './home/HomeFuligem'
 import { HOME_MAPS, useHomeForm, type HomeActions } from './home/homeShared'
 
 const SCREEN = {
   atlas: HomeAtlas,
-  neon: HomeNeonArcade,
+  fuligem: HomeFuligem,
 } as const
 
 export function HomeScreen(actions: HomeActions) {
   const { reduced } = useMotion()
-  // A prévia de mapa pertence somente à home. O tema do jogo não muda junto:
-  // Metrópole Neon ainda não existe como tabuleiro jogável.
-  const [theme, setTheme] = useState<BoardTheme>('atlas')
-  const [mountedThemes, setMountedThemes] = useState<BoardTheme[]>(['atlas'])
+  // A seleção da home É o mapa ativo do store (D-069) — é dele que `OnlineGate` lê o
+  // valor que grava na sala. Sala publicada continua vencendo (roomStore.setRoom).
+  const theme = useBoardTheme((s) => s.theme)
+  const setTheme = useBoardTheme((s) => s.setTheme)
+  const [mountedThemes, setMountedThemes] = useState<BoardTheme[]>(() => [theme])
   const [themeTransition, setThemeTransition] = useState<{
     target: BoardTheme
     phase: 'cover' | 'reveal'
@@ -49,7 +49,7 @@ export function HomeScreen(actions: HomeActions) {
   useEffect(() => {
     const mountAllThemes = () => {
       setMountedThemes((current) => (
-        current.length === Object.keys(SCREEN).length ? current : ['atlas', 'neon']
+        current.length === Object.keys(SCREEN).length ? current : ['atlas', 'fuligem']
       ))
     }
 

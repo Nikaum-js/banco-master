@@ -1,22 +1,21 @@
-// TEMA DO APP (skin inteira) — fora do GameState. Aplica `data-board-theme` no <html>
-// e o CSS resolve o resto: como TODA a UI
-// resolve cor por `var(--color-*)` e fonte por `var(--font-*)`, trocar o atributo troca
-// paleta, tipografia, fundo, cromo das casas e o miolo do tabuleiro sem re-render.
+// MAPA ATIVO DO APP (055/D-069) — o eixo visual e o mapa jogável são o MESMO eixo.
+// Aplica `data-board-theme` no <html> e o CSS resolve o resto: toda a UI resolve cor por
+// `var(--color-*)` e fonte por `var(--font-*)`, então trocar o atributo troca paleta,
+// tipografia, fundo, cromo das casas e o miolo do tabuleiro sem re-render.
 //
-// Antes daqui, o eixo tinha dois valores ("Atlas da Meia-Noite" e o legado "Café Coado") e
-// mexia só em cor. Agora são dois MUNDOS completos, e cada um tem também a sua tela de
-// entrada (`net/ui/home/`): tema e home são o MESMO eixo, não dois seletores separados.
+// Quem define o valor:
+//   1. a SALA publicada (fonte da verdade — `roomStore.setRoom` aplica `room.boardId`);
+//   2. a seleção do host na home, antes de criar a sala;
+//   3. `?map=fuligem` em partida local de desenvolvimento.
 //
-//   atlas — Atlas da Meia-Noite: carta náutica noturna, tinta azul, latão, Bebas condensada.
-//   neon  — Fliperama Neon: roxo/ciano/rosa, corpo em monoespaçada, varredura de tubo.
+//   atlas   — Cidades do Mundo: carta náutica noturna, tinta azul, latão, Bebas condensada.
+//   fuligem — Cidade da Fuligem: Revolução Industrial, carvão, ferro, cobre, luz de fornalha.
 import { create } from 'zustand'
+import { BOARD_IDS, catalogOf, coerceBoardId, type BoardId, type MapCatalog } from '@/lib/mapCatalog'
 
-export const BOARD_THEMES = ['atlas', 'neon'] as const
-export type BoardTheme = (typeof BOARD_THEMES)[number]
-
-function coerce(t: unknown): BoardTheme {
-  return BOARD_THEMES.includes(t as BoardTheme) ? (t as BoardTheme) : 'atlas'
-}
+export const BOARD_THEMES = BOARD_IDS
+/** Mantido como alias do id de mapa: tema do app ≡ mapa ativo (D-069). */
+export type BoardTheme = BoardId
 
 // O atributo é escrito SEMPRE, inclusive no atlas: os blocos de tema no CSS são
 // explícitos, e o atlas continua sendo o default do `@theme` (vale antes da re-hidratação,
@@ -28,17 +27,17 @@ function applyTheme(t: BoardTheme): void {
 export interface BoardThemeState {
   theme: BoardTheme
   setTheme: (t: BoardTheme) => void
-  /** Próximo tema do ciclo — usado pelo seletor do mapa e pelo controle global. */
+  /** Próximo mapa do ciclo — usado pelo seletor da home. */
   cycle: () => void
 }
 
 export const useBoardTheme = create<BoardThemeState>()(
   (set, get) => ({
-    // O tabuleiro publicado usa um único mapa/tema. Neon permanece disponível apenas
-    // como superfície de desenvolvimento e teste; não fica mais persistido no browser.
+    // Nunca persistido no browser: o valor de verdade vem da sala (D-069); antes de haver
+    // sala, atlas é o primeiro paint documentado.
     theme: 'atlas',
     setTheme: (t) => {
-      const theme = coerce(t)
+      const theme = coerceBoardId(t)
       set({ theme })
       applyTheme(theme)
     },
@@ -48,3 +47,13 @@ export const useBoardTheme = create<BoardThemeState>()(
     },
   }),
 )
+
+/** Catálogo do mapa ativo — leitura imperativa (views puras, módulos sem React). */
+export function activeCatalog(): MapCatalog {
+  return catalogOf(useBoardTheme.getState().theme)
+}
+
+/** Catálogo do mapa ativo, reativo (componentes que precisam re-renderizar na troca). */
+export function useMapCatalog(): MapCatalog {
+  return catalogOf(useBoardTheme((s) => s.theme))
+}

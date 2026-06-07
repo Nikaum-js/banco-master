@@ -12,6 +12,7 @@
 // `.stage-backdrop` do index.css.
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 import { AtlasCityscape } from '@/net/ui/home/AtlasCityscape'
+import { FuligemBackdrop } from '@/net/ui/home/FuligemBackdrop'
 import { AirlinerMark } from '@/net/ui/entryShell'
 
 // Rotas próprias do palco: mais altas (céu acima dos painéis), mais lentas e
@@ -78,12 +79,19 @@ function StageRoutes({ className }: { className?: string }) {
   )
 }
 
-// O Fliperama já tem cenário próprio de partida (scanlines + horizontes no
-// body); só o Atlas ganha a cidade. Renderizar nada mantém a troca de tema
-// instantânea, sem CSS condicional extra.
+// Cada mapa tem seu palco de partida (055/D-069). O da Fuligem é a MESMA cidade da
+// home/lobby, atenuada via CSS (`fuligem-backdrop--stage`) — e as janelas do complexo
+// principal continuam acesas nas cores dos assentos: a fábrica segue sendo o retrato da
+// mesa durante a partida, atrás do tabuleiro.
 export function StageBackdrop() {
   const theme = useBoardTheme((state) => state.theme)
-  if (theme !== 'atlas') return null
+  if (theme === 'fuligem') {
+    return (
+      <div className="stage-backdrop" aria-hidden="true">
+        <FuligemBackdrop className="fuligem-backdrop--stage" />
+      </div>
+    )
+  }
   return (
     <div className="stage-backdrop" aria-hidden="true">
       <StageRoutes className="absolute inset-0 h-full w-full text-brass" />
