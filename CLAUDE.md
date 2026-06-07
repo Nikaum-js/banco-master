@@ -98,5 +98,5 @@ Detalhe em [`docs/DECISIONS.md`](./docs/DECISIONS.md).
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-[`specs/033-distrito-super-luxo/plan.md`](./specs/033-distrito-super-luxo/plan.md)
+[`specs/035-efeitos-sonoros/plan.md`](./specs/035-efeitos-sonoros/plan.md)
 <!-- SPECKIT END -->
