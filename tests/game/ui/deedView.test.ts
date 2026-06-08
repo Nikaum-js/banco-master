@@ -9,6 +9,53 @@ function base(): GameState {
 }
 
 describe('deedView — construir/vender (US1)', () => {
+  it('D-050: uma cidade com uma casa bloqueia nova construção por limite de posse', () => {
+    const s = base()
+    s.titles[1].ownerId = 'p1'
+    s.titles[1].houses = 1
+    s.players[0].cash = 5_000
+
+    const v = deedView(s, 1)!
+    expect(v.flags.podeConstruir).toBe(false)
+    expect(v.buildBlock).toBe('limite-posse')
+  })
+
+  it('D-050: completar o país remove o limite de posse', () => {
+    const s = base()
+    for (const pos of [1, 3, 5]) {
+      s.titles[pos].ownerId = 'p1'
+      s.titles[pos].houses = 2
+    }
+    s.players[0].cash = 5_000
+
+    const v = deedView(s, 1)!
+    expect(v.flags.podeConstruir).toBe(true)
+    expect(v.buildBlock).toBeNull()
+  })
+
+  it('D-050: duas cidades no nível 2 também bloqueiam por limite de posse', () => {
+    const s = base()
+    for (const pos of [1, 3]) {
+      s.titles[pos].ownerId = 'p1'
+      s.titles[pos].houses = 2
+    }
+    s.players[0].cash = 5_000
+
+    const v = deedView(s, 1)!
+    expect(v.flags.podeConstruir).toBe(false)
+    expect(v.buildBlock).toBe('limite-posse')
+  })
+
+  it('abaixo do teto, caixa insuficiente continua sendo o motivo do bloqueio', () => {
+    const s = base()
+    s.titles[1].ownerId = 'p1'
+    s.players[0].cash = 0
+
+    const v = deedView(s, 1)!
+    expect(v.flags.podeConstruir).toBe(false)
+    expect(v.buildBlock).toBe('caixa')
+  })
+
   it('SC-002: dono da maioria, cidade de menor nível, caixa+estoque → podeConstruir', () => {
     const s = base()
     s.titles[1].ownerId = 'p1'

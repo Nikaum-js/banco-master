@@ -88,21 +88,25 @@ describe('perspectiva local com sala', () => {
     // do motor, e a UI compõe as duas condições.
   })
 
-  it('resposta a proposta de troca vai ao destinatário, não ao jogador da vez', () => {
+  it('resposta a proposta identificada vai ao destinatário sem bloquear o jogador da vez', () => {
     const game = jogo()
-    game.pendingTrade = {
-      fromId: 'p1',
-      toId: 'p3',
-      fromProps: [],
-      toProps: [],
-      fromCash: 0,
-      toCash: 0,
-    } as unknown as GameState['pendingTrade']
+    game.tradeProposals = [{
+      id: 7,
+      trade: {
+        fromId: 'p1',
+        toId: 'p3',
+        fromProps: [],
+        toProps: [],
+        fromCash: 0,
+        toCash: 0,
+      },
+    }]
     const room = sala()
+    const action = { kind: 'accept-trade', proposalId: 7 } as const
 
-    expect(localView(game, room, 'tok-3').mayAct('accept-trade')).toBe(true)
-    expect(localView(game, room, 'tok-1').mayAct('accept-trade')).toBe(false) // proponente não responde
-    expect(waitingForOf(game)).toBe('p3')
+    expect(localView(game, room, 'tok-3').mayActAction(action)).toBe(true)
+    expect(localView(game, room, 'tok-1').mayActAction(action)).toBe(false) // proponente não responde
+    expect(waitingForOf(game)).toBe('p1')
   })
 
   it('resposta de empréstimo vai ao credor', () => {

@@ -69,14 +69,18 @@ describe('trade draft', () => {
     expect(draft.to).toEqual({ props: new Set(), cash: 0, tickets: 0, grants: {}, transfers: new Set() })
   })
 
-  it('mantém concessão de imunidade incompatível fora do draft ao ceder o título', () => {
+  it('trata título e imunidade como escolhas exclusivas da mesma propriedade', () => {
     const game = fixture()
     let draft = createTradeDraft(game, 'p1')
 
+    draft = apply(game, draft, { kind: 'toggle-property', party: 'from', pos: 1 })
     draft = apply(game, draft, { kind: 'toggle-grant', party: 'from', pos: 1 })
+    expect(draft.from.props).toEqual(new Set())
     expect(draft.from.grants[1]).toBe(2)
+
     draft = apply(game, draft, { kind: 'toggle-property', party: 'from', pos: 1 })
 
+    expect(draft.from.props).toEqual(new Set([1]))
     expect(draft.from.grants).toEqual({})
     expect(projectTradeDraft(game, draft).trade.fromImmunities).toEqual([])
   })

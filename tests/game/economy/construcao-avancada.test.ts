@@ -30,6 +30,17 @@ const AIRPORT = BOARD.find((s) => s.kind === 'airport')!.pos
 const COST1 = buildCost(BOARD[1] as PropertySquare) // round(60/2)=30
 
 describe('2º hotel (US1)', () => {
+  it('D-050: snapshot parcial acima do teto é preservado e ainda pode vender', () => {
+    const g = brown(6, [1])
+
+    expect(buildHouse(g, 1)).toBe(g)
+    expect(g.titles[1].hotel2).toBe(true)
+
+    const sold = sellBuilding(g, 1)
+    expect(sold.titles[1].hotel2).toBe(false)
+    expect(sold.titles[1].hotel).toBe(true)
+  })
+
   it('SC-001: sobe hotel→2º hotel, custo do hotel (sem estoque — ilimitado)', () => {
     const g = brown(5)
     const out = buildHouse(g, 1)

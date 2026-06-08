@@ -117,4 +117,16 @@ describe('describeLogEntry — contrato do descritor (040, §2)', () => {
     const sentence = describeLogEntry({ kind: 'tax', who: 'p1', amount: 200 }, ROOM)
     expect(sentence.some((f) => f.t === 'money' && f.amount === 200)).toBe(true)
   })
+
+  it('Boom Econômico explica que o crédito de $200 vale para todos ainda na partida', () => {
+    const sentence = describeLogEntry({
+      kind: 'card-immediate',
+      who: 'p2',
+      deck: 'tesouro',
+      name: 'Boom Economico',
+      delta: 200,
+    }, ROOM)
+
+    expect(textOf(sentence)).toBe('Beto: Boom econômico: todos que ainda estão na partida receberam $200')
+  })
 })

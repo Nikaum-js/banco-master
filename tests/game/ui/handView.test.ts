@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { handCardsView, cardTargets } from '@/game/ui/cards/handView'
 import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
-import { RARITY_COLOR } from '@/game/ui/cards/cardMeta'
+import { CARD_DESC, RARITY_COLOR } from '@/game/ui/cards/cardMeta'
 
 // p1 é o jogador ativo (activeSeat 0). pos 1 e 7 são cidades; pos 6 é aeroporto.
 function setup(): GameState {
@@ -17,6 +17,13 @@ const handOf = (g: GameState, id: string, ...ids: string[]) => {
 const find = (g: GameState, pid: string, cardId: string) => handCardsView(g, pid).find((c) => c.id === cardId)!
 
 describe('handCardsView — jogável por timing (US1)', () => {
+  it('descreve cartas de reação como escolhas, sem prometer uso automático', () => {
+    expect(CARD_DESC.bunkerFiscal).toContain('escolha')
+    expect(CARD_DESC.diplomacia).toContain('escolha')
+    expect(CARD_DESC.bunkerFiscal).not.toContain('automática')
+    expect(CARD_DESC.diplomacia).not.toContain('automática')
+  })
+
   it('SC-002: carta de reação (Diplomacia) → não jogável, motivo de reação', () => {
     const g = handOf(setup(), 'diplomacia-1')
     const v = find(g, 'p1', 'diplomacia-1')

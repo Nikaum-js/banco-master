@@ -46,4 +46,20 @@ describe('Limpeza na eliminação §9.4 (019)', () => {
     expect(out.immunities).toHaveLength(1)
     expect(out.tempEffects).toHaveLength(1)
   })
+
+  it('remove propostas enviadas ou recebidas pelo eliminado e preserva as de terceiros', () => {
+    const g = withDebt()
+    const trade = (fromId: string, toId: string) => ({
+      fromId, toId, fromProps: [], fromCash: 0, toProps: [], toCash: 0,
+    })
+    g.tradeProposals = [
+      { id: 1, trade: trade('p1', 'p2') },
+      { id: 2, trade: trade('p3', 'p1') },
+      { id: 3, trade: trade('p2', 'p3') },
+    ]
+
+    const out = declareBankruptcy(g, ctx)
+
+    expect(out.tradeProposals).toEqual([{ id: 3, trade: trade('p2', 'p3') }])
+  })
 })

@@ -111,12 +111,16 @@ describe('LogEntry — forma do evento (040, FR-001..006)', () => {
 describe('LogEntry — famílias antes silenciosas (040, FR-007..013, SC-008)', () => {
   it('build: uma entrada por nível construído, level = resultante', () => {
     let g = createSeedState(['p1', 'p2'])
-    g.titles[1].ownerId = 'p1' // Roma — dono de 1 de 3 já basta para construir (034)
+    for (const pos of [1, 3, 5]) g.titles[pos].ownerId = 'p1'
     g = buildHouse(g, 1)
     expect(g.log.at(-1)).toMatchObject({ kind: 'build', who: 'p1', pos: 1, level: 1 })
-    g = buildHouse(g, 1)
-    g = buildHouse(g, 1)
-    g = buildHouse(g, 1) // 4ª casa (level 4)
+    g = buildHouse(g, 3)
+    g = buildHouse(g, 5)
+    for (let level = 2; level <= 4; level++) {
+      g = buildHouse(g, 1)
+      g = buildHouse(g, 3)
+      g = buildHouse(g, 5)
+    }
     g = buildHouse(g, 1) // 5ª chamada: 4 casas viram 1 hotel (level 5)
     expect(g.log.at(-1)).toMatchObject({ kind: 'build', who: 'p1', pos: 1, level: 5 })
   })
@@ -124,7 +128,9 @@ describe('LogEntry — famílias antes silenciosas (040, FR-007..013, SC-008)', 
   it('sell-building: level resultante após a venda', () => {
     let g = createSeedState(['p1', 'p2'])
     g.titles[1].ownerId = 'p1'
+    g.titles[3].ownerId = 'p1'
     g = buildHouse(g, 1)
+    g = buildHouse(g, 3)
     g = buildHouse(g, 1)
     g = sellBuilding(g, 1)
     expect(g.log.at(-1)).toMatchObject({ kind: 'sell-building', who: 'p1', pos: 1, level: 1 })

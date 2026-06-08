@@ -513,7 +513,9 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
 
     const snap = await t.loadSnapshot()
     expect(snap?.seq).toBe(7)
-    expect(snap?.game).toEqual(game)
+    // O adapter remoto pode acrescentar defaults compatíveis ao normalizar snapshots
+    // legados (paused/log e, desde 047, coleção de propostas).
+    expect(snap?.game).toMatchObject(game)
   })
 })
 

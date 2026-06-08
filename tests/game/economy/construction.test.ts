@@ -13,7 +13,34 @@ function withBrownMajority(): GameState {
   return g
 }
 
+function withBrownComplete(): GameState {
+  const g = withBrownMajority()
+  g.titles[5].ownerId = 'p1'
+  return g
+}
+
 describe('Construir (US1)', () => {
+  it('D-050: jogadores com uma cidade do mesmo país param igualmente na primeira casa', () => {
+    let g = createSeedState(['p1', 'p2'])
+    const [pequim, xangai] = BOARD.filter(
+      (s): s is PropertySquare => s.kind === 'property' && s.uf === 'CN',
+    )
+    g.titles[pequim.pos].ownerId = 'p1'
+    g.titles[xangai.pos].ownerId = 'p2'
+    g.players[0].cash = 5_000
+    g.players[1].cash = 5_000
+
+    g.activeSeat = 0
+    g = buildHouse(g, pequim.pos)
+    expect(g.titles[pequim.pos].houses).toBe(1)
+    expect(buildHouse(g, pequim.pos)).toBe(g)
+
+    g.activeSeat = 1
+    g = buildHouse(g, xangai.pos)
+    expect(g.titles[xangai.pos].houses).toBe(1)
+    expect(buildHouse(g, xangai.pos)).toBe(g)
+  })
+
   it('SC-001: respeita sequência e uniformidade', () => {
     let g = withBrownMajority()
     g = buildHouse(g, 1)
@@ -23,6 +50,43 @@ describe('Construir (US1)', () => {
     g = buildHouse(g, 1)
     expect(g.titles[1].houses).toBe(2)
     expect(g.titles[3].houses).toBe(1)
+  })
+
+  it('D-050: duas cidades param no nível 2 e completar o país libera o nível 3', () => {
+    let g = withBrownMajority()
+    g.players[0].cash = 5_000
+    for (let level = 0; level < 2; level++) {
+      g = buildHouse(g, 1)
+      g = buildHouse(g, 3)
+    }
+
+    expect(g.titles[1].houses).toBe(2)
+    expect(g.titles[3].houses).toBe(2)
+    expect(buildHouse(g, 1)).toBe(g)
+
+    g.titles[5].ownerId = 'p1'
+    g = buildHouse(g, 5)
+    g = buildHouse(g, 5)
+    g = buildHouse(g, 1)
+    expect(g.titles[1].houses).toBe(3)
+  })
+
+  it('D-050: país de duas cidades libera uma casa até ficar completo', () => {
+    const [cannes, paris] = BOARD.filter(
+      (s): s is PropertySquare => s.kind === 'property' && s.group === 'navy',
+    )
+    let g = createSeedState(['p1', 'p2'])
+    g.players[0].cash = 5_000
+    g.titles[cannes.pos].ownerId = 'p1'
+
+    g = buildHouse(g, cannes.pos)
+    expect(g.titles[cannes.pos].houses).toBe(1)
+    expect(buildHouse(g, cannes.pos)).toBe(g)
+
+    g.titles[paris.pos].ownerId = 'p1'
+    g = buildHouse(g, paris.pos)
+    g = buildHouse(g, cannes.pos)
+    expect(g.titles[cannes.pos].houses).toBe(2)
   })
 
   it('SC-002/034: permite construir com 1 cidade do país; bloqueia hipoteca / caixa', () => {
@@ -43,10 +107,11 @@ describe('Construir (US1)', () => {
   })
 
   it('SC-005: 4 casas viram hotel (sem estoque — ilimitado)', () => {
-    let g = withBrownMajority()
+    let g = withBrownComplete()
     for (let i = 0; i < 4; i++) {
       g = buildHouse(g, 1)
       g = buildHouse(g, 3)
+      g = buildHouse(g, 5)
     }
     expect(g.titles[1].houses).toBe(4)
     g = buildHouse(g, 1) // vira hotel
@@ -74,10 +139,11 @@ describe('Vender construções (US3)', () => {
   })
 
   it('SC-004: vender hotel volta para 4 casas (sem desmonte forçado — ilimitado)', () => {
-    let g = withBrownMajority()
+    let g = withBrownComplete()
     for (let i = 0; i < 4; i++) {
       g = buildHouse(g, 1)
       g = buildHouse(g, 3)
+      g = buildHouse(g, 5)
     }
     g = buildHouse(g, 1) // hotel pos1
     g = buildHouse(g, 3) // hotel pos3

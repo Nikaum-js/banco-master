@@ -43,8 +43,8 @@ export type SimAction =
   | { kind: 'pay-off-loan' }
   // Troca (trade.ts) — qualquer jogador pode propor; aceitar/recusar é do destinatário.
   | { kind: 'propose-trade'; trade: Trade }
-  | { kind: 'accept-trade' }
-  | { kind: 'reject-trade' }
+  | { kind: 'accept-trade'; proposalId: number }
+  | { kind: 'reject-trade'; proposalId: number }
 
 export type SimActionKind = SimAction['kind']
 

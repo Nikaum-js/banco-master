@@ -64,56 +64,67 @@ describe('tradableProps', () => {
 })
 
 describe('proposeTrade / acceptTrade / rejectTrade (US1+US2)', () => {
-  it('proposeTrade grava a pendente quando válida', () => {
+  it('proposeTrade acrescenta proposta identificada quando válida', () => {
     const r = proposeTrade(setup(), baseTrade())
-    expect(r.pendingTrade).toEqual(baseTrade())
+    expect(r.tradeProposals).toEqual([{ id: 1, trade: baseTrade() }])
+    expect(r.nextTradeProposalId).toBe(2)
   })
 
-  it('proposeTrade é no-op se já há pendente ou se inválida', () => {
+  it('permite várias propostas ativas, inclusive entre o mesmo par', () => {
     const g = proposeTrade(setup(), baseTrade())
-    expect(proposeTrade(g, baseTrade({ toProps: [6] }))).toBe(g) // já há pendente
+    const r = proposeTrade(g, baseTrade({ toProps: [6] }))
+    expect(r.tradeProposals).toEqual([
+      { id: 1, trade: baseTrade() },
+      { id: 2, trade: baseTrade({ toProps: [6] }) },
+    ])
+    expect(r.nextTradeProposalId).toBe(3)
+  })
+
+  it('proposeTrade é no-op somente quando a nova proposta é inválida', () => {
     const g2 = setup()
     expect(proposeTrade(g2, baseTrade({ toProps: [9] }))).toBe(g2) // inválida
   })
 
-  it('SC-002: acceptTrade aplica a troca (donos/saldos) e limpa a pendente', () => {
-    const g = proposeTrade(setup(), baseTrade())
-    const r = acceptTrade(g)
+  it('SC-002: acceptTrade aplica a troca e remove somente a proposta identificada', () => {
+    let g = proposeTrade(setup(), baseTrade())
+    g = proposeTrade(g, baseTrade({ toProps: [6] }))
+    const r = acceptTrade(g, 1)
     expect(r.titles[1].ownerId).toBe('p2') // pos1 foi de p1 → p2
     expect(r.titles[7].ownerId).toBe('p1') // pos7 foi de p2 → p1
-    expect(r.pendingTrade).toBeNull()
+    expect(r.tradeProposals).toEqual([{ id: 2, trade: baseTrade({ toProps: [6] }) }])
   })
 
   it('SC-003: acceptTrade é no-op se a proposta ficou obsoleta', () => {
     const g = proposeTrade(setup(), baseTrade())
     g.titles[1].ownerId = 'p3' // p1 deixou de ser dono → proposta inválida
-    const r = acceptTrade(g)
+    const r = acceptTrade(g, 1)
     expect(r).toBe(g) // no-op
-    expect(r.pendingTrade).not.toBeNull() // mantém p/ recusar
+    expect(r.tradeProposals).toHaveLength(1) // mantém p/ recusar
   })
 
-  it('SC-003: rejectTrade descarta sem mover nada', () => {
-    const g = proposeTrade(setup(), baseTrade())
-    const r = rejectTrade(g)
-    expect(r.pendingTrade).toBeNull()
+  it('SC-003: rejectTrade descarta somente a escolhida sem mover nada', () => {
+    let g = proposeTrade(setup(), baseTrade())
+    g = proposeTrade(g, baseTrade({ toProps: [6] }))
+    const r = rejectTrade(g, 1)
+    expect(r.tradeProposals).toEqual([{ id: 2, trade: baseTrade({ toProps: [6] }) }])
     expect(r.titles[1].ownerId).toBe('p1') // nada mudou
     expect(r.titles[7].ownerId).toBe('p2')
   })
 
-  it('acceptTrade/rejectTrade sem pendente → no-op', () => {
+  it('acceptTrade/rejectTrade com id inexistente → no-op', () => {
     const g = setup()
-    expect(acceptTrade(g)).toBe(g)
-    expect(rejectTrade(g)).toBe(g)
+    expect(acceptTrade(g, 999)).toBe(g)
+    expect(rejectTrade(g, 999)).toBe(g)
   })
 
   // 027 — registro das aceitas (histórico + log)
   it('SC-002: acceptTrade registra no histórico e loga; recusar não', () => {
-    const acc = acceptTrade(proposeTrade(setup(), baseTrade()))
+    const acc = acceptTrade(proposeTrade(setup(), baseTrade()), 1)
     expect(acc.tradeHistory).toHaveLength(1)
     expect(acc.tradeHistory[0]).toMatchObject({ fromId: 'p1', toId: 'p2' })
     expect(acc.log.some((e) => e.kind === 'trade' && e.who === 'p1' && e.toId === 'p2')).toBe(true)
 
-    const rej = rejectTrade(proposeTrade(setup(), baseTrade()))
+    const rej = rejectTrade(proposeTrade(setup(), baseTrade()), 1)
     expect(rej.tradeHistory).toHaveLength(0)
     expect(rej.log.some((e) => e.kind === 'trade')).toBe(false)
   })
@@ -121,7 +132,7 @@ describe('proposeTrade / acceptTrade / rejectTrade (US1+US2)', () => {
   it('SC-005: histórico é bounded em 12', () => {
     let g = setup()
     g.tradeHistory = Array.from({ length: 12 }, () => ({ fromId: 'p1', toId: 'p2', fromProps: [], fromCash: 0, toProps: [], toCash: 0 }))
-    g = acceptTrade(proposeTrade(g, baseTrade()))
+    g = acceptTrade(proposeTrade(g, baseTrade()), 1)
     expect(g.tradeHistory).toHaveLength(12) // descartou a mais antiga
   })
 })
@@ -132,7 +143,7 @@ describe('imunidades na troca (US3)', () => {
     g.titles[5].ownerId = 'p1' // p1 mantém pos5 (não oferece)
     const trade = baseTrade({ fromImmunities: [{ pos: 5, laps: 2 }] })
     expect(validateTrade(g, trade)).toBe(true)
-    const r = acceptTrade(proposeTrade(g, trade))
+    const r = acceptTrade(proposeTrade(g, trade), 1)
     expect(r.immunities.some((i) => i.beneficiaryId === 'p2' && i.pos === 5 && i.lapsRemaining === 2)).toBe(true)
   })
 
@@ -165,7 +176,7 @@ describe('transferência de imunidade existente (028)', () => {
   })
 
   it('SC-001: executeTrade re-atribui o beneficiário (recebedor passa a ter, ofertante deixa)', () => {
-    const r = acceptTrade(proposeTrade(setupImm(), baseTrade({ fromImmunityTransfers: [5] })))
+    const r = acceptTrade(proposeTrade(setupImm(), baseTrade({ fromImmunityTransfers: [5] })), 1)
     expect(hasImmunity(r, 'p2', 5)).toBe(true)
     expect(hasImmunity(r, 'p1', 5)).toBe(false)
     const im = r.immunities.find((i) => i.pos === 5)!
@@ -174,7 +185,7 @@ describe('transferência de imunidade existente (028)', () => {
   })
 
   it('SC-002: imunidade permanente (lapsRemaining null) transferida → recebedor permanente', () => {
-    const r = acceptTrade(proposeTrade(setupImm({ laps: null }), baseTrade({ fromImmunityTransfers: [5] })))
+    const r = acceptTrade(proposeTrade(setupImm({ laps: null }), baseTrade({ fromImmunityTransfers: [5] })), 1)
     expect(hasImmunity(r, 'p2', 5)).toBe(true)
     expect(r.immunities.find((i) => i.pos === 5)!.lapsRemaining).toBeNull()
   })
@@ -182,7 +193,7 @@ describe('transferência de imunidade existente (028)', () => {
   it('SC-005: transferir existente + conceder nova na mesma troca → ambos aplicados', () => {
     const g = setupImm()
     g.titles[9].ownerId = 'p1' // p1 mantém pos9 → pode conceder nova imunidade sobre ela
-    const r = acceptTrade(proposeTrade(g, baseTrade({ fromImmunityTransfers: [5], fromImmunities: [{ pos: 9, laps: 3 }] })))
+    const r = acceptTrade(proposeTrade(g, baseTrade({ fromImmunityTransfers: [5], fromImmunities: [{ pos: 9, laps: 3 }] })), 1)
     expect(hasImmunity(r, 'p2', 5)).toBe(true) // transferida
     expect(r.immunities.some((i) => i.beneficiaryId === 'p2' && i.pos === 9 && i.lapsRemaining === 3)).toBe(true) // concedida nova
   })
@@ -190,7 +201,7 @@ describe('transferência de imunidade existente (028)', () => {
   it('transferência no lado `to` re-atribui to→from', () => {
     const g = setup()
     g.immunities.push({ beneficiaryId: 'p2', pos: 3, lapsRemaining: 1, granterId: 'p1' })
-    const r = acceptTrade(proposeTrade(g, baseTrade({ toImmunityTransfers: [3] })))
+    const r = acceptTrade(proposeTrade(g, baseTrade({ toImmunityTransfers: [3] })), 1)
     expect(hasImmunity(r, 'p1', 3)).toBe(true)
     expect(hasImmunity(r, 'p2', 3)).toBe(false)
   })

@@ -36,13 +36,20 @@ describe('enumerateActions — decisor correto por tipo de bloqueio', () => {
     expect(points[0].mandatory).toBe(true)
   })
 
-  it('troca pendente: só o destinatário (toId) decide aceitar/recusar', () => {
+  it('proposta identificada: só o destinatário decide aceitar/recusar', () => {
     const s = session(['p1', 'p2', 'p3'])
-    s.game.pendingTrade = { fromId: 'p1', toId: 'p3', fromProps: [], fromCash: 0, toProps: [], toCash: 0 }
+    s.game.tradeProposals = [{
+      id: 4,
+      trade: { fromId: 'p1', toId: 'p3', fromProps: [], fromCash: 0, toProps: [], toCash: 0 },
+    }]
     const points = enumerateActions(s)
     const tradePoint = points.find((p) => p.actions.some((a) => a.kind === 'accept-trade' || a.kind === 'reject-trade'))!
     expect(tradePoint.actorId).toBe('p3')
     expect(tradePoint.mandatory).toBe(false) // não bloqueia o turno do jogador ativo (p1)
+    expect(tradePoint.actions).toEqual([
+      { kind: 'accept-trade', proposalId: 4 },
+      { kind: 'reject-trade', proposalId: 4 },
+    ])
   })
 
   it('reação pendente (bunker): só o reator decide, mesmo não sendo o jogador ativo', () => {

@@ -231,14 +231,14 @@ describe('checkConservation — mecanismos de dinheiro (036 extensão)', () => {
     prev.titles[1].ownerId = 'p1'
     prev.titles[1].mortgaged = true // hipotecada — 013/014 permitem trocar hipotecada
     const trade: Trade = { fromId: 'p1', toId: 'p2', fromProps: [1], fromCash: 0, toProps: [], toCash: 0 }
-    prev.pendingTrade = trade
+    prev.tradeProposals = [{ id: 1, trade }]
     const next = executeTrade(prev, trade)
-    next.pendingTrade = null
-    expect(codesOf(prev, next, { kind: 'accept-trade' })).toEqual([])
+    next.tradeProposals = []
+    expect(codesOf(prev, next, { kind: 'accept-trade', proposalId: 1 })).toEqual([])
 
     const bad = structuredClone(next)
     bad.players[1].cash += 1000
-    expect(codesOf(prev, bad, { kind: 'accept-trade' })).toContain('h')
+    expect(codesOf(prev, bad, { kind: 'accept-trade', proposalId: 1 })).toContain('h')
   })
 
   it('quitar empréstimo: paga só o principal ao credor; corrompido é detectado', () => {

@@ -66,6 +66,47 @@ describe('normalizeSnapshot — os 4 campos entram junto de log/paused (mesmo po
     expect(out.log).toEqual([])
     expect(out.paused).toBeNull()
   })
+
+  it('migra pendingTrade legado para uma proposta identificada', () => {
+    const legacy = legacySnapshotGame() as unknown as Record<string, unknown>
+    delete legacy.tradeProposals
+    delete legacy.nextTradeProposalId
+    legacy.pendingTrade = {
+      fromId: 'p1',
+      toId: 'p2',
+      fromProps: [],
+      fromCash: 100,
+      toProps: [],
+      toCash: 0,
+    }
+
+    const out = normalizeSnapshot(legacy as unknown as PersistedSnapshot['game'])
+
+    expect(out.tradeProposals).toEqual([{ id: 1, trade: legacy.pendingTrade }])
+    expect(out.nextTradeProposalId).toBe(2)
+    expect('pendingTrade' in out).toBe(false)
+  })
+
+  it('preserva ids atuais e corrige contador defasado', () => {
+    const game = createSeedState(['p1', 'p2'])
+    game.tradeProposals = [{
+      id: 8,
+      trade: {
+        fromId: 'p1',
+        toId: 'p2',
+        fromProps: [],
+        fromCash: 100,
+        toProps: [],
+        toCash: 0,
+      },
+    }]
+    game.nextTradeProposalId = 3
+
+    const out = normalizeSnapshot(game)
+
+    expect(out.tradeProposals).toEqual(game.tradeProposals)
+    expect(out.nextTradeProposalId).toBe(9)
+  })
 })
 
 describe('snapshot antigo — jogável, termina, matchSummary não lança (T010)', () => {

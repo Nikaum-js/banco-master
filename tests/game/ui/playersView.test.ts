@@ -32,6 +32,17 @@ describe('playersView — GameState → painel (020)', () => {
     expect(view[1].active).toBe(true)
   })
 
+  it('ordena o painel pela sequência real de jogada', () => {
+    const g = createSeedState(['p1', 'p2', 'p3'])
+    g.turnOrder = [2, 0, 1]
+    g.activeSeat = 0
+
+    const view = playersView(g)
+
+    expect(view.map((player) => player.id)).toEqual(['p3', 'p1', 'p2'])
+    expect(view[0].active).toBe(true)
+  })
+
   it('SC-001: loanActive e immune derivados do estado', () => {
     const g = createSeedState(['p1', 'p2'])
     g.loans.push({ debtorId: 'p1', creditorId: 'p2', principal: 100, ratePct: 20 })

@@ -211,9 +211,18 @@ export function enumerateActions(session: SimSession): DecisionPoint[] {
   const turnActions = turnActionsFor(session, active)
   if (turnActions.length > 0) points.push({ actorId: active.id, mandatory: true, actions: turnActions })
 
-  if (game.pendingTrade) {
-    points.push({ actorId: game.pendingTrade.toId, mandatory: false, actions: [{ kind: 'accept-trade' }, { kind: 'reject-trade' }] })
-  } else {
+  for (const proposal of game.tradeProposals) {
+    points.push({
+      actorId: proposal.trade.toId,
+      mandatory: false,
+      actions: [
+        { kind: 'accept-trade', proposalId: proposal.id },
+        { kind: 'reject-trade', proposalId: proposal.id },
+      ],
+    })
+  }
+  // Limite só da estratégia aleatória: evita inflar a árvore; o motor não impõe teto.
+  if (game.tradeProposals.length < game.players.filter((player) => !player.eliminated).length) {
     for (const { fromId, trade } of candidateTrades(game)) {
       points.push({ actorId: fromId, mandatory: false, actions: [{ kind: 'propose-trade', trade }] })
     }

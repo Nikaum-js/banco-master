@@ -57,11 +57,14 @@ function checkB(prev: GameState, next: GameState, action?: SimAction): Violation
       out.push({ code: 'b', detail: `concessão de empréstimo não conservou: devedor ${dDebtor}, credor ${dCreditor}, principal ${principal}` })
     }
   }
-  if (action.kind === 'accept-trade' && prev.pendingTrade) {
-    const { fromId, toId } = prev.pendingTrade
-    const before = cashOf(prev, fromId) + cashOf(prev, toId)
-    const after = cashOf(next, fromId) + cashOf(next, toId)
-    if (after > before) out.push({ code: 'b', detail: `troca criou dinheiro do nada: ${before} → ${after}` })
+  if (action.kind === 'accept-trade') {
+    const trade = prev.tradeProposals.find((proposal) => proposal.id === action.proposalId)?.trade
+    if (trade) {
+      const { fromId, toId } = trade
+      const before = cashOf(prev, fromId) + cashOf(prev, toId)
+      const after = cashOf(next, fromId) + cashOf(next, toId)
+      if (after > before) out.push({ code: 'b', detail: `troca criou dinheiro do nada: ${before} → ${after}` })
+    }
   }
   return out
 }

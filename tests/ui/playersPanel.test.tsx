@@ -13,8 +13,9 @@ afterEach(() => {
 })
 
 describe('painel de participantes', () => {
-  it('expõe a lotação, a ordem dos assentos e o turno atual sem rótulo visual redundante', () => {
+  it('expõe a lotação, segue a ordem de jogada e marca o turno sem numeração redundante', () => {
     const game = createSeedState(['p1', 'p2'])
+    game.turnOrder = [1, 0]
     act(() => useGameStore.setState({ game }))
 
     const { container } = render(<PlayersPanel />)
@@ -23,11 +24,13 @@ describe('painel de participantes', () => {
     const roster = screen.getByRole('list', { name: 'Participantes da partida' })
     const rows = within(roster).getAllByRole('listitem')
     expect(rows).toHaveLength(2)
+    expect(within(rows[0]).getByText('Jogador 2')).toBeTruthy()
+    expect(within(rows[1]).getByText('Jogador 1')).toBeTruthy()
     expect(rows[0].dataset.active).toBe('true')
     expect(rows[0].hasAttribute('aria-current')).toBe(false)
     expect(within(rows[0]).getByText('Turno atual').classList.contains('sr-only')).toBe(true)
     expect(container.querySelector('.players-capacity__slots')).toBeNull()
-    expect(container.querySelectorAll('.player-row__seat')[0]?.textContent).toBe('01')
+    expect(container.querySelector('.player-row__seat')).toBeNull()
     expect(container.querySelector('.player-row__portrait .avatar-artwork')).toBeTruthy()
     expect(within(rows[0]).getByText('Caixa')).toBeTruthy()
     expect(within(rows[0]).queryByText('VEZ')).toBeNull()

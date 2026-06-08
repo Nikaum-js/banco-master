@@ -64,8 +64,8 @@ export const INVALID_PROBE_CATALOG: ProbeEntry[] = [
   },
   {
     name: 'aceitar-troca-inexistente',
-    isApplicable: (g) => g.pendingTrade === null,
-    build: () => ({ kind: 'accept-trade' }),
+    isApplicable: (g) => g.tradeProposals.length === 0,
+    build: () => ({ kind: 'accept-trade', proposalId: Number.MAX_SAFE_INTEGER }),
   },
   {
     name: 'responder-emprestimo-inexistente',

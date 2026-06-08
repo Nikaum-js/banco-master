@@ -15,7 +15,7 @@ afterEach(() => {
   useGameStore.setState({ game: originalGame })
   useBusTicketUI.setState({ armed: false, boarding: false })
   useHandCardUI.setState({ cardId: null })
-  useTradeUI.setState({ open: false, dismissed: false })
+  useTradeUI.setState({ open: false, selectedProposalId: null })
 })
 
 describe('VisualLab', () => {
@@ -50,9 +50,9 @@ describe('VisualLab', () => {
 
   it('expõe propostas recebidas válidas e inválidas', () => {
     prepareVisualLabCase('trade-received')
-    expect(useGameStore.getState().game.pendingTrade?.fromProps).toEqual([1, 3])
+    expect(useGameStore.getState().game.tradeProposals[0]?.trade.fromProps).toEqual([1, 3])
 
     prepareVisualLabCase('trade-invalid')
-    expect(useGameStore.getState().game.pendingTrade?.fromProps).toEqual([13])
+    expect(useGameStore.getState().game.tradeProposals[0]?.trade.fromProps).toEqual([13])
   })
 })

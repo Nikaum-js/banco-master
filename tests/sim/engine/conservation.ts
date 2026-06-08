@@ -603,7 +603,7 @@ function checkDirectAction(prev: GameState, next: GameState, action: SimAction, 
       return
     }
     case 'accept-trade': {
-      const trade = prev.pendingTrade
+      const trade = prev.tradeProposals.find((proposal) => proposal.id === action.proposalId)?.trade
       if (!trade || !validateTrade(prev, trade)) return // pode ter ficado obsoleta desde o propose (024)
       const feeOn = (props: number[]) => props.reduce((sum, p) => sum + (prev.titles[p]?.mortgaged ? transferKeepFee(BOARD[p]) : 0), 0)
       const feesFrom = feeOn(trade.toProps) // `from` recebe `toProps`
