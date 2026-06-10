@@ -229,7 +229,12 @@ declare
   current_generation integer;
   current_status text;
   has_game boolean;
+  -- Cópias locais porque `rooms` tem colunas homônimas destes parâmetros, e o UPDATE abaixo
+  -- traz a tabela pro escopo: `set seats = ...(seats)` seria 42702 (ambiguous), com
+  -- `plpgsql.variable_conflict = error`. Só o `room_id` escapa — a coluna se chama `id`.
   requested_generation integer := match_generation;
+  requested_seats jsonb := seats;
+  requested_opening_mode text := opening_mode;
 begin
   if current_host is null or current_host is distinct from claimed_uid then
     raise exception 'not the current host of this room';
@@ -255,9 +260,9 @@ begin
   update public.rooms
   set
     status = 'lobby',
-    seats = public.preserve_seat_codes(room_id, seats),
+    seats = public.preserve_seat_codes(room_id, requested_seats),
     match_generation = requested_generation,
-    opening_mode = opening_mode,
+    opening_mode = requested_opening_mode,
     opening_auction = null,
     game = null,
     secrets = '{}'::jsonb
