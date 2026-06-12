@@ -4,31 +4,14 @@
 
 # Magnata Imobiliário
 
-</div>
-
-Jogo de tabuleiro imobiliário para até 8 pessoas, online, direto no navegador. Tema "Cidades do Mundo".
+Jogo de tabuleiro imobiliário para até 8 pessoas, online, direto no navegador.
 
 [![CI](https://github.com/Nikaum-js/magnata-imobiliario/actions/workflows/ci.yml/badge.svg)](https://github.com/Nikaum-js/magnata-imobiliario/actions/workflows/ci.yml)
 [![Deploy](https://github.com/Nikaum-js/magnata-imobiliario/actions/workflows/deploy.yml/badge.svg)](https://github.com/Nikaum-js/magnata-imobiliario/actions/workflows/deploy.yml)
 
----
+</div>
 
-## Índice
-
-- [Como uma partida funciona](#como-uma-partida-funciona)
-- [As mecânicas](#as-mecânicas)
-- [Stack](#stack)
-- [Rodando localmente](#rodando-localmente)
-- [Variáveis de ambiente](#variáveis-de-ambiente)
-- [Scripts](#scripts)
-- [Arquitetura](#arquitetura)
-- [Multiplayer](#multiplayer)
-- [Testes](#testes)
-- [Documentação](#documentação)
-- [Deploy](#deploy)
-- [Contribuindo](#contribuindo)
-
----
+![Partida de seis jogadores no Atlas da Meia-Noite](docs/screenshots/tabuleiro-atlas.jpg)
 
 ## Como uma partida funciona
 
@@ -40,9 +23,29 @@ cada jogada, aplica, e conta aos outros o que aconteceu. Os demais são clientes
 exatamente o mesmo resultado. Não existe servidor de jogo — o Supabase serve de transporte e de
 memória, não de árbitro.
 
-O tabuleiro tem 48 casas: dez países com suas cidades, quatro aeroportos, duas utilidades,
-impostos, Acaso, Tesouro, Prisão, Férias e o espaço de Bus Ticket. São 8 jogadores humanos, sem IA
-e sem bots.
+São 8 jogadores humanos, sem IA e sem bots.
+
+## Os dois tabuleiros
+
+O mapa é escolhido na home, fica gravado na sala e vale para todos os assentos. Os dois rodam sobre
+o mesmo motor, a mesma economia e as mesmas regras.
+
+| | **Atlas da Meia-Noite** | **Cidade da Fuligem** |
+|---|---|---|
+| Tema | Cidades do Mundo | Revolução Industrial |
+| Casas | 48 | 40 |
+| Conjuntos | 10 países | 8 bairros |
+| Compráveis | Cidades, aeroportos, utilidades | Cidades, estações, minas |
+| Impostos | Sim | Não |
+| Pote acumulado | Loteria | Sorte Grande |
+
+A Fuligem é menor de propósito: com 40 casas a partida termina mais cedo, e a faixa quente cai logo
+depois da prisão. Ela troca as utilidades e os impostos do Atlas por quatro **minas**, um conjunto
+comprável que não cobra aluguel nenhum: cada mina dá um bônus passivo sobre uma classe de ativo
+diferente que o dono já tem. Qual delas vale mais depende da carteira de cada um, e é isso que dá
+conteúdo ao leilão.
+
+![Cidade da Fuligem](docs/screenshots/tabuleiro-fuligem.jpg)
 
 ## As mecânicas
 
@@ -57,16 +60,23 @@ centro do tabuleiro e entrega o pote a quem parar nas Férias, o que dá a quem 
 chance real de virada. E o **Incentivo Fiscal** paga por propriedade hipotecada, ou seja: rende
 justamente para quem está mal.
 
-**O segundo é a partida que se decide cedo e não acaba.** Quando restam três terrenos sem dono ou
+**O segundo é a partida que se decide cedo e não acaba.** Quando restam seis terrenos sem dono ou
 menos, todos vão a **pregão simultâneo** — 24 segundos por lote, cronômetro à vista. Fecha o
 tabuleiro, faz o aluguel circular e apressa o fim. Quando alguém quebra, o **espólio** dele também
 vai a pregão em vez de voltar de graça ao banco. E quem simplesmente não quer mais jogar pode
 **desistir**, sem precisar estar insolvente para isso.
 
+![Pregão de escassez com seis lotes simultâneos](docs/screenshots/pregao.jpg)
+
 **O terceiro é a falta de coisa para fazer com dinheiro no fim.** Depois do hotel vêm o **segundo
 hotel**, o **arranha-céu** e o **Hangar** nos aeroportos. **Empréstimos entre jogadores** cobram
 juros de 10% a 50% a cada passagem pelo GO e vencem em três voltas — quem empresta corre risco de
 verdade, com o patrimônio do devedor como garantia.
+
+Dívida não é game over automático: enquanto o patrimônio cobrir, o jogo exige hipotecar, vender ou
+negociar antes de aceitar uma falência.
+
+![Cobrança de dívida com opção de pedir empréstimo ou declarar falência](docs/screenshots/divida.jpg)
 
 Por cima disso, 39 cartas em dois baralhos e três raridades. As de mão são **privadas** — os outros
 veem só o contador —, não podem ser negociadas, e a mão tem limite de três. Entre elas as
@@ -112,10 +122,12 @@ Sobe em `http://localhost:5173`:
 | `/how-to-play` | Guia de regras |
 | `/faq` | Perguntas frequentes |
 
+![Landing pública](docs/screenshots/landing.jpg)
+
 **Dá para jogar sem configurar nada.** `/play?local=1` entrega um cliente único que joga por todos
 os assentos — é assim que se desenvolve e se testa regra. Multiplayer de verdade precisa das
 variáveis abaixo. Em desenvolvimento, `?players=2|3|6` escolhe quantos jogadores entram no modo
-local.
+local e `&map=fuligem` troca o tabuleiro.
 
 ## Variáveis de ambiente
 
@@ -130,8 +142,8 @@ cp .env.example .env
 | `VITE_SENTRY_DSN` | não | Sem DSN, nenhum código de monitoramento roda |
 | `VITE_TELEMETRY` | não | `1` liga a contagem anônima de partidas. Em desenvolvimento nunca envia |
 
-As migrations ficam em [`supabase/migrations/`](supabase/migrations/) — seis, aplicadas em ordem. O
-procedimento de operação está no [runbook](docs/RUNBOOK.md).
+As migrations ficam em [`supabase/migrations/`](supabase/migrations/), aplicadas em ordem. Quais já
+estão em produção e como aplicar as próximas, quem diz é o [runbook](docs/RUNBOOK.md).
 
 ## Scripts
 
@@ -174,8 +186,8 @@ src/
 │  └─ ui/             componentes e view-models
 ├─ net/               transporte, autoridade, cliente, perspectiva, sala
 ├─ boards/            tabuleiro, tokens, bandeiras, escrituras
-├─ marketing/         landing, guia, FAQ (HTML + CSS, sem JS de aplicação)
-└─ lib/               dados do tabuleiro, formatação
+├─ lib/               catálogo de mapas, dados do tabuleiro, formatação
+└─ marketing/         landing, guia, FAQ (HTML + CSS, sem JS de aplicação)
 ```
 
 Três regras explicam o resto do código.
@@ -217,13 +229,13 @@ O que isso precisou resolver:
 
 ## Testes
 
-São 1.211 testes em 139 arquivos, em quatro camadas com propósitos diferentes.
+São 1.435 testes em 156 arquivos, em quatro camadas com propósitos diferentes.
 
 Os **unitários** (`tests/game`) cobrem cada regra do SRS isolada, e a exaustividade é imposta pelo
 tipo: um evento de log novo sem frase, ícone e som não compila. Os de **rede** (`tests/net`)
 verificam o transporte contra um Supabase falso — convergência, anti-spoof, reconexão, pausa,
 revanche, privacidade de cartas. O **E2E** (`e2e/`) roda navegador de verdade com 2, 3 e 6
-jogadores, mais acessibilidade e fronteira de erro.
+jogadores, nos dois mapas, mais acessibilidade e fronteira de erro.
 
 A camada mais valiosa é a **simulação** (`tests/sim`): partidas completas com política aleatória e
 seed fixa, e cada despacho passa por sete invariantes. Conservação pergunta se o dinheiro fecha, e
@@ -248,8 +260,8 @@ bun run test:e2e       # só o navegador
 
 ## Documentação
 
-O repositório é spec-driven, com [GitHub Spec Kit](https://github.com/github/spec-kit): 51 specs e
-67 decisões registradas. Cada camada tem um papel, sem sobreposição.
+O repositório é spec-driven, com [GitHub Spec Kit](https://github.com/github/spec-kit): 56 specs e
+79 decisões registradas. Cada camada tem um papel, sem sobreposição.
 
 | Camada | Onde | O que é |
 |---|---|---|
@@ -278,11 +290,9 @@ Roda na Vercel, e o auto-deploy nativo em `main` está **desligado** por
 [`deploy.yml`](.github/workflows/deploy.yml), e só depois de o CI fechar verde.
 
 O [CI](.github/workflows/ci.yml) classifica os arquivos alterados e roda em paralelo somente os
-gates afetados: quality; contrato do banco; simulação seedada; smoke de navegador com 2, 3 e 6
-jogadores; responsividade; acessibilidade; partida completa e animação real. Os smokes longos usam
-movimento reduzido; a coreografia normal tem um teste curto próprio. Mudança no motor roda 30
-partidas por contagem, enquanto o schedule diário das 03h BRT e o disparo manual com
-`full_simulation` rodam as 100 por contagem.
+gates afetados: qualidade, contrato do banco, simulação seedada, smoke de navegador nos dois mapas,
+responsividade, acessibilidade e partida completa. Mudança no motor amplia o lote de simulação, e
+há um schedule diário que roda a bateria inteira.
 
 ## Contribuindo
 
