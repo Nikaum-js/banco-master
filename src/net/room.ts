@@ -6,6 +6,7 @@
 //
 import { normalizeAvatar, type AvatarId } from '@/boards/playerAvatarCatalog'
 import { normalizeSkin, type SkinId } from '@/boards/playerSkinCatalog'
+import { coerceBoardId, type BoardId } from '@/lib/mapCatalog'
 import { normalizeMatchHistory, type RoomMatchHistoryEntry } from './roomHistory'
 
 // Identidade visual: a COR é única por sala (§12.5); NOME, AVATAR e SKIN podem repetir. A
@@ -92,6 +93,10 @@ export interface Room {
   openingAuction?: OpeningAuction | null
   /** D-067: até 10 resumos finais da própria sala. Opcional só no fio legado. */
   matchHistory?: RoomMatchHistoryEntry[]
+  /** 055/D-069: mapa jogável da sala. Escolhido ANTES da criação e imutável (não existe
+   * mutador). Opcional apenas para absorver salas anteriores à migration 0008 — a
+   * normalização resolve ausência/valor desconhecido para 'atlas'. */
+  boardId?: BoardId
 }
 
 // Sala PUBLICADA (043, D-036/data-model §3) — o que trafega em `publishRoom`/`onRoom`. Sem
@@ -113,6 +118,7 @@ export interface PublicRoom {
   openingMode?: OpeningMode
   openingAuction?: OpeningAuction | null
   matchHistory?: RoomMatchHistoryEntry[]
+  boardId?: BoardId
 }
 
 export function toPublicRoom(room: Room): PublicRoom {
@@ -126,6 +132,7 @@ export function toPublicRoom(room: Room): PublicRoom {
     openingMode: normalized.openingMode,
     openingAuction: normalized.openingAuction,
     matchHistory: normalized.matchHistory,
+    boardId: normalized.boardId,
     seats: normalized.seats.map(({ reentryCode: _reentryCode, openingBid, bidLocked, ...rest }) => ({
       ...rest,
       openingBid: reveal ? (openingBid ?? null) : null,
@@ -161,6 +168,7 @@ export function normalizeRoom(room: Room): Room {
     openingMode: room.openingMode === 'dice-roll' ? 'dice-roll' : 'sealed-bid',
     openingAuction: room.openingAuction ?? null,
     matchHistory: normalizeMatchHistory(room.matchHistory),
+    boardId: coerceBoardId(room.boardId),
     seats: room.seats.map((seat) => ({
       ...seat,
       historyId: typeof seat.historyId === 'string' && seat.historyId ? seat.historyId : seat.uid,
@@ -233,7 +241,8 @@ export function hostSeat(room: Room): Seat {
 }
 
 // Cria a sala com o host ocupando o 1º assento (FR-001). Cor livre entre as da paleta.
-export function createRoom(id: string, host: Identity): Room {
+// O mapa (055/D-069) entra AQUI e nunca mais muda: não existe `selectBoardId`.
+export function createRoom(id: string, host: Identity, opts?: { boardId?: BoardId }): Room {
   if (!isSeatColor(host.color)) throw new Error('invalid-color')
   return {
     id,
@@ -243,6 +252,7 @@ export function createRoom(id: string, host: Identity): Room {
     openingMode: 'sealed-bid',
     openingAuction: null,
     matchHistory: [],
+    boardId: coerceBoardId(opts?.boardId),
     seats: [{
       playerId: seatIdFor(0), uid: host.uid, historyId: host.historyId ?? host.uid, name: host.name, color: host.color,
       avatar: normalizeAvatar(host.avatar),
