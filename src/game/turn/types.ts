@@ -3,9 +3,9 @@
 import type { Title, ResolutionSlice, Loan, LoanRequest, Immunity, TempEffect, LogEntry, Trade, TradeProposal, LandAuction } from '../economy/types'
 import type { CardSlot, DeckId } from '../cards/types'
 
-export type SpeedFace = 1 | 2 | 3 | 'mr-banco' | 'onibus'
+export type SpeedFace = 1 | 2 | 3 | 'mr-magnata' | 'onibus'
 
-export type SpecialMove = 'mr-banco' | 'onibus' | 'triple' | null
+export type SpecialMove = 'mr-magnata' | 'onibus' | 'triple' | null
 
 export interface Roll {
   white: [number, number]

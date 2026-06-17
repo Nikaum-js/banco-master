@@ -1,5 +1,5 @@
 #!/bin/bash
-# Stop hook (banco-master): roda a suíte de testes do motor quando há mudanças
+# Stop hook (magnata-imobiliario): roda a suíte de testes do motor quando há mudanças
 # em src/ ou tests/ não commitadas. Falha bloqueia o encerramento do turno
 # (exit 2 → stderr vira feedback para o Claude corrigir antes de parar).
 

@@ -1,4 +1,4 @@
-# Banco Master Constitution
+# Magnata Imobiliário Constitution
 
 > Princípios não-negociáveis do projeto. Toda spec, plan e implementação deve respeitar este documento.
 > Regras de negócio detalhadas vivem em [`docs/SRS.md`](../../docs/SRS.md); entidades, invariantes e constantes técnicas pertencem à própria spec de cada feature.

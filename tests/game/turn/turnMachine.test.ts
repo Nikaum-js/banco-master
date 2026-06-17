@@ -141,10 +141,10 @@ describe('Speed Die no movimento (US3)', () => {
     expect(g.turn.mayRollAgain).toBe(true) // dupla nos brancos preservada (Q3)
   })
 
-  it('FR-024: Mr. Banco Master avança até a próxima casa comprável', () => {
+  it('FR-024: Mr. Magnata avança até a próxima casa comprável', () => {
     let g = createSeedState(['p1', 'p2'])
     g.players[0].completouPrimeiraVolta = true
-    const ctx = ctxWith([1, 1, 4], { speedDie: true }) // brancos 1,1 + mr-banco → move 2 (pos2 tesouro), depois comprável
+    const ctx = ctxWith([1, 1, 4], { speedDie: true }) // brancos 1,1 + mr-magnata → move 2 (pos2 tesouro), depois comprável
     g = rollDice(g, ctx)
     expect(g.players[0].pos).toBe(3) // pos2 não-comprável → pos3 (property)
     expect(g.turn.state).toBe('casa-a-resolver')

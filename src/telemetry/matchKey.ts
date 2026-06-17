@@ -5,7 +5,7 @@
 // `BUILD_SALT` é PÚBLICO: vai no bundle, visível a quem abrir o DevTools. Ele não guarda
 // segredo nenhum — só evita que a mesma sala correlacione entre versões diferentes do app,
 // o que ninguém precisa. A proteção real é o hash em si (SHA-256, sem volta).
-const BUILD_SALT = (import.meta.env.VITE_BUILD_SALT as string | undefined) ?? 'banco-master'
+const BUILD_SALT = (import.meta.env.VITE_BUILD_SALT as string | undefined) ?? 'magnata-imobiliario'
 
 function toHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer))

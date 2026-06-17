@@ -1,4 +1,4 @@
-# Banco Master — Milestones
+# Magnata Imobiliário — Milestones
 
 > Roadmap macro até a v1.0. Lista **o que** falta, não **como** fazer.
 > **Abordagem real:** desenvolvimento **vertical por feature** com GitHub Spec Kit — cada feature percorre `spec → plan → tasks → implement` (com testes) antes da próxima. Não é waterfall (specs todas, depois planos todos).

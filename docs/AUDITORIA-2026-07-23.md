@@ -1,4 +1,4 @@
-# Auditoria ponta a ponta — Banco Master (2026-07-23)
+# Auditoria ponta a ponta — Magnata Imobiliário (2026-07-23)
 
 > Diagnóstico apenas — nenhum código foi alterado. Toda afirmação está ancorada em
 > `arquivo:linha` lido na data da auditoria. Suíte verificada antes: **353 testes / 46
@@ -52,7 +52,7 @@
 | # | Achado | Evidência | Impacto |
 |---|---|---|---|
 | B1 | **Catch-up principal foi removido sem rastro no SRS:** GO Progressivo ($100–$400 por ranking, `SRS.md:844`) virou flat $200 (`balancing.ts:11`). Sobram como catch-up: Tax Man (atinge mais quem tem mais, `taxMan.ts:43-44`) e Free Parking aleatório | `balancing.ts:8-13` | O princípio IV (catch-up discreto) ficou apoiado só em RNG; e a "verdade absoluta" (princípio I) está desatualizada |
-| B2 | **Speed Die suspenso deixa 3 mecânicas mortas em produção:** `onibus`/`triple`/`mr-banco` (`turnMachine.ts:169-182`) e os choosers só existem via testes; com 2 dados em 48 casas, a volta média é ~14 turnos-jogador | `theme.ts:53-56` | Ritmo mais lento que o clássico; decidir substituto de ritmo ou recalibrar |
+| B2 | **Speed Die suspenso deixa 3 mecânicas mortas em produção:** `onibus`/`triple`/`mr-magnata` (`turnMachine.ts:169-182`) e os choosers só existem via testes; com 2 dados em 48 casas, a volta média é ~14 turnos-jogador | `theme.ts:53-56` | Ritmo mais lento que o clássico; decidir substituto de ritmo ou recalibrar |
 | B3 | **Free Parking é injeção líquida:** pote semeado E reabastecido com $500 a cada coleta (`balancing.ts:27`), e impostos/multas vão ao pote em vez de sumir (`resolution.ts:69`, `turnMachine.ts:289`) — não são sink. Sinks reais: compras, construção, deshipoteca (+10%), Hangar, Tax Man | `balancing.ts:16-28` | Inflação estrutural; hoje compensada pelos sinks — mas é o primeiro knob a olhar se partidas arrastarem com humanos |
 | B4 | **A simulação não mede o que importa para balanceamento:** o report conta ocorrências de mecanismo e rounds, mas **não registra vencedor, curva de patrimônio nem estratégia** (`tests/sim/engine/report.ts`) | `reports/headless-2p.md` | Impossível afirmar/refutar dominant strategy com evidência. A hipótese a testar: construção com país parcial (D-026) + tier fixo de casa (`theme.ts:15-19`) tem ROI desproporcional em orange/red com 1 cidade |
 | B5 | **Empréstimos (§15) nunca ocorrem no sim:** `grant-loan`, `pay-off-loan`, `loan-interest-on-go` com 0 ocorrências — gap admitido no próprio report | `reports/headless-*.md` (rodapé) | Mecânica inteira sem validação empírica — e é justamente onde achei o bug C1 |

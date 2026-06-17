@@ -30,7 +30,7 @@ describe('Aluguel — cálculo puro (US2)', () => {
   it('diceValue inclui a face numérica do Speed Die, não os símbolos', () => {
     const r: Roll = { white: [3, 4], speed: 2, isDouble: false, move: 9, special: null }
     expect(diceValue(r)).toBe(9)
-    const r2: Roll = { white: [3, 4], speed: 'mr-banco', isDouble: false, move: 7, special: 'mr-banco' }
+    const r2: Roll = { white: [3, 4], speed: 'mr-magnata', isDouble: false, move: 7, special: 'mr-magnata' }
     expect(diceValue(r2)).toBe(7)
   })
 })

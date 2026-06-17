@@ -1,6 +1,6 @@
 ---
 name: spec-prompt
-description: Monta o prompt estruturado de criação de spec do GitHub Spec Kit para o Banco Master a partir de uma descrição de feature — descobre o próximo número de spec, aponta a leitura obrigatória dos docs canônicos (constitution, SRS por §, DECISIONS, PRD, HANDOVER), deriva escopo / fora do escopo / restrições inegociáveis / entregáveis, e opcionalmente já executa o /speckit-specify. Usar quando o usuário quiser abrir uma spec nova (ex.: "monta o prompt da spec de X", "quero abrir a spec do multiplayer", "prepara o /speckit-specify de Y") e precisar do prompt pronto pra colar noutro modelo, ou pra rodar direto.
+description: Monta o prompt estruturado de criação de spec do GitHub Spec Kit para o Magnata Imobiliário a partir de uma descrição de feature — descobre o próximo número de spec, aponta a leitura obrigatória dos docs canônicos (constitution, SRS por §, DECISIONS, PRD, HANDOVER), deriva escopo / fora do escopo / restrições inegociáveis / entregáveis, e opcionalmente já executa o /speckit-specify. Usar quando o usuário quiser abrir uma spec nova (ex.: "monta o prompt da spec de X", "quero abrir a spec do multiplayer", "prepara o /speckit-specify de Y") e precisar do prompt pronto pra colar noutro modelo, ou pra rodar direto.
 argument-hint: "[--run] <descrição da feature em uma frase>"
 ---
 
@@ -56,7 +56,7 @@ Embutir na seção "Restrições inegociáveis" do template, sempre:
 ## Template
 
 ````
-Você vai criar a spec «NNN» do Banco Master usando GitHub Spec Kit.
+Você vai criar a spec «NNN» do Magnata Imobiliário usando GitHub Spec Kit.
 Idioma: PT-BR. NÃO escreva código — pare em /speckit-specify (+ /speckit-clarify se houver ambiguidade).
 
 ## Leia OBRIGATORIAMENTE antes de specificar (nesta ordem)

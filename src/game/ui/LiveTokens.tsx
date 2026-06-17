@@ -42,6 +42,7 @@ function useWalkedPositions(targets: Record<string, number>, paused: boolean, re
     if (paused) return // dados em arremesso: não anda ainda
     const next: Record<string, number> = {}
     const arrived: string[] = [] // chegaram NESTE passo (andando→parado)
+    const crossedGo: string[] = [] // cruzaram 47→0 NESTE passo visual
     let moving = false
     let walked = false
     for (const id of Object.keys(targets)) {
@@ -60,6 +61,7 @@ function useWalkedPositions(targets: Record<string, number>, paused: boolean, re
         moving = true
         arrived.push(id)
       }
+      if (cur > next[id]) crossedGo.push(id)
     }
     if (walked) play('step-tick') // um tick por batida de STEP_MS, mesmo com N peões (035)
     // Remove ids que sumiram (eliminados não importam aqui).
@@ -73,6 +75,7 @@ function useWalkedPositions(targets: Record<string, number>, paused: boolean, re
           for (const id of arrived) pop[id] = (pop[id] ?? 0) + 1
           return { shown: next, pop }
         })
+        for (const id of crossedGo) useTokenAnim.getState().signalGoCrossing(id)
         if (arrived.length) play('step-land') // um som por chegada, mesmo com N peões (035)
       }, delay)
       return () => { if (timer.current) clearTimeout(timer.current) }

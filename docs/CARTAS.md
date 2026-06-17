@@ -1,9 +1,9 @@
-# Banco Master — Sistema de Cartas
+# Magnata Imobiliário — Sistema de Cartas
 
 **Documento explicativo para avaliação com stakeholders.**
 **Versão:** 1.0 | Maio de 2026
 
-> Este documento explica o **sistema de cartas** do Banco Master. Resumo do que tem aqui:
+> Este documento explica o **sistema de cartas** do Magnata Imobiliário. Resumo do que tem aqui:
 > - Como funciona (visão geral)
 > - Sistema de raridade
 > - Catálogo completo de todas as cartas
@@ -14,7 +14,7 @@
 
 ## 🎯 Resumo Executivo
 
-O Banco Master tem um **sistema de cartas com raridade** inspirado em jogos modernos (Hearthstone, Magic) aplicado ao formato Monopoly. Cada partida tem 2 baralhos com 16 cartas cada, distribuídas em 3 níveis de raridade. Cartas raras e lendárias **vão para a mão** do jogador e podem ser usadas estrategicamente; cartas comuns têm efeito imediato.
+O Magnata Imobiliário tem um **sistema de cartas com raridade** inspirado em jogos modernos (Hearthstone, Magic) aplicado ao formato Monopoly. Cada partida tem 2 baralhos com 16 cartas cada, distribuídas em 3 níveis de raridade. Cartas raras e lendárias **vão para a mão** do jogador e podem ser usadas estrategicamente; cartas comuns têm efeito imediato.
 
 **Por que faz diferença:**
 - Adiciona uma camada de **estratégia mental** que o Monopoly tradicional não tem.
@@ -75,7 +75,7 @@ Cartas de **baixo impacto** — efeitos imediatos pequenos. São o "miolo" do ba
 | **Casas no tabuleiro** | 3 | 3 |
 | **Cartas no deck** | 16 | 16 |
 
-> 📌 **Princípio de design importante:** No Richup.io o Tesouro virou casa irrelevante de "receber troquinho". No Banco Master, **Tesouro é tão impactante quanto Acaso** — a diferença é **temática** (ofensivo vs benigno), não de magnitude.
+> 📌 **Princípio de design importante:** No Richup.io o Tesouro virou casa irrelevante de "receber troquinho". No Magnata Imobiliário, **Tesouro é tão impactante quanto Acaso** — a diferença é **temática** (ofensivo vs benigno), não de magnitude.
 
 ---
 
@@ -380,6 +380,6 @@ Os valores propostos (10% Auditoria, 1,5× Aeroporto na Aquisição, etc) são p
 
 ---
 
-**Banco Master — Sistema de Cartas | Maio 2026**
+**Magnata Imobiliário — Sistema de Cartas | Maio 2026**
 
 > Documento companheiro do SRS v1.2 (regras de negócio completas em `docs/SRS.md`, Seção 10).

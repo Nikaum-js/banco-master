@@ -11,11 +11,11 @@ export interface RollOptions {
   speedDie: boolean // ativo após a 1ª volta (FR-005)
 }
 
-// Speed Die — 6 faces: 1/2/3 (3 faces), Mr. Banco Master (2 faces), Ônibus (1 face). SRS §13.2.
+// Speed Die — 6 faces: 1/2/3 (3 faces), Mr. Magnata (2 faces), Ônibus (1 face). SRS §13.2.
 function rollSpeedFace(rng: RNG): SpeedFace {
   const idx = Math.floor(rng() * 6) // 0..5
   if (idx <= 2) return (idx + 1) as SpeedFace // 1, 2, 3
-  if (idx <= 4) return 'mr-banco'
+  if (idx <= 4) return 'mr-magnata'
   return 'onibus'
 }
 
@@ -33,7 +33,7 @@ export function roll(rng: RNG, opts: RollOptions): Roll {
       // Triple = os três dados iguais (só possível com face numérica igual aos brancos).
       if (isDouble && white[0] === speed) special = 'triple'
     } else {
-      special = speed // 'mr-banco' | 'onibus'
+      special = speed // 'mr-magnata' | 'onibus'
     }
   }
 

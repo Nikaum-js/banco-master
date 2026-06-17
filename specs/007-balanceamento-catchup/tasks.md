@@ -46,7 +46,7 @@ Novo `src/game/balancing/balancing.ts` + extensões em `turn/types.ts`, `turn/re
 
 ### Implementation for User Story 1
 
-- [X] T005 [US1] Em `src/game/turn/turnMachine.ts`: `advance` recebe `state` e credita `player.cash += ports.onPassGo(state, player.id)` ao cruzar/parar no GO; atualizar todos os call-sites de `advance` (rollDice, mr-banco, saída da prisão) e em `src/game/cards/effects.ts` (voltaGo, avance3) e `src/game/cards/draw.ts` (resolveCardShortcut)
+- [X] T005 [US1] Em `src/game/turn/turnMachine.ts`: `advance` recebe `state` e credita `player.cash += ports.onPassGo(state, player.id)` ao cruzar/parar no GO; atualizar todos os call-sites de `advance` (rollDice, mr-magnata, saída da prisão) e em `src/game/cards/effects.ts` (voltaGo, avance3) e `src/game/cards/draw.ts` (resolveCardShortcut)
 - [X] T006 [US1] Em `src/game/store.ts`: injetar `onPassGo: (s, id) => goBonus(s, id)` no `ctx.ports`
 
 **Checkpoint**: passar pelo GO credita de verdade.

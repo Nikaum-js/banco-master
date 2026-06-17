@@ -102,20 +102,20 @@ SPA única (plan §Project Structure): código em `src/game/`, testes em `tests/
 
 ## Phase 5: User Story 3 - Movimento com Speed Die (Priority: P3)
 
-**Goal**: 3º dado após a 1ª volta — faces numéricas, Mr. Banco Master, Ônibus, Triple — integrado ao movimento.
+**Goal**: 3º dado após a 1ª volta — faces numéricas, Mr. Magnata, Ônibus, Triple — integrado ao movimento.
 
 **Independent Test**: antes da 1ª volta só 2 dados; depois, 3º dado em todas as rolagens, cada face com o efeito de movimento correto.
 
 ### Tests for User Story 3 ⚠️ (escrever primeiro, devem FALHAR)
 
 - [X] T026 [P] [US3] Vitest: `speed === null` antes da 1ª volta e presente a partir da rolagem **seguinte** ao cruzamento do GO; `isDouble` ignora o Speed Die (SC-003, FR-005, FR-014, clarify Q2) em `tests/game/turn/dice.test.ts`
-- [X] T027 [P] [US3] Vitest: faces 1/2/3 somam ao movimento; comportamentos de mr-banco/onibus/triple; triple encerra a rolagem sem re-roll; e o valor do Speed Die soma ao dos brancos no aluguel de utilidades (FR-023…027, clarify Q1/Q3) em `tests/game/turn/dice.test.ts`
+- [X] T027 [P] [US3] Vitest: faces 1/2/3 somam ao movimento; comportamentos de mr-magnata/onibus/triple; triple encerra a rolagem sem re-roll; e o valor do Speed Die soma ao dos brancos no aluguel de utilidades (FR-023…027, clarify Q1/Q3) em `tests/game/turn/dice.test.ts`
 
 ### Implementation for User Story 3
 
-- [X] T028 [US3] Estender `src/game/turn/dice.ts`: gerar `SpeedFace` (1,2,3,`mr-banco`,`onibus`), detectar `triple` (três dados iguais → `special`), faces numéricas somam ao `move` (FR-023)
+- [X] T028 [US3] Estender `src/game/turn/dice.ts`: gerar `SpeedFace` (1,2,3,`mr-magnata`,`onibus`), detectar `triple` (três dados iguais → `special`), faces numéricas somam ao `move` (FR-023)
 - [X] T029 [US3] Implementar gating de `completouPrimeiraVolta`: setar a flag **após** computar o movimento da rolagem que cruza o GO; o store passa `speedDie = flag` ao `dice.roll` em `src/game/store.ts` e `turnMachine.ts` (FR-005, clarify Q2)
-- [X] T030 [US3] Implementar movimento Mr. Banco Master: avança à próxima propriedade não comprada (gancho de compra) senão à próxima de adversário não-hipotecada (gancho de aluguel); dispara `onPassGo` se cruzar o GO em `src/game/turn/turnMachine.ts` (FR-024, U1)
+- [X] T030 [US3] Implementar movimento Mr. Magnata: avança à próxima propriedade não comprada (gancho de compra) senão à próxima de adversário não-hipotecada (gancho de aluguel); dispara `onPassGo` se cruzar o GO em `src/game/turn/turnMachine.ts` (FR-024, U1)
 - [X] T031 [US3] Implementar `chooseBusMove(die0|die1|sum)` sem alterar `isDouble` (FR-025, clarify Q3) em `src/game/turn/turnMachine.ts`
 - [X] T032 [US3] Implementar `chooseTripleDest(pos)` encerrando o movimento sem re-roll, disparando `onPassGo` se cruzar o GO em `src/game/turn/turnMachine.ts` (FR-026, clarify Q1, U1)
 - [X] T033 [US3] Passar o valor do Speed Die ao `ResolveCtx.roll` para o cálculo de aluguel de utilidades em `src/game/turn/resolution.ts` (FR-027)

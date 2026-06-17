@@ -21,7 +21,7 @@ const COMMIT_SHA =
  */
 function requireEnv(): Plugin {
   return {
-    name: 'banco-master:require-env',
+    name: 'magnata-imobiliario:require-env',
     apply: 'build',
     config(_, { mode }) {
       if (process.env.VERCEL !== '1' && process.env.REQUIRE_ENV !== '1') return
@@ -32,7 +32,7 @@ function requireEnv(): Plugin {
       })
       if (issues.length > 0) {
         throw new Error(
-          `[banco-master] build de produção abortado: configuração Supabase inválida (${issues.join(', ')}). ` +
+          `[magnata-imobiliario] build de produção abortado: configuração Supabase inválida (${issues.join(', ')}). ` +
             `Sem elas a sala não persiste e o jogo sobe quebrado — ver docs/RUNBOOK.md §0.`,
         )
       }

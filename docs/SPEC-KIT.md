@@ -1,4 +1,4 @@
-# Guia do GitHub Spec Kit — para o Banco Master
+# Guia do GitHub Spec Kit — para o Magnata Imobiliário
 
 > Este documento é pra você (Nikolas) aprender a usar o Spec Kit do zero, no contexto deste projeto.
 > Ele não é fonte de verdade do projeto — é manual de uso.
@@ -112,7 +112,7 @@ Cada passo você revisa e aprova. **Nenhum passo é automático.**
 
 **Exemplo de invocação:**
 ```
-/speckit-specify Speed Die — terceiro dado especial que ativa depois que o jogador completa a primeira volta. Tem faces 1/2/3 que somam ao movimento, face Mr. Banco Master (avança até próxima propriedade disponível), e face Ônibus (escolhe mover só um dos dois dados normais ou a soma). Triple (três dados iguais) move pra qualquer casa.
+/speckit-specify Speed Die — terceiro dado especial que ativa depois que o jogador completa a primeira volta. Tem faces 1/2/3 que somam ao movimento, face Mr. Magnata (avança até próxima propriedade disponível), e face Ônibus (escolhe mover só um dos dois dados normais ou a soma). Triple (três dados iguais) move pra qualquer casa.
 ```
 
 **O que ele produz:** um arquivo `specs/speed-die/spec.md` contendo:
@@ -142,7 +142,7 @@ Cada passo você revisa e aprova. **Nenhum passo é automático.**
 
 **O que ele produz:** uma sessão de perguntas estilo:
 
-> ❓ **Q1:** Quando o jogador tira a face Mr. Banco Master, ele compra a propriedade automaticamente ou tem opção de recusar (e ir a leilão)?
+> ❓ **Q1:** Quando o jogador tira a face Mr. Magnata, ele compra a propriedade automaticamente ou tem opção de recusar (e ir a leilão)?
 >
 > ❓ **Q2:** Se o jogador está preso, o Speed Die é rolado mesmo assim?
 
@@ -209,7 +209,7 @@ E atualiza a spec com suas respostas.
 > - [ ] T-001: Criar tipo `SpeedDieFace` em `src/types/dice.ts`
 > - [ ] T-002: Adicionar `hasCompletedLap` no store de Player
 > - [ ] T-003: Componente `SpeedDieDisplay.tsx` com 6 faces
-> - [ ] T-004: Lógica de "Mr. Banco Master" — função `findNextAvailableProperty()`
+> - [ ] T-004: Lógica de "Mr. Magnata" — função `findNextAvailableProperty()`
 
 Cada tarefa é pequena, testável, e pode ser feita independente das outras (quando possível).
 
@@ -310,7 +310,7 @@ Quando você invocar `/speckit-specify`, o arquivo gerado terá esta estrutura:
 - **SpeedDie:** dado especial com 6 faces...
 
 ## Success Criteria
-- **SC-001:** Mr. Banco Master é acionado em pelo menos 30% das rolagens pós-1ª volta
+- **SC-001:** Mr. Magnata é acionado em pelo menos 30% das rolagens pós-1ª volta
 - **SC-002:** Tempo de decisão na face Ônibus < 5 segundos
 
 ## Assumptions
@@ -332,7 +332,7 @@ Quando você invocar `/speckit-specify`, o arquivo gerado terá esta estrutura:
 ## 7. Onde vivem os arquivos
 
 ```
-banco-master/
+magnata-imobiliario/
 │
 ├── .specify/                          ← internos do Spec Kit
 │   ├── memory/constitution.md         ← princípios (você já viu)

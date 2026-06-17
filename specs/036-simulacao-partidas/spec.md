@@ -24,7 +24,7 @@
 
 ### User Story 1 - Simulação headless massiva com invariantes (Priority: P1)
 
-Como desenvolvedor do Banco Master, quero rodar centenas de partidas completas simuladas — com 2, 3 e 6 jogadores — em segundos, sem browser, onde cada jogador simulado sempre escolhe uma ação **válida** ao acaso, para descobrir automaticamente crashes, regras furadas e estados impossíveis que testes unitários pontuais não cobrem.
+Como desenvolvedor do Magnata Imobiliário, quero rodar centenas de partidas completas simuladas — com 2, 3 e 6 jogadores — em segundos, sem browser, onde cada jogador simulado sempre escolhe uma ação **válida** ao acaso, para descobrir automaticamente crashes, regras furadas e estados impossíveis que testes unitários pontuais não cobrem.
 
 **Why this priority**: é o coração da feature — a malha de fuzzing sobre o motor puro é o que efetivamente responde "está funcionando tudo certo?" nas três contagens de jogadores. Sozinha, já entrega o valor principal.
 

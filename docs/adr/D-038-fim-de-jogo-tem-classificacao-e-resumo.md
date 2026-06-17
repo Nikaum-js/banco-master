@@ -2,6 +2,8 @@
 
 **Data:** 2026-07-26 · **Status:** aceita
 
+**Refinada parcialmente por:** [D-052](D-052-revanche-reabre-a-mesma-sala.md), que substitui somente a decisão de encerrar definitivamente a sala sem revanche.
+
 **Decisão:** o fim de partida deixa de ser um anúncio de vencedor e passa a ser um **fechamento com classificação**. Quando resta um jogador não-eliminado (§9.5), toda tela mostra:
 
 1. **A classificação completa**, do 1º ao último. A ordem é a **inversa da ordem de eliminação**: o vencedor é 1º, o último a falir é 2º, o primeiro a falir é último. Não há critério de desempate a inventar — a eliminação é sequencial e o motor a observa uma de cada vez.
@@ -24,6 +26,6 @@ O registro precisa estar **no estado**, não na tela. Três motivos, todos concr
 
 **Alternativa descartada — classificar por patrimônio no momento da eliminação:** exigiria congelar `netWorth` no instante da falência, o que dá **zero para todo mundo** (§9.1). Sem valor informativo e com campo novo por jogador.
 
-**Alternativa descartada — revanche na tela de fim:** recusada pela spec 038 (FR-027) e mantida recusada aqui. A partida é da sala e o anfitrião não reinicia a mesa; o caminho continua sendo voltar ao início e criar outra. Numa partida local, "novo jogo" continua existindo porque não há sala a encerrar.
+**Alternativa descartada à época — revanche na tela de fim:** esta parte foi substituída pela D-052. A classificação continua sendo o fechamento oficial, mas agora cada jogador pode voltar à mesma sala e o host pode preparar outra partida sem recriar o grupo. Numa partida local, "novo jogo" continua existindo porque não há sala a reabrir.
 
-**Como aplicar:** a spec 044 operacionaliza. O SRS ganha o conteúdo do fechamento em §9.5 e a linha correspondente em §12.2, e vai a v1.9. A classificação é **derivada** por uma função pura do estado final (nenhum campo `rank` guardado — rank é consequência, não fato). Os três campos novos entram no `GameState` com default seguro para snapshot antigo, no mesmo ponto onde `normalizeLog` já normaliza carregamento (`game/log.ts:22`). O fim de jogo não ganha caminho de saída novo: sala encerra como já encerra (spec 037, FR-028 — o link não reabre a mesa).
+**Como aplicar:** a spec 044 operacionaliza a classificação e o resumo. O SRS ganha o conteúdo do fechamento em §9.5 e a linha correspondente em §12.2, e vai a v1.9. A classificação é **derivada** por uma função pura do estado final (nenhum campo `rank` guardado — rank é consequência, não fato). Os três campos novos entram no `GameState` com default seguro para snapshot antigo, no mesmo ponto onde `normalizeLog` já normaliza carregamento (`game/log.ts:22`). A saída para a mesma sala e a criação de outra partida são acrescentadas depois pela D-052 e pela spec 049.

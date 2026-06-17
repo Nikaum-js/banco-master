@@ -50,7 +50,7 @@ export const THEME = {
   LAND_AUCTION_THRESHOLD: 3,
   LAND_AUCTION_SECONDS: 8, // janela por lote (reinicia só com lance NAQUELE lote)
 
-  // D-003 (Speed Die) SUSPENSO pós-playtest: gerava confusão (3º dado + Mr.Banco/
+  // D-003 (Speed Die) SUSPENSO pós-playtest: gerava confusão (3º dado + Mr.Magnata/
   // Ônibus/Triple). false = jogo rola sempre 2 dados. Reversível: voltar a true
   // reativa o motor (código e testes do Speed Die preservados). Ver DECISIONS.
   SPEED_DIE_ENABLED: false,

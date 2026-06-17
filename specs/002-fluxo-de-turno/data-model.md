@@ -74,9 +74,9 @@ encerrado               → transição p/ próximo jogador
 | `speed` | `SpeedFace \| null` | 3º dado; `null` antes da 1ª volta (FR-005) |
 | `isDouble` | `boolean` | derivado: `white[0] === white[1]` — **só brancos** (FR-014) |
 | `move` | `number` | casas a mover; default = soma dos brancos (+ face numérica do Speed Die) |
-| `special` | `'mr-banco' \| 'onibus' \| 'triple' \| null` | movimento especial do Speed Die |
+| `special` | `'mr-magnata' \| 'onibus' \| 'triple' \| null` | movimento especial do Speed Die |
 
-**`SpeedFace`**: `1 | 2 | 3 | 'mr-banco' | 'onibus'`. Quando os três dados coincidem → `special = 'triple'` (FR-026: encerra a rolagem, sem re-roll, mesmo com brancos iguais).
+**`SpeedFace`**: `1 | 2 | 3 | 'mr-magnata' | 'onibus'`. Quando os três dados coincidem → `special = 'triple'` (FR-026: encerra a rolagem, sem re-roll, mesmo com brancos iguais).
 
 ---
 

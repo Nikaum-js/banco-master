@@ -786,7 +786,16 @@ export function DiceArena() {
 
   const [rollKey, setRollKey] = useState(0)
   const [rolling, setRolling] = useState(false)
+  const [goPulse, setGoPulse] = useState<{ id: number; d: number } | null>(null)
+  const [pendingGoBonus, setPendingGoBonus] = useState<{
+    who: string
+    amount: number
+    afterCrossingId: number
+  } | null>(null)
+  const goCrossing = useTokenAnim((s) => s.goCrossing)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const goPulseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const goPulseId = useRef(0)
   // Chaves de valor do log do último snapshot visto — mesma técnica do SoundLayer
   // (o motor clona o estado a cada comando; identidade de objeto não sobrevive).
   const prevLogKeys = useRef<string[] | null>(null)
@@ -794,6 +803,7 @@ export function DiceArena() {
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      if (goPulseTimeoutRef.current) clearTimeout(goPulseTimeoutRef.current)
     }
   }, [])
 
@@ -822,8 +832,19 @@ export function DiceArena() {
     if (before === null) return // primeiro snapshot: nada a animar
     const fresh = countNewLogEntries(before, keys)
     let rolled = false
+    let goBonus: { who: string; amount: number } | null = null
     for (let i = game.log.length - fresh; i < game.log.length; i++) {
-      if (game.log[i].kind === 'roll') { rolled = true; break }
+      const entry = game.log[i]
+      if (entry.kind === 'roll') rolled = true
+      if (entry.kind === 'go' && entry.who === active.id) {
+        goBonus = { who: entry.who, amount: entry.amount }
+      }
+    }
+    if (goBonus !== null) {
+      setPendingGoBonus({
+        ...goBonus,
+        afterCrossingId: useTokenAnim.getState().goCrossing?.id ?? 0,
+      })
     }
     if (!rolled) return
     setRolling(true)
@@ -834,7 +855,24 @@ export function DiceArena() {
       setRolling(false)
       useTokenAnim.getState().setRolling(false) // dado caiu → peão pode andar
     }, rollDurationMs)
-  }, [game, rollDurationMs])
+  }, [active.id, game, rollDurationMs])
+
+  // O motor credita e loga o bônus no mesmo snapshot da rolagem, mas o peão só cruza
+  // o GO depois que os dados param e a caminhada chega ao passo 47→0. `LiveTokens`
+  // publica esse instante visual; a arena segura o valor até o sinal correspondente.
+  useEffect(() => {
+    if (
+      pendingGoBonus === null
+      || goCrossing === null
+      || goCrossing.id <= pendingGoBonus.afterCrossingId
+      || goCrossing.playerId !== pendingGoBonus.who
+    ) return
+    goPulseId.current += 1
+    setGoPulse({ id: goPulseId.current, d: pendingGoBonus.amount })
+    setPendingGoBonus(null)
+    if (goPulseTimeoutRef.current) clearTimeout(goPulseTimeoutRef.current)
+    goPulseTimeoutRef.current = setTimeout(() => setGoPulse(null), 1400)
+  }, [goCrossing, pendingGoBonus])
 
   // Trava otimista entre o clique e a chegada do resultado (online): o botão não aceita
   // clique duplo e o peão não sai andando antes do efeito acima assumir. O timeout é
@@ -886,9 +924,15 @@ export function DiceArena() {
           showActiveRing={false}
           size={72}
         />
-        <p className="display text-cream text-xl leading-none tracking-wide">
-          {active.name}
-        </p>
+        <div className="relative">
+          <MoneyPulse
+            pulse={goPulse}
+            className="dice-arena__money-pulse left-1/2 -translate-x-1/2 -top-4 whitespace-nowrap"
+          />
+          <p className="display text-cream text-xl leading-none tracking-wide">
+            {active.name}
+          </p>
+        </div>
         <p className={cn('label', isDoubleReroll ? 'text-gold font-bold' : 'text-cream-muted')}>{status}</p>
       </div>
 

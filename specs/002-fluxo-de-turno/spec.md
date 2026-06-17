@@ -62,7 +62,7 @@ Como jogador, ao tirar **dupla** (dados brancos iguais) eu resolvo a casa e **ro
 
 ### User Story 3 - Movimento com Speed Die após a 1ª volta (Priority: P3)
 
-Como jogador que já completou a **1ª volta** do tabuleiro, toda rolagem minha passa a incluir o **Speed Die** (3º dado): faces numéricas somam ao movimento; **Mr. Banco Master** me leva à próxima propriedade comprável; **Ônibus** me deixa escolher como mover; **Triples** me deixa ir a qualquer casa.
+Como jogador que já completou a **1ª volta** do tabuleiro, toda rolagem minha passa a incluir o **Speed Die** (3º dado): faces numéricas somam ao movimento; **Mr. Magnata** me leva à próxima propriedade comprável; **Ônibus** me deixa escolher como mover; **Triples** me deixa ir a qualquer casa.
 
 **Why this priority**: É a mecânica que mantém o ritmo no tabuleiro maior, mas é refinamento do movimento — o turno funciona sem ela na 1ª volta. Por isso P3. O **desenho** das faces e a regra de ativação pertencem à spec de Mecânicas de Balanceamento; aqui se define apenas como o turno **incorpora** o 3º dado.
 
@@ -72,7 +72,7 @@ Como jogador que já completou a **1ª volta** do tabuleiro, toda rolagem minha 
 
 1. **Given** A ainda não completou a 1ª volta, **When** A rola, **Then** apenas os dois dados brancos são lançados.
 2. **Given** A já completou a 1ª volta, **When** A rola e o Speed Die mostra "2", **Then** o movimento é a soma dos brancos + 2.
-3. **Given** A já completou a 1ª volta, **When** o Speed Die mostra Mr. Banco Master, **Then** A move o normal e depois avança até a próxima propriedade não comprada (podendo comprá-la na hora); se todas estiverem compradas, avança até a próxima propriedade não-hipotecada de adversário e paga aluguel.
+3. **Given** A já completou a 1ª volta, **When** o Speed Die mostra Mr. Magnata, **Then** A move o normal e depois avança até a próxima propriedade não comprada (podendo comprá-la na hora); se todas estiverem compradas, avança até a próxima propriedade não-hipotecada de adversário e paga aluguel.
 4. **Given** o Speed Die mostra Ônibus, **When** A decide o movimento, **Then** A escolhe mover o valor de um dos dois dados brancos individualmente ou a soma.
 5. **Given** os três dados saem iguais (triples), **When** A decide, **Then** A pode mover o token para qualquer casa do tabuleiro à sua escolha.
 
@@ -85,8 +85,8 @@ Como jogador que já completou a **1ª volta** do tabuleiro, toda rolagem minha 
 - **Speed Die não conta para dupla:** `3-3` nos brancos + `3` no Speed Die não é "tripla dupla"; a dupla é avaliada só pelos dois brancos.
 - **Triple encerra a rolagem:** três dados iguais → mover para qualquer casa **e** fim do movimento do turno; sem re-roll mesmo com os brancos iguais (FR-026).
 - **Carta que teleporta:** movimento por carta que envia diretamente a uma casa **não** concede GO ao passar, salvo se a carta disser explicitamente (detalhe na spec de Cartas).
-- **Mr. Banco Master / Triples cruzando o GO:** por serem movimento por dados (não por carta), passar pelo GO durante eles concede o bônus, consistente com §3.3.
-- **Mr. Banco Master sem propriedades livres:** se não houver propriedade não comprada, avança até a próxima de adversário não-hipotecada e paga aluguel.
+- **Mr. Magnata / Triples cruzando o GO:** por serem movimento por dados (não por carta), passar pelo GO durante eles concede o bônus, consistente com §3.3.
+- **Mr. Magnata sem propriedades livres:** se não houver propriedade não comprada, avança até a próxima de adversário não-hipotecada e paga aluguel.
 - **Ativação do Speed Die no cruzamento do GO:** a rolagem que cruza o GO pela 1ª vez usa 2 dados; a próxima rolagem do jogador (inclusive re-roll por dupla no mesmo turno) já inclui o 3º dado (FR-005).
 - **Turno ocioso:** sem timer, um turno deixado parado **não** avança sozinho; só termina por ação do jogador (ou ida automática à prisão).
 - **Desconexão mid-turno:** a partida pausa; o jogador ativo não perde a vez nem ativos; o mesmo turno prossegue na reconexão.
@@ -142,7 +142,7 @@ Como jogador que já completou a **1ª volta** do tabuleiro, toda rolagem minha 
 **Movimento com Speed Die (após a 1ª volta)**
 
 - **FR-023**: Faces numéricas (**1, 2, 3**) do Speed Die MUST somar ao movimento dos dois dados brancos.
-- **FR-024**: Face **Mr. Banco Master** MUST mover o jogador o normal e depois avançá-lo até a **próxima propriedade não comprada** (podendo comprá-la imediatamente); se todas estiverem compradas, avança até a próxima propriedade **não-hipotecada de adversário** e paga aluguel.
+- **FR-024**: Face **Mr. Magnata** MUST mover o jogador o normal e depois avançá-lo até a **próxima propriedade não comprada** (podendo comprá-la imediatamente); se todas estiverem compradas, avança até a próxima propriedade **não-hipotecada de adversário** e paga aluguel.
 - **FR-025**: Face **Ônibus** MUST permitir ao jogador escolher mover o valor de **um** dos dois dados brancos individualmente, ou a **soma** dos dois. A escolha de movimento **NÃO** afeta a avaliação de dupla: brancos iguais permanecem dupla (re-roll e contagem para a prisão) mesmo que o jogador mova só um dado (FR-014).
 - **FR-026**: **Triples** (os três dados iguais) MUST permitir ao jogador mover o token para **qualquer casa** do tabuleiro à sua escolha. Após o triple, o movimento do turno se **encerra**: **NÃO** há nova rolagem, mesmo que os dois dados brancos formem dupla (consistente com o triple já estar isento da contagem de duplas — FR-014/FR-015).
 - **FR-027**: Para **Utilidades**, o valor do Speed Die MUST somar ao dos dois dados brancos no cálculo do aluguel (consistente com §4.4).
@@ -176,7 +176,7 @@ Como jogador que já completou a **1ª volta** do tabuleiro, toda rolagem minha 
 
 - **A ordem inicial e a rolagem de desempate são responsabilidade da spec de Lobby & Sala**; aqui a ordem de turnos é **insumo**. Esta feature começa quando a partida já tem ordem definida.
 - **Ações facultativas podem ocorrer antes ou depois da rolagem**, em qualquer ordem, até a finalização; a única ação obrigatória do turno normal é a **rolagem + resolução da casa**.
-- **Mr. Banco Master e Triples movem o token por dados** (não por carta) → passar pelo GO durante esses movimentos **concede** o bônus, consistente com §3.3.
+- **Mr. Magnata e Triples movem o token por dados** (não por carta) → passar pelo GO durante esses movimentos **concede** o bônus, consistente com §3.3.
 - **"Dupla" é avaliada sempre pelos dois dados brancos** como rolados, independentemente da face do Speed Die ou da escolha na face Ônibus.
 - **Detalhes internos de cada tipo de casa** (compra/leilão, aluguel, cartas, construção, hipoteca, negociação), o **desenho das faces/ativação do Speed Die**, a **fórmula do GO Progressivo** e a **acumulação do Free Parking** pertencem às suas próprias specs; esta spec apenas orquestra **quando** disparam no turno.
 - **Eliminação por falência e seu efeito na ordem de turnos** são detalhados na spec de Falência; aqui assume-se que a ordem **pula** jogadores eliminados.

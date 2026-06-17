@@ -3,11 +3,11 @@
 // constante/mapeador importam daqui.
 export type SpeedFace = 'one' | 'two' | 'three' | 'mr' | 'bus'
 
-// Face do Speed Die do motor (1|2|3|'mr-banco'|'onibus') → face visual.
-export function toUiSpeedFace(speed: number | 'mr-banco' | 'onibus'): SpeedFace {
+// Face do Speed Die do motor (1|2|3|'mr-magnata'|'onibus') → face visual.
+export function toUiSpeedFace(speed: number | 'mr-magnata' | 'onibus'): SpeedFace {
   if (speed === 1) return 'one'
   if (speed === 2) return 'two'
   if (speed === 3) return 'three'
-  if (speed === 'mr-banco') return 'mr'
+  if (speed === 'mr-magnata') return 'mr'
   return 'bus' // 'onibus'
 }

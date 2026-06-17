@@ -1,4 +1,4 @@
-# Banco Master — Manual de bordo do Claude
+# Magnata Imobiliário — Manual de bordo do Claude
 
 > Carregado automaticamente em todo chat novo. Leia primeiro.
 > Este projeto usa **GitHub Spec Kit** para Spec-Driven Development.

@@ -16,7 +16,7 @@ function memoryStore(): ReloadMarkerStore {
 describe('recuperação de chunk lazy entre deploys', () => {
   it('recarrega a página uma única vez quando o chunk da versão aberta desapareceu', async () => {
     const error = new TypeError(
-      'Failed to fetch dynamically imported module: https://banco-master.test/assets/GameSurface-old.js',
+      'Failed to fetch dynamically imported module: https://magnata-imobiliario.test/assets/GameSurface-old.js',
     )
     const store = memoryStore()
     const reload = vi.fn()

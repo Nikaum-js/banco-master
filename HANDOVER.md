@@ -1,4 +1,4 @@
-# HANDOVER — Banco Master
+# HANDOVER — Magnata Imobiliário
 
 > Última atualização: 2026-07-26 · branch `main` (fluxo sem branch por feature)
 > Leitura de partida: este arquivo → `CLAUDE.md` → `docs/AUDITORIA-2026-07-23.md` → a spec ativa.
@@ -12,7 +12,7 @@
 - **Gates:** `bunx vitest run` → **633 testes / 73 arquivos verdes**; **`bun run typecheck` limpo** (`src/`+`tests/`+`e2e/`+`scripts/`); `bun run build` ok; **lint global ZERADO**; `bun audit` → 3 advisories restantes, todas em cópias transitivas de ferramenta de dev (nenhuma alcança o bundle). `bun run scripts/net-smoke.ts` verde contra o Supabase real.
 - **CI VIVO** (`.github/workflows/ci.yml`, 2026-07-25): 3 jobs — `gates` (lint + tipos + vitest + build), `simulation` (30 partidas seedadas 2/3/6) e `e2e` (smoke single-player, traces no artifact em falha). O `multiplayer.spec.ts` fica fora do gate: depende de credencial Supabase.
 - **E2E:** `bunx playwright test` → **2, 3 e 6 jogadores passam** (2 execuções seguidas). A falha de 6 jogadores registrada aqui antes NÃO era timeout de performance: o roteiro procurava um botão `← Frente` que o commit `03cb1ef` extinguiu, e travava no modal de Atalho até o teto de 240s. Como os dados do browser são `Math.random()`, aparecia como flake. Corrigido em `e2e/script.ts`.
-- **Push agora é rotina:** remote `origin` = `github.com:Nikaum-js/banco-master` — commits desta e da sessão anterior foram pushados. Backdate de commits segue a regra do `~/.claude/rules/git-conventions.md` (hook injeta).
+- **Push agora é rotina:** remote `origin` = `github.com:Nikaum-js/magnata-imobiliario` — commits desta e da sessão anterior foram pushados. Backdate de commits segue a regra do `~/.claude/rules/git-conventions.md` (hook injeta).
 - **Auditoria completa em `docs/AUDITORIA-2026-07-23.md`** — 17 itens priorizados por impacto×esforço; é o backlog técnico vigente (itens 1, 2, 7 e 14 já resolvidos).
 
 ## Spec 037 — fundação multiplayer host-autoritativo (2026-07-24)

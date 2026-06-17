@@ -126,7 +126,7 @@ export function VisualLab() {
         <div className="visual-lab__title">
           <span className="visual-lab__seal"><FlaskConical size={22} /></span>
           <div>
-            <p className="label text-gold">Banco Master</p>
+            <p className="label text-gold">Magnata Imobiliário</p>
             <h1>Laboratório Visual</h1>
           </div>
         </div>

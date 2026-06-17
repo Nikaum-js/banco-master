@@ -2,7 +2,7 @@
 
 **Data:** 2026-07-26 · **Status:** aceita
 
-**Decisão:** o Banco Master é publicado como aplicação estática na **Vercel**, com três regras:
+**Decisão:** o Magnata Imobiliário é publicado como aplicação estática na **Vercel**, com três regras:
 
 1. **Todo PR ganha um preview navegável.** A revisão deixa de ser "li o diff" e passa a poder ser "joguei".
 2. **A produção só é promovida a partir de `main` e só depois de todos os gates verdes** — lint, tipos, testes, build, simulação seedada, smoke E2E e a auditoria de acessibilidade (D-039). O deploy é disparado **pelo resultado do CI**, não pelo push: um commit vermelho não chega ao ar.

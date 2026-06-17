@@ -1,6 +1,6 @@
 # Runbook — lançamento e retorno
 
-> Como o Banco Master vai ao ar, e como voltar atrás. Decisão de origem: [D-041](adr/D-041-publicacao-em-vercel-com-gate-verde.md) · SRS §12.8 · spec [044](../specs/044-polimento-lancamento/spec.md).
+> Como o Magnata Imobiliário vai ao ar, e como voltar atrás. Decisão de origem: [D-041](adr/D-041-publicacao-em-vercel-com-gate-verde.md) · SRS §12.8 · spec [044](../specs/044-polimento-lancamento/spec.md).
 >
 > **A regra que governa tudo aqui:** produção é promovida pelo **resultado do CI**, nunca pelo push. Um commit vermelho não chega ao ar.
 
@@ -10,7 +10,7 @@
 
 | Item | Onde | Observação |
 |---|---|---|
-| Projeto Supabase de produção | painel Supabase | já existe desde a spec 037; confira em §1 **quais** migrations já subiram — o repo tem cinco |
+| Projeto Supabase de produção | painel Supabase | já existe desde a spec 037; confira em §1 **quais** migrations já subiram — o repo tem seis |
 | Projeto Vercel ligado ao repositório | painel Vercel | a integração nativa cuida dos **previews de PR**; produção é do workflow |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Vercel → Environment Variables (**Production** e **Preview**) | públicas por desenho: a RLS pressupõe que a anon key está no bundle |
 | `VITE_SENTRY_DSN` | Vercel → Production | opcional. Ausente = nenhum código de monitoramento roda |
@@ -25,7 +25,7 @@
 
 ## 1. Migrations — antes do primeiro deploy
 
-As **cinco**, nesta ordem, contra o projeto de produção:
+As **seis**, nesta ordem, contra o projeto de produção:
 
 ```sh
 supabase link --project-ref <project-ref>
@@ -37,6 +37,7 @@ supabase db push
 3. `0003_attested_identity.sql` — identidade atestada pelo servidor: políticas por tópico, funções de leitura, código de reentrada imutável · *spec 043, D-042/D-036/D-037/D-043*
 4. `0004_telemetry_events.sql` — telemetria, insert-only · *spec 044, D-040*
 5. `0005_opening_auction.sql` — prazo/lances persistidos, prévia com sigilo e novas assinaturas de escrita · *spec 045, D-046*
+6. `0006_rematch_generation.sql` — geração de partida, ordenação entre ciclos e reabertura atômica da mesma sala · *spec 049, D-052*
 
 > ⚠️ **A de telemetria nasceu como `0003` e foi renumerada para `0004`** quando a 043 entrou na linha principal com um `0003` próprio. Duas migrations com o mesmo prefixo têm a **mesma versão** para o CLI do Supabase — `db push` falharia ou aplicaria só uma. Se você chegou a aplicar a telemetria enquanto ela ainda era `0003`, não há problema: ela é idempotente (`create table if not exists`, `drop policy if exists`), então reaplicar como `0004` não muda nada no banco.
 
@@ -50,8 +51,9 @@ supabase db push
 | `select * from telemetry_events` com anon key | **negado** (não há política de leitura, por desenho) |
 | As políticas e funções da 043 | ver `specs/043-identidade-de-transporte/contracts/policies.md` — a identidade atestada tem verificação própria, e `scripts/attack.ts` exercita seis vetores contra o projeto real |
 | `room_preview` durante `bidding` | convidado recebe só o próprio `openingBid`; host recebe todos |
+| `reopen_room` após `status = 'ended'` | avança uma geração, volta ao lobby e limpa `game`/`secrets` sem alterar assentos, códigos ou `seq` |
 
-Sem as cinco, **não prossiga**: um jogo publicado sem `rooms` perde a partida no primeiro reload; sem o gatilho de monotonia uma escrita atrasada regride o estado; sem a 0005 o Leilão da Largada não persiste nem abre no transporte novo.
+Sem as seis, **não prossiga**: um jogo publicado sem `rooms` perde a partida no primeiro reload; sem o gatilho de monotonia uma escrita atrasada regride o estado; sem a 0005 o Leilão da Largada não persiste nem abre no transporte novo; sem a 0006 a partida atual continua compatível, mas o host não consegue reabrir a sala para a revanche.
 
 ---
 
@@ -73,6 +75,7 @@ Não substitui o gate automatizado — cobre o que só existe com infra real.
 - [ ] **Recarregar** um dos clientes → a partida volta do servidor (prova que `rooms` está viva)
 - [ ] Fechar um cliente → a mesa pausa nomeando o ausente (§11.3)
 - [ ] Reabrir pelo link → a mesa retoma
+- [ ] Encerrar a partida, voltar à mesma sala e iniciar uma revanche sem resíduos do jogo anterior
 - [ ] Conferir no banco: `room_created` e `match_started` chegaram, **sem** id de sala em claro
 - [ ] Conferir no navegador (DevTools → Sources): nenhum segredo além da anon key
 

@@ -9,7 +9,7 @@ describe('registerFailure (T007)', () => {
       { mintId: () => 'ABC123', now: () => 1_000 },
     )
     expect(id).toBe('ABC123')
-    expect(spy).toHaveBeenCalledWith('[banco-master:failure]', {
+    expect(spy).toHaveBeenCalledWith('[magnata-imobiliario:failure]', {
       occurrenceId: 'ABC123',
       where: 'match',
       phase: 'playing',

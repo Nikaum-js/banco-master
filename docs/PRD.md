@@ -1,4 +1,4 @@
-# Banco Master — PRD (Product Requirements Document)
+# Magnata Imobiliário — PRD (Product Requirements Document)
 
 > **O que este doc é:** a visão de **produto** amarrando objetivo → épicos → specs → status, e o
 > **mapa do que falta para o v1.0**. Não substitui o [`SRS.md`](./SRS.md) (verdade de regras) nem o

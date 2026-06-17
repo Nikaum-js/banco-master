@@ -10,9 +10,9 @@ describe('Dados e Speed Die', () => {
   })
 
   it('FR-014: isDouble só pelos brancos; Speed Die não cria dupla', () => {
-    const r = roll(rngFromDice([3, 3, 4]), { speedDie: true }) // brancos 3,3 + mr-banco
+    const r = roll(rngFromDice([3, 3, 4]), { speedDie: true }) // brancos 3,3 + mr-magnata
     expect(r.isDouble).toBe(true)
-    expect(r.special).toBe('mr-banco')
+    expect(r.special).toBe('mr-magnata')
     expect(r.special).not.toBe('triple')
   })
 
@@ -28,8 +28,8 @@ describe('Dados e Speed Die', () => {
     expect(r.move).toBe(9) // 3+3+3
   })
 
-  it('faces símbolo: mr-banco (idx 3/4) e ônibus (idx 5)', () => {
-    expect(roll(rngFromDice([1, 2, 5]), { speedDie: true }).special).toBe('mr-banco')
+  it('faces símbolo: mr-magnata (idx 3/4) e ônibus (idx 5)', () => {
+    expect(roll(rngFromDice([1, 2, 5]), { speedDie: true }).special).toBe('mr-magnata')
     expect(roll(rngFromDice([1, 2, 6]), { speedDie: true }).special).toBe('onibus')
   })
 })

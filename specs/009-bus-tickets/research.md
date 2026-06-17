@@ -30,7 +30,7 @@ Decisões técnicas que dão suporte ao [plan.md](./plan.md). Tudo resolvido —
 
 **Decisão**: `steps = (dest - pos + 48) % 48`; chamar `advance(s, player, steps, ctx.ports)`. `advance` (002) já credita `onPassGo` quando o caminho cruza o índice 0 e marca `completouPrimeiraVolta`.
 
-**Rationale**: implementa a decisão de clarify (movimento sempre horário; credita GO ao cruzar). Reuso total da primitiva — a única situação real de crédito é escolher uma casa "atrás" no lado 37–47 (ex.: pos 45 → dest 38 ⇒ 41 passos cruzando o GO). Consistente com cartas de movimento e Mr. Banco Master, que já usam `advance`.
+**Rationale**: implementa a decisão de clarify (movimento sempre horário; credita GO ao cruzar). Reuso total da primitiva — a única situação real de crédito é escolher uma casa "atrás" no lado 37–47 (ex.: pos 45 → dest 38 ⇒ 41 passos cruzando o GO). Consistente com cartas de movimento e Mr. Magnata, que já usam `advance`.
 
 **Alternativas**: salto direto (`player.pos = dest`) sem crédito (rejeitado em clarify — tornaria a cláusula de GO do §10.7 letra morta).
 

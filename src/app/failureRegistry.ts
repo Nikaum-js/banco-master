@@ -59,7 +59,7 @@ export function registerFailure(ctx: FailureContext, opts: FailureRegistryOption
     message: messageOf(ctx.error),
     at: now(),
   }
-  console.error('[banco-master:failure]', record)
+  console.error('[magnata-imobiliario:failure]', record)
   for (const cb of listeners) {
     try {
       cb(record)

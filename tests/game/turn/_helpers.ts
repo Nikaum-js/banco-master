@@ -6,7 +6,7 @@ import type { TurnCtx } from '@/game/turn/turnMachine'
 import { THEME } from '@/game/theme'
 
 // Cada valor v (1..6) é mapeado para o meio do "bucket" do dado: floor(rng*6)+1 === v.
-// Para a face do Speed Die: idx = floor(rng*6) = v-1 → 1/2/3 = faces, 4/5 = mr-banco, 6 = ônibus.
+// Para a face do Speed Die: idx = floor(rng*6) = v-1 → 1/2/3 = faces, 4/5 = mr-magnata, 6 = ônibus.
 export function rngFromDice(values: number[]): RNG {
   let i = 0
   return () => {

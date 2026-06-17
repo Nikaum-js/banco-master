@@ -81,7 +81,7 @@ Como jogador, quando alguém recusa comprar uma propriedade livre, ela vai a **l
 - **Sem caixa para comprar:** opção Comprar indisponível; só Recusar → leilão (não há compra fiada).
 - **Leilão sem lances:** propriedade volta/permanece com o banco; turno segue.
 - **Sem caixa para o aluguel obrigatório:** dispara o fluxo de **insolvência** (vender/hipotecar/negociar ou falir) — **deferido à spec Falência**; esta spec apenas sinaliza o débito devido.
-- **Aluguel de utilidade após movimento especial:** usa o **valor dos dados** da rolagem que levou à casa, incluindo o Speed Die (002 FR-027) — vale para movimento normal, Ônibus e Mr. Banco Master.
+- **Aluguel de utilidade após movimento especial:** usa o **valor dos dados** da rolagem que levou à casa, incluindo o Speed Die (002 FR-027) — vale para movimento normal, Ônibus e Mr. Magnata.
 - **Lance maior que o caixa do licitante:** um lance não pode exceder o caixa do licitante (não se licita fiado).
 - **Dono preso:** recebe aluguel normalmente.
 - **Propriedade própria / hipotecada:** sem cobrança.

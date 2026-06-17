@@ -23,7 +23,7 @@ export interface DiceArenaView {
   /** Faces dos dois dados brancos (1..6); 1 quando ainda não se rolou. */
   readonly dice: readonly [number, number]
   /** Face do Speed Die, quando houver (D-003: suspenso hoje). */
-  readonly speed: number | 'mr-banco' | 'onibus' | null
+  readonly speed: number | 'mr-magnata' | 'onibus' | null
 
   /**
    * Esta tela é a de quem DECIDE agora? É o portão da zona de ação inteira (FR-003): na tela

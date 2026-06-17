@@ -37,7 +37,7 @@ Decisões técnicas que sustentam o plan. Como o `src/` ainda não tem lógica d
 ## D6 — Speed Die como propriedade condicional da rolagem
 
 - **Decisão:** `dice.roll(rng, { speedDie: boolean })`. O store passa `speedDie = player.completouPrimeiraVolta`. A flag vira `true` **na rolagem seguinte** ao cruzamento do GO (clarificação Q2): o cruzamento seta a flag *após* computar o movimento daquela rolagem. Dupla é avaliada **só pelos dois brancos** (FR-014), independente da face/escolha do Ônibus (clarificação Q3). Triple encerra a rolagem, sem re-roll (clarificação Q1).
-- **Rationale:** isola a regra de ativação num único lugar e respeita as 3 clarificações. Faces especiais (Mr. Banco Master, Ônibus, Triples) são resolvidas como variações de **movimento**, não de estado de turno.
+- **Rationale:** isola a regra de ativação num único lugar e respeita as 3 clarificações. Faces especiais (Mr. Magnata, Ônibus, Triples) são resolvidas como variações de **movimento**, não de estado de turno.
 - **Alternativas consideradas:** ativar Speed Die na mesma rolagem do cruzamento — rejeitada pela clarificação Q2 (opção A do usuário).
 
 ## D7 — Transporte realtime/persistência DEFERIDO (estado sync-ready)

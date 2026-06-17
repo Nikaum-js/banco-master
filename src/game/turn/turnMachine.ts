@@ -83,7 +83,7 @@ function sendToJail(player: Player): void {
   player.jail = { inJail: true, attempts: 0 }
 }
 
-// Próxima casa comprável (Mr. Banco Master). "Não comprada" refina na spec de Compra & Aluguel.
+// Próxima casa comprável (Mr. Magnata). "Não comprada" refina na spec de Compra & Aluguel.
 function nextBuyableSteps(fromPos: number): number {
   for (let s = 1; s <= BOARD_SIZE; s++) {
     const k = BOARD[(fromPos + s) % BOARD_SIZE].kind
@@ -187,8 +187,8 @@ export function rollDice(state: GameState, ctx: TurnCtx): GameState {
     return s
   }
 
-  // Mr. Banco Master: move o normal e depois até a próxima comprável (FR-024).
-  if (roll.special === 'mr-banco') {
+  // Mr. Magnata: move o normal e depois até a próxima comprável (FR-024).
+  if (roll.special === 'mr-magnata') {
     advance(s, player,roll.move, ctx.ports)
     advance(s, player,nextBuyableSteps(player.pos), ctx.ports)
     land(turn, player, roll)
