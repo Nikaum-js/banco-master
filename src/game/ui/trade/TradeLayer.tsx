@@ -11,6 +11,7 @@ import { Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
 import { useTradeUI } from './tradeUI'
+import { play } from '@/game/ui/sound/engine'
 import { useLocalView, useRoomStore } from '@/net/roomStore'
 import { identityOf } from '@/net/identity'
 import { validateTrade } from '@/game/economy/trade'
@@ -1043,6 +1044,22 @@ export function TradeLayer() {
       useTradeUI.getState().closeProposal()
     }
   }, [selectedProposal, selectedProposalId])
+
+  // 058/US8 — cue de ABERTURA da negociação.
+  //
+  // O gatilho é a transição `false → true` deste booleano de UI, e não o `GameState`: abrir
+  // o compositor é decisão local de quem abriu, não fato da partida (FR-018/FR-045). Isso é
+  // o que dá, de graça, as três propriedades exigidas — toca uma vez por abertura (o efeito
+  // depende só de `open`), não toca em re-render (o valor não mudou) e não toca em
+  // reconexão nem replay (o store de UI é local e não é reidratado a partir do snapshot).
+  //
+  // Mudo, volume e política de autoplay já são tratados dentro de `play`.
+  //
+  // O som NÃO é a única confirmação (FR-048): o modal aparecendo é o sinal visual, e ele
+  // vem antes — não há caminho em que o jogador dependa do áudio para saber que abriu.
+  useEffect(() => {
+    if (open) play('trade-open')
+  }, [open])
 
   return (
     <AnimatePresence>

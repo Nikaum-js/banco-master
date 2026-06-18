@@ -17,7 +17,7 @@ acontecesse na mesma mesa. Ouvir o material já diz o domínio; o gesto diz a a�
 | Dados | osso/resina na madeira | dice-roll, dice-double, dice-speed, dice-bus |
 | Movimento | peão de madeira no tabuleiro | step-tick, step-land |
 | Dinheiro | moedas e fichas PESADAS + registradora | buy, rent-paid, tax-paid, sell, go-bonus, free-parking, loan-granted, auction-bid |
-| Documentos | papel, tomo, envelope | mortgage, unmortgage, decline, todas as cartas |
+| Documentos | papel, tomo, envelope | mortgage, unmortgage, decline, todas as cartas, trade-open |
 | Construção | tábua e martelo | build |
 | Prisão / agressão | metal | jail-in, jail-out, hostile-takeover (soco), loan-interest (rangido) |
 | Atenção / cerimônia | sinos e martelo de leiloeiro | your-turn, immunity, auction-close |
@@ -27,6 +27,31 @@ acontecesse na mesma mesa. Ouvir o material já diz o domínio; o gesto diz a a�
 (`confirmation_*`, `select_*`, `pluck_*`, `glass_*`, `minimize/maximize`, `error_*`,
 `bong_*`, `tick_*`) — beeps sintéticos de menu, a causa do "robotizado". Zero deles
 sobrevive.
+
+## trade-open — o 41º cue (spec 058)
+
+Abrir a negociação era a única ação de peso do jogo sem som. O briefing pedia "contrato ou
+papel sendo manuseado, com um clique sutil de ficha, caneta ou carimbo" — e a regra de
+material já respondia onde ele encaixa: **negociação é DOCUMENTO**, mesma família de
+`mortgage`/`unmortgage`/cartas. É por isso que ele não pode ser confundido com `buy`
+(registradora), `auction-close` (martelo) ou `rent-paid` (moedas): esses três são o domínio
+do DINHEIRO, e o cue de abertura não é uma transação — é uma proposta pousando na mesa.
+
+Camadas, em 420ms:
+
+| t | camada | como é feito |
+|---|---|---|
+| 0–210ms | folha de papel | ruído em banda 1,8–7 kHz com micro-crepitações esparsas — é a crepitação que separa "papel" de "chiado de vento" |
+| 165ms | carimbo | corpo grave de 152 Hz (o peso do gesto) + estalo de 1,18 kHz (a madeira da mesa) |
+| 196ms | ficha | dois parciais inarmônicos (2,14 e 3,26 kHz) decaindo em 18ms — o "toc" seco de peça de tabuleiro |
+
+Pico −6 dBFS, RMS −23 dBFS: discreto, porque ele toca sempre que alguém abre uma proposta,
+e um cue frequente que compete com os dados vira ruído em duas partidas.
+
+**Diferente de todos os outros: este é obra própria.** Os 40 anteriores vêm de packs
+royalty-free auditados um a um; este é gerado por `scripts/build-trade-open.py`, com semente
+fixa — mesma máquina ou outra, o mesmo arquivo. A licença é a do projeto, e não há terceiro
+a auditar.
 
 ## Fontes e licenças
 

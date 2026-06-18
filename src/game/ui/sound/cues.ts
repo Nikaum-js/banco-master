@@ -15,6 +15,12 @@ export type SoundCue =
   | 'free-parking' | 'jail-in' | 'jail-out' | 'win' | 'bankruptcy'
   | 'your-turn' | 'turn-end' | 'pause' | 'resume'
   | 'match-start'
+  // 058/US8 — abertura da negociação. Papel + carimbo + ficha: material de DOCUMENTO, que
+  // é a família de `mortgage`/cartas, e é exatamente o que uma proposta é. Nunca soa como
+  // dinheiro (registradora), leilão (martelo) ou pagamento (moedas) — os três cues com que
+  // ele poderia ser confundido. É cue de UI, disparado pela abertura do compositor, e não
+  // participa do `GameState` (FR-018).
+  | 'trade-open'
 
 // Auto-mapa: qualquer arquivo `<cue>.{webm,mp3,ogg,wav}` em src/assets/sfx vira CUE_SRC[cue].
 // import.meta.glob é do Vite (e suportado pelo vitest); em ambiente sem assets retorna {}.

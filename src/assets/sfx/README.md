@@ -27,6 +27,10 @@ sinos → atenção, música → momentos raros). Zero beeps sintéticos de inte
   win notification" #1992), `money-loss` ("Money bag drop" #1989).
 - **1 cue** — [Freesound](https://freesound.org) (**CC0**): `buy` = "Cash Register
   Purchase" (Zott820, #209578) — a registradora mecânica clássica.
+- **1 cue** — **obra própria deste repositório** (licença do projeto): `trade-open`,
+  sintetizado por [`scripts/build-trade-open.py`](../../../scripts/build-trade-open.py).
+  Não vem de pack nenhum: o script é a fonte, e rodá-lo reproduz o arquivo byte a byte
+  (semente fixa). É o que torna origem e licença verificáveis sem auditar um terceiro.
 
 ## Como as escolhas foram feitas
 
@@ -65,3 +69,4 @@ Auditar: `afplay src/assets/sfx/<cue>.ogg`.
 | loan-granted | chips-handle-2 | resume | switch10 (liga) |
 | loan-interest | creak3 (rangido) | auction-bid | chip-lay-2 |
 | auction-close | gavel duplo (impactWood_heavy_002 ×2) | turn-end | bookFlip1 (virada de página) |
+| trade-open | **síntese própria** (papel + carimbo + ficha) | | |
