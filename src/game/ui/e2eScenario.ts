@@ -21,6 +21,10 @@ import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import { createRoom, joinRoom, SEAT_COLORS } from '@/net/room'
 import { useRoomStore } from '@/net/roomStore'
+import { maybeOpenLandAuction, placeLandBid } from '@/game/economy/landAuction'
+import { isRentableKind } from '@/game/economy/titles'
+import { THEME } from '@/game/theme'
+import { BOARD } from '@/lib/boardData'
 
 const DEBTOR_ID = 'p1'
 const CREDITOR_ID = 'p2'
@@ -162,3 +166,69 @@ function applyE2EFuligemShowcaseScenario(): void {
 }
 
 applyE2EFuligemShowcaseScenario()
+
+// `?scenario=pregao&lots=N` (N de 1 a `LAND_AUCTION_THRESHOLD`, default 6) — pregão de
+// ESCASSEZ aberto, para o gate responsivo, o de acessibilidade e a inspeção visual. Combina
+// com `&map=fuligem`: `applyMapFromUrl` já trocou o `BOARD` ativo quando este módulo roda.
+//
+// O pregão não é PLANTADO, é DISPARADO: o cenário deixa exatamente `N` terrenos sem dono e
+// chama `maybeOpenLandAuction`, o reducer de produção. Se o gatilho da §7.5 quebrar, a tela
+// simplesmente não abre e o teste falha — que é o comportamento útil de um andaime. Plantar
+// um `landAuction` literal daria uma tela verde sobre um motor morto.
+function applyE2EPregaoScenario(): void {
+  if (typeof window === 'undefined') return
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('scenario') !== 'pregao') return
+
+  const teto = THEME.LAND_AUCTION_THRESHOLD
+  const pedidos = Number(params.get('lots'))
+  const livres = Number.isFinite(pedidos) && pedidos >= 1 ? Math.min(pedidos, teto) : teto
+
+  const g = createSeedState(['p1', 'p2', 'p3'], Date.now() - 65_000)
+  g.players[0].cash = 1_480
+  g.players[1].cash = 920
+  g.players[2].cash = 610
+  g.round = 14
+
+  // Todo terreno comprável fica com dono, menos os `livres` primeiros: é o estado de véspera
+  // de escassez que o gatilho lê. Alternar o dono evita uma mesa em que só p1 tem escritura.
+  const compraveis = BOARD.filter((sq) => isRentableKind(sq.kind)).map((sq) => sq.pos)
+  compraveis.slice(livres).forEach((pos, i) => {
+    g.titles[pos].ownerId = i % 2 === 0 ? 'p1' : 'p2'
+  })
+
+  const now = Date.now()
+  let aberto = maybeOpenLandAuction(g, now)
+  if (!aberto.landAuction) throw new Error('Cenário de pregão não abriu — gatilho da §7.5 mudou')
+
+  // Um lote disputado e outro na ponta do jogador local: a tela precisa mostrar os três
+  // estados que o jogador compara (sem lance, lance de rival, lance seu), não só o vazio.
+  const lotes = aberto.landAuction.lots.map((l) => l.pos)
+  if (lotes.length >= 2) aberto = placeLandBid(aberto, 'p2', lotes[0], 180, now)
+  if (lotes.length >= 3) aberto = placeLandBid(aberto, 'p1', lotes[1], 240, now)
+
+  useGameStore.setState({ game: aberto })
+
+  let room = createRoom('pregao-visual', {
+    uid: 'pregao-p1',
+    name: 'Ana',
+    color: SEAT_COLORS[0],
+    avatar: 'prism-face',
+    skin: 'cartola',
+  }, { boardId: params.get('map') === 'fuligem' ? 'fuligem' : 'atlas' })
+  for (const [i, who] of [['pregao-p2', 'Bia'], ['pregao-p3', 'Caio']].entries()) {
+    const guest = joinRoom(room, {
+      uid: who[0],
+      name: who[1],
+      color: SEAT_COLORS[i + 1],
+      avatar: 'totem-face',
+      skin: i === 0 ? 'aviador' : 'astronauta',
+    })
+    if (!guest.ok) throw new Error(`Cenário de pregão inválido: ${guest.reason}`)
+    room = guest.room
+  }
+  useRoomStore.getState().setRoom({ ...room, status: 'playing' })
+  useRoomStore.setState({ myUid: 'pregao-p1' })
+}
+
+applyE2EPregaoScenario()
