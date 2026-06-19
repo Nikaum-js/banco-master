@@ -18,7 +18,7 @@ interface Tower {
   w: number
   h: number
   mast: boolean
-  lights: { x: number; y: number; hue: string; delay: number }[]
+  lights: { x: number; y: number; hue: string; delay: number; flicker: boolean }[]
 }
 
 function towers(seed: number, minH: number, maxH: number): Tower[] {
@@ -34,11 +34,16 @@ function towers(seed: number, minH: number, maxH: number): Tower[] {
     for (let ly = 16; ly < h - 16; ly += 24) {
       for (let lx = 8; lx < w - 12; lx += 24) {
         if (rnd() > 0.34) {
+          const hue = `var(--color-group-${NEON_WINDOW[Math.floor(rnd() * NEON_WINDOW.length)]})`
+          const delay = Math.round(rnd() * 7000)
           lights.push({
             x: lx,
             y: ly,
-            hue: `var(--color-group-${NEON_WINDOW[Math.floor(rnd() * NEON_WINDOW.length)]})`,
-            delay: Math.round(rnd() * 7000),
+            hue,
+            delay,
+            // A cidade continua viva sem manter centenas de timelines individuais.
+            // O delay semeado também decide a amostra, preservando o cenário determinístico.
+            flicker: delay % 9 === 0,
           })
         }
       }
@@ -118,13 +123,13 @@ function TowerBand({
           {tower.lights.map((light) => (
             <rect
               key={`${light.x}-${light.y}`}
-              className="neon-window"
+              className={light.flicker ? 'neon-window' : undefined}
               x={light.x}
               y={light.y}
               width="8"
               height="8"
               fill={light.hue}
-              style={{ animationDelay: `${light.delay}ms` }}
+              style={light.flicker ? { animationDelay: `${light.delay}ms` } : undefined}
             />
           ))}
         </g>

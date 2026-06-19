@@ -3391,15 +3391,23 @@
     height: 90vh;
     transform: perspective(560px) rotateX(66deg);
     transform-origin: bottom center;
+    overflow: hidden;
+    contain: paint;
+    -webkit-mask-image: linear-gradient(to top, #000 0 42%, transparent 88%);
+    mask-image: linear-gradient(to top, #000 0 42%, transparent 88%);
+  }
+  .neon-floor::before {
+    content: "";
+    position: absolute;
+    inset: -40px 0 0;
     background-image:
       repeating-linear-gradient(to right, rgb(120 226 250 / 0.85) 0 1.5px, transparent 1.5px 86px),
       repeating-linear-gradient(to bottom, rgb(255 122 184 / 0.8) 0 1.5px, transparent 1.5px 40px);
-    -webkit-mask-image: linear-gradient(to top, #000 0 42%, transparent 88%);
-    mask-image: linear-gradient(to top, #000 0 42%, transparent 88%);
     animation: neon-floor-run 6s steps(8, end) infinite;
+    will-change: transform;
   }
   @keyframes neon-floor-run {
-    to { background-position: 0 0, 0 40px; }
+    to { transform: translateY(40px); }
   }
 
   /* Névoa acesa na linha do horizonte — é o que "cola" o skyline no piso. */

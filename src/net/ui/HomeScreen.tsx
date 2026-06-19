@@ -16,7 +16,7 @@
 // mora em `home/homeShared.ts`, uma vez só: as duas desenham o mesmo formulário de jeitos
 // diferentes.
 import { motion } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { Activity, useEffect, useState } from 'react'
 import { Map } from 'lucide-react'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import type { BoardTheme } from '@/game/ui/theme/boardTheme'
@@ -92,22 +92,23 @@ export function HomeScreen(actions: HomeActions) {
         const Screen = SCREEN[mountedTheme]
         const active = mountedTheme === theme
         return (
-          <motion.div
-            key={mountedTheme}
-            data-home-screen
-            data-home-theme={mountedTheme}
-            hidden={!active}
-            aria-hidden={!active}
-            initial={reduced ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={reduced ? { duration: 0 } : { duration: MOTION.slow, ease: EASE.standard }}
-          >
-            <Screen
-              f={f}
-              onChangeMap={changeMap}
-              mapChanging={active && themeTransition !== null}
-            />
-          </motion.div>
+          <Activity key={mountedTheme} mode={active ? 'visible' : 'hidden'}>
+            <motion.div
+              data-home-screen
+              data-home-theme={mountedTheme}
+              hidden={!active}
+              aria-hidden={!active}
+              initial={reduced ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={reduced ? { duration: 0 } : { duration: MOTION.slow, ease: EASE.standard }}
+            >
+              <Screen
+                f={f}
+                onChangeMap={changeMap}
+                mapChanging={active && themeTransition !== null}
+              />
+            </motion.div>
+          </Activity>
         )
       })}
 

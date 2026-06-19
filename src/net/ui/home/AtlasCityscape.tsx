@@ -118,8 +118,10 @@ function FacadeWindows({
         Array.from({ length: building.columns }, (_, column) => {
           const seed = hash(buildingIndex + 1, row + 3, column + 7, layer === 'near' ? 19 : 5)
           const lit = seed % 10 > (layer === 'near' ? 3 : 5)
-          const pulse = lit && seed % 7 === 0
-          const wake = !lit && seed % 23 === 0
+          // Poucas janelas contam a história da cidade inteira. Animar cada ponto aceso
+          // multiplicava timelines sem acrescentar leitura visual ao cenário.
+          const pulse = lit && seed % 19 === 0
+          const wake = !lit && seed % 53 === 0
           const width = Math.max(4, Math.min(8, columnGap - 6))
           const x = 9 + column * columnGap + (columnGap - width) / 2
           const y = top + row * rowGap + Math.max(2, (rowGap - 8) / 2)
