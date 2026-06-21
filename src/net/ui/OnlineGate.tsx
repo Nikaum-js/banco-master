@@ -8,7 +8,7 @@
 // Card 5 do review de arquitetura: a ORQUESTRAÇÃO saiu daqui para `net/roomSession.ts`
 // (máquina de fases, decisão de autoridade, escada de entrada, regra de reconexão). O que
 // resta é o que de fato é React: ler a URL, assinar a sessão e escolher a tela.
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { connectMultiplayer } from '@/net/connectStore'
 import { hostSeat } from '@/net/room'
 import { parseRoomLink, roomLink } from '@/net/session'
@@ -33,8 +33,7 @@ import type { SkinId } from '@/boards/playerSkinCatalog'
 const TICK_MS = 250 // o host fecha prazos vencidos (soft-close de leilão, janela de reação)
 
 export function OnlineGate({ children }: { children: ReactNode }) {
-  // A URL é lida uma vez: trocar de sala é recarregar a página.
-  const [link] = useState(() => parseRoomLink(window.location.search))
+  const [link, setLink] = useState(() => parseRoomLink(window.location.search))
   // `?local=1` (ou o botão "jogar local") entrega o cliente único de sempre — o andaime de
   // desenvolvimento e demonstração segue existindo, intacto (FR-029/SC-007). `?players=N`
   // é o hook de boot do smoke E2E (036): também é partida local e NÃO pode ver a home,
@@ -43,6 +42,23 @@ export function OnlineGate({ children }: { children: ReactNode }) {
     const q = new URLSearchParams(window.location.search)
     return q.has('local') || q.has('players')
   })
+  const navigateEntry = useCallback((search: string) => {
+    window.history.pushState(null, '', `${window.location.pathname}${search}`)
+    setLink(parseRoomLink(search))
+  }, [])
+
+  // Back/forward continua sendo navegação real, mas sem recarregar todo o bundle nem
+  // reconstruir a home antes da próxima tela de entrada.
+  useEffect(() => {
+    const syncRoute = () => {
+      const search = window.location.search
+      const query = new URLSearchParams(search)
+      setLocal(query.has('local') || query.has('players'))
+      setLink(parseRoomLink(search))
+    }
+    window.addEventListener('popstate', syncRoute)
+    return () => window.removeEventListener('popstate', syncRoute)
+  }, [])
 
   if (local) {
     return (
@@ -55,8 +71,8 @@ export function OnlineGate({ children }: { children: ReactNode }) {
     // Porta de entrada de verdade (FR-021): ninguém precisa saber o que é `?host=1`.
     return (
       <HomeScreen
-        onCreate={() => { window.location.search = '?host=1' }}
-        onJoin={(roomId) => { window.location.search = `?room=${encodeURIComponent(roomId)}` }}
+        onCreate={() => navigateEntry('?host=1')}
+        onJoin={(roomId) => navigateEntry(`?room=${encodeURIComponent(roomId)}`)}
         onLocal={() => setLocal(true)}
       />
     )
@@ -66,14 +82,22 @@ export function OnlineGate({ children }: { children: ReactNode }) {
       <LobbyMessage
         title="Multiplayer indisponível"
         message={describeSupabaseConfiguration() ?? 'Não foi possível validar a configuração do multiplayer.'}
-        action={<Button onClick={() => { window.location.search = '' }}>Voltar ao início</Button>}
+        action={<Button onClick={() => navigateEntry('')}>Voltar ao início</Button>}
       />
     )
   }
-  return <OnlineRoom roomId={link.roomId}>{children}</OnlineRoom>
+  return <OnlineRoom roomId={link.roomId} onExit={() => navigateEntry('')}>{children}</OnlineRoom>
 }
 
-function OnlineRoom({ roomId, children }: { roomId: string | null; children: ReactNode }) {
+function OnlineRoom({
+  roomId,
+  onExit,
+  children,
+}: {
+  roomId: string | null
+  onExit: () => void
+  children: ReactNode
+}) {
   // Hook de E2E (042, FR-025/e2e/errorBoundary.spec.ts) — mesmo espírito de `?players=N` (036):
   // um jeito determinístico de provar a queda da CASCA sem depender de um bug de verdade. Só
   // atua na 1ª chamada por navegação (a fronteira de último recurso captura e não remonta
@@ -162,7 +186,7 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
       <LobbyMessage
         title="Não foi possível entrar"
         message={msg}
-        action={<Button onClick={() => { window.location.search = '' }}>Voltar ao início</Button>}
+        action={<Button onClick={onExit}>Voltar ao início</Button>}
       />
     )
   }
