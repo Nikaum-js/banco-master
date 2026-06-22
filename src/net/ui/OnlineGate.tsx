@@ -152,7 +152,7 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
         title="Entrar na sala"
         subtitle="Confirme seu nome e escolha como você aparece na mesa"
         room={room}
-        cta="Entrar"
+        cta="Confirmar e entrar"
         busy={busy}
         error={error}
         onSubmit={(name, color, piece) => session.requestSeat({ name, color, piece })}
@@ -162,7 +162,7 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
         title="Criar sala"
         subtitle="Você será o anfitrião — confirme seu nome e escolha sua aparência"
         room={null}
-        cta="Criar sala"
+        cta="Confirmar e criar sala"
         busy={busy}
         error={error}
         onSubmit={createAndHost}

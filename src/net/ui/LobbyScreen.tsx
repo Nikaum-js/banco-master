@@ -142,6 +142,8 @@ export function IdentityForm({
       {message && <p className="text-signal-glow text-sm leading-snug">{message}</p>}
 
       <Button
+        variant="ghost"
+        className="cta-embark py-3 text-sm"
         disabled={!name.trim() || !chosen || !chosenPiece || busy}
         onClick={() => {
           rememberPlayerName(name)

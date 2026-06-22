@@ -2,8 +2,8 @@
 // Atlas da Meia-Noite. Antes, essas telas pintavam um `bg-coffee-950` chapado por cima do
 // graticule que o body já desenha e reusavam a casca de modal do jogo (faixa dourada de
 // ModalHeader) — genérico e fora do mundo do tabuleiro. Aqui o palco é TRANSPARENTE (a
-// carta náutica do fundo aparece) e vira uma CENA VIVA: rotas com aviões em voo, uma
-// trilha de tabuleiro cruzando o rodapé com um token passeando, balão subindo, nuvens à
+// carta náutica do fundo aparece) e vira uma CENA VIVA: rotas com aviões em voo, um
+// horizonte de cidade fechando o rodapé com janelas piscando, balão subindo, nuvens à
 // deriva, marcos de cidades e coordenadas de carta — tudo em latão apagado, atrás do
 // conteúdo. O painel (.entry-panel, index.css) carrega as marcas de registro dos cantos —
 // o mesmo cromo das casas do tabuleiro.
@@ -132,201 +132,99 @@ function SkyRoutes({ className }: { className?: string }) {
 }
 
 // ---------------------------------------------------------------------
-// Trilha de tabuleiro — um CAMINHO de casas serpenteando pelo rodapé inteiro da
-// carta, com a stripe colorida dos grupos, dados e cartas largados ao lado e um
-// token de latão passeando de casa em casa. As posições saem das mesmas bézieres
-// que o token percorre — a trilha e o passeio nunca desgarram.
+// Horizonte de cidades — a linha do rodapé da carta. Substituiu a "trilha de
+// tabuleiro" (fileira de casas com um peão passeando em cima): peça de jogo
+// desenhada em tamanho grande atrás da interface competia com o cartão de
+// embarque e lia como sobra de layout, não como cenário. Silhueta de cidade é
+// AMBIENTE — diz "Cidades do Mundo" sem imitar o tabuleiro.
+//
+// As janelas acesas piscam em ritmos diferentes (`.entry-window`), com o atraso
+// vindo do mesmo gerador determinístico que planta os prédios: o skyline é o
+// mesmo em todo carregamento (não pisca de forma diferente a cada render).
 // ---------------------------------------------------------------------
-type Pt = { x: number; y: number }
-const TRAIL_SEGS: [Pt, Pt, Pt, Pt][] = [
-  [{ x: -30, y: 850 }, { x: 180, y: 740 }, { x: 300, y: 900 }, { x: 520, y: 810 }],
-  [{ x: 520, y: 810 }, { x: 740, y: 720 }, { x: 820, y: 900 }, { x: 1040, y: 800 }],
-  [{ x: 1040, y: 800 }, { x: 1260, y: 700 }, { x: 1360, y: 880 }, { x: 1520, y: 790 }],
-]
-const TRAIL_GROUPS = ['brown', 'skyblue', 'pink', 'orange', 'red', 'yellow', 'green', 'navy', 'purple'] as const
 
-function cubicAt([p0, p1, p2, p3]: [Pt, Pt, Pt, Pt], t: number): { x: number; y: number; angle: number } {
-  const u = 1 - t
-  const x = u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x
-  const y = u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y
-  const dx = 3 * u * u * (p1.x - p0.x) + 6 * u * t * (p2.x - p1.x) + 3 * t * t * (p3.x - p2.x)
-  const dy = 3 * u * u * (p1.y - p0.y) + 6 * u * t * (p2.y - p1.y) + 3 * t * t * (p3.y - p2.y)
-  return { x, y, angle: (Math.atan2(dy, dx) * 180) / Math.PI }
-}
-
-// Carta de propriedade em miniatura — retrato com stripe de grupo no topo.
-function CardMark({ group }: { group: (typeof TRAIL_GROUPS)[number] }) {
-  return (
-    <g stroke="currentColor" strokeWidth="1.2">
-      <rect x="-13" y="-18" width="26" height="36" rx="2" />
-      <rect x="-13" y="-18" width="26" height="9" fill={`var(--color-group-${group})`} opacity="0.45" stroke="none" />
-      <g opacity="0.6">
-        <line x1="-8" y1="-2" x2="8" y2="-2" />
-        <line x1="-8" y1="4" x2="8" y2="4" />
-        <line x1="-8" y1="10" x2="4" y2="10" />
-      </g>
-    </g>
-  )
-}
-
-// Dado — quadrado arredondado com pips.
-function DieMark({ pips }: { pips: [number, number][] }) {
-  return (
-    <g stroke="currentColor" strokeWidth="1.2">
-      <rect x="-11" y="-11" width="22" height="22" rx="3.5" />
-      <g fill="currentColor" stroke="none">
-        {pips.map(([x, y]) => (
-          <circle key={`${x}-${y}`} cx={x} cy={y} r="1.8" />
-        ))}
-      </g>
-    </g>
-  )
-}
-
-// Uma casa da trilha, com a ANATOMIA das casas do tabuleiro de verdade: stripe do grupo
-// com filete de separação, "linhas de texto" (nome/aluguel), risco de preço no rodapé e —
-// em algumas — construção em cima da stripe (casas verdes, hotel vermelho, como no jogo).
-// A cada 8, uma casa ESPECIAL de canto, maior: moeda de GO, carta de sorte, dados.
-const TRAIL_SPECIALS = ['coin', 'carta', 'dice'] as const
-
-function TrailHouse({ x = 0, wide = false }: { x?: number; wide?: boolean }) {
-  return wide ? (
-    <path d="M-5 -9v-5l5-4 5 4v5Z" transform={`translate(${x} 0)`} fill="var(--color-group-red)" fillOpacity="0.55" strokeWidth="1" />
-  ) : (
-    <path d="M-4 -9v-4l4-3.5 4 3.5v4Z" transform={`translate(${x} 0)`} fill="var(--color-group-green)" fillOpacity="0.55" strokeWidth="1" />
-  )
-}
-
-function TrailSquare({ i }: { i: number }) {
-  const special = i % 8 === 0 ? TRAIL_SPECIALS[Math.floor(i / 8) % TRAIL_SPECIALS.length] : null
-
-  if (special) {
-    // casa de canto — maior, moldura dupla, motivo no centro
-    return (
-      <>
-        <rect x="-21" y="-21" width="42" height="42" rx="2" strokeWidth="1.4" />
-        <rect x="-17.5" y="-17.5" width="35" height="35" strokeWidth="0.6" opacity="0.6" />
-        {special === 'coin' && (
-          <>
-            <circle r="10" strokeWidth="1.3" />
-            <circle r="7.2" strokeWidth="0.6" strokeDasharray="1.5 2.2" />
-            <path d="M-4 -2h8M-4 2h8" strokeWidth="1.2" />
-          </>
-        )}
-        {special === 'carta' && (
-          <g transform="rotate(8)">
-            <rect x="-7.5" y="-10" width="15" height="20" rx="1.5" strokeWidth="1.2" />
-            <path d="M0 -4 3.2 0 0 4 -3.2 0Z" strokeWidth="0.9" />
-          </g>
-        )}
-        {special === 'dice' && (
-          <g transform="rotate(-7)">
-            <rect x="-9.5" y="-9.5" width="19" height="19" rx="3" strokeWidth="1.2" />
-            <g fill="currentColor" stroke="none">
-              <circle cx="-4.2" cy="-4.2" r="1.7" />
-              <circle cx="0" cy="0" r="1.7" />
-              <circle cx="4.2" cy="4.2" r="1.7" />
-            </g>
-          </g>
-        )}
-      </>
-    )
+// LCG minúsculo — aleatório REPETÍVEL. `Math.random` no corpo do componente
+// redesenharia a cidade a cada render.
+function seeded(seed: number): () => number {
+  let s = seed
+  return () => {
+    s = (s * 1664525 + 1013904223) % 4294967296
+    return s / 4294967296
   }
-
-  return (
-    <>
-      <rect x="-18" y="-18" width="36" height="36" rx="2" strokeWidth="1.3" />
-      <rect x="-15" y="-15" width="30" height="30" strokeWidth="0.55" opacity="0.5" />
-      {/* stripe do grupo + filete de separação */}
-      <rect x="-18" y="-18" width="36" height="10" fill={`var(--color-group-${TRAIL_GROUPS[i % TRAIL_GROUPS.length]})`} opacity="0.75" stroke="none" />
-      <line x1="-18" y1="-8" x2="18" y2="-8" strokeWidth="0.9" opacity="0.8" />
-      {/* construções sobre a stripe */}
-      {i % 4 === 2 && <TrailHouse />}
-      {i % 8 === 6 && (
-        <>
-          <TrailHouse x={-9} />
-          <TrailHouse x={9} wide />
-        </>
-      )}
-      {/* linhas de "texto" — nome e aluguel */}
-      <line x1="-12" y1="-1" x2="12" y2="-1" strokeWidth="1.1" opacity="0.7" />
-      <line x1="-9" y1="4.5" x2="9" y2="4.5" strokeWidth="1.1" opacity="0.45" />
-      {/* risco de preço no rodapé */}
-      <path d="M-8 12h2.5M-3.5 12h7M5.5 12h2.5" strokeWidth="1.2" opacity="0.75" />
-    </>
-  )
 }
 
-// O MESMO caminho das casas, em `d` — o token passeia por ele em passos discretos
-// (`.entry-hop`, 30 steps ≈ uma casa por passada), nunca deslizando: peão anda de casa
-// em casa. Como a trilha e o passeio nascem das mesmas bézieres, não têm como desgarrar.
-const TRAIL_PATH = TRAIL_SEGS.map(
-  (seg, i) => `${i === 0 ? `M${seg[0].x} ${seg[0].y}` : ''}C${seg[1].x} ${seg[1].y} ${seg[2].x} ${seg[2].y} ${seg[3].x} ${seg[3].y}`,
-).join('')
+interface Building {
+  x: number
+  w: number
+  h: number
+  spire: boolean
+  windows: { x: number; y: number; delay: number }[]
+}
 
-// Pino de jogador visto de perfil — base, corpo e cabeça, no traço dos glifos.
-function TokenMark({ scale = 1 }: { scale?: number }) {
+// Uma fileira de prédios cobrindo a largura da carta: largura e altura sorteadas
+// numa faixa, janelas em grade dentro de cada prédio (só uma fração acesa).
+function skyline(seed: number, count: number, minH: number, maxH: number): Building[] {
+  const rnd = seeded(seed)
+  const out: Building[] = []
+  let x = -40
+  for (let i = 0; i < count; i++) {
+    const w = 46 + Math.round(rnd() * 66)
+    const h = minH + Math.round(rnd() * (maxH - minH))
+    const windows: { x: number; y: number; delay: number }[] = []
+    for (let wy = 14; wy < h - 10; wy += 17) {
+      for (let wx = 9; wx < w - 12; wx += 15) {
+        if (rnd() > 0.45) windows.push({ x: wx, y: wy, delay: Math.round(rnd() * 9000) })
+      }
+    }
+    out.push({ x, w, h, spire: rnd() > 0.8, windows })
+    x += w + 4 + Math.round(rnd() * 16)
+    if (x > 1500) break
+  }
+  return out
+}
+
+const SKYLINE_FAR = skyline(20260727, 26, 90, 210)
+const SKYLINE_NEAR = skyline(41112, 20, 130, 300)
+
+function CityBand({ buildings, base, opacity }: { buildings: Building[]; base: number; opacity: number }) {
   return (
-    <g transform={`scale(${scale})`} stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
-      <ellipse cy="11" rx="9" ry="3" />
-      <path d="M-5.4 10.4c0-4.2 1.6-5.2 1.6-8.4a3.8 3.8 0 0 1 7.6 0c0 3.2 1.6 4.2 1.6 8.4Z" fill="currentColor" fillOpacity="0.18" />
-      <circle cy="-6.6" r="4.2" fill="currentColor" fillOpacity="0.18" />
+    <g opacity={opacity}>
+      {buildings.map((b) => (
+        <g key={`${b.x}-${b.h}`} transform={`translate(${b.x} ${base - b.h})`}>
+          <rect width={b.w} height={b.h + 40} fill="var(--color-ink-950)" fillOpacity="0.55" />
+          <rect width={b.w} height={b.h} stroke="currentColor" strokeWidth="1.1" fill="none" />
+          {b.spire && <path d={`M${b.w / 2} 0v-26`} stroke="currentColor" strokeWidth="1.1" />}
+          {b.windows.map((w) => (
+            <rect
+              key={`${w.x}-${w.y}`}
+              className="entry-window"
+              x={w.x}
+              y={w.y}
+              width="6"
+              height="8"
+              fill="currentColor"
+              style={{ animationDelay: `${w.delay}ms` }}
+            />
+          ))}
+        </g>
+      ))}
     </g>
   )
 }
 
-function BoardTrail({ className }: { className?: string }) {
-  const squares = TRAIL_SEGS.flatMap((seg, si) =>
-    Array.from({ length: 11 }, (_, i) => i)
-      .filter((i) => si === 0 || i > 0) // a junta entre segmentos é a mesma casa — não duplicar
-      .map((i) => cubicAt(seg, i / 10)),
-  )
+function CityHorizon({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" fill="none" className={className} aria-hidden="true">
-      {squares.map((s, i) => (
-        <g key={i} transform={`translate(${s.x} ${s.y}) rotate(${s.angle})`} opacity="0.35" stroke="currentColor">
-          <TrailSquare i={i} />
-        </g>
-      ))}
-
-      {/* dados e cartas largados na mesa, ao lado da trilha */}
-      <g opacity="0.3">
-        <g transform="translate(212 652) rotate(-14)">
-          <DieMark pips={[[-4.5, -4.5], [4.5, 4.5]]} />
-        </g>
-        <g transform="translate(246 668) rotate(11)">
-          <DieMark pips={[[-4.5, -4.5], [4.5, -4.5], [0, 0], [-4.5, 4.5], [4.5, 4.5]]} />
-        </g>
-        <g transform="translate(1178 648) rotate(-9)">
-          <CardMark group="green" />
-        </g>
-        <g transform="translate(1214 660) rotate(7)">
-          <CardMark group="navy" />
-        </g>
-      </g>
-
-      {/* dois peões percorrendo a trilha, um atrás do outro (o atraso negativo
-          é o que os separa por algumas casas — a mesa nasce no meio da partida) */}
-      {[
-        { dur: '96s', delay: '-12s', scale: 1, opacity: 0.5 },
-        { dur: '96s', delay: '-31s', scale: 0.9, opacity: 0.36 },
-      ].map((t) => (
-        <g
-          key={t.delay}
-          className="entry-flyer entry-hop"
-          opacity={t.opacity}
-          style={{
-            offsetPath: `path('${TRAIL_PATH}')`,
-            offsetRotate: '0deg',
-            animationDuration: t.dur,
-            animationDelay: t.delay,
-          }}
-        >
-          <g transform="translate(0 -26)">
-            <TokenMark scale={t.scale} />
-          </g>
-        </g>
-      ))}
+    <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice" fill="none" className={className} aria-hidden="true">
+      {/* brilho de cidade subindo do horizonte */}
+      <defs>
+        <linearGradient id="entry-glow" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.16" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <rect x="0" y="560" width="1440" height="340" fill="url(#entry-glow)" />
+      <CityBand buildings={SKYLINE_FAR} base={830} opacity={0.2} />
+      <CityBand buildings={SKYLINE_NEAR} base={900} opacity={0.34} />
     </svg>
   )
 }
@@ -527,8 +425,8 @@ export function EntryStage({ children }: { children: ReactNode }) {
             <CompassRose size="min(72vmin, 560px)" className="absolute -right-[10vmin] -bottom-[14vmin] text-brass opacity-[0.1]" />
             <CompassRose size="24vmin" className="absolute left-[3vmin] top-[5vmin] text-brass opacity-[0.06]" />
           </ParallaxLayer>
-          <ParallaxLayer depth={44}>
-            <BoardTrail className="absolute inset-0 w-full h-full text-brass" />
+          <ParallaxLayer depth={38}>
+            <CityHorizon className="absolute inset-0 w-full h-full text-brass" />
           </ParallaxLayer>
           {!reduced && <CursorLantern x={lx} y={ly} />}
         </div>
