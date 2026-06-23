@@ -254,6 +254,17 @@ jobs:
     if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # As duas alavancas que todo job de browser daqui liga, e o porquê está em
+    # `playwright.config.ts`, uma vez:
+    #
+    # `PW_WORKERS` — o default 1 existe por causa de `multiplayer.spec.ts`, que é limitada
+    #   por latência e morre de fome em paralelo. Nenhum job da CI a roda (precisa de
+    #   credencial e de infra real), então serializar aqui só deixava vCPU parado.
+    # `PW_SERVERS` — o `webServer` é global no Playwright, então toda invocação subia dev E
+    #   preview. Este job só usa o dev server; declarar isso poupa um `vite build` inteiro.
+    env:
+      PW_WORKERS: 2
+      PW_SERVERS: dev
     steps:
       - uses: actions/checkout@v4
 
@@ -287,6 +298,11 @@ jobs:
     if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # Ver o job `e2e` para o porquê das duas. Aqui é `built`: só o preview é usado, e subir
+    # o dev server junto seria um segundo servidor que nenhum teste abre.
+    env:
+      PW_WORKERS: 2
+      PW_SERVERS: built
     steps:
       - uses: actions/checkout@v4
 
@@ -324,6 +340,10 @@ jobs:
     if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # Ver o job `e2e`. Só o preview.
+    env:
+      PW_WORKERS: 2
+      PW_SERVERS: built
     steps:
       - uses: actions/checkout@v4
 
@@ -357,6 +377,12 @@ jobs:
     if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # Ver o job `e2e`. Aqui NÃO cabe recortar `PW_SERVERS`: este é o único job que mistura
+    # os dois projetos — `fullMatch.spec.ts` é `built` (preview, 4173) e
+    # `diceAnimation.spec.ts` é `chromium` (dev, 5173), porque mede a coreografia real e não
+    # tem por que esperar um bundle. Declarar um escopo só derrubaria metade do job.
+    env:
+      PW_WORKERS: 2
     steps:
       - uses: actions/checkout@v4
 
