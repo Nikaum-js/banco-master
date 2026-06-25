@@ -1,6 +1,6 @@
 # Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.37
+**Versão:** 1.38
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -65,7 +65,7 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Casas e hotéis | Presentes e obrigatórios no v1 |
 | Negociação entre jogadores | Presente e obrigatória no v1 |
 | Hipoteca | Presente e obrigatória no v1 — a hipotecada pode ser devolvida ao banco por zero, virando terreno livre (D-062, §6.4) |
-| Leilão | Presente — ativado quando jogador recusa a compra, e por **escassez de terrenos** quando restam ≤3 sem dono (D-060, §7.3/§7.5) |
+| Leilão | Presente — ativado quando jogador recusa a compra, e por **escassez de terrenos** quando restam ≤6 sem dono (D-078, §7.3/§7.5) |
 | Timer de turno | Não há — o jogador controla quando finaliza |
 | Desconexão mid-game | Partida pausa; propriedades não vão ao banco; aguarda reconexão |
 | Speed Die | Presente — ativado após primeira volta completa do jogador |
@@ -461,12 +461,12 @@ Ver §9.2 — o espólio usa o formato da §7.3.
 
 **(v1.25, [D-060](adr/D-060-leilao-de-escassez-restaurado-com-janela-legivel.md), restaurando a [D-023](adr/D-023-leilao-de-escassez-de-terrenos-pregao-simultaneo.md))** Mecanismo de fim de jogo que evita a partida se arrastar esperando alguém *cair* nos últimos terrenos livres. Aqui leiloam-se **terrenos** (cidades/aeroportos/utilidades sem dono), no formato da §7.3.
 
-- **Gatilho:** quando o número de terrenos compráveis **sem dono** cai a **≤ 3** (mas ≥ 1) **e** há **≥ 2 jogadores não-eliminados**, abre-se automaticamente um pregão por esses terrenos.
-- **Uma vez por episódio:** dispara uma única vez por "descida a ≤3"; sobras sem lance voltam ao fluxo normal (cair-e-comprar) e não reabrem o pregão. Só re-arma se a contagem subir acima do limiar — falência que devolve terreno, desistência (§9.6), devolução ao banco (§6.4) — e voltar a cair.
+- **Gatilho** (v1.38, [D-078](adr/D-078-pregao-de-escassez-abre-com-seis-terrenos.md)): quando o número de terrenos compráveis **sem dono** cai a **≤ 6** (mas ≥ 1) **e** há **≥ 2 jogadores não-eliminados**, abre-se automaticamente um pregão por esses terrenos. Com **7 ou mais** livres o pregão não abre; a **descida de 7 para 6** é o que o dispara. Havendo de **1 a 6** livres, **todos** entram no mesmo pregão, ao mesmo tempo. Com **0** livres não há pregão a abrir.
+- **Uma vez por episódio:** dispara uma única vez por "descida a ≤6"; sobras sem lance voltam ao fluxo normal (cair-e-comprar) e não reabrem o pregão. Só re-arma se a contagem voltar a **superar seis** — falência que devolve terreno, desistência (§9.6), devolução ao banco (§6.4) — e depois cair de novo.
 - **A contagem é visível** (v1.25): enquanto não há pregão aberto, a interface mostra **quantos terrenos livres ainda faltam** para o gatilho, derivado do estado do motor. Quando o pregão abre, o contador dá lugar ao estado do leilão.
 - **Cruzamento com o espólio:** se um espólio (§9.2) abrir durante um pregão de escassez, os lotes dele **entram no mesmo pregão** e a procedência passa a ser mista.
 
-> 📌 Fecha o tabuleiro com donos → mais aluguel circulando → fim de jogo mais rápido, com um clímax de pregão. Limiar (3) é tunável no tema.
+> 📌 Fecha o tabuleiro com donos → mais aluguel circulando, com um clímax de pregão. O limiar é tunável no tema. Era **3** até a v1.37; a [D-078](adr/D-078-pregao-de-escassez-abre-com-seis-terrenos.md) o levou a **6** porque a três terrenos (9% do inventário do Atlas, 10% do da Fuligem) o evento chegava com o tabuleiro já decidido, e o pregão virava formalidade sobre as sobras. A mesma decisão registra o que a medição **não** confirmou: a partida não fica mais curta.
 
 ---
 
@@ -1062,6 +1062,7 @@ nomes de regiões nem divisórias decorativas.
 - **Efeitos ativos no tabuleiro** (Greve, Estatização, Boicotes, Valorizações, Embargos e Imunidades ativos) — visíveis a todos.
 - **Caixa líquido durante dívida** (v1.25, [D-061](adr/D-061-obrigacao-a-outro-jogador-nao-e-truncada.md)): quando um jogador deve mais do que tem, o HUD mostra o **líquido real** (caixa − obrigação pendente). Líquido negativo aparece em **vermelho** e acompanhado de texto — nunca só por cor (§12.6) —, com **quanto ainda falta pagar**. Vale para o devedor **e** para os adversários: a mesa precisa saber que há dívida em resolução e de quem, inclusive quando o devedor não é o jogador da vez. O modelo econômico não muda: o caixa continua nunca ficando negativo no estado, o negativo é uma **leitura** de caixa menos obrigação.
 - **Terrenos livres até o pregão** (v1.25, [D-060](adr/D-060-leilao-de-escassez-restaurado-com-janela-legivel.md)): quantos terrenos sem dono ainda faltam para o gatilho da §7.5, derivado do motor, nunca negativo, preservado após reconexão. Com o pregão aberto, o contador dá lugar ao estado do leilão.
+- **O pregão comporta até seis lotes** (v1.38, [D-078](adr/D-078-pregao-de-escassez-abre-com-seis-terrenos.md)): a tela apresenta todos os lotes de uma vez, em **grade** (até 3 colunas no desktop, até 2 no tablet). Em **paisagem de celular** ela não empilha seis cartões completos nem usa carrossel ou rolagem horizontal: mostra um **resumo de todos** os lotes — nome curto, cronômetro e estado, sempre visíveis — e, abaixo, o **painel completo do lote selecionado**, com a ação de lance ao alcance. Quando um lote encerra, a seleção é preservada; quando ele sai do pregão, a seleção vai para o próximo ainda aberto. A ordem de leitura é a mesma nos dois casos: identidade do terreno, tempo restante, lance atual e maior interessado, caixa disponível e valor já comprometido, ação principal, incrementos, escritura sob demanda.
 - **Log de eventos completo** (v1.25, [D-063](adr/D-063-toda-mutacao-de-caixa-tem-causa-registrada.md)): **nenhuma** regra move caixa sem fato correspondente no log. Toda mudança de caixa tem motivo registrado — saldo anterior, valor, motivo e saldo final —, inclusive as que acontecem fora da vez do jogador afetado (cartas que cobram de todos §10.6, Aquisição Hostil e Imposto Federal §10.6) e as que movem caixa de mais de um jogador de uma vez (troca §8.3).
 
 ### 12.4 Painel de Cartas (do próprio jogador)

@@ -84,7 +84,7 @@ Legenda: ✅ entregue · ❌ descontinuada · ⏳ pendente (sem spec ainda).
 
 ### E11 — Leilões de escassez
 | 026 | Leilão de casas em escassez | ❌ descontinuada (D-022, construção ilimitada) |
-| 031 | Pregão de escassez de terrenos (D-023/§7.3) | ❌ descontinuada (D-059, gatilho revertido; o **formato** de pregão vive na 039) |
+| 031 | Pregão de escassez de terrenos (D-023/§7.3, §7.5) | ✅ (revertida pela D-059 e **restaurada pela D-060**, com janela de 24s e prazo visível; limiar de **seis** terrenos livres desde a D-078) |
 
 ### E12 — UI jogável (single-client)
 | 020 | Painéis ao vivo (jogadores/turno) | ✅ |
@@ -110,7 +110,7 @@ Legenda: ✅ entregue · ❌ descontinuada · ⏳ pendente (sem spec ainda).
 |---|---|---|
 | 037 | Fundação host-autoritativa: `applyCommand` puro, difusão por comando com não-determinismo gravado/replicado, snapshot upsert, pausa por presença, reconexão/reload, anti-spoof, lobby mínimo (nome+cor+link+iniciar), migration + adapter Supabase | ✅ (infra viva pendente: aplicar a migration) |
 | 038 | Partida online de verdade: perspectiva de jogador local (mão privada de fato), identidade real (nomes/cores/peças no lugar de `p1..pN`), status de conexão/pausa visível, roteamento home → sala → partida → fim, kick no lobby, ordem inicial sorteada | ✅ |
-| 039 | Leilão do **espólio** do falido-ao-banco (§9.2 / D-031): pregão simultâneo, com injeção de lotes em pregão aberto. Herdou o formato da 031 e é o único uso dele desde a D-059 (o discriminador de origem saiu com ela) | ✅ |
+| 039 | Leilão do **espólio** do falido-ao-banco (§9.2 / D-031): pregão simultâneo, com injeção de lotes em pregão aberto. Herdou o formato da 031, que voltou a ser a outra procedência com a D-060 — o discriminador de origem (`scarcity`/`bankruptcy`/`mixed`) saiu na D-059 e voltou com ela | ✅ |
 
 ### E16 — Polimento & Lançamento (M4) — **LANÇADO EM PRODUÇÃO** (2026-07-27)
 

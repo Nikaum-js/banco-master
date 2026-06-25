@@ -134,10 +134,10 @@ _Avoid_: Arranha-céu (no código), torre
 Melhoria de aeroporto que dobra o aluguel daquele aeroporto.
 
 **Leilão**:
-Disputa de lances por uma propriedade. Dispara por recusa de compra ou pelo espólio de um falido ([D-031](./docs/adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md)). O gatilho por **escassez de terrenos** existiu entre a D-023 e a [D-059](./docs/adr/D-059-leilao-de-escassez-de-terrenos-revertido.md), que o reverteu.
+Disputa de lances por uma propriedade. Dispara por recusa de compra, pelo espólio de um falido ([D-031](./docs/adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md)) ou por **escassez de terrenos**. O gatilho de escassez saiu do jogo na [D-059](./docs/adr/D-059-leilao-de-escassez-de-terrenos-revertido.md) e voltou na [D-060](./docs/adr/D-060-leilao-de-escassez-restaurado-com-janela-legivel.md), com janela de 24s e prazo visível.
 
 **Pregão**:
-Leilão **simultâneo** de vários lotes ao mesmo tempo, cada um com cronômetro próprio. Desde a [D-059](./docs/adr/D-059-leilao-de-escassez-de-terrenos-revertido.md) tem uma procedência só — o **espólio**.
+Leilão **simultâneo** de vários lotes ao mesmo tempo, cada um com cronômetro próprio. Tem duas procedências: a **escassez de terrenos** ([D-060](./docs/adr/D-060-leilao-de-escassez-restaurado-com-janela-legivel.md), limiar de seis desde a [D-078](./docs/adr/D-078-pregao-de-escassez-abre-com-seis-terrenos.md)) e o **espólio** ([D-031](./docs/adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md)); um espólio que cai num pregão de escassez em curso torna a procedência **mista**.
 
 **Espólio**:
 Conjunto de propriedades de um jogador que faliu **devendo ao banco**. Vai a pregão em vez de voltar de graça ao banco ([D-031](./docs/adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md)). Quando o falido devia a um **jogador**, não há espólio: as propriedades vão direto ao credor.
