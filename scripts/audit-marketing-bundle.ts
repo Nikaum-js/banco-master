@@ -9,6 +9,7 @@
 // Uso: bun run build && bun run scripts/audit-marketing-bundle.ts (exit 1 se vazar).
 import { readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
+import { gzipSync } from 'node:zlib'
 
 interface ManifestChunk {
   file: string
@@ -29,6 +30,14 @@ function kb(bytes: number): string {
 function sizeOf(file: string): number {
   try {
     return statSync(path.join(DIST, file)).size
+  } catch {
+    return 0
+  }
+}
+
+function gzipSizeOf(file: string): number {
+  try {
+    return gzipSync(readFileSync(path.join(DIST, file))).byteLength
   } catch {
     return 0
   }
@@ -78,6 +87,53 @@ console.log(
   `  play.html: ${gameJs.length} js (${kb(gameJs.reduce((t, f) => t + sizeOf(f), 0))}), ` +
     `${gameCss.length} css (${kb(gameCss.reduce((t, f) => t + sizeOf(f), 0))})`,
 )
+
+// `/play` importa `App.tsx` imediatamente depois do bootstrap. A partir daí, só os
+// imports ESTÁTICOS pertencem à primeira tela; sala, Supabase, tabuleiro e o segundo mapa
+// precisam continuar atrás de imports dinâmicos. O orçamento usa gzip, o custo próximo do
+// que viaja pela rede, e é largo o bastante para pequenas variações do bundler sem aceitar
+// de volta o baseline de ~258 KiB.
+const initialKeys = new Set<string>()
+const initialQueue = ['play.html', 'src/App.tsx']
+while (initialQueue.length > 0) {
+  const key = initialQueue.pop()!
+  if (initialKeys.has(key) || !manifest[key]) continue
+  initialKeys.add(key)
+  initialQueue.push(...(manifest[key].imports ?? []))
+}
+const initialFiles = new Set<string>()
+for (const key of initialKeys) {
+  initialFiles.add(manifest[key].file)
+  for (const css of manifest[key].css ?? []) initialFiles.add(css)
+}
+const initialJs = [...initialFiles].filter((file) => file.endsWith('.js'))
+const initialCss = [...initialFiles].filter((file) => file.endsWith('.css'))
+const initialJsGzip = initialJs.reduce((total, file) => total + gzipSizeOf(file), 0)
+const initialCssGzip = initialCss.reduce((total, file) => total + gzipSizeOf(file), 0)
+const initialSource = initialJs
+  .map((file) => readFileSync(path.join(DIST, file), 'utf-8'))
+  .join('\n')
+
+console.log('— Primeira tela de /play —')
+console.log(`  js inicial: ${kb(initialJsGzip)} gzip em ${initialJs.length} arquivo(s)`)
+console.log(`  css inicial: ${kb(initialCssGzip)} gzip em ${initialCss.length} arquivo(s)`)
+
+if (initialJsGzip > 210 * 1024) {
+  console.error(`✗ js inicial excede 210 KiB gzip: ${kb(initialJsGzip)}`)
+  failed = true
+}
+if (initialCssGzip > 53 * 1024) {
+  console.error(`✗ css inicial excede 53 KiB gzip: ${kb(initialCssGzip)}`)
+  failed = true
+}
+if (initialSource.includes('supabase')) {
+  console.error('✗ Supabase vazou para a primeira tela de /play.')
+  failed = true
+}
+if (initialSource.includes('fuligem-puff-city')) {
+  console.error('✗ o cenário completo da Fuligem vazou para a home Atlas inicial.')
+  failed = true
+}
 
 // Sanidade inversa: o grafo do jogo TEM que conter Supabase — se não contiver, esta
 // auditoria está lendo a coisa errada e o "✓" acima não vale nada. As dependências não

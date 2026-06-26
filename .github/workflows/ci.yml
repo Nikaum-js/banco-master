@@ -170,6 +170,9 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Orçamento do bundle inicial
+        run: bun run audit:bundle
+
   database:
     name: contrato do banco (RPCs sobre Postgres real)
     needs: changes
@@ -325,6 +328,14 @@ jobs:
 
       - name: Instalar chromium do Playwright
         run: bunx playwright install --with-deps chromium
+
+      - name: Build para auditoria
+        run: bun run build
+
+      # Três rodadas sobre `vite preview`; a mediana evita reprovar por uma única oscilação
+      # do runner e bloqueia regressões de score, FCP, LCP, TBT e CLS.
+      - name: Gate Lighthouse
+        run: bun run audit:performance
 
       # `e2e/responsive.spec.ts` roda no projeto `built` (playwright.config.ts) por dois
       # motivos: é o bundle que se promove, e a rota 404 de verdade só existe no preview.

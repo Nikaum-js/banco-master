@@ -14,6 +14,8 @@
     "sim:batch": "bun run scripts/sim-batch.ts",
     "test:sim": "SIM=1 vitest run tests/sim/headless",
     "attack": "bun run scripts/attack.ts",
+    "audit:bundle": "bun run scripts/audit-marketing-bundle.ts",
+    "audit:performance": "bun run scripts/lighthouse-budget.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -52,6 +54,7 @@
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
     "jsdom": "^29.1.1",
+    "lighthouse": "13.4.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.65.0",
     "vite": "^8.1.5",
