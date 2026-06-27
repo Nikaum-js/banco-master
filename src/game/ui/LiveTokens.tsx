@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { motion } from 'motion/react'
 import { useGameStore } from '@/game/store'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
+import { play } from '@/game/ui/sound/engine'
 import { PlayerFace, PLAYER_COLORS } from '@/boards/shared'
 
 const BOARD_SIZE = 48
@@ -24,15 +25,17 @@ function useWalkedPositions(targets: Record<string, number>, paused: boolean): R
     if (paused) return // dados em arremesso: não anda ainda
     const next: Record<string, number> = {}
     let moving = false
+    let walked = false
     for (const id of Object.keys(targets)) {
       const cur = shown[id]
       const tgt = targets[id]
       if (cur === undefined) { next[id] = tgt; continue } // jogador novo: entra na posição
       if (cur === tgt) { next[id] = cur; continue }
       const fwd = (tgt - cur + BOARD_SIZE) % BOARD_SIZE
-      if (fwd >= 1 && fwd <= WALK_MAX) { next[id] = (cur + 1) % BOARD_SIZE; moving = true } // anda 1
-      else { next[id] = tgt; moving = true } // teleporte/para trás: snap
+      if (fwd >= 1 && fwd <= WALK_MAX) { next[id] = (cur + 1) % BOARD_SIZE; moving = true; walked = true } // anda 1
+      else { next[id] = tgt; moving = true } // teleporte/para trás: snap (sem tick — só chegada)
     }
+    if (walked) play('step-tick') // um tick por batida de STEP_MS, mesmo com N peões (035)
     // Remove ids que sumiram (eliminados não importam aqui).
     const changed = Object.keys(next).some((id) => next[id] !== shown[id]) || Object.keys(shown).length !== Object.keys(next).length
     if (changed) {
@@ -66,15 +69,20 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
   const [pop, setPop] = useState<Record<string, number>>({})
   const prevWalking = useRef<Record<string, boolean>>({})
   useEffect(() => {
-    setPop((cur) => {
-      let next = cur
-      for (const id of Object.keys(targets)) {
-        const w = shown[id] !== undefined && shown[id] !== targets[id]
-        if (prevWalking.current[id] && !w) next = { ...next, [id]: (next[id] ?? 0) + 1 } // chegou
-        prevWalking.current[id] = w
-      }
-      return next
-    })
+    const landed: string[] = []
+    for (const id of Object.keys(targets)) {
+      const w = shown[id] !== undefined && shown[id] !== targets[id]
+      if (prevWalking.current[id] && !w) landed.push(id) // chegou
+      prevWalking.current[id] = w
+    }
+    if (landed.length) {
+      setPop((cur) => {
+        const next = { ...cur }
+        for (const id of landed) next[id] = (next[id] ?? 0) + 1
+        return next
+      })
+      play('step-land') // um som por chegada, mesmo com N peões (035)
+    }
   }, [shown, targets])
 
   // Casa de destino do jogador da vez, enquanto ele anda — recebe um realce.
