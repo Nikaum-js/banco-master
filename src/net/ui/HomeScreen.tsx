@@ -9,6 +9,9 @@ import { Button } from '@/game/ui/primitives'
 import { ModalShell, ModalHeader } from '@/game/ui/shell'
 import { extractRoomId } from '@/net/session'
 
+// Injetado pelo `vite.config.ts` a partir do sha do commit publicado (Vercel/Actions).
+const COMMIT_SHA = (import.meta.env.VITE_COMMIT_SHA as string | undefined) ?? ''
+
 export function HomeScreen({ onCreate, onJoin, onLocal }: { onCreate: () => void; onJoin: (roomId: string) => void; onLocal: () => void }) {
   const [link, setLink] = useState('')
   const roomId = extractRoomId(link)
@@ -56,6 +59,14 @@ export function HomeScreen({ onCreate, onJoin, onLocal }: { onCreate: () => void
           >
             Jogar local, neste dispositivo
           </button>
+
+          {/* Versão publicada (044, FR-048): é o que transforma "deu erro" em um relato
+              que localiza a build. Vazio em desenvolvimento — aí não há o que identificar. */}
+          {COMMIT_SHA && (
+            <p className="label text-cream-muted/85 text-center text-[0.65rem] tracking-wider">
+              versão {COMMIT_SHA.slice(0, 7)}
+            </p>
+          )}
         </div>
       </ModalShell>
     </div>

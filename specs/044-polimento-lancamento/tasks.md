@@ -137,13 +137,13 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 
 **Meta**: existe uma URL, e nada quebrado chega nela.
 
-- [ ] **T057** [P] `vercel.json` (FR-046): fallback de SPA; `Cache-Control: no-cache` no `index.html` e `immutable` em `/assets/*` ([D11 do plan](./plan.md#d11--o-deploy-é-disparado-pelo-resultado-do-ci-não-pelo-push)).
-- [ ] **T058** [P] `src/lib/env.ts` (ou equivalente): validação das variáveis obrigatórias em tempo de build — ausência **falha** a construção com mensagem clara (FR-047).
-- [ ] **T059** `VITE_COMMIT_SHA` no build e exibido no rodapé da home + contexto do Sentry (FR-048).
-- [ ] **T060** `.github/workflows/deploy.yml`: `workflow_run` encadeado ao CI, `branches: [main]`, sai cedo se `conclusion != success`; `vercel build --prod` + `vercel deploy --prebuilt --prod` com os três segredos.
+- [x] **T057** [P] `vercel.json` (FR-046): fallback de SPA; `Cache-Control: no-cache` no `index.html` e `immutable` em `/assets/*` ([D11 do plan](./plan.md#d11--o-deploy-é-disparado-pelo-resultado-do-ci-não-pelo-push)).
+- [x] **T058** [P] `src/lib/env.ts` (ou equivalente): validação das variáveis obrigatórias em tempo de build — ausência **falha** a construção com mensagem clara (FR-047).
+- [x] **T059** `VITE_COMMIT_SHA` no build e exibido no rodapé da home + contexto do Sentry (FR-048).
+- [x] **T060** `.github/workflows/deploy.yml`: `workflow_run` encadeado ao CI, `branches: [main]`, sai cedo se `conclusion != success`; `vercel build --prod` + `vercel deploy --prebuilt --prod` com os três segredos.
 - [ ] **T061** [manual] Painel Vercel (FR-042): projeto ligado ao repositório, previews de PR pela integração nativa, env vars de Production e Preview.
 - [ ] **T062** [manual] (FR-045) Aplicar as **três** migrations em produção e rodar as quatro verificações do [runbook §1](./contracts/production-runbook.md#1-migrations--antes-do-primeiro-deploy). É a pendência aberta desde a 037.
-- [ ] **T063** `docs/RUNBOOK.md`: escrever conforme [contracts/production-runbook.md](./contracts/production-runbook.md).
+- [x] **T063** `docs/RUNBOOK.md`: escrever conforme [contracts/production-runbook.md](./contracts/production-runbook.md).
 - [ ] **T064** [manual] Primeiro lançamento + teste de fumaça do runbook §3, em dois dispositivos e redes diferentes (**SC-001**, **SC-002**).
 - [ ] **T065** [manual] Ensaiar o **retorno** uma vez (promover o deploy anterior e voltar) — um runbook de rollback nunca executado não é um runbook (**SC-003**).
 
@@ -153,10 +153,10 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 
 ## Fase 9 — Fechamento
 
-- [ ] **T066** `docs/MILESTONES.md`: marcar o M4 concluído, com a nota do que ficou fora (celular retrato, estatísticas narrativas).
-- [ ] **T067** `docs/PRD.md`: E16 de "NÃO COMEÇOU" para entregue; remover a pendência "aplicar a migration" do E15, que esta spec fecha.
-- [ ] **T068** `CLAUDE.md` (§2 Fase atual) e o bloco `SPECKIT` do rodapé: apontar para esta spec.
-- [ ] **T069** Revisar se algum FR ficou sem prova; qualquer um que tenha ficado vira tarefa nova aqui, não nota de rodapé.
+- [x] **T066** `docs/MILESTONES.md`: marcar o M4 concluído, com a nota do que ficou fora (celular retrato, estatísticas narrativas).
+- [x] **T067** `docs/PRD.md`: E16 de "NÃO COMEÇOU" para entregue; remover a pendência "aplicar a migration" do E15, que esta spec fecha.
+- [x] **T068** `CLAUDE.md` (§2 Fase atual) e o bloco `SPECKIT` do rodapé: apontar para esta spec.
+- [x] **T069** Revisar se algum FR ficou sem prova; qualquer um que tenha ficado vira tarefa nova aqui, não nota de rodapé.
 
 ---
 
