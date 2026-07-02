@@ -40,7 +40,7 @@ export function HomeScreen(actions: HomeActions) {
     phase: 'cover' | 'reveal'
   } | null>(null)
   // Acima da troca de pele: nome, convite e gaveta permanecem intactos quando
-  // o seletor de mapa alterna Atlas ⇄ Neon.
+  // o seletor de mapa alterna Atlas ⇄ Fuligem.
   const f = useHomeForm(actions)
 
   // Cada palco tem mais de mil nós decorativos. Depois da primeira montagem, mantê-lo no

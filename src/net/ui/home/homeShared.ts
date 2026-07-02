@@ -58,7 +58,7 @@ export const HOME_MAPS = {
 
 // A frase da home. Diz o que o jogo É e que não cobra nada, em três negativas curtas —
 // é o que responde "por que eu clicaria?" antes de qualquer botão. Cada estilo pode
-// falar com a própria voz (a tela neon grita, a de feltro conta caso), mas o FATO
+// falar com a própria voz (o Atlas conta caso de viagem, a Fuligem bate placa), mas o FATO
 // (multiplayer, banco imobiliário, de graça, sem instalar) é o mesmo em todas.
 export const TAGLINE = 'Compre cidades, negocie propriedades e domine o tabuleiro com seus amigos.'
 export { NAME_MAX }
