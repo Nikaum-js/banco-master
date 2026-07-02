@@ -6,6 +6,8 @@ import { TradeLayer } from '@/game/ui/trade/TradeLayer'
 import { LandAuctionLayer } from '@/game/ui/landAuction/LandAuctionLayer'
 import { HandCardLayer } from '@/game/ui/cards/HandCardLayer'
 import { NoticeLayer } from '@/game/ui/NoticeLayer'
+import { SoundLayer } from '@/game/ui/sound/SoundLayer'
+import { AudioControl } from '@/game/ui/sound/AudioControl'
 import { DebugLogger } from '@/game/ui/DebugLogger'
 
 // O tabuleiro Clássico É a tela inicial. A rolagem é o DiceArena central; o
@@ -23,7 +25,9 @@ export default function App() {
       <LandAuctionLayer />
       <HandCardLayer />
       <NoticeLayer />
+      <SoundLayer />
       <GameHUD />
+      <AudioControl />
       <DebugLogger />
     </>
   )
