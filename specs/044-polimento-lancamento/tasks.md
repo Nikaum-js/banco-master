@@ -141,11 +141,11 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 - [x] **T058** [P] `src/lib/env.ts` (ou equivalente): validação das variáveis obrigatórias em tempo de build — ausência **falha** a construção com mensagem clara (FR-047).
 - [x] **T059** `VITE_COMMIT_SHA` no build e exibido no rodapé da home + contexto do Sentry (FR-048).
 - [x] **T060** `.github/workflows/deploy.yml`: `workflow_run` encadeado ao CI, `branches: [main]`, sai cedo se `conclusion != success`; `vercel build --prod` + `vercel deploy --prebuilt --prod` com os três segredos.
-- [ ] **T061** [manual] Painel Vercel (FR-042): projeto ligado ao repositório, previews de PR pela integração nativa, env vars de Production e Preview.
-- [ ] **T062** [manual] (FR-045) Aplicar as **três** migrations em produção e rodar as quatro verificações do [runbook §1](./contracts/production-runbook.md#1-migrations--antes-do-primeiro-deploy). É a pendência aberta desde a 037.
+- [x] **T061** [manual] Painel Vercel (FR-042): projeto ligado ao repositório, previews de PR pela integração nativa, env vars de Production e Preview.
+- [x] **T062** [manual] (FR-045) Aplicar as **três** migrations em produção e rodar as quatro verificações do [runbook §1](./contracts/production-runbook.md#1-migrations--antes-do-primeiro-deploy). É a pendência aberta desde a 037.
 - [x] **T063** `docs/RUNBOOK.md`: escrever conforme [contracts/production-runbook.md](./contracts/production-runbook.md).
-- [ ] **T064** [manual] Primeiro lançamento + teste de fumaça do runbook §3, em dois dispositivos e redes diferentes (**SC-001**, **SC-002**).
-- [ ] **T065** [manual] Ensaiar o **retorno** uma vez (promover o deploy anterior e voltar) — um runbook de rollback nunca executado não é um runbook (**SC-003**).
+- [x] **T064** [manual] Primeiro lançamento + teste de fumaça do runbook §3, em dois dispositivos e redes diferentes (**SC-001**, **SC-002**).
+- [x] **T065** [manual] Ensaiar o **retorno** uma vez (promover o deploy anterior e voltar) — um runbook de rollback nunca executado não é um runbook (**SC-003**).
 
 **Checkpoint**: **SC-001**, **SC-002**, **SC-003** verificados em produção real.
 

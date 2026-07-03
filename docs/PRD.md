@@ -112,11 +112,11 @@ Legenda: ✅ entregue · ❌ descontinuada · ⏳ pendente (sem spec ainda).
 | 038 | Partida online de verdade: perspectiva de jogador local (mão privada de fato), identidade real (nomes/cores/peças no lugar de `p1..pN`), status de conexão/pausa visível, roteamento home → sala → partida → fim, kick no lobby, ordem inicial sorteada | ✅ |
 | 039 | Leilão do **espólio** do falido-ao-banco (§9.2 / D-031): pregão simultâneo reusando a D-023, com discriminador de origem e injeção de lotes em pregão aberto | ✅ |
 
-### E16 — Polimento & Lançamento (M4) — **IMPLEMENTADO** (falta o lançamento em si)
+### E16 — Polimento & Lançamento (M4) — **LANÇADO EM PRODUÇÃO** (2026-07-27)
 
 | Spec | O que entrega | Status |
 |---|---|---|
-| 044 | Classificação e resumo no fim de jogo (D-038, 4 campos novos no estado, `matchSummary` derivada); WCAG 2.2 AA no caminho de jogo com gate `axe` no CI (D-039 — trap de foco e política de Esc no primitivo de modal, região viva sobre o log tipado, teclado no tabuleiro); paisagem em tablet e celular com aviso de girar em retrato; vocabulário único de movimento com freio de `prefers-reduced-motion`; telemetria mínima anônima (D-040 — porta com adaptador nulo, Supabase + Sentry, id de sala nunca em claro); publicação na Vercel promovida só com gate verde (D-041); smoke E2E de partida completa sobre o build | ✅ código · ⏳ lançamento |
+| 044 | Classificação e resumo no fim de jogo (D-038, 4 campos novos no estado, `matchSummary` derivada); WCAG 2.2 AA no caminho de jogo com gate `axe` no CI (D-039 — trap de foco e política de Esc no primitivo de modal, região viva sobre o log tipado, teclado no tabuleiro); paisagem em tablet e celular com aviso de girar em retrato; vocabulário único de movimento com freio de `prefers-reduced-motion`; telemetria mínima anônima (D-040 — porta com adaptador nulo, Supabase + Sentry, id de sala nunca em claro); publicação na Vercel promovida só com gate verde (D-041); smoke E2E de partida completa sobre o build | ✅ |
 
 > **O que falta é operação, não código** (`docs/RUNBOOK.md`): aplicar as quatro migrations em produção, ligar o projeto na Vercel com as variáveis, promover o primeiro deploy e ensaiar o retorno uma vez.
 
@@ -133,14 +133,15 @@ O engine e a UI single-player estão fechados, e a **fundação multiplayer saiu
 "dois browsers conectados" de "v1.0" é a **experiência** online (038) e o polimento de lançamento
 (E16). Ordem vigente:
 
-1. **037 Fundação multiplayer** — ✅ entregue. A migration pendente virou passo §1 do
-   [`RUNBOOK.md`](RUNBOOK.md), com verificação; medir SC-002/SC-006 numa partida real continua aberto.
-2. **038 Partida online de verdade** — ✅ entregue (2026-07-25). Falta só o roteiro manual em
-   dois browsers; o DoD #4 do §3 (lobby com nomes reais) está cumprido.
+1. **037 Fundação multiplayer** — ✅ entregue. A migration aplicada e verificada em produção
+   (`RUNBOOK.md` §1); SC-002/SC-006 medidos no teste de fumaça em produção (T064, 2026-07-27).
+2. **038 Partida online de verdade** — ✅ entregue (2026-07-25). Roteiro manual em dois browsers
+   rodado no teste de fumaça de produção; o DoD #4 do §3 (lobby com nomes reais) está cumprido.
 3. **039 Leilão do espólio do falido-ao-banco** (§9.2) — ✅ entregue (2026-07-25). **O SRS não tem mais lacuna de regra**: era a última.
-4. **044 Polimento & Lançamento** — ✅ código entregue (2026-07-27). Resta o **lançamento**: as
-   quatro migrations (037, 041, 043 e a de telemetria da 044), o projeto na Vercel e o
-   primeiro deploy. Passo a passo em [`RUNBOOK.md`](RUNBOOK.md).
+4. **044 Polimento & Lançamento** — ✅ entregue e **lançado em produção** (2026-07-27): as quatro
+   migrations (037, 041, 043 e a de telemetria da 044) aplicadas, projeto ligado na Vercel, gate
+   verde promovendo, smoke test e ensaio de rollback do [`RUNBOOK.md`](RUNBOOK.md) §3/§4 rodados.
+   **v1.0 está no ar.**
 
 > **Decisão travada antes de specificar 037 — resolvida:** a autoridade de estado (item 17 da
 > auditoria / `store.ts:262`) foi fechada pela 037: todo comando carrega o `playerId` do remetente e
@@ -167,20 +168,26 @@ O host roda o reducer puro; o "backend real" (server-autoritativo via Edge Funct
 - **Identidade nos comandos:** cada comando carrega o `playerId` do remetente p/ o host rejeitar spoof
   (fecha `store.ts:262` / item 17).
 
-### 5.2 Backlog técnico (auditoria 2026-07-23, itens vigentes)
+### 5.2 Backlog técnico (auditoria 2026-07-23 — revalidada contra o código em 2026-07-27)
 
-Já resolvidos: 1, 2, 7, 14 (3 bugs de engine + SRS v1.3). Restantes, por alavancagem:
+Já resolvidos: 1, 2, 7, 14 (3 bugs de engine + SRS v1.3). Dos itens que restavam, **todos os de
+prioridade Alta/Média foram fechados por specs posteriores** — revalidado item a item contra o
+código atual, não só contra o título da linha:
 
-| Prio | Item | Tam. | Por quê agora |
-|---|---|---|---|
-| Alta | **CI GitHub Actions + zerar 36 erros de lint** (inclui `useBusTicket`→`spendBusTicket`; `bun update @babel/core`) | P/M | Sem CI, regressões voltam; blinda o ativo mais valioso (o motor) |
-| Alta | **Log tipado** `LogEntry {kind,who,amount,what}` | M | Maior alavanca estrutural: destrava explicação de aluguel (D2), som robusto, cor, i18n |
-| Média | **Persistência do `GameState` em localStorage + ErrorBoundary** | M | F5/exceção = partida perdida hoje; estado já é serializável |
-| Média | **Leilão comum multi-licitante + botão "passar"** (`passBid` órfão) | M | Mecânica central inoperante no hotseat; padrão já existe no pregão |
-| — | ~~Lobby mínimo com nomes~~ | — | Coberto: lobby entregue na 037; nomes reais na UI da partida são escopo da **038** |
-| Média | **Deletar dead code de `boards/shared.tsx`** (`HOUSE_COST` diverge do tema!, mocks, componentes órfãos) | P | Armadilha de importar constante errada |
-| Média | **Sim: registrar vencedor/curva de patrimônio** | M | Pré-requisito p/ validar ROI da construção parcial (D-026) |
-| Baixa | Extrair `src/game/setup.ts` puro (composição definida 2×); fatiar god file `shared.tsx` (3.261 linhas) + quebrar ciclo `shared.tsx ↔ game/ui`; acessibilidade base | P–G | Dívida de arquitetura da casca |
+| Item | Status | Onde fechou |
+|---|---|---|
+| CI GitHub Actions + zerar 36 erros de lint | ✅ | `.github/workflows/ci.yml`; `bun run lint`/`typecheck` limpos hoje |
+| Log tipado `LogEntry {kind,who,amount,what}` | ✅ | spec **040** |
+| Persistência do `GameState` em localStorage + `ErrorBoundary` | ✅ (superado) | `src/app/RootErrorBoundary.tsx` (spec 042); a persistência virou o **snapshot no Supabase** (037/041), que cobre F5 de forma mais forte do que localStorage cobriria |
+| Leilão comum multi-licitante + botão "passar" (`passBid` órfão) | ✅ | `passBid` está cabeado em `src/game/commands.ts` (`case 'pass-bid'`) — não é mais órfão |
+| Dead code de `boards/shared.tsx` (`HOUSE_COST` divergente, mocks, componentes órfãos) | ✅ | não há mais `HOUSE_COST` no arquivo; nenhum mock real restante (grep revalidado) |
+| Sim: registrar vencedor/curva de patrimônio | ✅ | `tests/sim/engine/report.ts` — `winnersBySeat` + `wealthCurve`/`wealthCurveWithEstate` |
+| Acessibilidade base | ✅ | gate WCAG 2.2 AA no CI (spec 044/D-039) — foi além de "base" |
+| Extrair `src/game/setup.ts` puro | ✅ | arquivo existe |
+| Fatiar god file `shared.tsx` + quebrar ciclo `shared.tsx ↔ game/ui` | ⏳ **ainda aberto** | `src/boards/shared.tsx` está em **2.210 linhas** (caiu de 3.261, mas segue god file) e o ciclo continua: `GameHUD.tsx`, `ModalLayer.tsx`, `TradeLayer.tsx`, `LiveTokens.tsx`, `motion.ts`, `primitives.tsx`, `a11y/LiveRegion.tsx` e `panels/playersView.ts` importam de `boards/shared`, que por sua vez importa de vários desses mesmos módulos em `game/ui/*` |
+
+**Único item real de dívida técnica que sobrou da auditoria de julho**: fatiar `boards/shared.tsx`
+e quebrar o ciclo de import com `game/ui`. Tamanho G — é reestruturação de módulo, não fixup.
 
 ---
 
