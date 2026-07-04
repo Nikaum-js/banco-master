@@ -2941,6 +2941,98 @@
     color: var(--color-cream);
   }
 
+  /* Desistir da partida (§9.6/D-057) — só na linha do assento local. Discreto por
+     desenho: quase apagado em repouso, ganha o vermelho de sinal só no hover/foco. A
+     porta é pequena; o alvo de toque não é (o ::after leva a área a 44px sem inflar a
+     linha, §12.6). */
+  .player-row__quit {
+    position: relative;
+    z-index: 3;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.375rem;
+    height: 1.375rem;
+    padding: 0;
+    color: color-mix(in srgb, var(--color-starlight-muted) 55%, transparent);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sharp);
+    background: transparent;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition:
+      color var(--motion-base) var(--ease-standard),
+      border-color var(--motion-base) var(--ease-standard),
+      background-color var(--motion-base) var(--ease-standard);
+  }
+
+  .player-row__quit::after {
+    content: "";
+    position: absolute;
+    inset: -0.6875rem;
+  }
+
+  .player-row__quit:hover:not(:disabled),
+  .player-row__quit:focus-visible {
+    color: var(--color-signal-glow);
+    border-color: color-mix(in srgb, var(--color-signal) 42%, transparent);
+    background: color-mix(in srgb, var(--color-signal) 10%, var(--color-ink-950));
+  }
+
+  .player-row__quit:disabled {
+    color: color-mix(in srgb, var(--color-starlight-muted) 28%, transparent);
+    cursor: not-allowed;
+  }
+
+  /* Fatos da confirmação: o que sai da mesa, em linhas de rótulo↔valor. */
+  .concede-dialog__facts {
+    display: flex;
+    flex-direction: column;
+    gap: 0.0625rem;
+    border: 1px solid color-mix(in srgb, var(--color-ink-500) 62%, transparent);
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--color-ink-900) 70%, transparent);
+    overflow: hidden;
+  }
+
+  .concede-dialog__facts > li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .concede-dialog__facts > li + li {
+    border-top: 1px solid color-mix(in srgb, var(--color-ink-500) 40%, transparent);
+  }
+
+  .concede-dialog__facts > li > span {
+    color: var(--color-starlight-muted);
+    font-family: var(--font-sans);
+    font-size: 0.5625rem;
+    font-weight: 650;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .concede-dialog__facts > li > strong {
+    color: var(--color-brass-glow);
+    font-size: 0.9375rem;
+    line-height: 1;
+  }
+
+  .concede-dialog__heir {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    color: var(--color-starlight);
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+  }
+
   .player-row__you {
     position: absolute;
     z-index: 2;
@@ -3067,6 +3159,29 @@
   .player-row--bankrupt .player-row__money > p,
   .player-row--bankrupt .player-row__money small {
     color: var(--color-starlight-muted);
+  }
+
+  /* §12.3/D-061 — caixa líquido negativo durante cobrança. O vermelho é o `signal` do tema
+     (mesma cor do botão de falência), e NUNCA aparece sozinho: o rótulo vira "Caixa líquido" e a
+     linha `__owed` diz quanto falta. Cor sem texto reprova o §12.6. */
+  .player-row__money--negative,
+  .player-row__money--negative small {
+    color: var(--color-signal-glow);
+  }
+
+  .player-row__owed {
+    color: var(--color-signal-glow);
+    font-family: var(--font-sans);
+    font-size: 0.4375rem;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .player-row__money--debt > span {
+    color: var(--color-signal);
   }
 
   .dice-arena {
@@ -6735,6 +6850,242 @@
 
   .card-reveal__rarity {
     color: color-mix(in srgb, var(--card-reveal-accent) 82%, var(--color-starlight));
+  }
+
+  /* ---------------------------------------------------------------------
+     A VIRADA (o momento cerimonial do jogo). A carta chega DE VERSO e gira
+     revelando a face: é o único lugar do app com profundidade real, e ganhou
+     3D porque a informação nova — a RARIDADE — não existe antes da virada.
+     Encenar isso num fade seria contar o final antes.
+
+     Um momento autoral, não uma coleção de efeitos: o flip corre uma vez, o
+     selo carimba no fim dele, duas linhas entram atrás, e acabou. Fora da
+     entrada, a carta é superfície quieta.
+
+     A altura é ditada pela FRENTE (`position: relative`); o verso é sobreposto
+     e vive rotacionado 180°, então `backface-visibility` resolve qual das duas
+     o olho vê em cada ângulo — sem trocar `display` no meio da animação.
+     --------------------------------------------------------------------- */
+  .card-flip {
+    perspective: 1100px;
+    width: 300px;
+    max-width: 90vw;
+  }
+
+  /* A curva NÃO é a `--ease-emphasis` do resto do app, e a exceção é medida: aquela
+     curva (0.16,1,0.3,1) é um ease-out extremo, desenhado para chegadas curtas —
+     numa rotação de 180° ela gasta metade do ângulo nos primeiros ~100ms e arrasta
+     o resto, então o olho vê um estalo, não uma virada. Aqui a rotação precisa
+     ACELERAR e frear: é um objeto com massa girando, não um painel entrando. */
+  .card-flip__inner {
+    position: relative;
+    transform-style: preserve-3d;
+    animation: card-flip-turn 680ms cubic-bezier(0.5, 0.05, 0.3, 1) both;
+  }
+
+  /* O hold inicial dá ao dorso um beat de tela: sem ele a carta já chega virando e
+     o verso — que é o que anuncia "saiu uma carta" — nunca é visto. */
+  @keyframes card-flip-turn {
+    0%, 15% { transform: rotateY(180deg) scale(0.97); }
+    100% { transform: rotateY(0deg) scale(1); }
+  }
+
+  .card-flip__face {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .card-flip__front {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* O halo na cor da raridade é SINAL, não enfeite: é o que separa uma lendária de
+     uma comum a um relance, junto da cor do filete e da contagem de losangos. A
+     sombra com deslocamento continua sendo a do `--shadow-dropdown`, herdada da
+     superfície; o halo só se soma a ela. */
+  .card-flip__front.card-reveal {
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--card-reveal-accent) 13%, transparent),
+      0 0 0 4px color-mix(in srgb, var(--color-ink-950) 72%, transparent),
+      0 0 0 5px color-mix(in srgb, var(--card-reveal-accent) 20%, transparent),
+      var(--shadow-dropdown),
+      0 0 24px color-mix(in srgb, var(--card-reveal-accent) 30%, transparent);
+  }
+
+  /* Verso: prancha do Atlas sem acento de raridade — o dorso do baralho é um só,
+     e vazar a raridade aqui entregaria a carta antes de virar. */
+  .card-flip__back {
+    position: absolute;
+    inset: 0;
+    transform: rotateY(180deg);
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 0.85rem;
+    padding: 1.5rem;
+  }
+
+  .card-flip__back-glyph {
+    opacity: 0.9;
+    filter: drop-shadow(0 3px 10px color-mix(in srgb, var(--color-ink-abyss) 70%, transparent));
+  }
+
+  .card-flip__back-deck {
+    color: var(--color-brass-soft);
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+  }
+
+  /* Selo de raridade — carimba QUANDO a virada termina (delay = duração do flip),
+     na mesma gramática do selo de lance travado do leilão. Os losangos contam a
+     raridade sem depender de cor: 1 comum, 2 rara, 3 lendária. */
+  .card-reveal__seal {
+    display: grid;
+    place-items: center;
+    width: 3.15rem;
+    height: 3.15rem;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--card-reveal-accent) 60%, transparent);
+    background:
+      radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--card-reveal-accent) 20%, transparent), transparent 70%),
+      color-mix(in srgb, var(--color-ink-950) 76%, transparent);
+    box-shadow:
+      inset 0 0 0 3px color-mix(in srgb, var(--color-ink-950) 55%, transparent),
+      0 3px 12px -6px var(--color-ink-abyss);
+    transform: rotate(-7deg);
+    /* Carimba ANTES do flip fechar: a face já está de frente aos ~45% da rotação, e
+       esperar o fim faria a sequência passar de 1s — longo demais para um saque que
+       se repete a partida inteira. O carimbo se sobrepõe à frenagem da virada. */
+    animation: card-seal-stamp 360ms var(--ease-snap) 440ms both;
+  }
+
+  @keyframes card-seal-stamp {
+    0% { opacity: 0; transform: scale(1.75) rotate(-7deg); }
+    62% { opacity: 1; transform: scale(0.93) rotate(-7deg); }
+    100% { opacity: 1; transform: scale(1) rotate(-7deg); }
+  }
+
+  .card-reveal__pips {
+    display: flex;
+    gap: 0.22rem;
+  }
+
+  .card-reveal__pips i {
+    width: 0.4rem;
+    height: 0.4rem;
+    rotate: 45deg;
+    background: var(--card-reveal-accent);
+    box-shadow: 0 0 7px color-mix(in srgb, var(--card-reveal-accent) 60%, transparent);
+  }
+
+  /* Título e descrição entram ATRÁS do selo, curtas e escalonadas: a ordem de
+     leitura é selo → nome → efeito, e o movimento a repete. */
+  .card-reveal__line {
+    animation: card-reveal-line 300ms var(--ease-emphasis) both;
+  }
+  .card-reveal__line--1 { animation-delay: 520ms; }
+  .card-reveal__line--2 { animation-delay: 580ms; }
+
+  @keyframes card-reveal-line {
+    from { opacity: 0; translate: 0 7px; }
+    to { opacity: 1; translate: 0 0; }
+  }
+
+  /* Freio: os FATOS ficam (carta virada para a frente, selo cravado, texto
+     legível) — só a interpolação some. Sem `animation`, cada regra base já é o
+     estado final, então não há nada a restaurar à mão. */
+  @media (prefers-reduced-motion: reduce) {
+    .card-flip__inner,
+    .card-reveal__seal,
+    .card-reveal__line { animation: none; }
+    .card-flip__inner { transform: none; }
+  }
+
+  /* ---------------------------------------------------------------------
+     CARTA NA MÃO — o mini-card do painel lateral. Mesma matéria da carta
+     grande em escala de lista: filete de raridade, acento local e resposta
+     física ao toque. Antes era uma caixa lisa dentro da textura cartográfica
+     do `.side-panel-section`, que não conversava com nada.
+     --------------------------------------------------------------------- */
+  .hand-card {
+    --hand-card-accent: var(--color-brass);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--hand-card-accent) 24%, var(--color-ink-500));
+    border-radius: var(--radius-card);
+    background:
+      linear-gradient(158deg, color-mix(in srgb, var(--hand-card-accent) 10%, transparent), transparent 54%),
+      linear-gradient(180deg, var(--color-ink-700), var(--color-ink-800));
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--hand-card-accent) 12%, transparent),
+      var(--shadow-card);
+    transition:
+      transform var(--motion-fast) var(--ease-snap),
+      border-color var(--motion-fast) var(--ease-snap),
+      box-shadow var(--motion-fast) var(--ease-snap);
+  }
+
+  /* Filete no topo: a leitura mais rápida do painel é a raridade. */
+  .hand-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      var(--hand-card-accent),
+      color-mix(in srgb, var(--hand-card-accent) 20%, transparent)
+    );
+  }
+
+  .hand-card--playable:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--hand-card-accent) 52%, var(--color-ink-500));
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--hand-card-accent) 18%, transparent),
+      var(--shadow-lift);
+  }
+
+  .hand-card--playable:active {
+    transform: translateY(1px) scale(0.99);
+  }
+
+  .hand-card:focus-within {
+    border-color: color-mix(in srgb, var(--hand-card-accent) 62%, var(--color-ink-500));
+  }
+
+  .hand-card--locked {
+    border-color: color-mix(in srgb, var(--hand-card-accent) 16%, var(--color-ink-500));
+  }
+  .hand-card--locked::before { opacity: 0.5; }
+
+  .hand-card__rarity {
+    padding: 0.1rem 0.32rem;
+    border: 1px solid color-mix(in srgb, var(--hand-card-accent) 40%, transparent);
+    border-radius: var(--radius-sharp);
+    color: color-mix(in srgb, var(--hand-card-accent) 82%, var(--color-starlight));
+    background: color-mix(in srgb, var(--hand-card-accent) 9%, var(--color-ink-950));
+    line-height: 1;
+  }
+
+  .hand-card__reason {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid color-mix(in srgb, var(--color-ink-500) 80%, transparent);
+    border-radius: var(--radius-sharp);
+    color: var(--color-starlight-muted);
+    background: color-mix(in srgb, var(--color-ink-950) 45%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hand-card--playable:hover,
+    .hand-card--playable:active { transform: none; }
   }
 
   .lottery-card {

@@ -9,6 +9,7 @@ import { seatByUid, type Room } from '@/net/room'
 import type { GameState } from '@/game/turn/types'
 import type { AvatarId } from '@/boards/playerAvatarCatalog'
 import type { SkinId } from '@/boards/playerSkinCatalog'
+import { obligationTotalFor } from '@/game/economy/obligation'
 
 // ---------------------------------------------------------------------
 // Mockups de painéis laterais — fiel ao HUD do SRS §12.3.
@@ -24,6 +25,15 @@ export type Player = {
   connected?: boolean       // spec 038 — status de sessão no painel (§12.3/FR-015)
   you?: boolean             // spec 038 — o assento deste dispositivo
   money: number
+  // §12.3/D-061 — cobrança pendente do jogador (dívida no slot + fila de obrigações), e o
+  // LÍQUIDO real (`money - owed`). Ficam no view-model, não no componente, por dois motivos:
+  // a conta é a mesma para o próprio jogador e para os adversários (a mesa toda precisa saber
+  // que há dívida em resolução, e de quem), e ela é testável em node sem montar React.
+  //
+  // `net` pode ser NEGATIVO. Isso não contradiz o invariante de caixa nunca negativo no estado
+  // (§9.1): `money` continua ≥ 0; o negativo é uma LEITURA de caixa menos obrigação.
+  owed: number
+  net: number
   pos: number
   cardsInHand: number       // SRS §10.3 — privado, só contador é visível
   busTickets: number        // SRS §10.7 — contador separado
@@ -61,6 +71,8 @@ export function playersView(game: GameState, room: Room | null = null, myUid: st
       connected: room ? (room.seats.find((s) => s.playerId === p.id)?.connected ?? true) : true,
       you: mySeat?.playerId === p.id,
       money: p.cash,
+      owed: obligationTotalFor(game, p.id),
+      net: p.cash - obligationTotalFor(game, p.id),
       pos: p.pos,
       cardsInHand: p.hand.length, // só o contador é público (privacidade §10.3)
       busTickets: p.busTickets,
