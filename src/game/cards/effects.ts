@@ -44,25 +44,32 @@ const handlers: Record<string, Handler> = {
   erroBanco: (s, id) => {
     pl(s, id).cash += 200
   },
+  // Sem caixa suficiente → paga o que houver, sem abrir dívida/falência por esta via
+  // (mesmo padrão de `audit()`/Auditoria Fiscal — ofensivas.ts, 016). Evita saldo
+  // negativo fora do fluxo de dívida (FR-004a da simulação, 036).
   aniversario: (s, id) => {
     const me = pl(s, id)
     for (const p of s.players) {
       if (p.id !== id && !p.eliminated) {
-        p.cash -= 50
-        me.cash += 50
+        const paid = Math.min(50, p.cash)
+        p.cash -= paid
+        me.cash += paid
       }
     }
   },
   honorarios: (s, id, ports) => {
-    pl(s, id).cash -= 50
-    ports.onPayToCenter(s, 50)
+    const p = pl(s, id)
+    const paid = Math.min(50, p.cash)
+    p.cash -= paid
+    ports.onPayToCenter(s, paid)
   },
   criseImobiliaria: (s, _id, ports) => {
     for (const p of s.players) {
       if (p.eliminated) continue
-      const amt = Math.round(netWorth(s, p.id) * 0.05)
-      p.cash -= amt
-      ports.onPayToCenter(s, amt)
+      const owed = Math.round(netWorth(s, p.id) * 0.05)
+      const paid = Math.min(owed, p.cash)
+      p.cash -= paid
+      ports.onPayToCenter(s, paid)
     }
   },
   consertoImoveis: (s, id, ports) => {
@@ -72,8 +79,10 @@ const handlers: Record<string, Handler> = {
       if (sq.kind === 'property' && t?.ownerId === id) total += t.hotel ? 100 : t.houses * 25
     }
     if (total > 0) {
-      pl(s, id).cash -= total
-      ports.onPayToCenter(s, total)
+      const p = pl(s, id)
+      const paid = Math.min(total, p.cash)
+      p.cash -= paid
+      ports.onPayToCenter(s, paid)
     }
   },
   voltaGo: (s, id, ports) => {

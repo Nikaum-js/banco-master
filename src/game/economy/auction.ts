@@ -44,7 +44,10 @@ export function closeAuction(state: GameState): GameState {
   const a = auctionOf(s)
   if (a.highBidder) {
     const winner = s.players.find((p) => p.id === a.highBidder)
-    if (winner) winner.cash -= a.currentBid
+    // Solvência foi checada NO LANCE (placeBid); entre o lance e o fecho, outra ação do
+    // mesmo turno pode ter reduzido o caixa do licitante — paga o que houver em vez de
+    // ficar negativo (mesmo padrão de audit()/pagamentos obrigatórios; FR-004a, 036).
+    if (winner) winner.cash -= Math.min(a.currentBid, winner.cash)
     s.titles[a.pos].ownerId = a.highBidder
   }
   // sem highBidder → permanece com o banco (FR-015)

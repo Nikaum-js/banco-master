@@ -304,8 +304,12 @@ export function jailDecision(state: GameState, decision: 'pay' | 'card' | 'try',
   // sem dupla
   player.jail.attempts += 1
   if (player.jail.attempts >= 3) {
-    player.cash -= JAIL_FINE // débito real (007)
-    ctx.ports.onPayToCenter(s, JAIL_FINE) // 3ª tentativa: paga obrigatoriamente e move (FR-018)
+    // Pagamento obrigatório (SRS §4.11) — sem caixa suficiente, paga o que houver em vez de
+    // ficar negativo (mesmo padrão de audit()/cartas de pagamento — não abre falência por
+    // esta via, valor pequeno e incondicional; FR-004a da simulação, 036).
+    const paid = Math.min(JAIL_FINE, player.cash)
+    player.cash -= paid
+    ctx.ports.onPayToCenter(s, paid) // 3ª tentativa: paga obrigatoriamente e move (FR-018)
     player.jail = { inJail: false, attempts: 0 }
     advance(s, player,roll.move, ctx.ports)
     land(turn, player, null)
