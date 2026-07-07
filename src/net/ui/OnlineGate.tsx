@@ -40,6 +40,7 @@ import type { SkinId } from '@/boards/playerSkinCatalog'
 import { recallRoomPreset, rememberRoomPreset } from '@/net/roomPresets'
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 import { coerceBoardId, type BoardId } from '@/lib/mapCatalog'
+import { useRoomStore } from '@/net/roomStore'
 
 const TICK_MS = 250 // o host fecha prazos vencidos (soft-close de leilão, janela de reação)
 
@@ -176,6 +177,15 @@ function OnlineRoom({
   useEffect(() => () => session.dispose(), [session])
 
   const { phase, room, error, busy } = state
+
+  // A prévia pública chega antes de o convidado ter assento ou GameState. `connectStore`
+  // só assume quando a partida existe; o lobby também precisa da sala para aplicar o mapa
+  // autoritativo e acender o cenário conforme os assentos ocupados.
+  useEffect(() => {
+    if (room) useRoomStore.getState().setRoom(room)
+  }, [room])
+
+  useEffect(() => () => useRoomStore.getState().setRoom(null), [])
 
   if (phase === 'auction' && room) {
     return (

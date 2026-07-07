@@ -7,7 +7,7 @@ import { createContext, useContext, type PointerEvent as ReactPointerEvent, type
 import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { useMotion } from '@/game/ui/motion'
-import { useBoardTheme } from '@/game/ui/theme/boardTheme'
+import { useBoardTheme, useMapCatalog } from '@/game/ui/theme/boardTheme'
 import { AtlasCityscape } from './home/AtlasCityscape'
 import { FuligemBackdrop } from './home/FuligemBackdrop'
 
@@ -351,7 +351,7 @@ export function OrnamentRule({ className }: { className?: string }) {
 // Header de prancha — kicker em versalete de latão, título display, filete. Substitui a
 // faixa dourada chapada do ModalHeader nessas telas: latão como FIO, não como placa.
 export function EntryHeader({
-  kicker = 'Magnata Imobiliário · Cidades do Mundo',
+  kicker,
   title,
   subtitle,
 }: {
@@ -359,9 +359,12 @@ export function EntryHeader({
   title: string
   subtitle?: string
 }) {
+  const catalog = useMapCatalog()
   return (
     <header className="px-5 pt-5 text-center">
-      <p className="label text-brass/90 tracking-caps text-[0.6rem]">{kicker}</p>
+      <p className="label text-brass/90 tracking-caps text-[0.6rem]">
+        {kicker ?? `Magnata Imobiliário · ${catalog.name}`}
+      </p>
       <h2 className="display text-3xl leading-none mt-2">{title}</h2>
       {subtitle && <p className="text-starlight-muted text-[0.8rem] leading-snug mt-1.5">{subtitle}</p>}
       <OrnamentRule className="mt-4" />
