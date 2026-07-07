@@ -42,7 +42,7 @@ function applyTheme(t: BoardTheme): void {
 export interface BoardThemeState {
   theme: BoardTheme
   setTheme: (t: BoardTheme) => void
-  /** Próximo tema do ciclo — é o que o botão do canto inferior esquerdo chama. */
+  /** Próximo tema do ciclo — usado pelo seletor do mapa e pelo controle global. */
   cycle: () => void
 }
 

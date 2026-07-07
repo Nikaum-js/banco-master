@@ -59,9 +59,8 @@ export default function App() {
         <CommandFailureToast />
         <DebugLogger />
       </OnlineGate>
-      {/* FORA do `OnlineGate` de propósito: o gate devolve a home antes de montar os
-          filhos, e o alternador de tema precisa existir na home também — é lá que a troca
-          se vê inteira (a tela de entrada é parte do tema). */}
+      {/* Fora do `OnlineGate` para continuar disponível no lobby e na partida.
+          Na home, o próprio seletor de mapa assume essa ação e o CSS oculta este controle. */}
       <ThemeControl />
     </>
   )

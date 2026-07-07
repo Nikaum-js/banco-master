@@ -1,8 +1,6 @@
-// Miolo COMUM às três telas de entrada em avaliação (ver `home/styles.ts`): o que a home
-// faz é sempre a mesma coisa — lembrar o nome, criar sala e entrar por convite —
-// e só a pele muda. Este arquivo é o contrato entre as três: elas não repetem lógica de
-// clipboard, de extração de id de sala nem de persistência de nome, apenas a desenham
-// de formas diferentes.
+// Miolo comum aos dois visuais da entrada: o que a home faz é sempre a mesma coisa —
+// lembrar o nome, criar sala e entrar por convite — e só a pele muda. Este arquivo evita
+// repetir clipboard, extração de id de sala e persistência de nome.
 import { useState } from 'react'
 import { BOARD, GROUPS, type PropertySquare } from '@/lib/boardData'
 import { extractRoomId, rememberPlayerName, recallPlayerName, NAME_MAX } from '@/net/session'
@@ -25,7 +23,7 @@ export interface HomeActions {
   onLocal: () => void
 }
 
-/** Cidades do tabuleiro DE VERDADE — letreiro, ticker e cartas das três telas saem daqui. */
+/** Cidades do tabuleiro de verdade — letreiro, ticker e mapa da home saem daqui. */
 export const CITIES = BOARD.filter((s): s is PropertySquare => s.kind === 'property').map((s) => ({
   name: s.name,
   short: (s.short ?? s.name).toUpperCase(),

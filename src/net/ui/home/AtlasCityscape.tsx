@@ -307,39 +307,73 @@ function CityBand({
 }
 
 const CARS = [
-  { lane: 'eastbound', delay: '-4s', duration: '22s', tone: 'var(--color-brass)', scale: 1 },
-  { lane: 'eastbound', delay: '-16s', duration: '29s', tone: 'var(--color-starlight-muted)', scale: 0.9 },
-  { lane: 'westbound', delay: '-9s', duration: '25s', tone: 'var(--color-signal)', scale: 0.94 },
-  { lane: 'westbound', delay: '-21s', duration: '32s', tone: 'var(--color-brass-soft)', scale: 0.84 },
+  {
+    lane: 'eastbound',
+    delay: '-4s',
+    duration: '22s',
+    scale: 1.12,
+    path: 'M-100 858H1540',
+    rest: '24%',
+  },
+  {
+    lane: 'eastbound',
+    delay: '-16s',
+    duration: '29s',
+    scale: 1,
+    path: 'M-100 858H1540',
+    rest: '67%',
+  },
+  {
+    lane: 'westbound',
+    delay: '-9s',
+    duration: '25s',
+    scale: 1.08,
+    path: 'M1540 883H-100',
+    rest: '38%',
+  },
+  {
+    lane: 'westbound',
+    delay: '-21s',
+    duration: '32s',
+    scale: 0.96,
+    path: 'M1540 883H-100',
+    rest: '81%',
+  },
 ] as const
 
 function CarGlyph({
   direction,
-  tone,
   scale,
 }: {
   direction: 1 | -1
-  tone: string
   scale: number
 }) {
   return (
     <g transform={`scale(${direction * scale} ${scale})`} strokeLinecap="round" strokeLinejoin="round">
-      <ellipse cx="0" cy="11" rx="27" ry="3.5" fill="var(--color-ink-abyss)" opacity="0.65" stroke="none" />
+      <ellipse cx="0" cy="11.5" rx="28" ry="3.2" fill="var(--color-ink-abyss)" opacity="0.42" stroke="none" />
       <path
         d="M-27 6-22-2-9-5H9L20 0 27 3V10H-27Z"
-        fill={tone}
-        fillOpacity="0.72"
-        stroke="var(--color-brass)"
-        strokeOpacity="0.6"
+        fill="var(--color-ink-800)"
+        fillOpacity="0.62"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeOpacity="0.78"
       />
-      <path d="M-8-3H8L17 1H-15Z" fill="var(--color-ink-700)" stroke="var(--color-starlight-muted)" strokeOpacity="0.32" />
-      <path d="M0-3V1M-15 1h32" stroke="var(--color-starlight-muted)" strokeOpacity="0.34" />
-      <circle cx="-17" cy="10" r="4.2" fill="var(--color-ink-950)" stroke="var(--color-ink-400)" />
-      <circle cx="17" cy="10" r="4.2" fill="var(--color-ink-950)" stroke="var(--color-ink-400)" />
-      <circle cx="-17" cy="10" r="1.5" fill="var(--color-brass-soft)" stroke="none" />
-      <circle cx="17" cy="10" r="1.5" fill="var(--color-brass-soft)" stroke="none" />
+      <path
+        d="M-8-3H8L17 1H-15Z"
+        fill="var(--color-ink-950)"
+        fillOpacity="0.72"
+        stroke="var(--color-starlight)"
+        strokeOpacity="0.26"
+      />
+      <path d="M0-3V1M-15 1h32M-24 5h48" stroke="currentColor" strokeOpacity="0.34" />
+      <path d="M-21 2v5M21 3v4" stroke="var(--color-starlight)" strokeOpacity="0.24" />
+      <circle cx="-17" cy="10" r="4.2" fill="var(--color-ink-950)" stroke="currentColor" strokeOpacity="0.62" />
+      <circle cx="17" cy="10" r="4.2" fill="var(--color-ink-950)" stroke="currentColor" strokeOpacity="0.62" />
+      <circle cx="-17" cy="10" r="1.4" fill="var(--color-brass-soft)" fillOpacity="0.58" stroke="none" />
+      <circle cx="17" cy="10" r="1.4" fill="var(--color-brass-soft)" fillOpacity="0.58" stroke="none" />
       <circle className="entry-city-car__headlight" cx="27" cy="5" r="2.2" fill="var(--color-brass-glow)" stroke="none" />
-      <rect x="-28" y="4" width="2.5" height="4" rx="1" fill="var(--color-signal-glow)" stroke="none" />
+      <rect x="-28" y="4" width="2.3" height="4" rx="1" fill="var(--color-signal-glow)" fillOpacity="0.72" stroke="none" />
     </g>
   )
 }
@@ -373,12 +407,18 @@ function StreetLife() {
       {CARS.map((car) => (
         <g
           key={`${car.lane}-${car.delay}`}
-          className={`entry-city-car entry-city-car--${car.lane}`}
-          style={{ animationDelay: car.delay, animationDuration: car.duration }}
+          className="entry-flyer entry-city-car"
+          data-entry-car={car.lane}
+          style={{
+            offsetPath: `path('${car.path}')`,
+            offsetRotate: '0deg',
+            offsetDistance: car.rest,
+            animationDelay: car.delay,
+            animationDuration: car.duration,
+          }}
         >
           <CarGlyph
             direction={car.lane === 'eastbound' ? 1 : -1}
-            tone={car.tone}
             scale={car.scale}
           />
         </g>

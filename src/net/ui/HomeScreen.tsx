@@ -2,7 +2,7 @@
 // multiplayer era digitar `?host=1` / `?room=<id>` na barra de endereços — inviável para
 // qualquer pessoa fora do desenvolvimento.
 //
-// A ordem da tela é a mesma nos três estilos (revisão de UI, referência: richup.io): NOME
+// A ordem da tela é a mesma nos dois estilos (revisão de UI, referência: richup.io): NOME
 // primeiro, uma ação primária logo abaixo e a entrada por convite como caminho secundário.
 // O modo local continua existindo apenas como andaime por URL para desenvolvimento e testes.
 // O nome perguntado aqui é lembrado
@@ -10,7 +10,7 @@
 // padrão: quem recebe um convite clica no link, não cola.
 //
 // A PELE vem do tema do app (`game/ui/theme/boardTheme.ts`), não de um seletor próprio: a
-// tela de entrada é parte do tema, e trocar de tema no botão do canto inferior esquerdo
+// tela de entrada é parte do tema, e trocar de visual no ícone do mapa
 // troca a home junto — Atlas da Meia-Noite ou Fliperama Neon, cada uma com palco, painel e
 // movimento próprios. A lógica (nome lembrado, extração do id da sala, colar do clipboard)
 // mora em `home/homeShared.ts`, uma vez só: as duas desenham o mesmo formulário de jeitos
@@ -20,7 +20,7 @@ import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 import { HomeAtlas } from './home/HomeAtlas'
 import { HomeNeonArcade } from './home/HomeNeonArcade'
-import type { HomeActions } from './home/homeShared'
+import { useHomeForm, type HomeActions } from './home/homeShared'
 
 const SCREEN = {
   atlas: HomeAtlas,
@@ -31,6 +31,9 @@ export function HomeScreen(actions: HomeActions) {
   const { reduced } = useMotion()
   const theme = useBoardTheme((s) => s.theme)
   const Screen = SCREEN[theme]
+  // Acima da troca de pele: nome, convite e gaveta permanecem intactos quando
+  // o seletor de mapa alterna Atlas ⇄ Neon.
+  const f = useHomeForm(actions)
 
   return (
     <>
@@ -40,12 +43,13 @@ export function HomeScreen(actions: HomeActions) {
       <AnimatePresence initial={false}>
         <motion.div
           key={theme}
+          data-home-screen
           initial={reduced ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={reduced ? { opacity: 0 } : { opacity: 0 }}
           transition={reduced ? { duration: 0 } : { duration: MOTION.slow, ease: EASE.standard }}
         >
-          <Screen {...actions} />
+          <Screen f={f} />
         </motion.div>
       </AnimatePresence>
     </>

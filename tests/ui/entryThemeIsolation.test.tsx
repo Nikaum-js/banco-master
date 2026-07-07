@@ -35,6 +35,9 @@ describe('isolamento visual das telas de entrada', () => {
 
     expect(document.querySelector('[data-entry-backdrop="atlas"]')).toBeTruthy()
     expect(document.querySelector('[data-entry-cityscape="atlas"]')).toBeTruthy()
+    const cars = document.querySelectorAll('[data-entry-car]')
+    expect(cars).toHaveLength(4)
+    expect((cars[0] as SVGGElement).style.offsetPath).toContain('path(')
     expect(document.querySelector('[data-entry-backdrop="neon"]')).toBeNull()
     expect(screen.getByTestId('entry-content')).toBeTruthy()
   })
@@ -51,6 +54,7 @@ describe('isolamento visual das telas de entrada', () => {
 
     expect(document.querySelector('[data-entry-backdrop="atlas"]')).toBeNull()
     expect(document.querySelector('[data-entry-cityscape="atlas"]')).toBeNull()
+    expect(document.querySelector('[data-entry-car]')).toBeNull()
     expect(document.querySelector('[data-entry-backdrop="neon"]')).toBeTruthy()
     expect(screen.getByTestId('entry-content')).toBeTruthy()
     expect(mounts).toBe(1)
