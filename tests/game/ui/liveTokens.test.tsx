@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { Profiler } from 'react'
 import { act, cleanup, render } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { LiveTokens } from '@/game/ui/LiveTokens'
@@ -40,5 +41,34 @@ describe('tokens vivos', () => {
     const { container } = render(<LiveTokens gridArea={() => ({})} />)
     expect(container.querySelector('[data-avatar="prism-face"][data-skin="cartola"]')).toBeTruthy()
     expect(container.querySelector('[data-avatar="totem-face"][data-skin="astronauta"]')).toBeTruthy()
+  })
+
+  it('não renderiza novamente quando só estado alheio aos peões muda', () => {
+    const game = createSeedState(['p1', 'p2'])
+    act(() => useGameStore.setState({ game }))
+
+    let commits = 0
+    render(
+      <Profiler id="tokens" onRender={() => { commits += 1 }}>
+        <LiveTokens gridArea={() => ({})} />
+      </Profiler>,
+    )
+    const mountedCommits = commits
+
+    act(() => {
+      const next = structuredClone(useGameStore.getState().game)
+      next.round += 1
+      useGameStore.setState({ game: next })
+    })
+
+    expect(commits).toBe(mountedCommits)
+
+    act(() => {
+      const next = structuredClone(useGameStore.getState().game)
+      next.players[0].pos = 1
+      useGameStore.setState({ game: next })
+    })
+
+    expect(commits).toBeGreaterThan(mountedCommits)
   })
 })

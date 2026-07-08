@@ -6,6 +6,7 @@
 // snap direto, evitando dar a volta pelo caminho errado.
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { motion } from 'motion/react'
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '@/game/store'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
 import { play } from '@/game/ui/sound/engine'
@@ -82,19 +83,30 @@ function useWalkedPositions(targets: Record<string, number>, paused: boolean, re
 }
 
 export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSProperties }) {
-  const game = useGameStore((s) => s.game)
+  // O peão não depende de log, cartas, negociações ou resolução da casa. Assinar
+  // `s.game` inteiro fazia esta árvore animada renderizar em todo comando do motor.
+  // Os reducers clonam o GameState profundamente; por isso também não basta selecionar
+  // `players`: extraímos apenas os primitivos que mudam a representação dos peões.
+  const ids = useGameStore(useShallow((s) => s.game.players.map((p) => p.id)))
+  const positions = useGameStore(useShallow((s) => s.game.players.map((p) => p.pos)))
+  const eliminated = useGameStore(useShallow((s) => s.game.players.map((p) => p.eliminated)))
+  const cash = useGameStore(useShallow((s) => s.game.players.map((p) => p.cash)))
+  const turnOrder = useGameStore(useShallow((s) => s.game.turnOrder))
+  const activeSeat = useGameStore((s) => s.game.activeSeat)
   const room = useRoomStore((s) => s.room)
   const rolling = useTokenAnim((s) => s.rolling)
-  const activeId = game.players[game.turnOrder[game.activeSeat]]?.id
+  const activeId = ids[turnOrder[activeSeat]]
   const { reduced } = useMotion()
 
   // Alvo de posição por jogador (não-eliminado). Memoizado: é a dependência dos efeitos
   // da caminhada, e um objeto novo a cada render os reexecutaria sem nada ter mudado.
   const targets = useMemo(() => {
     const t: Record<string, number> = {}
-    game.players.forEach((p) => { if (!p.eliminated) t[p.id] = p.pos })
+    ids.forEach((id, index) => {
+      if (!eliminated[index]) t[id] = positions[index]
+    })
     return t
-  }, [game.players])
+  }, [ids, positions, eliminated])
   const { shown, pop } = useWalkedPositions(targets, rolling, reduced)
 
   // Sinaliza ao GameDriver se o peão do jogador da vez ainda está andando —
@@ -135,31 +147,31 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
         </motion.div>
       )}
 
-      {game.players.map((p) => {
-        if (p.eliminated) return null
-        const identity = identityOf(room, p.id)
-        const pos = shown[p.id] ?? p.pos
-        const group = groups[pos] ?? [p.id]
+      {ids.map((id, index) => {
+        if (eliminated[index]) return null
+        const identity = identityOf(room, id)
+        const pos = shown[id] ?? positions[index]
+        const group = groups[pos] ?? [id]
         const n = group.length
         const size = tokenSize(n)
-        const off = stackOffset(group.indexOf(p.id), n, size)
+        const off = stackOffset(group.indexOf(id), n, size)
         return (
           <motion.div
-            key={p.id}
+            key={id}
             layout
             transition={{ duration: reduced ? 0 : MOTION.fast, ease: EASE.standard }}
             className="relative z-30 pointer-events-none"
             style={gridArea(pos)}
           >
             <div
-              title={`${p.id} · $${p.cash}`}
+              title={`${id} · $${cash[index]}`}
               className="absolute left-1/2 top-1/2"
               style={{ transform: `translate(calc(-50% + ${off.x}px), calc(-50% + ${off.y}px))` }}
             >
               {/* key={tick} remonta e replay a escala a cada CHEGADA (plop) — some sob
                   movimento reduzido: a chegada em si já está no `shown` (o FATO fica). */}
               <motion.div
-                key={`pop-${pop[p.id] ?? 0}`}
+                key={`pop-${pop[id] ?? 0}`}
                 className="board-live-token"
                 initial={{ scale: 1 }}
                 animate={reduced ? { scale: 1 } : { scale: [1, 1.22, 1] }}
@@ -170,7 +182,7 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
                   avatar={identity.avatar}
                   skin={identity.skin}
                   size={size}
-                  active={p.id === activeId}
+                  active={id === activeId}
                 />
               </motion.div>
             </div>
