@@ -101,7 +101,14 @@ export function placeLandBid(
 function settleLot(s: GameState, lot: LandLot): void {
   if (lot.highBidder) {
     const winner = s.players.find((p) => p.id === lot.highBidder)
-    if (winner) winner.cash -= lot.currentBid
+    // O lote roda em PARALELO ao turno normal (evento autônomo) — entre o lance e o
+    // fecho, o licitante pode ter falido (elimination). Sem herdeiro válido, o lote
+    // permanece livre (sem dono) em vez de ir para um jogador eliminado (FR-004g, 036).
+    if (!winner || winner.eliminated) return
+    // Solvência foi checada NO LANCE (placeLandBid); outra ação no meio-tempo pode ter
+    // reduzido o caixa do licitante — paga o que houver em vez de ficar negativo (mesmo
+    // padrão de audit()/pagamentos obrigatórios; FR-004a, 036).
+    winner.cash -= Math.min(lot.currentBid, winner.cash)
     s.titles[lot.pos].ownerId = lot.highBidder
   }
 }
