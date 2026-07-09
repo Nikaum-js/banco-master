@@ -178,6 +178,16 @@ function clearLandTimer(): void {
   }
 }
 
+// Contagem de jogadores no boot: 2 por padrão. Sem lobby (M3/D-025 ainda não chegou —
+// app hoje é single-client), o parâmetro de URL `?players=2|3|6` é o único gancho para
+// o smoke E2E (036/US3) escolher a contagem sem precisar de UI de lobby nova.
+function initialPlayerIds(): string[] {
+  if (typeof window === 'undefined') return ['p1', 'p2']
+  const requested = Number(new URLSearchParams(window.location.search).get('players'))
+  const count = requested === 3 || requested === 6 ? requested : 2
+  return Array.from({ length: count }, (_, i) => `p${i + 1}`)
+}
+
 export const useGameStore = create<GameStore>((set, get) => {
   // (Re)agenda o fechamento do leilão de PROPRIEDADE pelo deadline; respeita pausa.
   // (O leilão de casas — 026 — é evento autônomo de fecho manual, não usa este timer.)
@@ -216,7 +226,7 @@ export const useGameStore = create<GameStore>((set, get) => {
   }
 
   return {
-    game: freshGame(['p1', 'p2']),
+    game: freshGame(initialPlayerIds()),
     ctx: {
       rng: () => Math.random(),
       // Fiscal injetado só aqui (jogo real); defaultPorts segue sem ele p/ não afetar os testes (012)
