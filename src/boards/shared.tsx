@@ -12,10 +12,7 @@ import { THEME } from '@/game/theme'
 import { deedView, type BuildBlock } from '@/game/ui/deed/deedView'
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { GROUP_COLOR } from './groupColors'
-import { AvatarArtwork } from './playerAvatars'
-import { normalizeAvatar, type AvatarId } from './playerAvatarCatalog'
-import { PlayerSkinArtwork } from './playerSkins'
-import { normalizeSkin, type SkinId } from './playerSkinCatalog'
+import { PlayerFace } from './PlayerFace'
 import { useTradeUI } from '@/game/ui/trade/tradeUI'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { markLayout, popoverPlacement, sideOf, type Side } from './topology'
@@ -405,82 +402,6 @@ export function CornerSquare({ square, accent = 'cream' }:
         {label}
       </p>
     </div>
-  )
-}
-
-// ---------------------------------------------------------------------
-// PlayerFace — representação canônica do avatar em lobby, token e painéis.
-// O catálogo fechado vive em `playerAvatarCatalog`; a cor continua sendo o distintivo único.
-// Cada player ganha delays determinísticos para os gestos não rodarem em sincronia.
-// ---------------------------------------------------------------------
-function hashStr(s: string) {
-  let h = 0
-  for (let i = 0; i < s.length; i++) h = ((h * 31 + s.charCodeAt(i)) & 0xffff)
-  return h
-}
-
-export function PlayerFace({
-  color,
-  size = 24,
-  active = false,
-  asleep = false,
-  avatar,
-  skin,
-  className,
-}: {
-  color: string
-  size?: number | string
-  active?: boolean
-  asleep?: boolean
-  avatar?: AvatarId
-  skin?: SkinId
-  className?: string
-}) {
-  const head = color || 'var(--color-ink-400)'
-  const resolvedAvatar = normalizeAvatar(avatar)
-  const resolvedSkin = normalizeSkin(skin)
-  const h = hashStr(head)
-  const delay = `-${(h % 5200) / 1000}s`
-
-  return (
-    <svg
-      viewBox="0 0 160 160"
-      width={size}
-      height={size}
-      className={cn(
-        'avatar-face shrink-0',
-        `avatar-face--${resolvedAvatar}`,
-        `avatar-skin--${resolvedSkin}`,
-        asleep && 'avatar-face--asleep',
-        !asleep && (active ? 'face-idle-active' : 'face-idle'),
-        className,
-      )}
-      style={{
-        filter: active ? `drop-shadow(0 0 4px color-mix(in srgb, ${head} 70%, transparent))` : undefined,
-        '--face-delay': delay,
-      } as React.CSSProperties}
-      data-avatar={resolvedAvatar}
-      data-skin={resolvedSkin}
-      aria-hidden="true"
-    >
-      <PlayerSkinArtwork id={resolvedSkin} color={head} layer="behind" />
-      <AvatarArtwork id={resolvedAvatar} color={head} asleep={asleep} />
-      <PlayerSkinArtwork id={resolvedSkin} color={head} layer="front" />
-
-      {/* Anel giratório do jogador da vez — na COR do player (não dourado fixo) */}
-      {active && (
-        <circle
-          className="face-active-ring"
-          cx="80"
-          cy="80"
-          r="70"
-          fill="none"
-          stroke={head}
-          strokeWidth="4"
-          strokeDasharray="8 8"
-        />
-      )}
-    </svg>
   )
 }
 

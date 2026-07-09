@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { PlayerFace } from '@/boards/shared'
+import { PlayerFace } from '@/boards/PlayerFace'
 import {
   AVATARS,
   DEFAULT_AVATAR,

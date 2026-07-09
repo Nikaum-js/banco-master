@@ -21,7 +21,7 @@
 import { type ReactNode, useId, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { HandCoins, Landmark, ShieldAlert } from 'lucide-react'
-import { PlayerFace } from '@/boards/shared'
+import { PlayerFace } from '@/boards/PlayerFace'
 import { useGameStore } from '@/game/store'
 import { useLocalView, useRoomStore } from '@/net/roomStore'
 import { identityOf } from '@/net/identity'

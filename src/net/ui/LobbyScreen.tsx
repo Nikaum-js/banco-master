@@ -3,7 +3,7 @@
 // tabuleiro — graticule, latão, marcas de registro).
 import { useEffect, useState } from 'react'
 import { Button, Chip } from '@/game/ui/primitives'
-import { PlayerFace } from '@/boards/shared'
+import { PlayerFace } from '@/boards/PlayerFace'
 import { DEFAULT_AVATAR, type AvatarId } from '@/boards/playerAvatarCatalog'
 import { DEFAULT_SKIN, type SkinId } from '@/boards/playerSkinCatalog'
 import {

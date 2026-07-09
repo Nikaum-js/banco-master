@@ -1,4 +1,4 @@
-import { PlayerFace } from '@/boards/shared'
+import { PlayerFace } from '@/boards/PlayerFace'
 import {
   AVATARS,
   avatarLabel,
