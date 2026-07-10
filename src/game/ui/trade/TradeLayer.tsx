@@ -7,7 +7,7 @@
 // (validade) vem de validateTrade. Troca-se propriedade + dinheiro + Bus Tickets (D-028).
 import { useReducer, useEffect, type CSSProperties, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Bus, Shield } from 'lucide-react'
+import { Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
 import { useTradeUI } from './tradeUI'
@@ -36,6 +36,7 @@ import {
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { TradeDeedItem } from './TradeDeedItem'
 import { CountryFlag } from '@/boards/glyphs/flags'
+import { TicketVehicleIcon } from '@/game/ui/ticketVehicle'
 import { PropertyIconArt } from '@/boards/glyphs/propertyIcons'
 import { activeBoard, activeLabels } from '@/game/ui/theme/boardTheme'
 
@@ -301,7 +302,7 @@ function TicketField({ value, max, onChange }: { value: number; max: number; onC
     'w-6 h-6 rounded-full border border-coffee-500 bg-coffee-700 text-cream grid place-items-center leading-none text-sm hover:border-gold/60 hover:text-gold disabled:opacity-40 disabled:hover:border-coffee-500 disabled:hover:text-cream transition-colors'
   return (
     <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-950/50 border border-coffee-500">
-      <Bus size={14} className="text-gold shrink-0" />
+      <span className="text-gold shrink-0"><TicketVehicleIcon size={14} /></span>
       <span className="label text-cream-muted flex-1 min-w-0 truncate">{`${activeLabels().busTicket}s`}</span>
       <button type="button" className={stepBtn} disabled={value <= 0} onClick={() => onChange(value - 1)} aria-label="Menos um ticket">−</button>
       <span className={cn('currency text-sm tabular-nums w-5 text-center leading-none', value > 0 ? 'text-gold-glow' : 'text-cream-muted/85')}>{value}</span>
@@ -353,7 +354,7 @@ function PanTokens({ positions, cash, tickets, reduced }: { positions: number[];
       )}
       {tickets > 0 && (
         <motion.span {...drop} transition={landing} className={cn('relative z-10 flex items-end', (positions.length > 0 || cash > 0) && '-ml-0.5')}>
-          <Bus size={14} className="text-gold" />
+          <span className="text-gold"><TicketVehicleIcon size={14} /></span>
           {tickets > 1 && <span className="currency text-gold-glow text-nano leading-none ml-px">×{tickets}</span>}
         </motion.span>
       )}
@@ -874,7 +875,7 @@ function ReadSide({
         )}
         {tickets > 0 && (
           <div className="trade-value-item">
-            <span className="trade-value-item__icon"><Bus size={18} /></span>
+            <span className="trade-value-item__icon"><TicketVehicleIcon size={18} /></span>
             <div>
               <p>{activeLabels().busTicket}{tickets > 1 ? 's' : ''}</p>
               <strong>{tickets}</strong>

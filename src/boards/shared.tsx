@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { Bus, ChevronRight, DoorOpen, TrainFront } from 'lucide-react'
+import { ChevronRight, DoorOpen } from 'lucide-react'
 import { motion } from 'motion/react'
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -49,6 +49,7 @@ import { AccessoryErrorBoundary } from '@/app/AccessoryErrorBoundary'
 import { identityOf } from '@/net/identity'
 import { CountryFlag } from '@/boards/glyphs/flags'
 import { PropertyIconArt } from '@/boards/glyphs/propertyIcons'
+import { SteamLocoIcon, TicketVehicleIcon } from '@/game/ui/ticketVehicle'
 import { GROUP_COLOR } from '@/boards/groupColors'
 
 // Este módulo exporta SÓ componentes — cada consumidor importa constante e seletor da
@@ -993,7 +994,7 @@ function RailHopAction({ targets, onHop }: { targets: number[]; onHop: (dest: nu
           title={`Embarcar para ${board[dest]?.name ?? dest} — resolve a casa de destino, sem bônus de GO`}
         >
           <span className="rail-hop-action__icon" aria-hidden="true">
-            <TrainFront size={18} />
+            <SteamLocoIcon size={18} />
           </span>
           <span className="rail-hop-action__label">
             <span className="rail-hop-action__eyebrow">Embarcar</span>
@@ -1016,7 +1017,7 @@ function BusTicketAction({ count, onClick }: { count: number; onClick: () => voi
       title={`Usar ${activeLabels().busTicket} · ${count} ${count === 1 ? 'disponível' : 'disponíveis'}`}
     >
       <span className="bus-ticket-action__icon" aria-hidden="true">
-        <Bus size={18} />
+        <TicketVehicleIcon size={18} />
       </span>
       <span className="bus-ticket-action__label">
         <span className="bus-ticket-action__eyebrow">Usar</span>

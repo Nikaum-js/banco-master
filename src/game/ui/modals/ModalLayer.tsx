@@ -3,7 +3,6 @@
 // vocabulário visual dos popovers de propriedade (cartão coffee + header com stripe).
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Bus, TramFront } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
 import { useLocalView, useRoomStore } from '@/net/roomStore'
@@ -28,7 +27,8 @@ import { useMotion } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { CountryFlag } from '@/boards/glyphs/flags'
-import { activeBoard, activeCatalog, activeLabels, capLabel, useBoardTheme } from '@/game/ui/theme/boardTheme'
+import { activeBoard, activeCatalog, activeLabels, capLabel } from '@/game/ui/theme/boardTheme'
+import { TicketVehicleIcon } from '@/game/ui/ticketVehicle'
 import { PropertyIconArt, PropertyIconDisc } from '@/boards/glyphs/propertyIcons'
 import { METAL_ACCENT, METAL_LABEL } from '@/boards/glyphs/metals'
 
@@ -372,8 +372,7 @@ export function ModalLayer() {
  * própria em `var(--color-brass*)` e ficariam errados dentro do disco dourado do veículo.
  */
 function LineVehicle({ size }: { size: number }) {
-  const fuligem = useBoardTheme((s) => s.theme) === 'fuligem'
-  return fuligem ? <TramFront size={size} /> : <Bus size={size} />
+  return <TicketVehicleIcon size={size} />
 }
 
 // Bus Ticket — "linha de ônibus" (SRS §2.7): as casas do MESMO LADO viram
