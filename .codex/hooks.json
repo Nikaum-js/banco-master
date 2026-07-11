@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "'/Users/nikaum/Projects/magnata-imobiliario/.codex/hooks/stop-verify.sh'",
+            "command": "'/Users/nikaum/Projects/banco-master/.codex/hooks/stop-verify.sh'",
             "timeout": 120,
             "statusMessage": "Rodando testes do motor (vitest)…"
           }
