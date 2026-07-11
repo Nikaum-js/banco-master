@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { BUS_TICKET_APPRAISAL } from '@/game/economy/appraisal'
+import { THEME } from '@/game/theme'
+import { BOARD } from '@/lib/boardData'
 import { createSeedState } from '@/game/setup'
 import {
   createTradeDraft,
@@ -109,12 +112,14 @@ describe('trade draft', () => {
     expect(projectTradeDraft(game, draft).canPropose).toBe(false)
     expect(projectTradeDraft(game, draft).counterpart).toMatchObject({ fromDonation: true, fromMissing: 0 })
 
-    // Junto com o caixa inteiro ($2.000 + Roma $60 + 2 tickets $200 = $2.260 → piso ⌈…/3⌉=$754),
-    // por $1: deixa de ser doação e vira esvaziamento — falta o que completa o piso.
-    draft = apply(game, draft, { kind: 'set-cash', party: 'from', amount: 2000 })
+    // Junto com o caixa inteiro (+ Roma + 2 tickets), por $1: deixa de ser doação e vira
+    // esvaziamento — falta o que completa o piso de um terço do patrimônio.
+    const patrimonio = THEME.INITIAL_CASH + (BOARD[1] as { price: number }).price + 2 * BUS_TICKET_APPRAISAL
+    const falta = Math.ceil(patrimonio / 3) - 1 // o piso, menos o $1 que ele recebe
+    draft = apply(game, draft, { kind: 'set-cash', party: 'from', amount: THEME.INITIAL_CASH })
     draft = apply(game, draft, { kind: 'set-tickets', party: 'from', amount: 2 })
     draft = apply(game, draft, { kind: 'set-cash', party: 'to', amount: 1 })
     expect(projectTradeDraft(game, draft).canPropose).toBe(false)
-    expect(projectTradeDraft(game, draft).counterpart).toMatchObject({ fromDonation: false, fromMissing: 753 })
+    expect(projectTradeDraft(game, draft).counterpart).toMatchObject({ fromDonation: false, fromMissing: falta })
   })
 })

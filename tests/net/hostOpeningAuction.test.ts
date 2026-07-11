@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { THEME } from '@/game/theme'
 import { createHost } from '@/net/host'
 import { LocalHub, localTransport } from '@/net/localTransport'
 import { createRoom, joinRoom, selectOpeningMode, SEAT_COLORS, type PublicRoom } from '@/net/room'
+
+// O caixa inicial é knob de balanceamento (D-076): estes testes são sobre a LIQUIDAÇÃO do
+// leilão — cada um paga o próprio lance —, não sobre o valor de partida.
+const C0 = THEME.INITIAL_CASH
 
 function table() {
   const base = createRoom('mesa-leilao', {
@@ -84,8 +89,8 @@ describe('Leilão da Largada — autoridade', () => {
       ['Bruno', [6, 6]],
       ['Ana', [1, 1]],
     ])
-    expect(host.game().players.map((player) => player.cash)).toEqual([2_000, 2_000])
-    expect(host.game().centerPot).toBe(500)
+    expect(host.game().players.map((player) => player.cash)).toEqual([C0, C0])
+    expect(host.game().centerPot).toBe(THEME.PARKING_SEED)
     expect(host.seq()).toBe(0)
   })
 
@@ -156,8 +161,8 @@ describe('Leilão da Largada — autoridade', () => {
       ['Bruno', 500, 'p1'],
       ['Ana', 200, 'p2'],
     ])
-    expect(host.game().players.map((player) => player.cash)).toEqual([1_500, 1_800])
-    expect(host.game().centerPot).toBe(1_200)
+    expect(host.game().players.map((player) => player.cash)).toEqual([C0 - 500, C0 - 200])
+    expect(host.game().centerPot).toBe(THEME.PARKING_SEED + 700)
   })
 
   it('no prazo, converte quem não enviou em $0 e inicia sem ação do convidado', async () => {
@@ -181,8 +186,8 @@ describe('Leilão da Largada — autoridade', () => {
       ['Ana', 300],
       ['Bruno', 0],
     ])
-    expect(host.game().players.map((player) => player.cash)).toEqual([1_700, 2_000])
-    expect(host.game().centerPot).toBe(800)
+    expect(host.game().players.map((player) => player.cash)).toEqual([C0 - 300, C0])
+    expect(host.game().centerPot).toBe(THEME.PARKING_SEED + 300)
   })
 
   it('reanexa a autoridade no meio da coleta sem revelar nem perder lances', async () => {
@@ -214,7 +219,7 @@ describe('Leilão da Largada — autoridade', () => {
 
     guestTransport.submitOpeningBid(400)
     await settleHost(revived)
-    expect(revived.game().players.map((player) => player.cash)).toEqual([1_600, 1_750])
-    expect(revived.game().centerPot).toBe(1_150)
+    expect(revived.game().players.map((player) => player.cash)).toEqual([C0 - 400, C0 - 250])
+    expect(revived.game().centerPot).toBe(THEME.PARKING_SEED + 650)
   })
 })

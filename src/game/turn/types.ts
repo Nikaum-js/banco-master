@@ -33,7 +33,7 @@ export interface Player {
   completouPrimeiraVolta: boolean // gatilho do Speed Die (FR-005)
   jail: JailState
   eliminated: boolean // lido para pular na ordem (Falência)
-  cash: number // saldo (semente $2.000, SRS §3.1) — introduzido por Compra & Aluguel (003)
+  cash: number // saldo (semente do tema, SRS §3.1) — introduzido por Compra & Aluguel (003)
   // ids de cartas na mão (≤ 3) — Sistema de Cartas (006). 043, D-037: `CardSlot[]`, não
   // `CardId[]` — na perspectiva da AUTORIDADE nunca há `null` (comprimento é a única verdade
   // pública numa mão alheia; ver data-model §4).
@@ -103,7 +103,7 @@ export interface GameState {
   titles: Record<number, Title> // pos → posse (003); só casas compráveis
   resolution: ResolutionSlice | null // interação transitória de compra/leilão (003)
   decks: Record<DeckId, CardSlot[]> // ids de cartas por deck; topo = índice 0 (006). 043, D-037: idem `hand`.
-  centerPot: number // pote do Free Parking (007); semente/reabastecimento $500
+  centerPot: number // pote do Free Parking (007); semente/reabastecimento definidos no tema
   loans: Loan[] // empréstimos ativos entre jogadores (010, §15)
   pendingLoan: LoanRequest | null // solicitação de empréstimo aguardando resposta do credor (§15.2); uma por vez
   // `taxManPos` saiu na D-065 (o Fiscal saiu do jogo). Snapshot anterior ainda traz o campo, e

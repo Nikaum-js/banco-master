@@ -2,6 +2,7 @@
 // próprio reducer de produção, sem violação) e um caso ADULTERADO (mesmo estado, valor corrompido
 // manualmente, violação código 'h' detectada). Mesmo padrão de invariants.test.ts.
 import { describe, expect, it } from 'vitest'
+import { THEME } from '@/game/theme'
 import { createSimSession } from './driver'
 import { checkConservation, checkAuctionClose } from './conservation'
 import type { GameState } from '@/game/turn/types'
@@ -27,14 +28,16 @@ function baseState(n = 2): GameState {
 
 function ports(): TurnPorts {
   return {
-    onPassGo: () => 200,
+    // O mock ESPELHA a produção: `onPassGo`/`onCollectCenter` com literal divergem do ledger
+    // de conservação (que lê o THEME) assim que alguém recalibra o balanceamento — D-076.
+    onPassGo: () => THEME.GO_PASS,
     onPayToCenter: (s: GameState, amount: number) => {
       s.centerPot += amount
     },
     onCollectCenter: (s: GameState, id: string) => {
       const p = s.players.find((x) => x.id === id)!
       p.cash += s.centerPot
-      s.centerPot = 500
+      s.centerPot = THEME.PARKING_SEED
     },
     draw: (state, deckId) => state.decks[deckId].shift() ?? null, // 043 — igual ao default de produção (setup.ts)
     hasReaction: () => null,
@@ -84,7 +87,7 @@ describe('checkConservation — mecanismos de dinheiro (036 extensão)', () => {
 
   it('Free Parking: coleta o pote e reseta pro seed; corrompido é detectado', () => {
     const prev = baseState()
-    prev.centerPot = 550
+    prev.centerPot = THEME.PARKING_SEED + 50 // pote já acumulado acima da semente
     prev.players[0].pos = 24 // Férias/Loteria
     prev.turn.state = 'casa-a-resolver'
     prev.turn.pendingResolve = true

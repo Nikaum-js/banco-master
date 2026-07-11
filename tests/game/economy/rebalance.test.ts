@@ -11,9 +11,11 @@ const topHotel = (g: GroupKey) => rentLadder(g, topBase(g)).hotel
 
 describe('Rebalance 032 — curva de aluguel (US1)', () => {
   it('SC-001: hotel-topo por grupo bate os alvos; o topo é a Alta Roda (super-luxo)', () => {
-    expect(topHotel('brown')).toBe(360) // Pisa base 6 × 60
-    expect(topHotel('skyblue')).toBe(520) // Luxor 10 × 52
-    expect(topHotel('navy')).toBe(1872) // Paris base 52 × 36 (França virou duo, 033)
+    // Os alvos seguem o TABULEIRO × o multiplicador do tier: escrever o produto à mão faz um
+    // rebalanceamento de aluguel-base (D-076 subiu o brown) reprovar um teste sobre a CURVA.
+    expect(topHotel('brown')).toBe(topBase('brown') * THEME.RENT_MULT.brown.hotel)
+    expect(topHotel('skyblue')).toBe(topBase('skyblue') * THEME.RENT_MULT.skyblue.hotel)
+    expect(topHotel('navy')).toBe(topBase('navy') * THEME.RENT_MULT.navy.hotel) // França é duo (033)
     // Alta Roda (platinum) é o novo topo do tabuleiro (033)
     const maxHotel = Math.max(...GROUPS.map(topHotel))
     expect(maxHotel).toBe(topHotel('platinum'))

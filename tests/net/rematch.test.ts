@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { THEME } from '@/game/theme'
 import { buildInitialGame } from '@/game/setup'
 import { createHost } from '@/net/host'
 import { LocalHub, localTransport } from '@/net/localTransport'
@@ -212,9 +213,9 @@ describe('RoomSession — revanche', () => {
     const next = host.client()!.game()!
     expect(host.client()!.seq()).toBeGreaterThan(9)
     expect(next.phase).toBe('playing')
-    expect(next.players.map((player) => player.cash)).toEqual([2_000, 2_000])
+    expect(next.players.map((player) => player.cash)).toEqual([THEME.INITIAL_CASH, THEME.INITIAL_CASH])
     expect(Object.values(next.titles).every((title) => title.ownerId === null)).toBe(true)
-    expect(next.centerPot).toBe(500)
+    expect(next.centerPot).toBe(THEME.PARKING_SEED)
     expect(next.loans).toEqual([])
     expect(next.tempEffects).toEqual([])
     expect(host.session.getState().room?.matchHistory).toHaveLength(1)

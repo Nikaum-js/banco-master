@@ -2,17 +2,17 @@
 // Magnata Imobiliário — Tabuleiro tema "Países do Mundo"
 // 48 casas no padrão SRS §2.1 / decisão D-017 (4 cantos + 28 propriedades
 // + 4 aeroportos + 3 utilidades + 3 Acaso + 3 Tesouro + 2 impostos +
-// 1 espaço Bus Ticket). 9 países: 2 premium (4 cidades), 3 regular (3),
-// 2 médios (2), 1 novo premium (Rússia, 4). Inspirado no Monopoly Mega Edition.
+// 1 espaço Bus Ticket). 10 países: 8 grupos de 3 cidades e 2 duos de prestígio.
+// Inspirado no Monopoly Mega Edition.
 // Posições começam em 0 (GO, canto inferior direito) e vão no sentido
-// horário, encerrando na casa 47 (Paris). Cantos em 0/12/24/36.
+// horário, encerrando na casa 47 (Dubai). Cantos em 0/12/24/36.
 //
 // Campo `uf` é código ISO-3166-1 alfa-2 do país (BR, US, JP…) — usado
 // como semente pra renderizar a bandeira-avatar no tabuleiro.
 //
 // Preços/aluguéis-base por cidade são os valores OFICIAIS do tema "Cidades do
-// Mundo" (escada $60–$400). Os multiplicadores/knobs globais (aluguel, GO,
-// estoques, custos, imposto) vivem em `src/game/theme.ts` (fonte única, tunável).
+// Mundo" (escada $60–$650). Os multiplicadores/knobs globais (aluguel, GO,
+// custos, imposto) vivem em `src/game/theme.ts` (fonte única, tunável).
 // Aeroporto: `rent` aqui é decorativo — o aluguel vem de `theme.AIRPORT_RENT`.
 // =====================================================================
 
@@ -139,12 +139,12 @@ const ATLAS_BOARD: readonly Square[] = [
   { pos: 0,  kind: 'corner-go', name: 'GO', short: 'GO' },
 
   // ---------- lado inferior (direita → esquerda) — Itália + Egito ----------
-  { pos: 1,  kind: 'property', group: 'brown',   name: 'Roma',       uf: 'IT', capital: 'Itália', price: 60,  rent: 2 },
+  { pos: 1,  kind: 'property', group: 'brown',   name: 'Roma',       uf: 'IT', capital: 'Itália', price: 60,  rent: 4 },
   { pos: 2,  kind: 'tesouro',  name: 'Tesouro' },
-  { pos: 3,  kind: 'property', group: 'brown',   name: 'Veneza',     uf: 'IT', capital: 'Itália', price: 80,  rent: 4 },
-  { pos: 4,  kind: 'tax',      name: 'Imposto de Renda', amount: 200 },
-  { pos: 5,  kind: 'property', group: 'brown',   name: 'Pisa',       uf: 'IT', capital: 'Itália', price: 100, rent: 6 },
-  { pos: 6,  kind: 'airport',  name: 'JFK',      iata: 'JFK', price: 200, rent: 25 },
+  { pos: 3,  kind: 'property', group: 'brown',   name: 'Veneza',     uf: 'IT', capital: 'Itália', price: 80,  rent: 5 },
+  { pos: 4,  kind: 'tax',      name: 'Imposto de Renda', amount: 250 },
+  { pos: 5,  kind: 'property', group: 'brown',   name: 'Pisa',       uf: 'IT', capital: 'Itália', price: 100, rent: 7 },
+  { pos: 6,  kind: 'airport',  name: 'JFK',      iata: 'JFK', price: 250, rent: 30 },
   { pos: 7,  kind: 'property', group: 'skyblue', name: 'Cairo',      uf: 'EG', capital: 'Egito',  price: 115, rent: 8 },
   { pos: 8,  kind: 'acaso', name: 'Acaso' },
   { pos: 9,  kind: 'property', group: 'skyblue', name: 'Gizé',       uf: 'EG', capital: 'Egito',  price: 120, rent: 8 },
@@ -156,11 +156,11 @@ const ATLAS_BOARD: readonly Square[] = [
 
   // ---------- lado esquerdo (baixo → cima) — Japão + Espanha ----------
   { pos: 13, kind: 'property', group: 'pink',    name: 'Tóquio',     uf: 'JP', capital: 'Japão',   price: 160, rent: 12 },
-  { pos: 14, kind: 'utility',  name: 'Petro Corp', icon: 'fuel', price: 150 },
+  { pos: 14, kind: 'utility',  name: 'Petro Corp', icon: 'fuel', price: 175 },
   { pos: 15, kind: 'property', group: 'pink',    name: 'Kyoto',      uf: 'JP', capital: 'Japão',   price: 180, rent: 14 },
   { pos: 16, kind: 'property', group: 'pink',    name: 'Osaka',      uf: 'JP', capital: 'Japão',   price: 190, rent: 16 },
   { pos: 17, kind: 'acaso', name: 'Acaso' },
-  { pos: 18, kind: 'airport',  name: 'Londres',  iata: 'LHR', price: 200, rent: 25 },
+  { pos: 18, kind: 'airport',  name: 'Londres',  iata: 'LHR', price: 250, rent: 30 },
   { pos: 19, kind: 'property', group: 'purple',  name: 'Madri',      uf: 'ES', capital: 'Espanha', price: 200, rent: 18 },
   { pos: 20, kind: 'tesouro',  name: 'Tesouro' },
   { pos: 21, kind: 'property', group: 'purple',  name: 'Ibiza',      uf: 'ES', capital: 'Espanha', price: 220, rent: 20 },
@@ -176,9 +176,9 @@ const ATLAS_BOARD: readonly Square[] = [
   { pos: 27, kind: 'property', group: 'orange',  name: 'Hamburgo',   uf: 'DE', capital: 'Alemanha', price: 265, rent: 24 },
   { pos: 28, kind: 'property', group: 'red',     name: 'Pequim',     uf: 'CN', capital: 'China',    price: 270, rent: 24 },
   { pos: 29, kind: 'property', group: 'red',     name: 'Xangai',     uf: 'CN', capital: 'China',    price: 280, rent: 26 },
-  { pos: 30, kind: 'airport',  name: 'Narita',   iata: 'NRT', price: 200, rent: 25 },
+  { pos: 30, kind: 'airport',  name: 'Narita',   iata: 'NRT', price: 250, rent: 30 },
   { pos: 31, kind: 'property', group: 'red',     name: 'Hong Kong',  uf: 'CN', capital: 'China', price: 285, rent: 26 },
-  { pos: 32, kind: 'utility',  name: 'Eletro Corp', icon: 'bolt', price: 150 },
+  { pos: 32, kind: 'utility',  name: 'Eletro Corp', icon: 'bolt', price: 175 },
   { pos: 33, kind: 'property', group: 'yellow',  name: 'Rio de Janeiro', short: 'Rio', uf: 'BR', capital: 'Brasil', price: 300, rent: 28 },
   { pos: 34, kind: 'property', group: 'yellow',  name: 'São Paulo',  uf: 'BR', capital: 'Brasil', price: 305, rent: 28 },
   { pos: 35, kind: 'property', group: 'yellow',  name: 'Brasília',   uf: 'BR', capital: 'Brasil', price: 320, rent: 30 },
@@ -192,10 +192,10 @@ const ATLAS_BOARD: readonly Square[] = [
   { pos: 39, kind: 'tesouro',  name: 'Tesouro' },
   { pos: 40, kind: 'property', group: 'green',    name: 'Miami',       uf: 'US', capital: 'EUA',    price: 360, rent: 38 },
   { pos: 41, kind: 'property', group: 'navy',     name: 'Cannes',      uf: 'FR', capital: 'França', price: 380, rent: 40 },
-  { pos: 42, kind: 'airport',  name: 'Sydney',   iata: 'SYD', price: 200, rent: 25 },
-  { pos: 43, kind: 'utility',  name: 'Gas Corp',    icon: 'gas',  price: 150 },
+  { pos: 42, kind: 'airport',  name: 'Sydney',   iata: 'SYD', price: 250, rent: 30 },
+  { pos: 43, kind: 'utility',  name: 'Gas Corp',    icon: 'gas',  price: 175 },
   { pos: 44, kind: 'property', group: 'navy',     name: 'Paris',       uf: 'FR', capital: 'França',  price: 430, rent: 52 },
-  { pos: 45, kind: 'tax',      name: 'Imposto de Luxo',  amount: 100 },
+  { pos: 45, kind: 'tax',      name: 'Imposto de Luxo',  amount: 150 },
   { pos: 46, kind: 'property', group: 'platinum', name: 'Abu Dhabi',   uf: 'AE', capital: 'Emirados', price: 550, rent: 60 },
   { pos: 47, kind: 'property', group: 'platinum', name: 'Dubai',       uf: 'AE', capital: 'Emirados', price: 650, rent: 72 },
 ]

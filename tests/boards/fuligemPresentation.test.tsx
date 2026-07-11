@@ -50,12 +50,12 @@ describe('apresentação por mapa (055)', () => {
     const board = catalogOf('fuligem').board
 
     const rail = render(<ClassicSquare square={board[5]} side="bottom" />)
-    expect(rail.container.querySelector('.board-square-price')?.textContent).toBe('R$200')
+    expect(rail.container.querySelector('.board-square-price')?.textContent).toBe(`R$${(board[5] as { price: number }).price}`)
     expect(screen.getByText('Estação Bonfim')).toBeTruthy()
     rail.unmount()
 
     const mine = render(<ClassicSquare square={board[4]} side="bottom" />)
-    expect(mine.container.querySelector('.board-square-price')?.textContent).toBe('R$220')
+    expect(mine.container.querySelector('.board-square-price')?.textContent).toBe(`R$${(board[4] as { price: number }).price}`)
     expect(screen.getByText('Mina de Ferro')).toBeTruthy()
   })
 

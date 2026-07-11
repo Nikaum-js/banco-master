@@ -11,6 +11,7 @@
 //   3. a DISPOSIÇÃO honra a razão de existir dela: a faixa quente pós-prisão;
 //   4. o Atlas segue byte a byte intacto (é isso que faz o mapa novo ser aditivo).
 import { describe, expect, it } from 'vitest'
+import { THEME } from '@/game/theme'
 import { ATLAS_BOARD, GROUPS, type GroupKey, type PropertySquare } from '@/lib/boardData'
 import { BOARD_IDS, catalogOf, coerceBoardId, DEFAULT_RULES } from '@/lib/mapCatalog'
 
@@ -123,20 +124,17 @@ describe('mapCatalog — composição da Fuligem (40 casas)', () => {
       expect(props[i].price, `preço em ${props[i].name}`).toBeGreaterThan(props[i - 1].price)
       expect(props[i].rent, `aluguel em ${props[i].name}`).toBeGreaterThanOrEqual(props[i - 1].rent)
     }
-    // A escada é DERIVADA (não copiada do Atlas): preço sai da economia de caixa
-    // (tabuleiro/caixa 0,60 — mais que os 0,54 do Atlas, porque a volta de 40 casas dá
-    // 20% mais GO por lançamento) e o aluguel-base sai do payback-alvo por bairro.
-    expect(props[0].price).toBe(90)
-    expect(props[props.length - 1].price).toBe(940)
-    // Contar quantos preços coincidem com o Atlas seria um teste ruim: as duas escadas
-    // são múltiplos de 10 numa faixa parecida, então coincidência é inevitável e não diz
-    // nada sobre derivação. O que a derivação PRODUZ e a cópia não produzia é a razão
-    // tabuleiro/caixa — a cópia dava 0,48 (tabuleiro barato demais para o dinheiro em
-    // jogo, num tabuleiro cujo GO paga 20% mais por lançamento); o alvo é 0,60.
+    // A escada é própria, mas não é livre: cada bairro reusa uma `GroupKey`, e a chave carrega
+    // o TIER econômico (`HOUSE_COST`/`RENT_MULT`, D-024). Precificar fora da faixa do tier foi o
+    // defeito que a D-076 consertou — `yellow` a $463 com o multiplicador calibrado para ~$300
+    // produzia uma curva invertida, em que o bairro mais caro rendia proporcionalmente menos.
+    //
+    // O que se trava aqui é a MESA DE 3 conseguir comprar o tabuleiro na largada. É o requisito
+    // de ritmo da D-076, e é o único número desta escada que muda o jogo.
     const buyable = board.reduce((sum, s) => sum + ('price' in s ? s.price : 0), 0)
-    const cash = 8 * 2000 // INITIAL_CASH × mesa cheia
-    expect(buyable / cash).toBeGreaterThan(0.56)
-    expect(buyable / cash).toBeLessThan(0.64)
+    const mesa3 = 3 * THEME.INITIAL_CASH
+    expect(buyable / mesa3).toBeGreaterThan(0.85)
+    expect(buyable / mesa3).toBeLessThan(1.05)
   })
 })
 

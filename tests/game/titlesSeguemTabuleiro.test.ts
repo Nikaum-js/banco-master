@@ -68,7 +68,7 @@ describe('a regressão exata: pos 4 é mina na Fuligem e imposto no Atlas', () =
     const antes = g.players[0].cash
     const depois = buyProperty({ ...g, resolution: { kind: 'purchase', pos: 4 } })
     expect(depois.titles[4].ownerId).toBe(g.players[0].id)
-    expect(depois.players[0].cash).toBe(antes - 220)
+    expect(depois.players[0].cash).toBe(antes - (catalogOf('fuligem').board[4] as { price: number }).price)
   })
 
   it('estado semeado no Atlas NÃO tem título na pos 4 — a origem do crash', () => {

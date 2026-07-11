@@ -13,10 +13,17 @@ import { economyResolve } from '@/game/economy/resolveRentable'
 import { audit } from '@/game/cards/ofensivas'
 import { setActiveBoard, BOARD, ATLAS_BOARD, type PropertySquare } from '@/lib/boardData'
 import { catalogOf, setActiveRules, DEFAULT_RULES } from '@/lib/mapCatalog'
+import { THEME } from '@/game/theme'
 import type { GameState, Roll } from '@/game/turn/types'
 
 const MINES = { ferro: 4, carvao: 17, estanho: 28, cobre: 34 } as const
 const RAILS = [5, 16, 25, 36]
+
+// DERIVADOS, não literais. Estes testes são sobre o BÔNUS DO METAL (o fator que ele aplica),
+// não sobre a tabela de aluguel — que é knob de balanceamento e mudou na D-076.
+const CASH0 = THEME.INITIAL_CASH
+const RAIL4 = THEME.AIRPORT_RENT[3] // aluguel de ferrovia com as quatro no mesmo nome
+const MINE_PRICE = (catalogOf('fuligem').board[MINES.estanho] as { price: number }).price
 
 function useMap(id: 'atlas' | 'fuligem') {
   const catalog = catalogOf(id)
@@ -140,19 +147,20 @@ describe('minas — Mina de Carvão: ferrovias +50%', () => {
   it('sobe o aluguel de ferrovia, sobre a escada BASE', () => {
     const sem = withOwned(RAILS)
     const base = rentDue(sem, RAILS[0], me(sem), null)
-    expect(base).toBe(200) // quatro ferrovias
+    expect(base).toBe(RAIL4) // quatro ferrovias
 
     const com = withOwned([...RAILS, MINES.carvao])
-    expect(rentDue(com, RAILS[0], me(com), null)).toBe(300) // 200 × 1,5
+    expect(rentDue(com, RAILS[0], me(com), null)).toBe(Math.round(RAIL4 * THEME.MINE_BONUS.carvao))
   })
 
   it('NÃO empilha em cima da Estação de Carga — a dobra vem depois do bônus', () => {
-    // Empilhar daria 200 × 2 × 1,5 = 600. O desenho é 200 × 1,5 = 300, e só então × 2.
+    // Empilhar daria base × 2 × 1,5. O desenho é base × 1,5, e só então × 2.
+    const comCarvao = Math.round(RAIL4 * THEME.MINE_BONUS.carvao)
     const g = withOwned([...RAILS, MINES.carvao])
     g.titles[RAILS[0]].hangar = true
-    expect(rentDue(g, RAILS[0], me(g), null)).toBe(600) // (200 × 1,5) × 2
-    // O teto é o dobro do valor com carvão, não o quádruplo do base.
-    expect(rentDue(g, RAILS[0], me(g), null)).toBe(300 * 2)
+    // O teto é o dobro do valor COM carvão, não o quádruplo do base.
+    expect(rentDue(g, RAILS[0], me(g), null)).toBe(comCarvao * 2)
+    expect(rentDue(g, RAILS[0], me(g), null)).toBeLessThan(RAIL4 * 2 * THEME.MINE_BONUS.carvao + 1)
   })
 })
 
@@ -173,9 +181,10 @@ describe('minas — Mina de Estanho: impostos e aluguéis pagos −15%', () => {
       state: g,
     })
 
-    // Quatro ferrovias = 200; Obras na Linha dobra para 400; estanho reduz para 340.
-    expect(g.players[0].cash).toBe(2_000 - 340)
-    expect(g.players[1].cash).toBe(2_000 + 340)
+    // Quatro ferrovias = RAIL4; Obras na Linha dobra; estanho tira 15% do total.
+    const pago = Math.round(RAIL4 * 2 * THEME.MINE_BONUS.estanho)
+    expect(g.players[0].cash).toBe(CASH0 - pago)
+    expect(g.players[1].cash).toBe(CASH0 + pago)
   })
 
   it('hipotecada não reduz aluguel pago', () => {
@@ -192,21 +201,23 @@ describe('minas — Mina de Estanho: impostos e aluguéis pagos −15%', () => {
       state: g,
     })
 
-    expect(g.players[0].cash).toBe(2_000 - 200)
-    expect(g.players[1].cash).toBe(2_000 + 200)
+    expect(g.players[0].cash).toBe(CASH0 - RAIL4)
+    expect(g.players[1].cash).toBe(CASH0 + RAIL4)
   })
 
   it('reduz o Imposto Federal em 25%', () => {
     const g = createSeedState(['p1', 'p2'])
     g.titles[MINES.estanho].ownerId = 'p2'
-    g.players[1].cash = 1_780 // + mina de R$220 = patrimônio de R$2.000
+    const caixa = 2_000 - MINE_PRICE // + a mina = patrimônio de exatamente R$2.000
+    g.players[1].cash = caixa
     const potBefore = g.centerPot
 
     expect(audit(g, 'p1', 'p2', defaultPorts)).toBe(true)
 
-    // Imposto Federal: 25% de R$2.000 = R$500; Estanho reduz o pagamento a R$425.
-    expect(g.players[1].cash).toBe(1_780 - 425)
-    expect(g.centerPot).toBe(potBefore + 425)
+    // Imposto Federal: 25% de R$2.000 = R$500; Estanho reduz o pagamento em 15%.
+    const devido = Math.round(500 * THEME.MINE_BONUS.estanho)
+    expect(g.players[1].cash).toBe(caixa - devido)
+    expect(g.centerPot).toBe(potBefore + devido)
   })
 })
 
@@ -253,8 +264,8 @@ describe('minas — o Atlas não tem mina nenhuma', () => {
   it('nenhuma casa do Atlas é mina, e o aluguel de lá segue intocado', () => {
     useMap('atlas')
     expect(ATLAS_BOARD.some((s) => s.kind === 'mine')).toBe(false)
-    // Quatro aeroportos no Atlas continuam valendo 200, sem bônus a aplicar.
+    // Quatro aeroportos no Atlas rendem a escada CRUA do THEME: não há metal a aplicar.
     const g = withOwned([6, 18, 30, 42])
-    expect(rentDue(g, 6, me(g), null)).toBe(200)
+    expect(rentDue(g, 6, me(g), null)).toBe(RAIL4)
   })
 })

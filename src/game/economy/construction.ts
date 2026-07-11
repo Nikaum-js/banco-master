@@ -47,7 +47,7 @@ export function buildPaymentFor(
   return buildIsFree ? 0 : buildCostFor(state, square, ownerId)
 }
 
-export const HANGAR_COST = THEME.HANGAR_COST // §13.6; venda = metade ($50)
+export const HANGAR_COST = THEME.HANGAR_COST // §13.6; venda = metade arredondada
 
 // Nível de construção da cidade (ladder estendido — 011): casas 0–4, hotel 5, 2º hotel 6, Skyscraper 7.
 export function cityLevel(title: { houses: number; hotel: boolean; hotel2: boolean; skyscraper: boolean }): number {
@@ -174,7 +174,7 @@ export function sellHangar(state: GameState, pos: number): GameState {
   if (!canSellHangar(state, pos)) return state
   const s = clone(state)
   const p = s.players.find((x) => x.id === liquidatorOf(s))! // o devedor, se houver dívida
-  const amount = Math.round(HANGAR_COST / 2) // metade ($50)
+  const amount = Math.round(HANGAR_COST / 2) // metade arredondada
   p.cash += amount
   s.titles[pos].hangar = false
   logEvent(s, { kind: 'sell-hangar', who: p.id, pos, amount })

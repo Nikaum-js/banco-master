@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { THEME } from '@/game/theme'
 import { placeBid, closeAuction } from '@/game/economy/auction'
 import { declineProperty, AUCTION_WINDOW } from '@/game/economy/purchase'
 import { createSeedState } from '@/game/setup'
@@ -24,7 +25,7 @@ describe('Leilão (US3)', () => {
     expect(g.resolution).toMatchObject({ auction: { highBidder: 'p3' } })
     g = closeAuction(g)
     expect(g.titles[1].ownerId).toBe('p3')
-    expect(g.players[2].cash).toBe(2000 - 80)
+    expect(g.players[2].cash).toBe(THEME.INITIAL_CASH - 80)
     expect(g.resolution).toBeNull()
     expect(g.turn.state).toBe('aguardando-finalizacao')
   })

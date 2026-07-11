@@ -5,6 +5,7 @@
 // maior atenção da tela (ao lado dos dados e do botão de rolar). O pulso central saiu; este
 // arquivo trava a remoção pelos dois lados, senão ele volta na primeira refatoração.
 import { act, cleanup, render } from '@testing-library/react'
+import { THEME } from '@/game/theme'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DiceArena, PlayersPanel } from '@/boards/shared'
 import { applyCommand } from '@/game/commands'
@@ -79,17 +80,18 @@ describe('feedback do bônus de GO', () => {
   })
 
   it.each([
-    ['+R$200 passando pelo GO', 42, [3, 4] as [number, number]],
-    ['+R$400 parando no GO', 43, [2, 3] as [number, number]],
-  ])('mostra %s na caixa de jogadores', (label, pos, dice) => {
+    // O VALOR é knob de balanceamento (D-076); o que o teste trava é o pulso aparecer com o
+    // número que o motor creditou, e dobrado quando o jogador PARA no GO.
+    [THEME.GO_PASS, 42, [3, 4] as [number, number]],
+    [THEME.GO_PASS * 2, 43, [2, 3] as [number, number]],
+  ])('mostra +R$%d na caixa de jogadores', (bonus, pos, dice) => {
     const { game, next } = rollFrom(pos, dice)
     useGameStore.setState({ game })
     const { container } = render(<PlayersPanel />)
 
     act(() => useGameStore.setState({ game: next }))
 
-    const expected = label.split(' ')[0]
-    expect(container.querySelector('.player-row__pulse')?.textContent).toBe(expected)
+    expect(container.querySelector('.player-row__pulse')?.textContent).toBe(`+R$${bonus}`)
   })
 
   it('separa o bônus do som dos dados para ele continuar audível', () => {

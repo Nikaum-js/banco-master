@@ -10,6 +10,10 @@ import { buildHouse } from '@/game/economy/construction'
 import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import { BOARD } from '@/lib/boardData'
+import { THEME } from '@/game/theme'
+
+// Caixa inicial vem do THEME: um literal aqui trava o balanceamento no teste (D-076).
+const CASH0 = THEME.INITIAL_CASH
 
 // p1 (seat 0) dono de Roma (pos 1, price 60 → valor de hipoteca 30).
 function owned(): GameState {
@@ -21,7 +25,7 @@ function owned(): GameState {
 describe('Hipotecar (US1)', () => {
   it('SC-001: credita metade do preço e marca mortgaged', () => {
     const g = mortgageProperty(owned(), 1)
-    expect(g.players[0].cash).toBe(2000 + 30)
+    expect(g.players[0].cash).toBe(CASH0 + 30)
     expect(g.titles[1].mortgaged).toBe(true)
   })
 
@@ -67,7 +71,7 @@ describe('Deshipotecar (US2)', () => {
     const g0 = owned()
     g0.titles[1].mortgaged = true
     const g = unmortgageProperty(g0, 1)
-    expect(g.players[0].cash).toBe(2000 - 33) // round(30 × 1,10)
+    expect(g.players[0].cash).toBe(CASH0 - 33) // round(30 × 1,10)
     expect(g.titles[1].mortgaged).toBe(false)
   })
 

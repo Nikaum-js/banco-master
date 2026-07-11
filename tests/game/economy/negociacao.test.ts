@@ -6,6 +6,10 @@ import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import { BOARD } from '@/lib/boardData'
 import { pausedBy } from '../../net/harness'
+import { THEME } from '@/game/theme'
+
+// Caixa inicial vem do THEME: um literal aqui trava o balanceamento no teste (D-076).
+const CASH0 = THEME.INITIAL_CASH
 
 const AIRPORT = BOARD.find((s) => s.kind === 'airport')!.pos
 
@@ -23,8 +27,8 @@ describe('Negociação — troca (US1)', () => {
     const out = executeTrade(g, { fromId: 'p1', toId: 'p2', fromProps: [1], fromCash: 100, toProps: [3], toCash: 0 })
     expect(out.titles[1].ownerId).toBe('p2')
     expect(out.titles[3].ownerId).toBe('p1')
-    expect(out.players[0].cash).toBe(1900)
-    expect(out.players[1].cash).toBe(2100)
+    expect(out.players[0].cash).toBe(CASH0 - 100)
+    expect(out.players[1].cash).toBe(CASH0 + 100)
   })
 
   // §8.5 (D-058) mantém proibido o "presente" que esta spec permitia: entregar e não receber
@@ -35,8 +39,8 @@ describe('Negociação — troca (US1)', () => {
 
     const out = executeTrade(g, { fromId: 'p1', toId: 'p2', fromProps: [1], fromCash: 0, toProps: [], toCash: 30 })
     expect(out.titles[1].ownerId).toBe('p2')
-    expect(out.players[0].cash).toBe(2030)
-    expect(out.players[1].cash).toBe(1970)
+    expect(out.players[0].cash).toBe(CASH0 + 30)
+    expect(out.players[1].cash).toBe(CASH0 - 30)
     expect(out.players[0].hand).toEqual(g.players[0].hand) // cartas não mudam (SC-005)
     expect(out.players[0].busTickets).toBe(g.players[0].busTickets)
   })
@@ -46,8 +50,8 @@ describe('Negociação — troca (US1)', () => {
     g.titles[5].ownerId = 'p2'
     const out = executeTrade(g, { fromId: 'p2', toId: 'p3', fromProps: [5], fromCash: 0, toProps: [], toCash: 200 })
     expect(out.titles[5].ownerId).toBe('p3')
-    expect(out.players[1].cash).toBe(2000 + 200) // p2 recebe
-    expect(out.players[2].cash).toBe(2000 - 200) // p3 paga
+    expect(out.players[1].cash).toBe(CASH0 + 200) // p2 recebe
+    expect(out.players[2].cash).toBe(CASH0 - 200) // p3 paga
     expect(out.activeSeat).toBe(0) // turno não muda
   })
 
@@ -81,8 +85,8 @@ describe('Negociação — hipoteca e Hangar (US2)', () => {
     const out = executeTrade(g, { fromId: 'p2', toId: 'p1', fromProps: [3], fromCash: 0, toProps: [], toCash: 20 })
     expect(out.titles[3].ownerId).toBe('p1')
     expect(out.titles[3].mortgaged).toBe(true) // continua hipotecada
-    expect(out.players[0].cash).toBe(2000 - fee - 20) // p1 (recebedor) paga a taxa
-    expect(out.players[1].cash).toBe(2020) // p2 não paga taxa
+    expect(out.players[0].cash).toBe(CASH0 - fee - 20) // p1 (recebedor) paga a taxa
+    expect(out.players[1].cash).toBe(CASH0 + 20) // p2 não paga taxa
   })
 
   it('SC-003: recebedor sem caixa para a taxa → no-op', () => {
@@ -159,7 +163,7 @@ describe('Negociação — Bus Tickets (D-028)', () => {
     const out = executeTrade(g, { fromId: 'p1', toId: 'p2', fromProps: [], fromCash: 0, toProps: [], toCash: 50, fromBusTickets: 1 })
     expect(out.players[0].busTickets).toBe(0)
     expect(out.players[1].busTickets).toBe(1)
-    expect(out.players[0].cash).toBe(2050) // recebeu os 50 de p2
+    expect(out.players[0].cash).toBe(CASH0 + 50) // recebeu os 50 de p2
   })
 
   it('rejeita tickets além da posse ou valores inválidos (atômico)', () => {
@@ -185,18 +189,22 @@ describe('Negociação — Bus Tickets (D-028)', () => {
 // livre em qualquer proporção; só doação pura e a troca que reduz o patrimônio a menos de
 // um terço são recusadas.
 describe('Negociação — trava de esvaziamento (§8.5)', () => {
-  // p1 dono de Roma ($60), Veneza ($80), Pisa ($100) e JFK ($200) = $440 em títulos + $2.000 em caixa.
+  // p1 dono de Roma, Veneza, Pisa e JFK — os títulos, mais o caixa inicial. Os VALORES saem do
+  // tabuleiro e do THEME: a trava é sobre a FRAÇÃO do patrimônio que sobra (um terço), então
+  // fixar cifras aqui prende a regra ao balanceamento de preços (D-076 mexeu no JFK).
   function rich(): GameState {
     const g = createSeedState(['p1', 'p2', 'p3'])
     for (const pos of [1, 3, 5, AIRPORT]) g.titles[pos].ownerId = 'p1'
     return g
   }
-  // O mesmo tabuleiro com o caixa zerado: os $440 em títulos são TODO o patrimônio de p1.
+  // O mesmo tabuleiro com o caixa zerado: os títulos são TODO o patrimônio de p1.
   function broke(): GameState {
     const g = rich()
     g.players[0].cash = 0
     return g
   }
+  const TITULOS = [1, 3, 5, AIRPORT].reduce((sum, pos) => sum + (BOARD[pos] as { price: number }).price, 0)
+  const terco = (patrimonio: number) => Math.ceil(patrimonio / 3)
   const dump = (over: Partial<Trade> = {}): Trade => ({
     fromId: 'p1', toId: 'p2', fromProps: [1, 3, 5, AIRPORT], fromCash: 0, toProps: [], toCash: 0, ...over,
   })
@@ -214,38 +222,44 @@ describe('Negociação — trava de esvaziamento (§8.5)', () => {
   })
 
   it('D-058: troca desequilibrada é livre quando não esvazia — 4 títulos por $1 com caixa cheio', () => {
-    const g = rich() // p1 fica com $2.001 de um patrimônio de $2.440 — segue no jogo
+    const g = rich() // p1 fica com o caixa quase inteiro de um patrimônio de caixa + títulos
     expect(validateTrade(g, dump({ toCash: 1 }))).toBe(true)
   })
 
   it('D-058: quem entrega quase tudo precisa ficar com ao menos um terço', () => {
-    const g = broke() // patrimônio = $440 → piso ⌈440/3⌉ = $147
+    const g = broke() // patrimônio = só os títulos → piso = um terço deles
+    const piso = terco(TITULOS)
     expect(validateTrade(g, dump({ toCash: 1 }))).toBe(false)
-    expect(validateTrade(g, dump({ toCash: 146 }))).toBe(false)
-    expect(validateTrade(g, dump({ toCash: 147 }))).toBe(true)
+    expect(validateTrade(g, dump({ toCash: piso - 1 }))).toBe(false)
+    expect(validateTrade(g, dump({ toCash: piso }))).toBe(true)
   })
 
   it('D-058: o esvaziamento conta o caixa que sai junto', () => {
-    const g = rich() // entrega os títulos E os $2.000 → sobraria $1 de $2.440
-    expect(validateTrade(g, dump({ fromCash: 2000, toCash: 1 }))).toBe(false)
+    const g = rich() // entrega os títulos E o caixa inteiro → sobraria $1
+    expect(validateTrade(g, dump({ fromCash: CASH0, toCash: 1 }))).toBe(false)
   })
 
   it('FR-015: pagar caro em dinheiro continua livre — até o ponto em que o pagamento esvazia', () => {
     const g = rich()
-    // p2 paga $900 por Roma ($60): fica com $1.160 de $2.000 — livre.
-    expect(validateTrade(g, { fromId: 'p1', toId: 'p2', fromProps: [1], fromCash: 0, toProps: [], toCash: 900 })).toBe(true)
-    // Pagar $1.900 pela mesma Roma deixaria p2 com $160 de $2.000 — é o despejo de caixa com folha de figueira.
-    expect(validateTrade(g, { fromId: 'p1', toId: 'p2', fromProps: [1], fromCash: 0, toProps: [], toCash: 1900 })).toBe(false)
+    const roma = (BOARD[1] as { price: number }).price
+    // p2 paga um terço do caixa por Roma: sobra bem acima do piso — livre.
+    expect(validateTrade(g, { fromId: 'p1', toId: 'p2', fromProps: [1], fromCash: 0, toProps: [], toCash: Math.floor(CASH0 / 3) })).toBe(true)
+    // Pagar até sobrar MENOS que um terço do que teria é o despejo de caixa com folha de figueira.
+    const espremido = CASH0 + roma - terco(CASH0) + 1 // piso é ⌈patrimônio ANTES / 3⌉
+    expect(validateTrade(g, { fromId: 'p1', toId: 'p2', fromProps: [1], fromCash: 0, toProps: [], toCash: espremido })).toBe(false)
     // ...e entregar sem receber NADA nunca é troca, nem quando o que sai é só dinheiro
-    expect(validateTrade(g, { fromId: 'p2', toId: 'p1', fromProps: [], fromCash: 1200, toProps: [], toCash: 0 })).toBe(false)
-    expect(validateTrade(g, { fromId: 'p2', toId: 'p1', fromProps: [], fromCash: 1200, toProps: [1], toCash: 0 })).toBe(true) // recebeu Roma
+    const meio = Math.floor(CASH0 / 2)
+    expect(validateTrade(g, { fromId: 'p2', toId: 'p1', fromProps: [], fromCash: meio, toProps: [], toCash: 0 })).toBe(false)
+    expect(validateTrade(g, { fromId: 'p2', toId: 'p1', fromProps: [], fromCash: meio, toProps: [1], toCash: 0 })).toBe(true) // recebeu Roma
   })
 
   it('FR-014: hipotecada vale metade também no patrimônio', () => {
     const g = broke()
-    g.titles[AIRPORT].mortgaged = true // $200 → avaliado $100; patrimônio 340 → piso ⌈340/3⌉ = 114
-    expect(validateTrade(g, dump({ toCash: 113 }))).toBe(false)
-    expect(validateTrade(g, dump({ toCash: 114 }))).toBe(true)
+    g.titles[AIRPORT].mortgaged = true // hipotecada entra pela METADE no patrimônio
+    const aeroporto = (BOARD[AIRPORT] as { price: number }).price
+    const piso = terco(TITULOS - Math.round(aeroporto * THEME.MORTGAGE_RATIO))
+    expect(validateTrade(g, dump({ toCash: piso - 1 }))).toBe(false)
+    expect(validateTrade(g, dump({ toCash: piso }))).toBe(true)
   })
 
   it('D-058: conceder imunidades sem pedir nada é válido — imunidade não é patrimônio', () => {

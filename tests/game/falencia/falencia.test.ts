@@ -3,6 +3,10 @@ import { liquidationValue, isBankrupt, payDebt, declareBankruptcy, checkEndGame 
 import { createSeedState, defaultPorts } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
+import { THEME } from '@/game/theme'
+
+// Caixa inicial vem do THEME: um literal aqui trava o balanceamento no teste (D-076).
+const CASH0 = THEME.INITIAL_CASH
 
 const ctx: TurnCtx = { rng: () => 0, ports: defaultPorts }
 
@@ -31,7 +35,7 @@ describe('Falência (US1)', () => {
     g.players[0].cash = 200
     const after = payDebt(g)
     expect(after.players[0].cash).toBe(150)
-    expect(after.players[1].cash).toBe(2050)
+    expect(after.players[1].cash).toBe(CASH0 + 50)
     expect(after.resolution).toBeNull()
     expect(after.turn.state).toBe('aguardando-finalizacao')
   })
@@ -44,7 +48,7 @@ describe('Falência (US1)', () => {
     const after = declareBankruptcy(g, ctx)
     expect(after.players[0].eliminated).toBe(true)
     expect(after.players[0].cash).toBe(0)
-    expect(after.players[1].cash).toBe(2000 + 100)
+    expect(after.players[1].cash).toBe(CASH0 + 100)
     expect(after.titles[1].ownerId).toBe('p2')
     expect(after.titles[3].ownerId).toBe('p2')
     expect(after.resolution).toBeNull()

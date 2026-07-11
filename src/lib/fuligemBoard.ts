@@ -114,61 +114,73 @@ export const FULIGEM_GROUPS = [
   'brown', 'skyblue', 'pink', 'orange', 'red', 'yellow', 'green', 'platinum',
 ] as const satisfies readonly GroupKey[]
 
+// PREÇOS REPRECIFICADOS NA D-076 — e o motivo é que a `GroupKey` não é só uma cor.
+//
+// `THEME.HOUSE_COST` e `THEME.RENT_MULT` são indexados PELO GRUPO (D-024): escolher `yellow` é
+// aderir ao tier do yellow, calibrado para propriedades em torno de $300. A Fuligem usava as
+// mesmas chaves e precificava fora da faixa — `yellow` a $463, `green` a $633, `platinum` a $870 —
+// e o resultado era uma curva INVERTIDA: o aluguel-base caía de 6,3% do preço no bairro mais
+// barato para 3,6% no mais caro, e o retorno de uma fábrica cheia despencava de 122% para 58%.
+// Quanto mais caro o bairro, pior o negócio. O tabuleiro punia quem subia nele.
+//
+// Agora cada bairro é precificado DENTRO da faixa do seu tier, ~10% acima do gêmeo do Atlas — a
+// margem que a volta de 40 casas (contra 48) justifica em renda por turno. O aluguel-base volta a
+// subir monotonicamente (6,9% → 11,1%) e o ROI fica na mesma faixa dos dois mapas.
 export const FULIGEM_BOARD: readonly Square[] = [
   // ---------- canto inferior direito ----------
   { pos: 0, kind: 'corner-go', name: 'GO', short: 'GO' },
 
   // ---------- lado SUL (direita → esquerda) — Olaria + Vila Bonfim ----------
-  { pos: 1, kind: 'property', group: 'brown', name: 'Barro Preto', capital: 'Olaria', price: 90, rent: 6, icon: 'kiln' },
+  { pos: 1, kind: 'property', group: 'brown', name: 'Barro Preto', capital: 'Olaria', price: 70, rent: 5, icon: 'kiln' },
   { pos: 2, kind: 'acaso', name: 'Acaso' },
-  { pos: 3, kind: 'property', group: 'brown', name: 'Caieira', capital: 'Olaria', price: 100, rent: 6, icon: 'kiln' },
-  { pos: 4, kind: 'mine', name: 'Mina de Ferro', short: 'Ferro', metal: 'ferro', price: 220 },
-  { pos: 5, kind: 'airport', name: 'Estação Bonfim', short: 'Bonfim', iata: 'BFM', price: 200, rent: 25 },
-  { pos: 6, kind: 'property', group: 'skyblue', name: 'Glória', capital: 'Vila Bonfim', price: 120, rent: 10, icon: 'loom' },
+  { pos: 3, kind: 'property', group: 'brown', name: 'Caieira', capital: 'Olaria', price: 90, rent: 6, icon: 'kiln' },
+  { pos: 4, kind: 'mine', name: 'Mina de Ferro', short: 'Ferro', metal: 'ferro', price: 250 },
+  { pos: 5, kind: 'airport', name: 'Estação Bonfim', short: 'Bonfim', iata: 'BFM', price: 250, rent: 30 },
+  { pos: 6, kind: 'property', group: 'skyblue', name: 'Glória', capital: 'Vila Bonfim', price: 125, rent: 9, icon: 'loom' },
   { pos: 7, kind: 'tesouro', name: 'Tesouro' },
-  { pos: 8, kind: 'property', group: 'skyblue', name: 'Piedade', capital: 'Vila Bonfim', price: 130, rent: 10, icon: 'loom' },
-  { pos: 9, kind: 'property', group: 'skyblue', name: 'Lapa', capital: 'Vila Bonfim', price: 150, rent: 10, icon: 'loom' },
+  { pos: 8, kind: 'property', group: 'skyblue', name: 'Piedade', capital: 'Vila Bonfim', price: 135, rent: 9, icon: 'loom' },
+  { pos: 9, kind: 'property', group: 'skyblue', name: 'Lapa', capital: 'Vila Bonfim', price: 150, rent: 11, icon: 'loom' },
 
   // ---------- canto inferior esquerdo ----------
   { pos: 10, kind: 'corner-jail', name: 'Prisão · Visita', short: 'Prisão' },
 
   // ---------- lado OESTE (baixo → cima) — Fundição + Colônia Nova ----------
   // A faixa 16–19 é a mais pisada do tabuleiro (6 a 9 passos da prisão).
-  { pos: 11, kind: 'property', group: 'pink', name: 'Bica', capital: 'Fundição', price: 160, rent: 14, icon: 'anvil' },
-  { pos: 12, kind: 'property', group: 'pink', name: 'Vila Inglesa', capital: 'Fundição', price: 180, rent: 14, icon: 'anvil' },
-  { pos: 13, kind: 'property', group: 'pink', name: 'Barreto', capital: 'Fundição', price: 200, rent: 14, icon: 'anvil' },
+  { pos: 11, kind: 'property', group: 'pink', name: 'Bica', capital: 'Fundição', price: 175, rent: 14, icon: 'anvil' },
+  { pos: 12, kind: 'property', group: 'pink', name: 'Vila Inglesa', capital: 'Fundição', price: 190, rent: 15, icon: 'anvil' },
+  { pos: 13, kind: 'property', group: 'pink', name: 'Barreto', capital: 'Fundição', price: 205, rent: 17, icon: 'anvil' },
   { pos: 14, kind: 'bus-ticket', name: 'Bilhete de Trem', short: 'Bilhete' },
-  { pos: 15, kind: 'property', group: 'orange', name: 'Aurora', capital: 'Colônia Nova', price: 220, rent: 14, icon: 'house' },
-  { pos: 16, kind: 'airport', name: 'Estação Serra', short: 'Serra', iata: 'SRA', price: 200, rent: 25 }, // +6 da prisão
-  { pos: 17, kind: 'mine', name: 'Mina de Carvão', short: 'Carvão', metal: 'carvao', price: 220 }, // +7 da prisão: o pico do 2d6
-  { pos: 18, kind: 'property', group: 'orange', name: 'União', capital: 'Colônia Nova', price: 250, rent: 14, icon: 'house' },
-  { pos: 19, kind: 'property', group: 'orange', name: 'Treze de Maio', capital: 'Colônia Nova', price: 280, rent: 14, icon: 'house' },
+  { pos: 15, kind: 'property', group: 'orange', name: 'Aurora', capital: 'Colônia Nova', price: 260, rent: 24, icon: 'house' },
+  { pos: 16, kind: 'airport', name: 'Estação Serra', short: 'Serra', iata: 'SRA', price: 250, rent: 30 }, // +6 da prisão
+  { pos: 17, kind: 'mine', name: 'Mina de Carvão', short: 'Carvão', metal: 'carvao', price: 250 }, // +7 da prisão: o pico do 2d6
+  { pos: 18, kind: 'property', group: 'orange', name: 'União', capital: 'Colônia Nova', price: 280, rent: 26, icon: 'house' },
+  { pos: 19, kind: 'property', group: 'orange', name: 'Treze de Maio', capital: 'Colônia Nova', price: 295, rent: 27, icon: 'house' },
 
   // ---------- canto superior esquerdo ----------
   { pos: 20, kind: 'corner-parking', name: 'Sorte Grande', short: 'Sorte Grande' },
 
   // ---------- lado NORTE (esquerda → direita) — Guilhermina + Alto do Desvio ----------
-  { pos: 21, kind: 'property', group: 'red', name: 'Brás', capital: 'Guilhermina', price: 300, rent: 16, icon: 'gear' },
-  { pos: 22, kind: 'property', group: 'red', name: 'Mooca', capital: 'Guilhermina', price: 340, rent: 16, icon: 'gear' },
+  { pos: 21, kind: 'property', group: 'red', name: 'Brás', capital: 'Guilhermina', price: 300, rent: 28, icon: 'gear' },
+  { pos: 22, kind: 'property', group: 'red', name: 'Mooca', capital: 'Guilhermina', price: 310, rent: 29, icon: 'gear' },
   { pos: 23, kind: 'acaso', name: 'Acaso' },
-  { pos: 24, kind: 'property', group: 'red', name: 'Marmelo', capital: 'Guilhermina', price: 380, rent: 16, icon: 'gear' },
-  { pos: 25, kind: 'airport', name: 'Estação Cascata', short: 'Cascata', iata: 'CSC', price: 200, rent: 25 },
-  { pos: 26, kind: 'property', group: 'yellow', name: 'Piraí', capital: 'Alto do Desvio', price: 410, rent: 17, icon: 'mountain' },
-  { pos: 27, kind: 'property', group: 'yellow', name: 'Engenho', capital: 'Alto do Desvio', price: 460, rent: 17, icon: 'mountain' },
-  { pos: 28, kind: 'mine', name: 'Mina de Estanho', short: 'Estanho', metal: 'estanho', price: 220 },
-  { pos: 29, kind: 'property', group: 'yellow', name: 'Quinze', capital: 'Alto do Desvio', price: 520, rent: 17, icon: 'mountain' },
+  { pos: 24, kind: 'property', group: 'red', name: 'Marmelo', capital: 'Guilhermina', price: 320, rent: 30, icon: 'gear' },
+  { pos: 25, kind: 'airport', name: 'Estação Cascata', short: 'Cascata', iata: 'CSC', price: 250, rent: 30 },
+  { pos: 26, kind: 'property', group: 'yellow', name: 'Piraí', capital: 'Alto do Desvio', price: 330, rent: 31, icon: 'mountain' },
+  { pos: 27, kind: 'property', group: 'yellow', name: 'Engenho', capital: 'Alto do Desvio', price: 345, rent: 33, icon: 'mountain' },
+  { pos: 28, kind: 'mine', name: 'Mina de Estanho', short: 'Estanho', metal: 'estanho', price: 250 },
+  { pos: 29, kind: 'property', group: 'yellow', name: 'Quinze', capital: 'Alto do Desvio', price: 360, rent: 34, icon: 'mountain' },
 
   // ---------- canto superior direito ----------
   { pos: 30, kind: 'corner-gotojail', name: 'Vá para Prisão', short: 'Vá pra Prisão' },
 
   // ---------- lado LESTE (cima → baixo) — Salto + Serrano ----------
-  { pos: 31, kind: 'property', group: 'green', name: 'Deodoro', capital: 'Salto', price: 560, rent: 23, icon: 'dam' },
+  { pos: 31, kind: 'property', group: 'green', name: 'Deodoro', capital: 'Salto', price: 375, rent: 36, icon: 'dam' },
   { pos: 32, kind: 'tesouro', name: 'Tesouro' },
-  { pos: 33, kind: 'property', group: 'green', name: 'Represa', capital: 'Salto', price: 630, rent: 23, icon: 'dam' },
-  { pos: 34, kind: 'mine', name: 'Mina de Cobre', short: 'Cobre', metal: 'cobre', price: 220 },
-  { pos: 35, kind: 'property', group: 'green', name: 'Riacho', capital: 'Salto', price: 710, rent: 23, icon: 'dam' },
-  { pos: 36, kind: 'airport', name: 'Estação Vale', short: 'Vale', iata: 'VAL', price: 200, rent: 25 },
+  { pos: 33, kind: 'property', group: 'green', name: 'Represa', capital: 'Salto', price: 395, rent: 40, icon: 'dam' },
+  { pos: 34, kind: 'mine', name: 'Mina de Cobre', short: 'Cobre', metal: 'cobre', price: 250 },
+  { pos: 35, kind: 'property', group: 'green', name: 'Riacho', capital: 'Salto', price: 420, rent: 44, icon: 'dam' },
+  { pos: 36, kind: 'airport', name: 'Estação Vale', short: 'Vale', iata: 'VAL', price: 250, rent: 30 },
   { pos: 37, kind: 'acaso', name: 'Acaso' },
-  { pos: 38, kind: 'property', group: 'platinum', name: 'Barão', capital: 'Serrano', price: 800, rent: 44, icon: 'mansion' },
-  { pos: 39, kind: 'property', group: 'platinum', name: 'Cristal', capital: 'Serrano', price: 940, rent: 44, icon: 'mansion' },
+  { pos: 38, kind: 'property', group: 'platinum', name: 'Barão', capital: 'Serrano', price: 600, rent: 66, icon: 'mansion' },
+  { pos: 39, kind: 'property', group: 'platinum', name: 'Cristal', capital: 'Serrano', price: 700, rent: 78, icon: 'mansion' },
 ]

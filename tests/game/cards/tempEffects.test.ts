@@ -7,6 +7,10 @@ import { createSeedState, defaultPorts } from '@/game/setup'
 import type { GameState, Roll } from '@/game/turn/types'
 import { BOARD } from '@/lib/boardData'
 import { mockPorts } from '../turn/_helpers'
+import { THEME } from '@/game/theme'
+
+// Caixa inicial vem do THEME: um literal aqui trava o balanceamento no teste (D-076).
+const CASH0 = THEME.INITIAL_CASH
 
 const AIRPORT = BOARD.find((s) => s.kind === 'airport')!.pos
 const UTILITY = BOARD.find((s) => s.kind === 'utility')!.pos
@@ -22,7 +26,7 @@ describe('Greve — imediata unificada (US1, D-064)', () => {
     expect(g.tempEffects.some((e) => e.kind === 'greve')).toBe(true) // os DOIS efeitos, numa carta
 
     economyResolve({ playerId: 'p3', square: BOARD[AIRPORT], roll: null, ports: mockPorts(), state: g })
-    expect(g.players[2].cash).toBe(2000 - 25) // base (1 aeroporto), SEM a dobra
+    expect(g.players[2].cash).toBe(CASH0 - THEME.AIRPORT_RENT[0]) // base (1 aeroporto), SEM a dobra
 
     tickTempEffects(g, 'p1') // sacador passa pelo GO (1 volta)
     expect(g.tempEffects.some((e) => e.kind === 'apagao')).toBe(false) // expirou
@@ -34,12 +38,12 @@ describe('Greve — imediata unificada (US1, D-064)', () => {
     comGreve.titles[UTILITY].ownerId = 'p2'
     applyEffect('greve', comGreve, 'p1', mockPorts())
     economyResolve({ playerId: 'p3', square: BOARD[UTILITY], roll: diceRoll, ports: mockPorts(), state: comGreve })
-    expect(comGreve.players[2].cash).toBe(2000) // $0 (greve)
+    expect(comGreve.players[2].cash).toBe(CASH0) // $0 (greve)
 
     const semGreve = createSeedState(['p1', 'p2', 'p3'])
     semGreve.titles[UTILITY].ownerId = 'p2'
     economyResolve({ playerId: 'p3', square: BOARD[UTILITY], roll: diceRoll, ports: mockPorts(), state: semGreve })
-    expect(semGreve.players[2].cash).toBe(2000 - 20) // 1 utilidade: mult 4 × dados 5 = 20
+    expect(semGreve.players[2].cash).toBe(CASH0 - 20) // 1 utilidade: mult 4 × dados 5 = 20
   })
 })
 
@@ -58,7 +62,7 @@ describe('Boicote (US2)', () => {
     expect(g.players[0].hand).not.toContain('boicote-1') // carta usada
 
     economyResolve({ playerId: 'p3', square: BOARD[1], roll: null, ports: mockPorts(), state: g })
-    expect(g.players[2].cash).toBe(2000) // p3 não paga
+    expect(g.players[2].cash).toBe(CASH0) // p3 não paga
 
     tickTempEffects(g, 'p1')
     expect(isBoycotted(g, 1)).toBe(true) // 1 volta ainda
@@ -98,7 +102,7 @@ describe('Imunidade Total (US3, D-064)', () => {
     g.titles[1].ownerId = 'p2'
     g.tempEffects.push({ kind: 'imunidade-total', ownerId: 'p1', pos: null, lapsRemaining: 1 })
     economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports: mockPorts(), state: g })
-    expect(g.players[0].cash).toBe(2000) // sem aluguel
+    expect(g.players[0].cash).toBe(CASH0) // sem aluguel
 
     // p2 (imune) não pode ser alvo de Boicote de p1
     const alvoImune = createSeedState(['p1', 'p2'])

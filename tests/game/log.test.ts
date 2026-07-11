@@ -43,13 +43,13 @@ describe('Log de eventos — emissões do núcleo (021/040)', () => {
     const g = createSeedState(['p1', 'p2'])
     g.titles[1].ownerId = 'p2' // Roma base = 2
     economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports: defaultPorts, state: g })
-    expect(g.log.at(-1)).toEqual({ kind: 'rent', who: 'p1', pos: 1, amount: 2, ownerId: 'p2' })
+    expect(g.log.at(-1)).toEqual({ kind: 'rent', who: 'p1', pos: 1, amount: (BOARD[1] as { rent: number }).rent, ownerId: 'p2' })
   })
 
   it('SC-001: imposto pago loga kind "tax"', () => {
     const g = createSeedState(['p1', 'p2'])
     resolveSquare({ playerId: 'p1', square: BOARD[4], roll: null, ports: defaultPorts, state: g }) // Imposto de Renda 200
-    expect(g.log.at(-1)).toEqual({ kind: 'tax', who: 'p1', amount: 200 })
+    expect(g.log.at(-1)).toEqual({ kind: 'tax', who: 'p1', amount: (BOARD[4] as { amount: number }).amount })
   })
 
   it('SC-001: payDebt loga kind "debt-paid"', () => {

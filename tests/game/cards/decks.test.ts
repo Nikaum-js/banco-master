@@ -4,6 +4,7 @@ import { cardResolve } from '@/game/cards/draw'
 import { createSeedState } from '@/game/setup'
 import type { TurnPorts } from '@/game/turn/resolution'
 import { BOARD } from '@/lib/boardData'
+import { THEME } from '@/game/theme'
 
 function ports(): TurnPorts {
   return {
@@ -19,8 +20,8 @@ describe('Decks e saque (US1)', () => {
     g.decks.tesouro = ['boom-economico-1', 'erro-banco-1'] // topo = boom
     const out = cardResolve({ playerId: 'p1', square: BOARD[2], roll: null, ports: ports(), state: g })
     expect(out).toEqual({ done: true })
-    expect(g.players[0].cash).toBe(2200) // Boom +200 a todos
-    expect(g.players[1].cash).toBe(2200)
+    expect(g.players[0].cash).toBe(THEME.INITIAL_CASH + 200) // Boom +200 a todos
+    expect(g.players[1].cash).toBe(THEME.INITIAL_CASH + 200)
     expect(g.decks.tesouro[0]).toBe('erro-banco-1') // topo avançou
     expect(g.decks.tesouro.at(-1)).toBe('boom-economico-1') // voltou ao fundo
   })

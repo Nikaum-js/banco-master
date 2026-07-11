@@ -4,6 +4,10 @@ import { economyResolve } from '@/game/economy/resolveRentable'
 import { createSeedState, defaultPorts } from '@/game/setup'
 import { BOARD } from '@/lib/boardData'
 import type { Roll } from '@/game/turn/types'
+import { THEME } from '@/game/theme'
+
+// Caixa inicial vem do THEME: um literal aqui trava o balanceamento no teste (D-076).
+const CASH0 = THEME.INITIAL_CASH
 
 describe('Aluguel — cálculo puro (US2)', () => {
   it('SC-003: cidade base / 150% maioria / 200% completo', () => {
@@ -17,8 +21,10 @@ describe('Aluguel — cálculo puro (US2)', () => {
     expect(rentCity('pink', 8, 4, 4)).toBe(16) // completo → 200%
   })
 
-  it('SC-004: aeroporto $25/$50/$100/$200', () => {
-    expect([1, 2, 3, 4].map(rentAirport)).toEqual([25, 50, 100, 200])
+  it('SC-004: aeroporto — escada por nº de aeroportos do dono', () => {
+    // A escada é knob de balanceamento (D-076): o que o teste trava é que ela DOBRA a cada
+    // aeroporto e vem do THEME, não os quatro números.
+    expect([1, 2, 3, 4].map(rentAirport)).toEqual([...THEME.AIRPORT_RENT])
   })
 
   it('SC-005: utilidade 4×/10×/20× o valor dos dados', () => {
@@ -37,14 +43,18 @@ describe('Aluguel — cálculo puro (US2)', () => {
 
 describe('Aluguel — resolução (US2)', () => {
   const ports = defaultPorts
+  // Aluguel-base de Roma vem do TABULEIRO. Escrito à mão, um rebalanceamento como a D-076
+  // (brown subiu de 2 para 4) reprova um teste que não é sobre o valor, e sim sobre o fluxo:
+  // debita o pagador, credita o dono, e a dívida abre pelo valor certo.
+  const ROMA = (BOARD[1] as { rent: number }).rent
 
-  it('cobra aluguel do pagador e credita o dono (Roma base = 2)', () => {
+  it('cobra aluguel do pagador e credita o dono (Roma, base do tabuleiro)', () => {
     const g = createSeedState(['p1', 'p2'])
     g.titles[1].ownerId = 'p2' // Roma (brown), p2 só tem 1 do grupo
     const out = economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports, state: g })
     expect(out).toEqual({ done: true })
-    expect(g.players[0].cash).toBe(2000 - 2)
-    expect(g.players[1].cash).toBe(2000 + 2)
+    expect(g.players[0].cash).toBe(CASH0 - ROMA)
+    expect(g.players[1].cash).toBe(CASH0 + ROMA)
   })
 
   it('SC-006: propriedade hipotecada não cobra', () => {
@@ -52,7 +62,7 @@ describe('Aluguel — resolução (US2)', () => {
     g.titles[1].ownerId = 'p2'
     g.titles[1].mortgaged = true
     economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports, state: g })
-    expect(g.players[0].cash).toBe(2000)
+    expect(g.players[0].cash).toBe(CASH0)
   })
 
   it('SC-006: propriedade própria não cobra', () => {
@@ -60,7 +70,7 @@ describe('Aluguel — resolução (US2)', () => {
     g.titles[1].ownerId = 'p1'
     const out = economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports, state: g })
     expect(out).toEqual({ done: true })
-    expect(g.players[0].cash).toBe(2000)
+    expect(g.players[0].cash).toBe(CASH0)
   })
 
   it('SC-001: casa livre abre o modal de compra (resolução pendente)', () => {
@@ -73,12 +83,12 @@ describe('Aluguel — resolução (US2)', () => {
   it('FR-016: caixa insuficiente abre dívida pendente (não fica negativo)', () => {
     const g = createSeedState(['p1', 'p2'])
     g.titles[1].ownerId = 'p2'
-    g.players[0].cash = 1 // < aluguel base 2
+    g.players[0].cash = 1 // < aluguel base de Roma
     const out = economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports, state: g })
     expect(out).toEqual({ done: false })
     // `debtorId`/`cause`: D-061/D-063 — o devedor deixou de ser implícito e a causa é narrada.
-    expect(g.resolution).toEqual({ kind: 'debt', amount: 2, creditorId: 'p2', debtorId: 'p1', cause: 'rent' })
-    expect(g.log.at(-1)).toEqual({ kind: 'debt-open', who: 'p1', amount: 2, creditorId: 'p2', cause: 'rent' })
+    expect(g.resolution).toEqual({ kind: 'debt', amount: ROMA, creditorId: 'p2', debtorId: 'p1', cause: 'rent' })
+    expect(g.log.at(-1)).toEqual({ kind: 'debt-open', who: 'p1', amount: ROMA, creditorId: 'p2', cause: 'rent' })
     expect(g.players[0].cash).toBe(1) // não debitou
   })
 })

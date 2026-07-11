@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { THEME } from '@/game/theme'
 import { applyOpeningAuction } from '@/game/openingAuction'
 import { createSeedState } from '@/game/setup'
 import type { Room } from '@/net/room'
@@ -27,9 +28,10 @@ describe('Leilão da Largada — liquidação econômica', () => {
 
     const settled = applyOpeningAuction(game, room([500, 250, 0]))
 
-    expect(settled.players.map((player) => player.cash)).toEqual([1_500, 1_750, 2_000])
+    const c0 = THEME.INITIAL_CASH
+    expect(settled.players.map((player) => player.cash)).toEqual([c0 - 500, c0 - 250, c0])
     expect(settled.centerPot).toBe(initialPot + 750)
-    expect(game.players.map((player) => player.cash)).toEqual([2_000, 2_000, 2_000])
+    expect(game.players.map((player) => player.cash)).toEqual([c0, c0, c0])
     expect(game.centerPot).toBe(initialPot)
   })
 

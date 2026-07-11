@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { THEME } from '@/game/theme'
 import { buildHouse, sellBuilding, buildHangar, sellHangar, buildCost } from '@/game/economy/construction'
 import { rentCity } from '@/game/economy/rent'
 import { economyResolve } from '@/game/economy/resolveRentable'
@@ -72,19 +73,19 @@ describe('2º hotel (US1)', () => {
 })
 
 describe('Hangar (US2)', () => {
-  it('SC-002: build $100 e aluguel do aeroporto dobra', () => {
+  it('SC-002: Hangar custa o tier do tema e DOBRA o aluguel do aeroporto', () => {
     const g = brown(0, []) // ninguém possui brown; usamos só o aeroporto
     g.titles[AIRPORT].ownerId = 'p1'
     const built = buildHangar(g, AIRPORT)
     expect(built.titles[AIRPORT].hangar).toBe(true)
-    expect(built.players[0].cash).toBe(5000 - 100)
+    expect(built.players[0].cash).toBe(5000 - THEME.HANGAR_COST)
 
     // p2 cai no aeroporto → paga o dobro da base (1 aeroporto: 25 → 50)
     built.players[1].cash = 1000
     const after = economyResolve({ playerId: 'p2', square: BOARD[AIRPORT], roll: null, ports: mockPorts(), state: built })!
     expect(after.done).toBe(true)
-    expect(built.players[1].cash).toBe(1000 - 50)
-    expect(built.players[0].cash).toBe(5000 - 100 + 50)
+    expect(built.players[1].cash).toBe(1000 - THEME.AIRPORT_RENT[0] * 2) // 1 aeroporto, dobrado pelo Hangar
+    expect(built.players[0].cash).toBe(5000 - THEME.HANGAR_COST + THEME.AIRPORT_RENT[0] * 2)
   })
 
   it('SC-002/SC-004: máx. 1 Hangar; venda devolve $50 e zera o efeito', () => {
@@ -94,7 +95,7 @@ describe('Hangar (US2)', () => {
     expect(buildHangar(g, AIRPORT)).toBe(g) // já tem Hangar → no-op
     const sold = sellHangar(g, AIRPORT)
     expect(sold.titles[AIRPORT].hangar).toBe(false)
-    expect(sold.players[0].cash).toBe(5000 - 100 + 50)
+    expect(sold.players[0].cash).toBe(5000 - THEME.HANGAR_COST + Math.round(THEME.HANGAR_COST / 2))
   })
 
   it('hipotecado ou sem caixa → build no-op', () => {

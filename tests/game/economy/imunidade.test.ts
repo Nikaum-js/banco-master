@@ -6,6 +6,10 @@ import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import { BOARD } from '@/lib/boardData'
 import { mockPorts } from '../turn/_helpers'
+import { THEME } from '@/game/theme'
+
+// Caixa inicial vem do THEME: um literal aqui trava o balanceamento no teste (D-076).
+const CASH0 = THEME.INITIAL_CASH
 
 // p1 dono de Roma (pos 1).
 function withRoma(ids: string[] = ['p1', 'p2']): GameState {
@@ -22,8 +26,8 @@ describe('Imunidade — concessão na troca (US1)', () => {
       fromImmunities: [{ pos: 1, laps: 3 }],
     })
     expect(out.immunities).toEqual([{ beneficiaryId: 'p2', pos: 1, lapsRemaining: 3, granterId: 'p1' }])
-    expect(out.players[0].cash).toBe(2200) // p1 recebe $200
-    expect(out.players[1].cash).toBe(1800)
+    expect(out.players[0].cash).toBe(CASH0 + 200) // p1 recebe $200
+    expect(out.players[1].cash).toBe(CASH0 - 200)
   })
 
   it('SC-001: rejeita concessão sobre propriedade não-própria / cedida / laps inválido', () => {
@@ -42,11 +46,11 @@ describe('Imunidade — concessão na troca (US1)', () => {
 
     const benef = economyResolve({ playerId: 'p2', square: BOARD[1], roll: null, ports: mockPorts(), state: g })!
     expect(benef.done).toBe(true)
-    expect(g.players[1].cash).toBe(2000) // p2 não paga
+    expect(g.players[1].cash).toBe(CASH0) // p2 não paga
 
     const outro = economyResolve({ playerId: 'p3', square: BOARD[1], roll: null, ports: mockPorts(), state: g })!
     expect(outro.done).toBe(true)
-    expect(g.players[2].cash).toBe(2000 - rent) // p3 paga normal
+    expect(g.players[2].cash).toBe(CASH0 - rent) // p3 paga normal
     expect(hasImmunity(g, 'p2', 1)).toBe(true) // imunidade não é consumida ao usar
   })
 })
@@ -87,7 +91,7 @@ describe('Imunidade — é do BENEFICIÁRIO, não da propriedade (US2)', () => {
 
     economyResolve({ playerId: 'p3', square: BOARD[3], roll: null, ports: mockPorts(), state: g })
 
-    expect(g.players[2].cash).toBe(2000 - rent) // p3 paga: a imunidade não é dele
-    expect(g.players[1].cash).toBe(2000 + rent) // e o dono p2 recebe normalmente
+    expect(g.players[2].cash).toBe(CASH0 - rent) // p3 paga: a imunidade não é dele
+    expect(g.players[1].cash).toBe(CASH0 + rent) // e o dono p2 recebe normalmente
   })
 })

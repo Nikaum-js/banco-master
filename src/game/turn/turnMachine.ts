@@ -258,7 +258,7 @@ export function canUseBusTicket(state: GameState): boolean {
 }
 
 // Uso de Bus Ticket (009, SRS §10.7): antes de rolar, gasta 1 ticket e PULA DIRETO
-// para uma casa do MESMO LADO (não percorre o tabuleiro → NÃO cruza o GO, sem $200).
+// para uma casa do MESMO LADO (não percorre o tabuleiro → NÃO cruza o GO, sem bônus).
 export function spendBusTicket(state: GameState, dest: number, ctx: TurnCtx): GameState {
   if (!canUseBusTicket(state)) return state // FR-011/FR-002/FR-003a — mesma cadeia da UI
   const player = activePlayer(state)

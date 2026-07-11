@@ -10,6 +10,7 @@
  * `tests/game/balancing/taxManNarracao.test.ts`.
  */
 import { describe, it, expect } from 'vitest'
+import { THEME } from '@/game/theme'
 import { createSeedState, buildPorts } from '@/game/setup'
 import { applyEffect } from '@/game/cards/effects'
 import { payDebt, declareBankruptcy, debtorOf, isBankrupt } from '@/game/falencia/falencia'
@@ -184,7 +185,7 @@ describe('CARD 02 — o que CONTINUA truncando, por decisão explícita (§9.1/D
 
     expect(g.players[0].cash).toBe(0)
     expect(g.obligations).toEqual([]) // pote não é parte lesada — ninguém foi privado de receita
-    expect(g.centerPot).toBe(500 + 20)
+    expect(g.centerPot).toBe(THEME.PARKING_SEED + 20)
   })
 
   it('Crise Imobiliária (credor = pote) trunca, mas o débito dos OUTROS deixa de ser mudo', () => {

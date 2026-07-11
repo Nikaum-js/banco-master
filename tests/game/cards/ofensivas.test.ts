@@ -4,6 +4,10 @@ import { transferKeepFee } from '@/game/economy/mortgage'
 import { createSeedState, defaultPorts } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import { BOARD } from '@/lib/boardData'
+import { THEME } from '@/game/theme'
+
+// Caixa inicial vem do THEME: um literal aqui trava o balanceamento no teste (D-076).
+const CASH0 = THEME.INITIAL_CASH
 
 const AIRPORT = BOARD.find((s) => s.kind === 'airport')!.pos
 const AIRPORT_PRICE = 'price' in BOARD[AIRPORT] ? (BOARD[AIRPORT] as { price: number }).price : 0
@@ -22,8 +26,8 @@ describe('Aquisição Hostil (US1)', () => {
     const g = setup('aquisicao-hostil-1')
     const out = playHandCard(g, 'p1', 'aquisicao-hostil-1', defaultPorts, 1) // Roma, price 60 → paga 30
     expect(out.titles[1].ownerId).toBe('p1')
-    expect(out.players[0].cash).toBe(2000 - 30)
-    expect(out.players[1].cash).toBe(2000 + 30)
+    expect(out.players[0].cash).toBe(CASH0 - 30)
+    expect(out.players[1].cash).toBe(CASH0 + 30)
     expect(out.players[0].hand).not.toContain('aquisicao-hostil-1')
   })
 
@@ -33,8 +37,8 @@ describe('Aquisição Hostil (US1)', () => {
     const esperado = Math.round(AIRPORT_PRICE * 0.5 * 1.5)
     const out = playHandCard(g, 'p1', 'aquisicao-hostil-1', defaultPorts, AIRPORT)
     expect(out.titles[AIRPORT].ownerId).toBe('p1')
-    expect(out.players[0].cash).toBe(2000 - esperado)
-    expect(out.players[1].cash).toBe(2000 + esperado)
+    expect(out.players[0].cash).toBe(CASH0 - esperado)
+    expect(out.players[1].cash).toBe(CASH0 + esperado)
   })
 
   it('SC-001: hipotecada chega hipotecada e cobra a taxa de 10% ao banco', () => {
@@ -45,8 +49,8 @@ describe('Aquisição Hostil (US1)', () => {
     const out = playHandCard(g, 'p1', 'aquisicao-hostil-1', defaultPorts, 1)
     expect(out.titles[1].ownerId).toBe('p1')
     expect(out.titles[1].mortgaged).toBe(true)
-    expect(out.players[0].cash).toBe(2000 - 30 - fee) // metade do preço + taxa (D-064)
-    expect(out.players[1].cash).toBe(2000 + 30) // dono recebe só a metade
+    expect(out.players[0].cash).toBe(CASH0 - 30 - fee) // metade do preço + taxa (D-064)
+    expect(out.players[1].cash).toBe(CASH0 + 30) // dono recebe só a metade
   })
 
   it('SC-004: gates → no-op (própria, construção, <2 não-hipotecadas, imune, sem caixa)', () => {
@@ -80,7 +84,7 @@ describe('Confisco Geral (US2, D-064)', () => {
     const out = playHandCard(g, 'p1', 'confisco-geral-1', defaultPorts, 1)
     expect(out.titles[1].houses).toBe(0)
     expect(out.titles[1].ownerId).toBe('p2') // terreno fica com o dono
-    expect(out.players[1].cash).toBe(2000) // dono não recebe nada
+    expect(out.players[1].cash).toBe(CASH0) // dono não recebe nada
   })
 
   it('SC-002: derruba hotel, 2º hotel e arranha-céu de uma vez', () => {
@@ -113,11 +117,12 @@ describe('Confisco Geral (US2, D-064)', () => {
 describe('Imposto Federal (US3, D-064)', () => {
   it('SC-003: alvo paga 25% do patrimônio ao pote', () => {
     const g = createSeedState(['p1', 'p2'])
-    g.players[0].hand.push('imposto-federal-1') // p2 só caixa → netWorth 2000
+    g.players[0].hand.push('imposto-federal-1') // p2 só caixa → netWorth CASH0
     const potAntes = g.centerPot
     const out = playHandCard(g, 'p1', 'imposto-federal-1', defaultPorts, undefined, 'p2')
-    expect(out.players[1].cash).toBe(2000 - 500) // 25% de 2000
-    expect(out.centerPot).toBe(potAntes + 500)
+    const quarto = Math.round(CASH0 * 0.25) // 25% do patrimônio, que aqui é só caixa
+    expect(out.players[1].cash).toBe(CASH0 - quarto)
+    expect(out.centerPot).toBe(potAntes + quarto)
   })
 
   it('SC-003: alvo sem caixa paga o que tem; self → no-op', () => {

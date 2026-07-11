@@ -3,6 +3,10 @@ import { buyProperty, declineProperty } from '@/game/economy/purchase'
 import { createSeedState, defaultPorts } from '@/game/setup'
 import { finalizeTurn } from '@/game/turn/turnMachine'
 import type { GameState } from '@/game/turn/types'
+import { THEME } from '@/game/theme'
+
+// Caixa inicial vem do THEME: um literal aqui trava o balanceamento no teste (D-076).
+const CASH0 = THEME.INITIAL_CASH
 
 // Estado parado numa propriedade livre, com o modal de compra aberto.
 function setupPurchase(pos: number): GameState {
@@ -20,14 +24,14 @@ describe('Compra (US1)', () => {
   it('SC-001: comprar debita o preço, dá o título e completa a resolução', () => {
     const r = buyProperty(setupPurchase(1)) // Roma, preço 60
     expect(r.titles[1].ownerId).toBe('p1')
-    expect(r.players[0].cash).toBe(2000 - 60)
+    expect(r.players[0].cash).toBe(CASH0 - 60)
     expect(r.resolution).toBeNull()
     expect(r.turn.state).toBe('aguardando-finalizacao')
   })
 
   it('SC-001: recusar não cobra e abre leilão', () => {
     const r = declineProperty(setupPurchase(1), 1000)
-    expect(r.players[0].cash).toBe(2000)
+    expect(r.players[0].cash).toBe(CASH0)
     expect(r.resolution).toMatchObject({ kind: 'auction', auction: { pos: 1, currentBid: 0 } })
   })
 

@@ -6,6 +6,7 @@
 // Playwright contra infra viva. Com o transporte entrando por parâmetro, tudo isso roda
 // sobre o `localTransport` — síncrono e determinístico.
 import { describe, expect, it } from 'vitest'
+import { THEME } from '@/game/theme'
 import { createRoomSession, type RoomSession, type SessionIdentity } from '@/net/roomSession'
 import { LocalHub, localTransport } from '@/net/localTransport'
 import { createRoom, joinRoom, startGame, SEAT_COLORS } from '@/net/room'
@@ -221,8 +222,8 @@ describe('createRoomSession — início da partida', () => {
     expect(anfitriao.session.getState().phase).toBe('reveal')
     expect(convidado.session.getState().phase).toBe('reveal')
     expect(anfitriao.session.getState().room?.seats.every((seat) => seat.openingRoll !== null)).toBe(true)
-    expect(anfitriao.client()?.game()?.players.map((player) => player.cash)).toEqual([2_000, 2_000])
-    expect(anfitriao.client()?.game()?.centerPot).toBe(500)
+    expect(anfitriao.client()?.game()?.players.map((player) => player.cash)).toEqual([THEME.INITIAL_CASH, THEME.INITIAL_CASH])
+    expect(anfitriao.client()?.game()?.centerPot).toBe(THEME.PARKING_SEED)
 
     await new Promise<void>((resolve) => setTimeout(resolve, 25))
     expect(anfitriao.session.getState().phase).toBe('playing')

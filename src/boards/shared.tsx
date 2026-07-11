@@ -672,7 +672,7 @@ function effectRow(e: TempEffect, i: number): {
   key: string; label: string; desc: string; detail: string; tag: string; laps: number; tone: 'logo' | 'gold'
 } {
   const laps = `${e.lapsRemaining} ${e.lapsRemaining === 1 ? 'volta' : 'voltas'}`
-  const place = activeBoard()[e.pos ?? 0]?.name ?? '—'
+  const place = activeBoard()[e.pos ?? 0]?.name ?? '·'
   switch (e.kind) {
     case 'apagao': return { key: `a${i}`, label: `Greve (${activeLabels().hangar})`, desc: `${activeLabels().hangar} inativa · ${laps}`, detail: `${activeLabels().hangar} inativa`, tag: 'A', laps: e.lapsRemaining, tone: 'logo' }
     case 'greve': return { key: `g${i}`, label: 'Greve (Utilidades)', desc: `Utilidades sem aluguel · ${laps}`, detail: 'Utilidades sem aluguel', tag: 'G', laps: e.lapsRemaining, tone: 'logo' }
@@ -840,7 +840,7 @@ function PlayerRow({ player: p }: { player: Player }) {
           <span className="player-row__state player-row__state--bankrupt">Falido</span>
         ) : p.connected === false ? (
           // Status de sessão (§12.3/FR-015): quem caiu segue com tudo intacto (FR-020).
-          <span title="Desconectado — a partida espera" className="player-row__state player-row__state--offline">
+          <span title="Desconectado. A partida espera" className="player-row__state player-row__state--offline">
             <i aria-hidden />
             Offline
           </span>
@@ -991,7 +991,7 @@ function RailHopAction({ targets, onHop }: { targets: number[]; onHop: (dest: nu
           variant="secondary"
           onClick={() => onHop(dest)}
           className="rail-hop-action min-w-0 flex-[1.35] justify-start gap-2 px-2 text-sm"
-          title={`Embarcar para ${board[dest]?.name ?? dest} — resolve a casa de destino, sem bônus de GO`}
+          title={`Embarcar para ${board[dest]?.name ?? dest} . Resolve a casa de destino, sem bônus de GO`}
         >
           <span className="rail-hop-action__icon" aria-hidden="true">
             <SteamLocoIcon size={18} />
@@ -1685,7 +1685,7 @@ export function CenterArena() {
 // casa, hipoteca e dono se houver. Fecha clicando no backdrop ou Esc.
 // =====================================================================
 function fmtMoney(n: number) {
-  if (n == null || Number.isNaN(n)) return '—' // blindagem: nunca quebra por valor ausente
+  if (n == null || Number.isNaN(n)) return '·' // blindagem: nunca quebra por valor ausente
   return n.toLocaleString('pt-BR')
 }
 
@@ -2236,7 +2236,7 @@ export function AirportPopover({
  * ele existir: acima do preço vem o BÔNUS PASSIVO em destaque.
  *
  * Sem isso a mina era a única casa comprável do tabuleiro que não dizia o que fazia — o
- * jogador via "R$ 220" e um desenho de galeria, e tinha de descobrir o efeito comprando.
+ * jogador via apenas o preço e um desenho de galeria, e tinha de descobrir o efeito comprando.
  * O passivo é a metade do valor da carta; esconder isso é esconder o preço.
  */
 export function MinePopover({

@@ -4,6 +4,10 @@ import { taxBunkerResolve, respondReaction } from '@/game/cards/reacao'
 import { createSeedState, defaultPorts } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import { BOARD } from '@/lib/boardData'
+import { THEME } from '@/game/theme'
+
+// Caixa inicial vem do THEME: um literal aqui trava o balanceamento no teste (D-076).
+const CASH0 = THEME.INITIAL_CASH
 
 const TAX = BOARD.find((s) => s.kind === 'tax')!.pos
 const TAX_AMT = 'amount' in BOARD[TAX] ? (BOARD[TAX] as { amount: number }).amount : 0
@@ -34,7 +38,7 @@ describe('Diplomacia — reação a ofensiva (US1)', () => {
     const out = respondReaction(g, true, defaultPorts)
     expect(out.resolution).toBeNull()
     expect(out.titles[1].ownerId).toBe('p2') // não mudou
-    expect(out.players[0].cash).toBe(2000) // atacante não pagou
+    expect(out.players[0].cash).toBe(CASH0) // atacante não pagou
     expect(out.players[1].hand).not.toContain('diplomacia-1') // Diplomacia gasta
     expect(out.decks.acaso).toContain('aquisicao-hostil-1') // ofensiva reciclada
   })
@@ -45,8 +49,8 @@ describe('Diplomacia — reação a ofensiva (US1)', () => {
     const out = respondReaction(g, false, defaultPorts)
     expect(out.resolution).toBeNull()
     expect(out.titles[1].ownerId).toBe('p1') // adquirida
-    expect(out.players[0].cash).toBe(2000 - 30) // metade do preço (D-064)
-    expect(out.players[1].cash).toBe(2000 + 30)
+    expect(out.players[0].cash).toBe(CASH0 - 30) // metade do preço (D-064)
+    expect(out.players[1].cash).toBe(CASH0 + 30)
   })
 
   it('SC-001: alvo sem Diplomacia → ofensiva aplica direto', () => {
@@ -88,14 +92,14 @@ describe('Bunker Fiscal — reação a imposto (US2)', () => {
     const usa = taxState(true)
     taxBunkerResolve({ playerId: 'p1', square: BOARD[TAX], roll: null, ports: defaultPorts, state: usa })
     const cancelado = respondReaction(usa, true, defaultPorts)
-    expect(cancelado.players[0].cash).toBe(2000) // não pagou
+    expect(cancelado.players[0].cash).toBe(CASH0) // não pagou
     expect(cancelado.players[0].hand).not.toContain('bunker-fiscal-1') // gasta
     expect(cancelado.resolution).toBeNull()
 
     const recusa = taxState(true)
     taxBunkerResolve({ playerId: 'p1', square: BOARD[TAX], roll: null, ports: defaultPorts, state: recusa })
     const pago = respondReaction(recusa, false, defaultPorts)
-    expect(pago.players[0].cash).toBe(2000 - TAX_AMT) // pagou o imposto
+    expect(pago.players[0].cash).toBe(CASH0 - TAX_AMT) // pagou o imposto
     expect(pago.resolution).toBeNull()
   })
 })

@@ -5,10 +5,18 @@
 import type { GroupKey } from '@/lib/boardData'
 
 export const THEME = {
-  INITIAL_CASH: 2000, // SRS §3.1 (D-017: 1.500 → 2.000 com 48 casas)
-  PARKING_SEED: 500, // pote do Free Parking — semente/reabastecimento (007/D-006)
+  // D-076 — a mesa de 3 jogadores tem de conseguir COMPRAR o tabuleiro na largada. Com $2.000 ela
+  // cobria 70% do Atlas e 62% da Fuligem: a primeira volta acabava com metade das casas sem dono,
+  // e o jogo virava fila de leilão antes de virar jogo. $3.000 põe 3 jogadores em ~101%/107% e 4 em
+  // ~135%/142% — o excedente do quarto assento é o que financia construção, que é onde o jogo mora.
+  INITIAL_CASH: 3000, // SRS §3.1 (D-017: 1.500 → 2.000 com 48 casas; D-076: → 3.000)
+  PARKING_SEED: 750, // pote do Free Parking — semente/reabastecimento (007/D-006; D-076 acompanha a escala)
 
-  GO_PASS: 200, // passar pelo GO = $200; CAIR exatamente no GO = $400 (2×) — substitui o GO Progressivo
+  // $250 ao passar; $500 ao CAIR exatamente no GO (2×). A subida (D-076) é sobre RENDA POR TURNO,
+  // não por volta: o Atlas tem 48 casas, então uma volta custa ~6,9 turnos contra os ~5,7 de um
+  // tabuleiro de 40 — a $200 ele pagava $29/turno, um terço abaixo do padrão do gênero. A Fuligem,
+  // com 40 casas, recebe $44/turno, sustentando o prêmio de ~10% dentro de cada tier equivalente.
+  GO_PASS: 250,
 
   // Custo de construção de casa — TIER FIXO por grupo (032/D-024). Não proporcional ao preço.
   // Sweet spot em orange/red: casa barata pro aluguel que rende.
@@ -34,7 +42,7 @@ export const THEME = {
     platinum: { houses: [4, 10, 22, 27], hotel: 32, hotel2: 42, skyscraper: 50 }, // Emirados (super-luxo): topo ~$1.900-2.300, ROI baixo (033)
   } satisfies Record<GroupKey, { houses: readonly [number, number, number, number]; hotel: number; hotel2: number; skyscraper: number }>,
 
-  AIRPORT_RENT: [25, 50, 100, 200] as const, // por nº de aeroportos do dono (§2.4)
+  AIRPORT_RENT: [30, 60, 125, 250] as const, // por nº de aeroportos do dono (§2.4; D-076 acompanha o preço 200 → 250)
   UTILITY_MULT: [4, 10, 20] as const, // × valor dos dados, por nº de utilidades (§2.5)
 
   // MINAS (D-071, mapa Fuligem) — títulos sem aluguel. O valor vem exclusivamente do
@@ -54,7 +62,7 @@ export const THEME = {
     estanho: 0.85, // impostos e aluguéis que VOCÊ paga −15%
   } as const,
 
-  HANGAR_COST: 100, // melhoria de aeroporto (§13.6); venda = metade
+  HANGAR_COST: 125, // melhoria de aeroporto (§13.6); venda = metade
 
   MORTGAGE_RATIO: 0.5, // hipoteca = metade do preço (§6.1)
   UNMORTGAGE_SURCHARGE: 0.1, // deshipoteca = hipoteca × (1 + surcharge) (§6.2)
@@ -75,5 +83,5 @@ export const THEME = {
   // reativa o motor (código e testes do Speed Die preservados). Ver DECISIONS.
   SPEED_DIE_ENABLED: false,
 
-  TAX: { renda: 200, luxo: 100 }, // referência (fonte ativa = `amount` das casas tax no board)
+  TAX: { renda: 250, luxo: 150 }, // referência (fonte ativa = `amount` das casas tax no board)
 } as const

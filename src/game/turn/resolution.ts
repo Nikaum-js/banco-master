@@ -100,7 +100,7 @@ export const resolutionRegistry: Record<Square['kind'], ResolutionHandler> = {
     return { done: true }
   },
   'corner-parking': ({ playerId, ports, state }) => {
-    ports.onCollectCenter(state, playerId) // coleta o pote e reseta $500
+    ports.onCollectCenter(state, playerId) // coleta o pote e restaura a semente do tema
     return { done: true }
   },
   'corner-go': () => ({ done: true }), // crédito de GO já disparado no movimento

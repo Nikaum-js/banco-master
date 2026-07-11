@@ -7,6 +7,7 @@
  * LEITURA — caixa menos obrigação — e por isso vive no view-model, não no motor.
  */
 import { afterEach, describe, it, expect } from 'vitest'
+import { THEME } from '@/game/theme'
 import { cleanup, render, screen } from '@testing-library/react'
 import { createSeedState } from '@/game/setup'
 import { playersView } from '@/game/ui/panels/playersView'
@@ -25,8 +26,8 @@ describe('CARD 06 — view-model do caixa líquido', () => {
   it('sem dívida, líquido é o caixa e nada é devido', () => {
     const view = playersView(createSeedState(['p1', 'p2']))
     expect(view.map((p) => ({ owed: p.owed, net: p.net, money: p.money }))).toEqual([
-      { owed: 0, net: 2_000, money: 2_000 },
-      { owed: 0, net: 2_000, money: 2_000 },
+      { owed: 0, net: THEME.INITIAL_CASH, money: THEME.INITIAL_CASH },
+      { owed: 0, net: THEME.INITIAL_CASH, money: THEME.INITIAL_CASH },
     ])
   })
 

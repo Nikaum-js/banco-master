@@ -18,7 +18,7 @@ installGlobalFailureCollector() // FR-019: handler/timer/callback/promessa rejei
 // um mapa e casas de outro.
 //
 // O sintoma era crash ao COMPRAR: `priceOf(pos)` lê `BOARD` na hora do clique (Fuligem pos 4 =
-// Mina de Ferro, R$220 ⇒ abre `resolution: purchase`), mas `titles[4]` não existia, porque no
+// Mina de Ferro, hoje R$250 ⇒ abre `resolution: purchase`), mas `titles[4]` não existia, porque no
 // Atlas a pos 4 é imposto e imposto não é rentável. `s.titles[pos].ownerId` num `undefined`.
 //
 // Aqui é o único ponto que roda antes de tudo: `App` também entra por import dinâmico, depois
