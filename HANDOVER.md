@@ -1,7 +1,32 @@
 # HANDOVER — Banco Master
 
-> Estado para continuar em um **chat novo**. Snapshot de 2026-05-24.
+> Estado para continuar em um **chat novo**. Snapshot de 2026-05-24 (tabela de features
+> não atualizada desde então — ver nota de 2026-07-11 abaixo para specs 034–036).
 > Leitura de partida: este arquivo → `CLAUDE.md` → `docs/MILESTONES.md` → a spec ativa (`specs/030-.../plan.md`).
+
+## Atualização 2026-07-11 — spec 036 (Simulação Automatizada de Partidas)
+
+Entregue: harness de teste **dev-only**, infraestrutura de qualidade, não gameplay.
+
+- **Headless** (`tests/sim/`): motor de fuzzing seedado (`mulberry32`) que reusa os MESMOS
+  reducers puros de `src/game/**` sem Zustand/timers reais. Lote padrão (100 partidas × 2/3/6
+  jogadores, teto de **1.500 rodadas** — 300 mostrou-se insuficiente na prática, ver
+  `research.md` D7/plan.md) agora faz parte de `bun run test` (3 arquivos-shard,
+  `tests/sim/headless/{2p,3p,6p}.test.ts`, ~2min em paralelo).
+- **Reprodução por seed**: `bun run sim:replay -- --seed=N --players=P` e
+  `bun run sim:batch -- --games=N --counts=2,3,6` (scripts/).
+- **Smoke E2E** (`e2e/`, Playwright, nova devDependency): 3 partidas (2/3/6 jogadores) via UI
+  real, roteiro fixo determinístico (`e2e/script.ts`). **Gap descoberto**: o app não tem
+  lobby/seletor de jogadores — `store.ts` ganhou um hook de teste (`?players=2|3|6` na URL,
+  default 2) só para o boot inicial; nenhuma UI nova foi criada.
+- **4 bugs de produção encontrados pelo próprio fuzzer** (não injetados) e corrigidos com o
+  mesmo padrão já usado em `audit()`/Auditoria Fiscal ("paga o que houver, sem abrir dívida
+  por essa via"): cartas de pagamento sem checar solvência (`cards/effects.ts`:
+  honorários/conserto/crise/aniversário), multa obrigatória da 3ª tentativa de prisão
+  (`turnMachine.ts`), e liquidação de leilão de propriedade/terreno sem revalidar solvência/
+  elegibilidade no fecho (`auction.ts`/`landAuction.ts` — este último podia atribuir um lote a
+  um jogador já falido, violando FR-004g). Todos com teste de regressão verde antes/depois.
+- Ver `specs/036-simulacao-partidas/{plan,research,data-model,tasks}.md` para o design completo.
 
 ## Onde estamos
 
@@ -9,9 +34,11 @@ Saímos da discovery e entramos em **implementação ativa**, feature a feature,
 
 **Como verificar:**
 ```bash
-bunx vitest run tests/game  # 250 testes (motor + playersView + log + activeModal + deedView + negociação/transferência + handView + notice) — projeto usa BUN, não npm/npx
-bun run build               # tsc -b + vite (deve passar, exit 0)
-bun run dev                 # demo local jogável (HUD na barra de baixo)
+bun run test                        # suíte completa (motor + UI + lote headless da 036), ~1min — projeto usa BUN, não npm/npx
+bun run build                       # tsc -b + vite (deve passar, exit 0)
+bun run dev                         # demo local jogável (HUD na barra de baixo); ?players=3|6 troca a contagem (036)
+bun run sim:replay -- --seed=N --players=2   # reexecuta 1 partida simulada (036)
+bunx playwright test                # smoke E2E (036) — precisa de `bunx playwright install chromium` uma vez
 ```
 
 ## Features entregues (motor, em `src/game/`)
@@ -83,7 +110,7 @@ bun run dev                 # demo local jogável (HUD na barra de baixo)
 
 **Produto:**
 - **M2 (UI jogável): FECHADO** — painéis ao vivo, modais de resolução, token animado, construção/hipoteca/negociação pelo tabuleiro, **jogar cartas de mão** (029) e os **modais informativos do §12.2** (030) prontos. Falta só validação visual no `bun run dev` (T010 da 030) + acabamento.
-- **Multiplayer / Supabase / Lobby / Sessão & Resiliência** (M3 do MILESTONES, **redesenhado** 2026-05-24; **ADRs travados**: [D-019](docs/DECISIONS.md) auth anônima por link + [D-020](docs/DECISIONS.md) host-autoritativo + Realtime + snapshot) — nada de código começado. **Próximo passo natural = fatia 1 (infra Supabase)**, que depende de credenciais/projeto seu; caminho credential-free = scaffold do transporte de comandos (D-020). Inclui §9.2 (leilão do falido-ao-banco).
+- **Multiplayer / Supabase / Lobby / Sessão & Resiliência** (M3 do MILESTONES, **redesenhado** 2026-05-24; **ADRs travados**: [D-019](docs/DECISIONS.md) auth anônima por link + [D-020](docs/DECISIONS.md) host-autoritativo + Realtime + snapshot) — nada de código começado. **Próximo passo natural = fatia 1 (infra Supabase)**, que depende de credenciais/projeto seu; caminho credential-free = scaffold do transporte de comandos (D-020). Inclui §9.2 (leilão do falido-ao-banco). O `?players=N` da 036 **não é** o lobby do M3 — é só um hook de boot pro smoke E2E; M3 ainda vai precisar de uma tela de lobby real.
 
 ## Estado do Git
 
