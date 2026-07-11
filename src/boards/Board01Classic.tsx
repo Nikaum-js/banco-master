@@ -12,6 +12,7 @@ import {
   UtilityPopover,
 } from './shared'
 import { LiveTokens } from '@/game/ui/LiveTokens'
+import { StageBackdrop } from './StageBackdrop'
 // A FORMA do tabuleiro (lados, células, faixas da grade) vem da topologia. Antes
 // `gridArea` morava aqui e `sideOf` no `shared.tsx`: a mesma família de geometria
 // partida em dois arquivos, com os cantos 0/12/24/36 escritos duas vezes.
@@ -34,6 +35,7 @@ export default function Board01Classic() {
       // Cells de propriedade fazem stopPropagation antes de setar a nova.
       onClick={() => setSelectedPos(null)}
     >
+      <StageBackdrop />
       <PlayersPanel />
 
       <div

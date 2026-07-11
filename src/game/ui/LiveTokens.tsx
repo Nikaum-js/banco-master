@@ -151,6 +151,9 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
         if (eliminated[index]) return null
         const identity = identityOf(room, id)
         const pos = shown[id] ?? positions[index]
+        // `rolling` fica de fora do gate: com o dado no ar o peão está SEGURADO
+        // (não em marcha) — sem isso ele levantava da chapa antes de andar.
+        const walking = !rolling && targets[id] !== undefined && pos !== targets[id]
         const group = groups[pos] ?? [id]
         const n = group.length
         const size = tokenSize(n)
@@ -159,7 +162,15 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
           <motion.div
             key={id}
             layout
-            transition={{ duration: reduced ? 0 : MOTION.fast, ease: EASE.standard }}
+            // Passo INTERMEDIÁRIO desliza linear com a MESMA duração do intervalo entre
+            // passos (STEP_MS): um passo emenda no outro sem o anda-e-para do ease
+            // padrão (120ms de curva + 30ms parado, medido como "esquisito"). Só o
+            // passo de CHEGADA desacelera (emphasis) — o pouso fica macio.
+            transition={
+              reduced ? { duration: 0 }
+              : walking ? { duration: STEP_MS / 1000, ease: 'linear' }
+              : { duration: MOTION.base, ease: EASE.emphasis }
+            }
             className="relative z-30 pointer-events-none"
             style={gridArea(pos)}
           >
@@ -168,22 +179,29 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
               className="absolute left-1/2 top-1/2"
               style={{ transform: `translate(calc(-50% + ${off.x}px), calc(-50% + ${off.y}px))` }}
             >
-              {/* key={tick} remonta e replay a escala a cada CHEGADA (plop) — some sob
-                  movimento reduzido: a chegada em si já está no `shown` (o FATO fica). */}
+              {/* Em marcha, o token levanta da mesa (sombra da chapa fica pra trás) e
+                  assenta na chegada — o plop abaixo completa o pouso. */}
               <motion.div
-                key={`pop-${pop[id] ?? 0}`}
-                className="board-live-token"
-                initial={{ scale: 1 }}
-                animate={reduced ? { scale: 1 } : { scale: [1, 1.22, 1] }}
-                transition={{ duration: MOTION.base, ease: EASE.standard }}
+                animate={reduced || !walking ? { y: 0, scale: 1 } : { y: -4, scale: 1.08 }}
+                transition={{ duration: MOTION.fast, ease: EASE.standard }}
               >
-                <PlayerFace
-                  color={identity.color}
-                  avatar={identity.avatar}
-                  skin={identity.skin}
-                  size={size}
-                  active={id === activeId}
-                />
+                {/* key={tick} remonta e replay a escala a cada CHEGADA (plop) — some sob
+                    movimento reduzido: a chegada em si já está no `shown` (o FATO fica). */}
+                <motion.div
+                  key={`pop-${pop[id] ?? 0}`}
+                  className="board-live-token"
+                  initial={{ scale: 1 }}
+                  animate={reduced ? { scale: 1 } : { scale: [1, 1.22, 1] }}
+                  transition={{ duration: MOTION.base, ease: EASE.standard }}
+                >
+                  <PlayerFace
+                    color={identity.color}
+                    avatar={identity.avatar}
+                    skin={identity.skin}
+                    size={size}
+                    active={id === activeId}
+                  />
+                </motion.div>
               </motion.div>
             </div>
           </motion.div>

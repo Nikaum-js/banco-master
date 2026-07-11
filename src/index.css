@@ -1849,6 +1849,13 @@
     animation-delay: var(--face-delay, 0s);
   }
 
+  /* Token vivo sem moldura: o rosto É o token. Só uma sombra projetada assenta o
+     peão na casa e descola os avatares vazados (Linha Única) do tabuleiro escuro
+     — nada de disco/chapa atrás do avatar. */
+  .board-live-token {
+    filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.55));
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .avatar-face,
     .avatar-face *,
@@ -1893,21 +1900,57 @@
   }
   .board-stage::before {
     opacity: 0.48;
+    /* Latão via token (não rgb fixo): no Fliperama os arcos e a rota viram
+       ciano junto com o resto do mundo. */
+    --survey: color-mix(in srgb, var(--color-brass) 9%, transparent);
+    --survey-soft: color-mix(in srgb, var(--color-brass) 7%, transparent);
     background:
-      radial-gradient(circle at 8% 15%, transparent 0 72px, rgb(217 166 80 / 0.09) 73px 74px, transparent 75px),
-      radial-gradient(circle at 92% 84%, transparent 0 108px, rgb(217 166 80 / 0.07) 109px 110px, transparent 111px),
-      linear-gradient(118deg, transparent 0 18%, rgb(217 166 80 / 0.045) 18.1% 18.2%, transparent 18.3% 100%);
+      radial-gradient(circle at 8% 15%, transparent 0 72px, var(--survey) 73px 74px, transparent 75px),
+      radial-gradient(circle at 92% 84%, transparent 0 108px, var(--survey-soft) 109px 110px, transparent 111px),
+      linear-gradient(118deg, transparent 0 18%, color-mix(in srgb, var(--color-brass) 4.5%, transparent) 18.1% 18.2%, transparent 18.3% 100%);
   }
   .board-stage::after {
     opacity: 0.34;
+    --fix: color-mix(in srgb, var(--color-brass-glow) 48%, transparent);
+    --fix-soft: color-mix(in srgb, var(--color-brass) 34%, transparent);
     background:
-      radial-gradient(circle at 8% 15%, rgb(255 217 138 / 0.48) 0 2px, transparent 3px),
-      radial-gradient(circle at 23% 72%, rgb(217 166 80 / 0.34) 0 2px, transparent 3px),
-      radial-gradient(circle at 77% 24%, rgb(217 166 80 / 0.34) 0 2px, transparent 3px),
-      radial-gradient(circle at 92% 84%, rgb(255 217 138 / 0.48) 0 2px, transparent 3px);
+      radial-gradient(circle at 8% 15%, var(--fix) 0 2px, transparent 3px),
+      radial-gradient(circle at 23% 72%, var(--fix-soft) 0 2px, transparent 3px),
+      radial-gradient(circle at 77% 24%, var(--fix-soft) 0 2px, transparent 3px),
+      radial-gradient(circle at 92% 84%, var(--fix) 0 2px, transparent 3px);
   }
   .board-stage > * {
     z-index: 1;
+  }
+
+  /* Cenário do palco (boards/StageBackdrop) — a cidade da home continua viva
+     atrás da mesa. Fica ACIMA dos arcos de agrimensura (::before, z -1) e
+     ABAIXO de painéis e tabuleiro (filhos, z 1). Só existe no layout de três
+     colunas: empilhado (<=1100px) o palco rola além da viewport e a cena
+     esticaria sem aparecer — abaixo do limiar ela sai do DOM visual e não
+     custa GPU num aparelho que precisa dela pra outra coisa. */
+  .board-stage > .stage-backdrop {
+    display: none;
+  }
+  @media (min-width: 1101px) {
+    .board-stage > .stage-backdrop {
+      display: block;
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+  }
+  .stage-backdrop__city {
+    position: absolute;
+    inset: 0;
+    /* Metade da presença que a cidade tem na home: cenário de fundo de
+       partida, não protagonista. O véu de cima apaga mastros e coroas antes
+       de encostarem nos painéis. */
+    opacity: 0.42;
+    -webkit-mask-image: linear-gradient(to top, black 0 34%, transparent 88%);
+    mask-image: linear-gradient(to top, black 0 34%, transparent 88%);
   }
 
   .board-frame {
@@ -4614,8 +4657,10 @@
     justify-content: space-between;
     gap: 1rem;
     min-height: 6.4rem;
-    padding: 1rem;
-    overflow: hidden;
+    padding: 1rem 1.25rem 1rem 1rem;
+    /* overflow visível: o tumble do dado 3D sobe ~70px acima do repouso (fase
+       "no ar" da coreografia do tabuleiro) e não pode ser decepado pela moldura. */
+    overflow: visible;
     border: 1px solid color-mix(in srgb, var(--color-brass) 46%, var(--color-ink-500));
     border-radius: var(--radius-card);
     background:
@@ -4638,20 +4683,19 @@
   .opening-rolls-focus__player p {
     margin-top: 0.15rem;
   }
+  /* Foco da disputa usa os dados 3D do tabuleiro (`game/ui/dice`). Enquanto a
+     janela pública está aberta (D-051) e o resultado ainda não chegou, os cubos
+     chacoalham "na mão"; o tumble de verdade dispara quando a autoridade revela. */
   .opening-rolls-dice {
-    gap: 0.4rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex: none;
   }
-  .opening-rolls-dice .opening-die {
-    width: 2.5rem;
-    border-color: color-mix(in srgb, var(--color-brass) 72%, var(--color-starlight));
-    box-shadow:
-      0 7px 12px -8px var(--color-ink-abyss),
-      0 0 14px -10px var(--color-brass-glow);
-  }
-  .opening-rolls-dice--moving .opening-die:first-child {
+  .opening-rolls-dice--moving > * {
     animation: opening-die-tension-a 440ms var(--ease-snap) infinite alternate;
   }
-  .opening-rolls-dice--moving .opening-die:last-child {
+  .opening-rolls-dice--moving > *:last-child {
     animation: opening-die-tension-b 520ms var(--ease-snap) infinite alternate;
   }
   @keyframes opening-die-tension-a {
@@ -4752,7 +4796,7 @@
     .lottery-stack--reveal .lottery-chip,
     .auction-result-row,
     .auction-route-dots i,
-    .opening-rolls-dice--moving .opening-die { animation: none; }
+    .opening-rolls-dice--moving > * { animation: none; }
     .auction-result-row { opacity: 1; transform: none; }
   }
   @media (max-height: 640px) {
@@ -5211,8 +5255,31 @@
   @keyframes bm-spin {
     to { transform: rotate(360deg); }
   }
+
+  /* Malha de rotas da carta (ChartPattern) — o tracejado FLUI nas linhas em
+     operação e os hubs pulsam, o mesmo pulso do globo da home. O deslocamento
+     do fluxo é múltiplo exato do período do tracejado (1 + 1.6 = 2.6 × 10):
+     o loop reinicia sem salto visível. */
+  .bm-route-flow { animation: bm-route-flow 9s linear infinite; }
+  @keyframes bm-route-flow {
+    to { stroke-dashoffset: -26; }
+  }
+  .bm-chart-node {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: bm-chart-node-pulse 3.4s var(--ease-standard) infinite;
+  }
+  @keyframes bm-chart-node-pulse {
+    0%, 100% { opacity: 0.6; transform: scale(0.94); }
+    50% { opacity: 1; transform: scale(1.12); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .bm-spin-slow { animation: none; }
+    .bm-spin-slow,
+    .bm-route-flow,
+    .bm-chart-node {
+      animation: none;
+    }
   }
 }
 

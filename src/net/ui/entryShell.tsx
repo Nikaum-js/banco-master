@@ -16,7 +16,8 @@ const RUNWAY_LIGHTS = [578, 628, 680, 734, 790, 848] as const
 // Aeronave em perspectiva lateral 3/4: a asa próxima é maior, a asa oposta recua,
 // a fuselagem tem ventre e linha de luz, e as turbinas aparecem sob as asas. O pai
 // segue a rota; só o miolo oscila, mantendo a animação em transform/opacity.
-function AirlinerMark({ scale, facing }: { scale: number; facing: 1 | -1 }) {
+// Exportada porque o palco do tabuleiro (boards/StageBackdrop) voa a mesma frota.
+export function AirlinerMark({ scale, facing }: { scale: number; facing: 1 | -1 }) {
   const windows = [-32, -21, -10, 1, 12, 23, 34]
   return (
     <g transform={`scale(${scale * facing} ${scale})`}>
