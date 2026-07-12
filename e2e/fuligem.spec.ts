@@ -59,11 +59,17 @@ test('partida local no mapa fuligem apresenta o catálogo inteiro do tabuleiro',
   await expect(page.locator('html')).toHaveAttribute('data-board-theme', 'fuligem')
 
   // Conteúdo do catálogo nas 40 casas: bairros, ferrovias, minas e Sorte Grande.
-  await expect(page.getByText('Ladeira do Barreiro')).toBeVisible()
-  await expect(page.getByText('Rua Treze de Maio')).toBeVisible()
-  await expect(page.getByText('Alameda das Palmeiras')).toBeVisible()
+  // Os nomes são os de `src/lib/fuligemBoard.ts` DEPOIS do encurtamento de 2231bc1
+  // ('Ladeira do Barreiro' → 'Barro Preto', 'Rua Treze de Maio' → 'Treze de Maio',
+  // 'Alameda das Palmeiras' → 'Represa', 'Estação do Vale' → 'Estação Vale'). Este arquivo
+  // ficou dois meses afirmando os nomes antigos sem ninguém notar, porque nenhum job da CI
+  // o executava — é o que motivou pô-lo no gate.
+  await expect(page.getByText('Barro Preto')).toBeVisible()
+  await expect(page.getByText('Treze de Maio')).toBeVisible()
+  await expect(page.getByText('Represa', { exact: true })).toBeVisible()
   await expect(page.getByText('Estação Bonfim')).toBeVisible()
-  await expect(page.getByText('Estação do Vale')).toBeVisible()
+  await expect(page.getByText('Estação Vale')).toBeVisible()
+  await expect(page.getByText('Mina de Ferro')).toBeVisible()
   await expect(page.getByText('Sorte Grande', { exact: true })).toBeVisible()
   await expect(page.getByText('Bilhete de Trem', { exact: true })).toBeVisible()
   await expect(page.getByText('Pátio das Máquinas', { exact: true })).toHaveCount(0)

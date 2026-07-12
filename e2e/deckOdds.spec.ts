@@ -15,7 +15,11 @@ import { test, expect, type Page } from '@playwright/test'
 
 async function abrirVitrine(page: Page, casa: 'Acaso' | 'Tesouro') {
   await page.goto('/play?players=2&map=fuligem')
-  await page.getByRole('button', { name: new RegExp(`^${casa} — ver detalhes$`, 'i') }).first().click()
+  // Separador DOIS-PONTOS: `Board01Classic.tsx` monta `${square.name}: ver detalhes`. Era
+  // travessão até `7a90710 style(copy): clarify interface punctuation`, e este arquivo
+  // continuou procurando o travessão por dois meses sem ninguém ver — nenhum job da CI o
+  // executava. É o que motivou pô-lo no gate.
+  await page.getByRole('button', { name: new RegExp(`^${casa}: ver detalhes$`, 'i') }).first().click()
   await expect(page.getByRole('dialog')).toBeVisible()
 }
 

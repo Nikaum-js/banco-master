@@ -282,8 +282,18 @@ jobs:
       # Só o smoke single-player (036): sobe o app pelo `webServer` do config e dirige a
       # partida pela UI real. O `multiplayer.spec.ts` (038) fica FORA — depende de credencial
       # Supabase e de rede, então não serve como gate de PR de fora do repo.
+      #
+      # `deckOdds` (057) e `fuligem` (055) entram aqui porque NÃO estavam em job nenhum, e
+      # isso cobrou o preço previsto: as duas apodreceram em silêncio. A fuligem afirmava os
+      # nomes de casa anteriores ao encurtamento de `2231bc1`; a deckOdds procurava o
+      # `aria-label` com travessão, que `7a90710` trocou por dois-pontos. Nenhum gate rodava,
+      # então nenhum dos dois renames apareceu vermelho. Custam 17s somadas.
+      #
+      # A fuligem tem uma segunda metade que fala com o Supabase real; ela se auto-pula sem
+      # credencial (`test.skip`), então o gate roda os 4 testes locais e ignora os 3 de infra.
+      # `errorBoundary` e `inviteRetention` continuam fora de propósito: são opt-in por infra.
       - name: Smoke E2E
-        run: bunx playwright test e2e/2players.spec.ts e2e/3players.spec.ts e2e/6players.spec.ts
+        run: bunx playwright test e2e/2players.spec.ts e2e/3players.spec.ts e2e/6players.spec.ts e2e/deckOdds.spec.ts e2e/fuligem.spec.ts
 
       - if: failure()
         uses: actions/upload-artifact@v4
