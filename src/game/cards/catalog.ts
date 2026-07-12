@@ -53,6 +53,16 @@ const TESOURO: CardDef[] = [
   { base: 'honorarios', copies: 1, deck: 'tesouro', rarity: 'comum', mode: 'imediato', timing: null, effect: 'honorarios', status: 'implementado' },
 ]
 
+/** As DEFINIÇÕES do catálogo, antes de `expand()` desagregar as cópias (spec 057).
+ *
+ * É esta a fonte da composição do baralho — quantas cópias de cada efeito existem. A vitrine
+ * de probabilidades precisa disso, e reconstruí-la a partir de `CARDS` seria agrupar de volta
+ * o que o próprio módulo acabou de desagregar: uma inferência que pode discordar da definição
+ * em silêncio. Exportar a definição custa uma linha e não tem como divergir de si mesma. */
+export const CARD_DEFS: readonly CardDef[] = [...ACASO, ...TESOURO]
+
+export type { CardDef }
+
 function expand(defs: CardDef[]): Card[] {
   const out: Card[] = []
   for (const d of defs) {
