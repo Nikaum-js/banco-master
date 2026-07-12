@@ -7,6 +7,7 @@
         "@fontsource-variable/inter": "^5.3.0",
         "@fontsource-variable/roboto-slab": "^5.3.0",
         "@fontsource/bebas-neue": "^5.3.0",
+        "@fontsource/press-start-2p": "^5.3.0",
         "@sentry/react": "^10.68.0",
         "@supabase/supabase-js": "^2.110.8",
         "@tailwindcss/vite": "^4.3.3",
@@ -134,6 +135,8 @@
     "@fontsource-variable/roboto-slab": ["@fontsource-variable/roboto-slab@5.3.0", "", {}, "sha512-eByKAjLM9td0qsXCOZhlUGfhsjen//epd6/cAJOg+o73RtYBijrI1jz+lTp2X0ebwTCLmKB1+Kt/QiRMgmNPTw=="],
 
     "@fontsource/bebas-neue": ["@fontsource/bebas-neue@5.3.0", "", {}, "sha512-nCxMEb9Bg9sjNWm9TIOsvHKDMLRUfEZPWpLgYu6m9KavZZVSA/WoHzI5wROwqA+eNwEi/PNBAcB5Co7HA3S0Cw=="],
+
+    "@fontsource/press-start-2p": ["@fontsource/press-start-2p@5.3.0", "", {}, "sha512-gxWFxdeDglPhEYSwEeooomcaFK8kSQYLQwVxfnOJeYRj2sPEHXjpVtFgEaYfqzOjuAJGrIcJOipu2KY5YkbyuQ=="],
 
     "@humanfs/core": ["@humanfs/core@0.19.2", "", { "dependencies": { "@humanfs/types": "^0.15.0" } }, "sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA=="],
 
