@@ -167,9 +167,9 @@ _Avoid_: Fiscal, cobrador
 Mecanismo que dá vantagem a jogadores em desvantagem. Por princípio, nunca é rotulado como tal na interface.
 _Avoid_: rubber banding, mecanismo de equilíbrio
 
-**Faixa de cobrança**:
-Superfície ancorada na base que apresenta uma dívida pendente. Reduz a altura do tabuleiro em vez de cobri-lo, e não é modal ([D-056](./docs/adr/D-056-cobranca-de-divida-sai-do-centro-da-tela.md)).
-_Avoid_: modal de falência, card de dívida
+**Cobrança de dívida**:
+Superfície que apresenta uma dívida pendente. Fica no miolo do tabuleiro, dentro do anel de casas: não cobre casa nenhuma, não reposiciona a mesa e não é modal ([D-066](./docs/adr/D-066-cobranca-de-divida-vai-para-o-miolo-do-tabuleiro.md), que substitui a faixa ancorada da [D-056](./docs/adr/D-056-cobranca-de-divida-sai-do-centro-da-tela.md)).
+_Avoid_: faixa de cobrança, modal de falência, card de dívida
 
 **Capacidade de levantar**:
 Caixa mais venda de construções mais hipoteca de tudo que ainda é hipotecável. É o número que diz se ainda há saída, e o mesmo que autoriza declarar falência.

@@ -7,10 +7,9 @@ export function AudioControl() {
   const muted = useAudioPrefs((s) => s.muted)
   const volume = useAudioPrefs((s) => s.volume)
 
-  // `audio-control` só carrega o posicionamento vertical (index.css): durante a cobrança de
-  // dívida ele sobe acima da faixa (050/D-056), que ocupa a base da tela — medido em
-  // 1440×900, ele caía em cima do "Você deve a …" e escondia a primeira informação da
-  // cobrança.
+  // `audio-control` só carrega o posicionamento vertical (index.css). Ele já precisou subir
+  // para não cobrir a cobrança de dívida, que ocupava a base da tela (D-056); desde a D-066 a
+  // cobrança mora no miolo do tabuleiro e a base voltou a ser só dele.
   return (
     <div className="audio-control group fixed left-3 z-[80] flex items-center gap-2">
       <button

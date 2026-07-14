@@ -2181,13 +2181,11 @@
     --stage-pad: 4px;
     --side-min: 200px;
     --side-max: 300px;
-    /* Altura RESERVADA pela faixa de cobrança (050/D-056). Zero quase sempre; enquanto a
-       cobrança existe, o tabuleiro encolhe por esta conta em vez de ficar coberto. */
-    --dock-h: 0px;
     /* Altura útil do palco — as três fórmulas de `.board-frame` (base, retrato empilhado e
-       paisagem estreita) derivam daqui, senão a reserva da faixa teria de ser repetida três
-       vezes e uma delas ficaria para trás. */
-    --stage-vh: calc(100svh - var(--stage-pad) * 2 - var(--dock-h));
+       paisagem estreita) derivam daqui, em vez de repetir a conta três vezes e deixar uma
+       para trás. Nenhuma superfície reserva altura aqui: a cobrança de dívida reservava
+       (D-056) e o tabuleiro pulava para cima ao abrir; agora ela mora no miolo (D-066). */
+    --stage-vh: calc(100svh - var(--stage-pad) * 2);
     position: relative;
     width: 100%;
     min-height: 100svh;
@@ -2199,18 +2197,9 @@
     align-items: center;
     gap: 10px;
     padding: var(--stage-pad);
-    padding-bottom: calc(var(--stage-pad) + var(--dock-h));
     isolation: isolate;
   }
 
-  /* A faixa de cobrança existe no DOM só durante a dívida; `:has` liga a reserva sem que o
-     palco precise saber quem a montou. O VALOR de `--debt-dock-h` é publicado pela própria
-     faixa a partir da altura medida (`useReservedHeight`): um número escrito à mão aqui
-     errou por 51px em 740×360 e devolveu o tabuleiro para debaixo da faixa. Os 92px são só
-     o piso do primeiro frame, antes da medida. */
-  :root:has(.debt-dock) .board-stage {
-    --dock-h: var(--debt-dock-h, 92px);
-  }
   .board-stage::before,
   .board-stage::after {
     content: "";
@@ -2319,9 +2308,9 @@
 
   .side-panel {
     height: 100%;
-    /* Mesma altura útil do tabuleiro (`--stage-vh`): as gavetas laterais também precisam
-       ceder espaço à faixa de cobrança. Sem isso, elas seguravam a linha da grade na altura
-       cheia da janela e empurravam o tabuleiro — já encolhido — para debaixo da faixa. */
+    /* Mesma altura útil do tabuleiro (`--stage-vh`): as gavetas laterais não podem esticar
+       além da mesa, senão seguram a linha da grade na altura cheia da janela e empurram o
+       tabuleiro para fora dela. */
     max-height: var(--stage-vh);
     width: 100%;
     max-width: var(--side-max);
@@ -2408,50 +2397,103 @@
   }
 
   /* =================================================================
-     Faixa de cobrança de dívida (050, §12.2 / D-056).
+     Cobrança de dívida (050 → 066, §12.2 / D-066).
 
-     Ancorada na base e do tamanho da janela; o palco reserva a altura dela
-     (`--dock-h`), então ela nunca cobre casa nenhuma. Não é modal: sem
-     backdrop, sem trap de foco, Esc não fecha (§12.6).
+     Mora no MIOLO do tabuleiro, dentro do anel de casas: o tabuleiro monta
+     `.debt-slot` lá e o cartão é portado até ele (`debt/debtSlot.tsx`). Não
+     cobre casa nenhuma, não reserva altura — a mesa não se move ao abrir nem
+     ao fechar — e não é modal: sem backdrop, sem trap de foco, Esc não fecha
+     (§12.6).
      ================================================================= */
-  .debt-dock {
-    position: fixed;
-    inset: auto 0 0 0;
-    z-index: 60;
-    /* Sem `min-height`: a altura sai do conteúdo e é ela que `useReservedHeight` publica em
-       `--debt-dock-h`. Amarrar a altura à variável que a própria faixa escreve trava o valor
-       no palpite inicial — medido, a forma compacta ficava presa nos 92px do desktop. */
+  .debt-slot {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
     display: grid;
-    grid-template-columns: minmax(0, auto) minmax(0, auto) minmax(0, 1fr) minmax(0, auto);
-    grid-template-areas: "parties amount gauge actions" "hint hint gauge actions";
-    align-items: center;
-    column-gap: clamp(0.6rem, 1.6vw, 1.5rem);
-    row-gap: 0.1rem;
-    padding: 0.5rem clamp(0.6rem, 2vw, 1.4rem);
-    border-top: 2px solid color-mix(in srgb, var(--color-signal) 55%, var(--color-ink-950));
-    background:
-      linear-gradient(180deg, color-mix(in srgb, var(--color-signal) 12%, transparent) 0%, transparent 46%),
-      color-mix(in srgb, var(--color-ink-950) 92%, var(--color-signal));
-    box-shadow: 0 -14px 34px -20px rgb(2 6 16 / 0.95), 0 -1px 0 color-mix(in srgb, var(--color-signal-glow) 30%, transparent);
+    place-items: center;
+    /* Folga contra o filete interno do miolo, em % do próprio miolo. */
+    padding: 4%;
+    /* Só o cartão recebe clique: dados e histórico seguem vivos atrás dele, e o tabuleiro
+       inteiro continua alcançável para hipotecar e vender. */
+    pointer-events: none;
+    /* O cartão se mede pelo TABULEIRO, não pela janela — é o miolo que define quanto espaço
+       livre existe aqui dentro, e ele encolhe junto com a mesa. */
+    container-type: inline-size;
   }
 
-  .debt-dock__parties {
-    grid-area: parties;
+  /* Véu CURTO atrás do cartão, e só enquanto ele existe: separa a cobrança da carta náutica
+     do miolo sem escurecer a tela. Do anel de casas para fora o tabuleiro segue inteiro e
+     claro — escurecer a tela é o que um modal faria, e a cobrança não é modal (§12.6). */
+  .debt-slot:has(.debt-call) {
+    background: radial-gradient(
+      ellipse 74% 62% at 50% 50%,
+      color-mix(in srgb, var(--color-ink-950) 90%, transparent) 0%,
+      color-mix(in srgb, var(--color-ink-950) 62%, transparent) 52%,
+      transparent 86%
+    );
+  }
+
+  /* Sem slot na árvore (VisualLab, teste que monta só o HUD) o cartão ainda precisa
+     aparecer; aí ele se centra na janela. */
+  .debt-call-free {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    pointer-events: none;
+  }
+
+  .debt-call {
+    pointer-events: auto;
+    /* `min-width: 0` não é decoração: sem ele o tamanho mínimo automático do flex/grid faz o
+       cartão crescer até o min-content dos botões (rótulos `nowrap`), e num miolo de 230px
+       ele transbordava por cima das casas — o defeito que este lugar existe para não ter. */
+    /* Proporcional ao miolo (`cqw`), com teto em rem: num tabuleiro grande o cartão não vira
+       um pôster, e num miolo apertado ele não precisa de outra regra para caber. */
+    width: min(30rem, 88cqw);
+    min-width: 0;
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.9rem 1rem 0.8rem;
+    border: 1px solid color-mix(in srgb, var(--color-signal) 46%, var(--color-ink-950));
+    border-top: 2px solid color-mix(in srgb, var(--color-signal) 72%, var(--color-ink-950));
+    border-radius: var(--radius-card);
+    background:
+      radial-gradient(120% 72% at 50% -10%, color-mix(in srgb, var(--color-signal) 16%, transparent) 0%, transparent 58%),
+      color-mix(in srgb, var(--color-ink-950) 94%, var(--color-signal));
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--color-signal-glow) 14%, transparent),
+      0 22px 54px -22px rgb(2 6 16 / 0.95),
+      0 0 0 4px color-mix(in srgb, var(--color-ink-950) 72%, transparent),
+      0 0 34px -12px color-mix(in srgb, var(--color-signal) 42%, transparent);
+    text-align: center;
+  }
+
+  .debt-call__parties {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.4rem;
+    max-width: 100%;
     min-width: 0;
   }
 
-  .debt-dock__arrow {
+  .debt-call__arrow {
     color: var(--color-signal-glow);
     font-size: 1rem;
     line-height: 1;
   }
 
-  .debt-dock__bank {
-    width: 30px;
-    height: 30px;
+  .debt-call__bank {
+    width: 28px;
+    height: 28px;
+    flex: none;
     display: grid;
     place-items: center;
     border-radius: 999px;
@@ -2460,27 +2502,24 @@
     color: var(--color-gold, var(--color-brass));
   }
 
-  .debt-dock__to {
+  .debt-call__to {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     min-width: 0;
     line-height: 1.15;
+    text-align: left;
   }
 
-  .debt-dock__to > strong {
+  .debt-call__to > strong {
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .debt-dock__amount {
-    grid-area: amount;
-    display: flex;
-    align-items: baseline;
-  }
-
-  .debt-dock__value {
-    font-size: clamp(1.5rem, 3.4vh, 2.3rem);
+  .debt-call__value {
+    font-size: clamp(1.7rem, 11cqw, 2.4rem);
     line-height: 1;
     background-image: var(--gradient-signal-shine);
     -webkit-background-clip: text;
@@ -2489,14 +2528,12 @@
     filter: drop-shadow(0 2px 12px color-mix(in srgb, var(--color-signal) 50%, transparent));
   }
 
-  .debt-dock__gauge {
-    grid-area: gauge;
+  .debt-call__gauge {
+    width: 100%;
     min-width: 0;
-    /* Guarda: os números não invadem a coluna dos botões nem que a largura aperte. */
-    overflow: hidden;
   }
 
-  .debt-dock__bar {
+  .debt-call__bar {
     position: relative;
     height: 8px;
     border-radius: 999px;
@@ -2507,7 +2544,7 @@
 
   /* Alcance por liquidação — a "sombra" à frente do caixa. Sem ela, descobrir se ainda há
      saída significava hipotecar às cegas e ver o que acontecia. */
-  .debt-dock__bar-reach {
+  .debt-call__bar-reach {
     position: absolute;
     inset: 0 auto 0 0;
     background: repeating-linear-gradient(
@@ -2517,72 +2554,93 @@
     );
   }
 
-  .debt-dock__bar-fill {
+  .debt-call__bar-fill {
     position: absolute;
     inset: 0 auto 0 0;
     border-radius: 999px;
     background: linear-gradient(90deg, var(--color-signal-deep), var(--color-signal-glow));
   }
 
-  .debt-dock__bar-fill.is-covered {
+  .debt-call__bar-fill.is-covered {
     background: linear-gradient(90deg, var(--color-brass-soft), var(--color-brass-glow));
   }
 
-  .debt-dock__facts {
-    margin-top: 0.3rem;
+  .debt-call__facts {
+    margin-top: 0.35rem;
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: 0.25rem 1rem;
+    justify-content: center;
+    gap: 0.15rem 0.7rem;
     color: var(--color-starlight-muted);
     font-family: var(--font-sans);
-    font-size: 0.68rem;
+    font-size: 0.66rem;
     font-weight: 650;
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
 
-  .debt-dock__missing {
+  .debt-call__missing {
     color: var(--color-signal-glow);
   }
 
-  .debt-dock__actions {
-    grid-area: actions;
+  /* Pagar em cima e sozinho; pedir emprestado e falir dividem a linha de baixo — a
+     hierarquia das três saídas fica na forma, sem precisar de tamanho de fonte diferente. */
+  .debt-call__actions {
+    width: 100%;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 0.4rem;
   }
 
-  .debt-dock__pay {
-    white-space: nowrap;
+  .debt-call__pay {
+    width: 100%;
   }
 
-  .debt-dock__lenders {
+  .debt-call__alt {
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+  }
+
+  .debt-call__lenders {
     position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
-  /* Escolha de credor: abre ACIMA da faixa. Com sete adversários, sete botões empilhados
-     eram o que fazia o cartão antigo crescer até tomar a tela. */
-  .debt-dock__menu {
+  /* Falir NÃO estica: é a ação de menor destaque do cartão (D-056, ponto 4) e precisa
+     continuar sendo, inclusive quando não há credor elegível e ela é a única na linha —
+     esticada, ela ganharia o mesmo peso visual do botão de pagar. */
+  .debt-call__falir {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  /* Escolha de credor: abre ABAIXO do botão, para dentro do miolo, onde sobra espaço. Com
+     sete adversários, sete botões empilhados eram o que fazia o cartão crescer até tomar a
+     tela. */
+  .debt-call__menu {
     position: absolute;
-    bottom: calc(100% + 0.55rem);
-    right: 0;
+    top: calc(100% + 0.45rem);
+    left: 0;
     z-index: 1;
-    min-width: 12rem;
-    max-height: 44svh;
+    min-width: max(100%, 11rem);
+    max-height: 13rem;
     overflow-y: auto;
     padding: 0.4rem;
     border: 1px solid color-mix(in srgb, var(--color-brass) 34%, var(--color-ink-500));
     border-radius: var(--radius-card);
     background: color-mix(in srgb, var(--color-ink-950) 96%, var(--color-brass));
     box-shadow: var(--shadow-lift, 0 18px 40px -18px rgb(2 6 16 / 0.9));
+    text-align: left;
   }
 
-  .debt-dock__menu-title {
+  .debt-call__menu-title {
     padding: 0.2rem 0.4rem 0.35rem;
   }
 
-  .debt-dock__menu-item {
+  .debt-call__menu-item {
     width: 100%;
     min-height: 34px;
     display: flex;
@@ -2596,59 +2654,76 @@
     text-align: left;
   }
 
-  .debt-dock__menu-item:hover,
-  .debt-dock__menu-item:focus-visible {
+  .debt-call__menu-item:hover,
+  .debt-call__menu-item:focus-visible {
     background: color-mix(in srgb, var(--color-brass) 18%, transparent);
   }
 
-  .debt-dock__hint {
-    grid-area: hint;
+  .debt-call__hint {
     color: var(--color-starlight-muted);
     font-family: var(--font-sans);
     font-size: 0.66rem;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.25;
+    text-wrap: balance;
   }
 
   /* Rótulo curto do botão de falência: escondido por padrão, ligado na forma compacta. A
-     regra base precisa vir ANTES do @media — com ela depois, mesma especificidade, ela
-     vencia e o botão ficava sem texto nenhum (medido: 26px de largura em 740×360). */
-  .debt-dock__label-short { display: none; }
+     regra base precisa vir ANTES da @container — com ela depois, mesma especificidade, ela
+     vencia e o botão ficava sem texto nenhum. */
+  .debt-call__label-short { display: none; }
+  .debt-call__btn-amount { display: inline; }
 
-  /* Compacta: a dica sai (a informação dela está nos números ao lado) e tudo cabe em
-     uma linha só, devolvendo altura ao tabuleiro. */
-  @media (orientation: landscape) and (max-width: 1100px),
-    (orientation: landscape) and (max-height: 560px) {
-    .debt-dock {
-      grid-template-areas: "parties amount gauge actions";
-      /* A medida de 740×360 mostrou o custo de deixar a coluna do medidor colapsar: com
-         27px ela empilhava os números em três linhas e a faixa dobrava de altura, comendo
-         o tabuleiro que ela deveria preservar. O piso aqui é o que impede isso. */
-      /* `max-content` na coluna das ações, e não `auto`: com `auto` a grade encolhia os
-         botões abaixo do próprio texto e o de falência virou uma tira de 26px em 740×360.
-         Quem cede largura é o medidor, que degrada bem — o botão, não. */
-      grid-template-columns: minmax(0, auto) auto minmax(4rem, 1fr) max-content;
-      column-gap: 0.6rem;
-      padding-block: 0.35rem;
+  /* Forma compacta — o miolo de um tabuleiro pequeno (paisagem estreita, tablet em pé). A
+     medida que importa é a do MIOLO, não a da janela: o mesmo aparelho tem miolo grande no
+     tabuleiro em paisagem e miolo apertado quando o palco empilha. A dica sai (a informação
+     dela está nos números acima) e as três ações cabem numa linha só. */
+  @container (max-width: 21rem) {
+    .debt-call {
+      /* Todo o miolo disponível: as três ações numa linha só precisam de cada pixel. */
+      width: 100%;
+      gap: 0.35rem;
+      padding: 0.6rem 0.6rem 0.55rem;
     }
-    .debt-dock__hint {
+    .debt-call__hint {
       display: none;
     }
-    /* O nome do credor é o primeiro a ceder largura: a carinha dele já diz quem é, na mesma
-       cor do assento no tabuleiro. Medido em 740×360, era esta coluna que empurrava o botão
-       de falência para fora da tela. */
-    .debt-dock__to {
+    .debt-call__value {
+      font-size: clamp(1.2rem, 14cqw, 1.7rem);
+    }
+    .debt-call__actions {
+      flex-direction: row;
+    }
+    .debt-call__pay {
+      width: auto;
+      flex: 1 1 0;
+      min-width: 0;
+    }
+    .debt-call__alt {
+      flex: 2 1 0;
+      min-width: 0;
+    }
+    /* Três botões numa linha de ~230px só cabem sem a cifra no rótulo — ela continua no nome
+       acessível e em corpo grande logo acima. */
+    .debt-call__btn-amount {
       display: none;
     }
-    .debt-dock__value {
-      font-size: 1.25rem;
+    .debt-call .ui-button {
+      padding-inline: 0.4rem;
+      font-size: 0.75rem;
+      gap: 0.25rem;
     }
-    .debt-dock__actions {
-      gap: 0.3rem;
+    /* O menu de credores abre para CIMA e para a ESQUERDA na forma compacta: aberto para
+       baixo, ele saía pela base do miolo e cobria casas (medido em 740×360); ancorado à
+       esquerda do botão do meio, sairia pela borda lateral. Para cima ele fica sobre o
+       próprio cartão, dentro do miolo, e some no clique seguinte. */
+    .debt-call__menu {
+      top: auto;
+      bottom: calc(100% + 0.45rem);
+      left: auto;
+      right: 0;
+      max-height: 10rem;
     }
-    .debt-dock__facts {
+    .debt-call__facts {
       flex-wrap: nowrap;
       white-space: nowrap;
       font-size: 0.55rem;
@@ -2656,17 +2731,12 @@
       letter-spacing: 0.02em;
     }
     /* Rótulo curto no botão de falência — o nome acessível continua completo (aria-label). */
-    .debt-dock__label-full { display: none; }
-    .debt-dock__label-short { display: inline; }
+    .debt-call__label-full { display: none; }
+    .debt-call__label-short { display: inline; }
   }
 
-  /* O controle de áudio mora na base esquerda; com a faixa aberta ele sobe para não cobrir
-     a primeira informação da cobrança (a quem se deve). */
   .audio-control {
     bottom: 0.75rem;
-  }
-  :root:has(.debt-dock) .audio-control {
-    bottom: calc(0.75rem + var(--debt-dock-h, 92px));
   }
 
   /* Prazo do empréstimo (§15.6): a frase que explica o que o vencimento faz.

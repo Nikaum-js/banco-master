@@ -12,6 +12,7 @@ import {
   UtilityPopover,
 } from './shared'
 import { LiveTokens } from '@/game/ui/LiveTokens'
+import { DebtSlot } from '@/game/ui/debt/DebtCall'
 import { StageBackdrop } from './StageBackdrop'
 // A FORMA do tabuleiro (lados, células, faixas da grade) vem da topologia. Antes
 // `gridArea` morava aqui e `sideOf` no `shared.tsx`: a mesma família de geometria
@@ -68,6 +69,10 @@ export default function Board01Classic() {
             style={{ gridRow: '2 / 13', gridColumn: '2 / 13' }}
           >
             <CenterArena />
+            {/* Área livre de casa, do tamanho do próprio tabuleiro: é aqui que a cobrança de
+                dívida aparece (066/D-066). O slot fica sempre montado e vazio — quem o
+                preenche é o HUD, por portal, quando existe dívida. */}
+            <DebtSlot />
           </div>
 
           {/* 40 casas */}

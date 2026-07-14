@@ -1,6 +1,6 @@
 # Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.27
+**Versão:** 1.28
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -929,9 +929,9 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor d
 | Speed Die — escolha de casa (Triples) | Triples nos dados |
 | Hangar | Jogador deseja construir hangar em aeroporto próprio |
 
-> 📌 **A cobrança de dívida NÃO é modal** (v1.21, [D-056](adr/D-056-cobranca-de-divida-sai-do-centro-da-tela.md)). Ela aparece como **faixa ancorada na base**, que **reduz a altura do tabuleiro em vez de cobri-lo** — a decisão de o que hipotecar ou vender é tomada olhando o tabuleiro inteiro. A faixa não escurece a tela, não captura nem prende o foco, e Esc continua sem fechá-la (§12.6): sai-se dela pagando, negociando ou declarando falência (§9.1). Ela mostra, na ordem: a quem se deve, quanto, o caixa atual, quanto falta e **quanto ainda dá para levantar** vendendo construções e hipotecando tudo — este último é a mesma medida que autoriza o botão de falência. A escolha de credor para empréstimo abre a partir da faixa, sem empilhar um botão por adversário.
+> 📌 **A cobrança de dívida NÃO é modal** (v1.21, [D-056](adr/D-056-cobranca-de-divida-sai-do-centro-da-tela.md)). Ela aparece como **cartão no miolo do tabuleiro**, dentro do anel de casas (v1.28, [D-066](adr/D-066-cobranca-de-divida-vai-para-o-miolo-do-tabuleiro.md)): **não cobre casa nenhuma e não reposiciona o tabuleiro** — a decisão de o que hipotecar ou vender é tomada olhando o tabuleiro inteiro, que continua parado e clicável no lugar em que estava. A cobrança não escurece a tela além do próprio miolo, não captura nem prende o foco, e Esc continua sem fechá-la (§12.6): sai-se dela pagando, negociando ou declarando falência (§9.1). Ela mostra, na ordem: a quem se deve, quanto, o caixa atual, quanto falta e **quanto ainda dá para levantar** vendendo construções e hipotecando tudo — este último é a mesma medida que autoriza o botão de falência. A escolha de credor para empréstimo abre a partir do cartão, sem empilhar um botão por adversário.
 >
-> A faixa é do **devedor nomeado** na dívida (v1.25, [D-061](adr/D-061-obrigacao-a-outro-jogador-nao-e-truncada.md)), que pode não ser o jogador da vez. Quem não é o devedor vê, no lugar dela, quem a mesa está aguardando — mesmo tratamento que a janela de reação (§10.6) e o pedido de empréstimo (§15.2) já recebem.
+> A cobrança é do **devedor nomeado** na dívida (v1.25, [D-061](adr/D-061-obrigacao-a-outro-jogador-nao-e-truncada.md)), que pode não ser o jogador da vez. Quem não é o devedor vê, no lugar dela, quem a mesa está aguardando — mesmo tratamento que a janela de reação (§10.6) e o pedido de empréstimo (§15.2) já recebem.
 
 ### 12.3 HUD
 
@@ -1256,4 +1256,4 @@ sendo a fonte de verdade da **regra**, o `CONTEXT.md` é a fonte dos **nomes**.
 
 ---
 
-**Magnata Imobiliário — SRS v1.27 | Julho 2026 | Documento de fonte de verdade absoluta**
+**Magnata Imobiliário — SRS v1.28 | Julho 2026 | Documento de fonte de verdade absoluta**

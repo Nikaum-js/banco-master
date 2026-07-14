@@ -6,10 +6,11 @@
 // Ações OPCIONAIS não moram aqui: Bus Ticket é canhoto na DiceArena; quitar
 // empréstimo vive no LoanPanel lateral. Sem nada pendente → não renderiza.
 //
-// 050/D-056: a DÍVIDA saiu daqui e virou faixa ancorada (`debt/DebtDock.tsx`). Ela era a
-// exceção deste arquivo — o único clima que não podia bloquear a tela, porque a decisão de
-// hipotecar ou vender se toma olhando o tabuleiro. Manter uma exceção como cartão não
-// resolvia o problema real: não adianta o tabuleiro estar clicável se ele está atrás.
+// 050/D-056 → 066/D-066: a DÍVIDA saiu daqui e virou superfície própria
+// (`debt/DebtCall.tsx`), hoje no miolo do tabuleiro. Ela era a exceção deste arquivo — o
+// único clima que não podia bloquear a tela, porque a decisão de hipotecar ou vender se toma
+// olhando o tabuleiro. Manter uma exceção como card centralizado não resolvia o problema
+// real: não adianta o tabuleiro estar clicável se ele está atrás.
 //
 // 044/T024 (US3/D-039): reação e empréstimo (`dim`) BLOQUEIAM a tela de verdade (o backdrop
 // cobre tudo e recebe clique) — viram diálogo de verdade (role="dialog", trap de foco,
@@ -26,7 +27,7 @@ import { identityOf } from '@/net/identity'
 import { getActiveSession } from '@/net/activeSession'
 import { WaitingBar } from '@/net/ui/WaitingBar'
 import { interestOf } from '@/game/emprestimos/emprestimos'
-import { DebtDock } from '@/game/ui/debt/DebtDock'
+import { DebtCall } from '@/game/ui/debt/DebtCall'
 import { activeHudView } from '@/game/ui/panels/activeHudView'
 import { EndGameScreen } from '@/game/ui/EndGameScreen'
 import { Button, Chip } from '@/game/ui/primitives'
@@ -140,7 +141,7 @@ export function GameHUD() {
   const view = useLocalView() // spec 038: controles só do assento local (FR-002)
   const room = useRoomStore((s) => s.room)
   const online = room !== null
-  // Feedback de caixa (044/T020 — FR-029): a faixa de cobrança mostra o caixa do devedor
+  // Feedback de caixa (044/T020 — FR-029): a cobrança de dívida mostra o caixa do devedor
   // mudando ao vivo (hipoteca/venda pra cobrir a fatura) sem NENHUM aviso; mesmo pulso que
   // `PlayerRow`/`PotCard` já usam (`primitives.tsx`), não um vocabulário novo.
   const cashPulse = useMoneyPulse(active.cash)
@@ -241,11 +242,12 @@ export function GameHUD() {
     )
   }
 
-  // ---- Dívida pendente — FAIXA ancorada, não cartão (050/D-056) ----
-  // O cartão centralizado saiu daqui de propósito: ele cobria o centro do tabuleiro e as
-  // casas em volta, que é exatamente onde a decisão de hipotecar/vender é tomada. A faixa
-  // reserva altura do palco (`:root:has(.debt-dock)` em index.css), então a mesa encolhe e
-  // continua inteira. Ela também não é modal — sem backdrop, sem trap, sem Esc (§12.6).
+  // ---- Dívida pendente — cartão no MIOLO do tabuleiro (050/D-056 → 066/D-066) ----
+  // Ela saiu deste arquivo como superfície e continua fora: não é um dos cards centralizados
+  // daqui, que cobririam o centro do tabuleiro e as casas em volta — exatamente onde a
+  // decisão de hipotecar/vender é tomada. O cartão é portado para dentro do anel de casas
+  // (`debt/debtSlot.tsx`), não cobre casa alguma, não move a mesa, e não é modal — sem
+  // backdrop, sem trap, sem Esc (§12.6).
   if (hud?.kind === 'debt') {
     if (!view.mayAct('pay-debt')) {
       return (
@@ -256,7 +258,7 @@ export function GameHUD() {
     }
     return (
       <AnimatePresence>
-        <DebtDock
+        <DebtCall
           game={game}
           amount={hud.amount}
           creditorId={hud.creditorId}

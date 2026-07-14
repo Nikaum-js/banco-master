@@ -66,7 +66,7 @@
 - [D-053](D-053-projeto-renomeado-para-magnata-imobiliario.md) — Projeto renomeado de Banco Master para Magnata Imobiliário (risco de marca registrada no INPI)
 - [D-054](D-054-emprestimo-vence-em-tres-voltas.md) — Empréstimo vence em três voltas, com cobrança automática do principal (revoga parcialmente D-009)
 - [D-055](D-055-troca-exige-contrapartida-minima.md) — ~~Troca exige contrapartida mínima de metade do valor entregue em ativos~~ **revogada** (substituída pela D-058)
-- [D-056](D-056-cobranca-de-divida-sai-do-centro-da-tela.md) — Cobrança de dívida sai do centro da tela e vira faixa ancorada que encolhe o tabuleiro (refina D-039)
+- [D-056](D-056-cobranca-de-divida-sai-do-centro-da-tela.md) — Cobrança de dívida sai do centro da tela e vira faixa ancorada que encolhe o tabuleiro (refina D-039; a faixa é substituída pelo miolo na D-066, o motivo continua valendo)
 - [D-057](D-057-desistencia-voluntaria-encerra-a-participacao.md) — Desistir encerra a participação sem exigir insolvência; sem empréstimo ativo os bens voltam livres ao banco, sem pregão (novo §9.6)
 - [D-058](D-058-troca-e-livre-ate-o-esvaziamento.md) — Troca é livre em qualquer proporção; só doação pura e esvaziamento (reduzir o patrimônio a menos de um terço) são recusados (substitui D-055, §8.5)
 - [D-059](D-059-leilao-de-escassez-de-terrenos-revertido.md) — ~~Leilão de escassez de terrenos revertido~~ **revogada** (revertida pela D-060, que restaura a D-023)
@@ -75,6 +75,7 @@
 - [D-062](D-062-hipotecada-pode-voltar-ao-banco.md) — Propriedade hipotecada pode voltar ao banco por zero e vira terreno livre; bloqueada com dívida pendente (novo §6.4)
 - [D-063](D-063-toda-mutacao-de-caixa-tem-causa-registrada.md) — Toda mutação de caixa passa por uma função e registra motivo; o Fiscal e mais cinco regras deixam de mover dinheiro em silêncio (refina D-032)
 - [D-065](D-065-fiscal-sai-do-jogo.md) — O Fiscal sai do jogo: token invisível que cobrava fora da vez, causa raiz de quatro relatos de bug financeiro (revoga §13.8; revoga parcialmente D-063)
+- [D-066](D-066-cobranca-de-divida-vai-para-o-miolo-do-tabuleiro.md) — Cobrança de dívida vai para o miolo do tabuleiro: não cobre casa, não reposiciona a mesa e continua sem ser modal (refina D-056, que acertou o motivo e errou o lugar)
 - [D-064](D-064-rebalanceamento-do-catalogo-de-cartas.md) — Rebalanceamento do catálogo de cartas: Acaso 21 / Tesouro 18, lendárias reforçadas (Confisco Geral, Aquisição a ½ preço, Imposto Federal 25%), Greve unificada, Imunidade total de 1 volta, 8 cartas novas e Refinanciamento removido (SRS §10, v1.26)
 
 > ℹ️ **Renumeração na integração da 043** (a colisão que este arquivo avisava): a worktree da 043

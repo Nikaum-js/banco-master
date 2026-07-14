@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-// Faixa de cobrança (050, US4 / D-056). O que estes casos protegem não é aparência: é a
-// promessa de que a cobrança deixou de esconder o tabuleiro e passou a dizer, na tela, se
-// ainda existe saída.
+// Cobrança de dívida (050, US4 / D-056 → D-066). O que estes casos protegem não é aparência:
+// é a promessa de que a cobrança deixou de esconder o tabuleiro e passou a dizer, na tela, se
+// ainda existe saída. Aqui o HUD é montado SEM tabuleiro, então o cartão cai no caminho sem
+// slot — a cobrança nunca deixa de aparecer por causa de onde foi montada.
 import { cleanup, render, screen, fireEvent } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { GameHUD } from '@/game/ui/GameHUD'
@@ -31,10 +32,10 @@ function renderDebt(game: GameState) {
   return render(<GameHUD />)
 }
 
-describe('Faixa de cobrança — forma (FR-019/FR-020/FR-024)', () => {
-  it('renderiza a faixa, e não um cartão modal', () => {
+describe('Cobrança de dívida — forma (FR-019/FR-020/FR-024)', () => {
+  it('renderiza a cobrança sem virar modal', () => {
     const { container } = renderDebt(withDebt(500, 200))
-    expect(container.querySelector('.debt-dock')).not.toBeNull()
+    expect(container.querySelector('.debt-call')).not.toBeNull()
     // Nenhum diálogo: sem backdrop bloqueante, sem captura de foco — o tabuleiro
     // precisa continuar alcançável para hipotecar e vender.
     expect(container.querySelector('[role="dialog"]')).toBeNull()
@@ -44,35 +45,35 @@ describe('Faixa de cobrança — forma (FR-019/FR-020/FR-024)', () => {
   it('FR-025: Esc não fecha a cobrança', () => {
     const { container } = renderDebt(withDebt(500, 200))
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(container.querySelector('.debt-dock')).not.toBeNull()
+    expect(container.querySelector('.debt-call')).not.toBeNull()
   })
 
-  it('FR-026: a faixa é uma região nomeada', () => {
+  it('FR-026: a cobrança é uma região nomeada', () => {
     renderDebt(withDebt(500, 200))
     expect(screen.getByRole('region', { name: /cobrança de dívida/i })).toBeTruthy()
   })
 })
 
-describe('Faixa de cobrança — os cinco números (FR-021/FR-022)', () => {
+describe('Cobrança de dívida — os cinco números (FR-021/FR-022)', () => {
   it('mostra credor, valor, caixa, quanto falta e quanto ainda dá para levantar', () => {
     // p1 deve 500, tem 200 em caixa e Roma ($60, hipoteca $30) → levanta até 230.
     const { container } = renderDebt(withDebt(500, 200, [1]))
-    const dock = container.querySelector('.debt-dock')!
-    expect(dock.textContent).toContain('Você deve a')
-    expect(dock.textContent).toContain('500')
-    expect(dock.textContent).toContain('Caixa')
-    expect(dock.textContent).toContain('200')
-    expect(dock.textContent).toContain('Falta')
-    expect(dock.textContent).toContain('300')
-    expect(dock.textContent).toContain('Levanta até')
-    expect(dock.textContent).toContain('230')
+    const call = container.querySelector('.debt-call')!
+    expect(call.textContent).toContain('Você deve a')
+    expect(call.textContent).toContain('500')
+    expect(call.textContent).toContain('Caixa')
+    expect(call.textContent).toContain('200')
+    expect(call.textContent).toContain('Falta')
+    expect(call.textContent).toContain('300')
+    expect(call.textContent).toContain('Levanta até')
+    expect(call.textContent).toContain('230')
   })
 
   it('FR-022: a capacidade exibida é a mesma que autoriza a falência', () => {
     // Insolvente: levanta 230 < 500 devidos → falência habilitada.
     const insolvente = renderDebt(withDebt(500, 200, [1]))
     expect(screen.getByRole('button', { name: /declarar falência/i }).hasAttribute('disabled')).toBe(false)
-    expect(insolvente.container.querySelector('.debt-dock')!.textContent).toContain('230')
+    expect(insolvente.container.querySelector('.debt-call')!.textContent).toContain('230')
     cleanup()
 
     // Solvente: caixa 200 + Roma + Veneza ($80 → 40) + Pisa ($100 → 50) = 320 ≥ 300.
@@ -94,7 +95,7 @@ describe('Faixa de cobrança — os cinco números (FR-021/FR-022)', () => {
   })
 })
 
-describe('Faixa de cobrança — escolha de credor (FR-023)', () => {
+describe('Cobrança de dívida — escolha de credor (FR-023)', () => {
   it('não empilha um botão por adversário: a lista abre a partir de um único controle', () => {
     renderDebt(withDebt(500, 200))
     // Um controle só, mesmo com dois credores possíveis (p2 e p3).
