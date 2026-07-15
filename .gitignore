@@ -28,3 +28,6 @@ dist-ssr
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Relatórios de simulação (036 — extensão de conservação/cobertura), artefato gerado
+/reports/

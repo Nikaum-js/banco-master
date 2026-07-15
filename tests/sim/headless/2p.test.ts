@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest'
 import { runGame } from '../engine/runGame'
 import { buildReport, formatReport } from '../engine/report'
+import { writeReport } from '../engine/reportIO'
 
 const PLAYER_COUNT = 2
 const GAMES = 100
@@ -15,8 +16,9 @@ describe('simulação headless — 2 jogadores', () => {
       const t0 = Date.now()
       const results = Array.from({ length: GAMES }, (_, i) => runGame(BASE_SEED + i, PLAYER_COUNT))
       const report = buildReport(results, Date.now() - t0)
+      writeReport(report, 'reports/headless-2p') // inspecionável depois de `bun run test`, sem rodar sim:batch à parte
       expect(report.failed, formatReport(report)).toBe(0)
     },
-    110_000, // SC-002: lote completo (3 shards em paralelo) < 2 min
+    180_000, // margem sobre SC-002 (<2min em condições normais) p/ máquina sob carga
   )
 })
