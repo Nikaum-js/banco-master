@@ -75,6 +75,9 @@ export interface SimResult {
   durationMs: number
   winnerId?: string
   failure?: SimFailure
+  // Mecanismos de dinheiro exercitados nesta partida → contagem de ocorrências (extensão de
+  // conservação/cobertura). Chaves ex.: 'rent', 'card:boomEconomico', 'taxman-sink', 'mortgage'.
+  coverage: Record<string, number>
 }
 
 export interface SimReport {
@@ -84,4 +87,7 @@ export interface SimReport {
   durationMs: number
   roundsHistogram: Record<number, number>
   failures: SimFailure[]
+  // Soma do coverage de todas as partidas do lote — mecanismos com 0 ocorrências no lote são
+  // um gap real de cobertura (não suposição), reportado por formatReport.
+  coverage: Record<string, number>
 }

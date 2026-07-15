@@ -17,7 +17,7 @@ import { activeLoanFor } from '@/game/emprestimos/emprestimos'
 import type { SimAction } from './types'
 
 export interface Violation {
-  code: 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g'
+  code: 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h'
   detail: string
 }
 

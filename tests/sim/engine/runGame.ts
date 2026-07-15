@@ -1,11 +1,17 @@
-// Orquestra 1 partida completa: enumerar → escolher → aplicar → sondar (1x/turno) →
-// checar invariantes (1x/turno) → checar fim de jogo/teto de rodadas (036).
+// Orquestra 1 partida completa: enumerar → escolher → aplicar → checar conservação de
+// dinheiro (todo dispatch) → sondar/invariantes estruturais (1x/turno) → checar fim de
+// jogo/teto de rodadas (036 + extensão de conservação/cobertura).
 import { createSimSession, dispatch, closeExhaustedAuctions } from './driver'
 import { enumerateActions } from './actions'
 import { pickAction } from './agent'
 import { pickProbe, applyProbe } from './invalidProbe'
 import { checkInvariants } from './invariants'
+import { checkConservation, checkAuctionClose } from './conservation'
 import type { SimAction, SimFailure, SimResult } from './types'
+
+function addCoverage(coverage: Record<string, number>, mechanisms: string[]): void {
+  for (const m of mechanisms) coverage[m] = (coverage[m] ?? 0) + 1
+}
 
 // 300 (Assumption original do spec.md) mostrou-se insuficiente na prática para a
 // política puramente aleatória (Assumption "sem heurística de jogador razoável"): o
@@ -26,6 +32,7 @@ function fail(
   rounds: number,
   actionsExecuted: number,
   durationMs: number,
+  coverage: Record<string, number>,
 ): SimResult {
   return {
     seed,
@@ -34,6 +41,7 @@ function fail(
     rounds,
     actionsExecuted,
     durationMs,
+    coverage,
     failure: { reason, seed, playerCount, round, action, detail },
   }
 }
@@ -47,20 +55,41 @@ export function runGame(seed: number, playerCount: number, roundCap: number = DE
   let lastActiveSeat = session.game.activeSeat
   const maxTicks = roundCap * playerCount * SAFETY_TICK_FACTOR
   let ticks = 0
+  const coverage: Record<string, number> = {}
 
   try {
     while (session.game.phase !== 'ended') {
       ticks++
       if (ticks > maxTicks) {
-        return fail('round-cap-exceeded', seed, playerCount, rounds, undefined, `excedeu a salvaguarda de ${maxTicks} ticks sem terminar`, rounds, actionsExecuted, Date.now() - t0)
+        return fail('round-cap-exceeded', seed, playerCount, rounds, undefined, `excedeu a salvaguarda de ${maxTicks} ticks sem terminar`, rounds, actionsExecuted, Date.now() - t0, coverage)
       }
+
+      const beforeAuctionClose = session.game
       closeExhaustedAuctions(session)
+      if (session.game !== beforeAuctionClose) {
+        const { violations, mechanisms } = checkAuctionClose(beforeAuctionClose, session.game)
+        addCoverage(coverage, mechanisms)
+        if (violations.length > 0) {
+          const detail = violations.map((v) => `[${v.code}] ${v.detail}`).join('; ')
+          return fail('invariant', seed, playerCount, rounds, undefined, `[fechamento de leilão] ${detail}`, rounds, actionsExecuted, Date.now() - t0, coverage)
+        }
+      }
 
       const points = enumerateActions(session)
       const { action } = pickAction(session.ctx.rng, points)
       const before = session.game
       dispatch(session, action)
       actionsExecuted++
+
+      // Conservação de dinheiro: checada em TODO dispatch (não só na troca de assento) —
+      // cada mecanismo (aluguel/imposto/cartas/GO/TaxMan/etc.) só é atribuível ao dispatch
+      // exato que o disparou.
+      const { violations: moneyViolations, mechanisms } = checkConservation(before, session.game, action)
+      addCoverage(coverage, mechanisms)
+      if (moneyViolations.length > 0) {
+        const detail = moneyViolations.map((v) => `[${v.code}] ${v.detail}`).join('; ')
+        return fail('invariant', seed, playerCount, rounds, action, detail, rounds, actionsExecuted, Date.now() - t0, coverage)
+      }
 
       const seatChanged = session.game.activeSeat !== lastActiveSeat
       const ended = session.game.phase === 'ended'
@@ -69,32 +98,32 @@ export function runGame(seed: number, playerCount: number, roundCap: number = DE
         if (probe) {
           const probeResult = applyProbe(session, probe)
           if (!probeResult.ok) {
-            return fail('invalid-action-accepted', seed, playerCount, rounds, action, probeResult.detail, rounds, actionsExecuted, Date.now() - t0)
+            return fail('invalid-action-accepted', seed, playerCount, rounds, action, probeResult.detail, rounds, actionsExecuted, Date.now() - t0, coverage)
           }
         }
 
         const violations = checkInvariants(before, session.game, action)
         if (violations.length > 0) {
           const detail = violations.map((v) => `[${v.code}] ${v.detail}`).join('; ')
-          return fail('invariant', seed, playerCount, rounds, action, detail, rounds, actionsExecuted, Date.now() - t0)
+          return fail('invariant', seed, playerCount, rounds, action, detail, rounds, actionsExecuted, Date.now() - t0, coverage)
         }
 
         if (seatChanged && session.game.activeSeat <= lastActiveSeat) rounds++
         lastActiveSeat = session.game.activeSeat
 
         if (!ended && rounds >= roundCap) {
-          return fail('round-cap-exceeded', seed, playerCount, rounds, action, `estourou o teto de ${roundCap} rodadas`, rounds, actionsExecuted, Date.now() - t0)
+          return fail('round-cap-exceeded', seed, playerCount, rounds, action, `estourou o teto de ${roundCap} rodadas`, rounds, actionsExecuted, Date.now() - t0, coverage)
         }
       }
     }
   } catch (e) {
-    return fail('exception', seed, playerCount, rounds, undefined, e instanceof Error ? (e.stack ?? e.message) : String(e), rounds, actionsExecuted, Date.now() - t0)
+    return fail('exception', seed, playerCount, rounds, undefined, e instanceof Error ? (e.stack ?? e.message) : String(e), rounds, actionsExecuted, Date.now() - t0, coverage)
   }
 
   const winner = session.game.players.find((p) => !p.eliminated)
   const alive = session.game.players.filter((p) => !p.eliminated).length
   if (alive !== 1) {
-    return fail('invariant', seed, playerCount, rounds, undefined, `fim de jogo com ${alive} jogadores vivos (esperado 1)`, rounds, actionsExecuted, Date.now() - t0)
+    return fail('invariant', seed, playerCount, rounds, undefined, `fim de jogo com ${alive} jogadores vivos (esperado 1)`, rounds, actionsExecuted, Date.now() - t0, coverage)
   }
-  return { seed, playerCount, outcome: 'ok', rounds, actionsExecuted, durationMs: Date.now() - t0, winnerId: winner?.id }
+  return { seed, playerCount, outcome: 'ok', rounds, actionsExecuted, durationMs: Date.now() - t0, winnerId: winner?.id, coverage }
 }
