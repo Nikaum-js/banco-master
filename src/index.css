@@ -7862,3 +7862,112 @@
   background: color-mix(in srgb, var(--deed-accent, var(--color-brass)) 10%, transparent);
   padding: 0.5rem 0.625rem;
 }
+
+/* =====================================================================
+   VITRINE DE PROBABILIDADES DOS BARALHOS (spec 057)
+   Lista de 14–18 linhas: cada uma é um botão que abre a própria explicação.
+   A descrição vive em DOM (nunca em `title=`), então o estilo precisa dar conta
+   dela aberta e fechada — não é tooltip flutuante, é revelação no fluxo.
+   ===================================================================== */
+@layer components {
+  .deck-odds-list {
+    max-height: min(56vh, 30rem);
+    overflow-y: auto;
+    padding: 0.25rem 0.75rem 0.5rem;
+    margin: 0;
+    list-style: none;
+  }
+
+  .deck-odds-row {
+    border-bottom: 1px solid color-mix(in srgb, var(--color-brass) 12%, transparent);
+  }
+
+  .deck-odds-row:last-child { border-bottom: 0; }
+
+  .deck-odds-row__trigger {
+    display: grid;
+    grid-template-columns: 1.25rem auto 1fr auto;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.5rem 0.35rem;
+    text-align: left;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    border-radius: var(--radius-sharp);
+  }
+
+  .deck-odds-row__trigger:hover,
+  .deck-odds-row__trigger:focus-visible {
+    background: color-mix(in srgb, var(--color-brass) 9%, transparent);
+  }
+
+  .deck-odds-row__ord {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.65rem;
+    color: var(--color-cream-muted);
+    text-align: right;
+  }
+
+  /* Losangos da raridade — o sinal NÃO-cromático que acompanha a cor. */
+  .deck-odds-row__pips { display: inline-flex; gap: 2px; }
+  .deck-odds-row__pips i {
+    width: 5px;
+    height: 5px;
+    border-radius: 1px;
+    transform: rotate(45deg);
+  }
+
+  .deck-odds-row__name {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+    color: var(--color-starlight);
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+  }
+
+  .deck-odds-row__rarity {
+    color: var(--deck-odds-accent);
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .deck-odds-row__odds {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.85rem;
+    color: var(--color-brass-glow);
+    white-space: nowrap;
+  }
+
+  .deck-odds-row__copies {
+    font-size: 0.6rem;
+    color: var(--color-cream-muted);
+  }
+
+  /* A explicação. Recuada até a coluna do nome para ficar claro a quem pertence. */
+  .deck-odds-row__desc {
+    margin: 0 0 0.55rem 3.1rem;
+    padding-left: 0.6rem;
+    border-left: 2px solid color-mix(in srgb, var(--deck-odds-accent) 45%, transparent);
+    color: var(--color-cream-muted);
+    font-size: 0.75rem;
+    line-height: 1.45;
+  }
+
+  .deck-odds-foot {
+    padding: 0.6rem 1rem 0.9rem;
+    color: var(--color-cream-muted);
+    font-size: 0.68rem;
+    line-height: 1.4;
+    text-align: center;
+    border-top: 1px solid color-mix(in srgb, var(--color-brass) 12%, transparent);
+  }
+}

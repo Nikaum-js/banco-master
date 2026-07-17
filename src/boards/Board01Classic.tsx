@@ -14,6 +14,7 @@ import {
   MinePopover,
 } from './shared'
 import { LiveTokens } from '@/game/ui/LiveTokens'
+import { DeckOddsModal } from '@/game/ui/cards/DeckOddsModal'
 import { DebtSlot } from '@/game/ui/debt/DebtCall'
 import { StageBackdrop } from './StageBackdrop'
 // A FORMA do tabuleiro (lados, células, faixas da grade) vem da topologia. Antes
@@ -91,7 +92,10 @@ export default function Board01Classic() {
             const isAirport  = square.kind === 'airport'
             const isUtility  = square.kind === 'utility'
             const isMine     = square.kind === 'mine' // D-071: comprável ⇒ clicável, como as outras
-            const isClickable = isProperty || isAirport || isUtility || isMine
+            // 057: casa de CARTA também abre — mas vitrine de probabilidades, não escritura.
+            // Ela não tem dono nem preço; o que se inspeciona nela é o baralho.
+            const isCardSquare = square.kind === 'acaso' || square.kind === 'tesouro'
+            const isClickable = isProperty || isAirport || isUtility || isMine || isCardSquare
             const isSelected = selectedPos === square.pos
             // 044/T032: casa clicável (propriedade/aeroporto/utilidade) precisa ser
             // alcançável e operável por teclado, com nome. Antes era um `<div onClick>` —
@@ -178,6 +182,28 @@ export default function Board01Classic() {
               </div>
             )
           })}
+
+          {/*
+            VITRINE DE PROBABILIDADES (057) — fora do laço das casas, e de propósito.
+            Os outros são POPOVER ancorado na casa; este é MODAL centrado, porque 14–18 linhas
+            com explicação expansível não caberiam num balão sem cobrir meio tabuleiro. Sendo
+            modal, renderizar dentro da célula da grade o prenderia ao `position: relative`
+            dela.
+
+            Também não entra na fila do `ModalLayer`: aquela camada é dirigida por
+            `state.resolution` e decide a partida. Esta é informativa, mora no board layer com
+            estado local de seleção, e o `ModalLayer` desenha POR CIMA quando há decisão
+            pendente — então a vitrine nunca esconde uma decisão nem serve de fuga dela.
+          */}
+          <AnimatePresence>
+            {selectedSquare && (selectedSquare.kind === 'acaso' || selectedSquare.kind === 'tesouro') && (
+              <DeckOddsModal
+                key={`odds-${selectedSquare.kind}`}
+                deck={selectedSquare.kind}
+                onClose={() => setSelection(null)}
+              />
+            )}
+          </AnimatePresence>
 
           {/* Peças vivas dos jogadores (posições vêm do store) */}
           <LiveTokens gridArea={gridArea} />
