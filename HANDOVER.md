@@ -28,6 +28,50 @@ Entregue: harness de teste **dev-only**, infraestrutura de qualidade, não gamep
   um jogador já falido, violando FR-004g). Todos com teste de regressão verde antes/depois.
 - Ver `specs/036-simulacao-partidas/{plan,research,data-model,tasks}.md` para o design completo.
 
+**Atualização 2026-07-17 — spec 036 encerrada (Phase 6/Polish, `tasks.md` T001–T032 ✓):**
+quickstart validado ponta a ponta (`bun run test`, `sim:replay`, `sim:batch`, `bunx playwright test`
+— todos ok, dentro do orçamento de SC-002/003/005); SC-004 confirmado manualmente (guarda de
+`canSellBuilding` comentada de propósito → lote headless aponta `[c] houses fora de [0,4]`
+corretamente, revertido em seguida); `bunx tsc --noEmit` + `bun run test` (324 testes) + `bun run
+build` sem regressão. Feature 036 **concluída**.
+
+**Atualização 2026-07-17 — spec 036 estendida (Phase 7, `tasks.md` T033–T040 ✓): conservação de
+dinheiro + cobertura + relatórios persistidos.** Motivada por pergunta direta do usuário ("os
+testes cobrem TUDO?") — resposta honesta era não: `checkB` (`invariants.ts`) só cobria 3 ações
+(quitar/conceder empréstimo, aceitar troca); aluguel, imposto, as 32 cartas, leilões, hipoteca/
+construção, TaxMan e falência não tinham checagem de conservação de dinheiro.
+
+- **`tests/sim/engine/conservation.ts`** (novo): `checkConservation(prev,next,action)` — ledger
+  de deltas esperados por dispatch (não só ao fim do turno), novo código de violação **`h`**.
+  Dois grupos: ação direta (`action.kind` já diz o mecanismo — hipoteca/construção/ofensivas/
+  troca/empréstimo/falência/prisão) e diff de estado (GO/TaxMan/cartas disparam por várias ações
+  diferentes — detectados por mudança de posição/log/baralho, não por `action.kind`).
+  `checkAuctionClose` cobre o fechamento de leilão (não é um `SimAction`).
+- **Cobertura**: `runGame.ts` acumula `Record<string,number>` por mecanismo; `SimReport` soma e
+  `formatReport`/`formatReportMarkdown` apontam mecanismos com **0 ocorrências** (gap real, sem
+  esconder). Persistência em disco: `tests/sim/engine/reportIO.ts` (JSON completo + Markdown
+  resumido em `reports/`, git-ignorado); `--report=<path>` em `sim-batch.ts`/`sim-replay.ts`; os
+  3 shards headless escrevem `reports/headless-{2p,3p,6p}` automaticamente.
+- **8 bugs reais do próprio checker corrigidos durante o desenvolvimento** (não do motor desta
+  vez — do checker novo, pego pela suíte real rodando 300+ partidas): guarda `isBankrupt` ausente
+  em `declare-bankruptcy`, Free Parking **reseta** o pote pro seed (não zera), depleção sequencial
+  de caixa quando o mesmo vencedor fecha múltiplos lotes de terreno na mesma leva, Diplomacia
+  interceptando ofensiva ANTES de aplicar (não checado), `accept-trade` sem revalidar troca
+  obsoleta, dado interno do TaxMan em utilidade não recuperável do `GameState` (aceito como
+  não-verificável), assimetria real do motor — carta Volta ao GO nunca cobra juros de empréstimo
+  (`effects.ts` não chama `afterPassGo`, só `advance()` chama), e alinhamento de log por
+  ÍNDICE fixo quebrando quando o log (bound 50) faz shift — corrigido pra alinhamento por
+  conteúdo.
+- **`tests/sim/engine/conservation.test.ts`** (novo, 23 casos): caso correto (via reducer real)
+  + caso adulterado (detecção) para cada mecanismo, incluindo os 4 que ficam em **0 ocorrências**
+  no lote aleatório mesmo com 1.500 partidas (`rent-immune`, `loan-interest-on-go`,
+  `pay-off-loan`, `grant-loan` — subsistema de empréstimo é raro pela política uniforme do
+  agente; coberto por teste unitário dedicado, não escondido do relatório).
+- Validação manual estilo SC-004 pra 3 mecanismos novos (aluguel, hipoteca, carta Honorários):
+  bug injetado → detectado com o mecanismo certo no `detail` → revertido. `bun run test` (46
+  arquivos, 347 testes, ~59s) + `bunx tsc --noEmit` + `bun run build` + `bunx playwright test`
+  sem regressão. `spec.md` ganhou FR-004h/FR-014/FR-015 e SC-004/SC-007.
+
 ## Onde estamos
 
 Saímos da discovery e entramos em **implementação ativa**, feature a feature, via GitHub Spec Kit (`spec → plan → tasks → implement`, com testes). O **motor de jogo (M1) está completo e testado** (`src/game/`, regras + tema oficial + §9.4 + §8.4) + uma **UI jogável** (incl. jogar cartas de mão). Auditoria SRS×código (2026-05-24): motor sem gaps de regra **single-player** — uma regra inerentemente multiplayer (§9.2 leilão do falido-ao-banco) **movida ao M3**. _(2026-05-25: escassez de construção e o leilão de casas §5.4 foram **removidos** — construção ilimitada, ver [D-022](docs/DECISIONS.md).)_ Falta: 2 modais informativos do M2, **multiplayer (M3)** e tuning pós-playtest.

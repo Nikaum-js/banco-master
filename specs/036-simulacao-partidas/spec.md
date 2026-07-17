@@ -88,7 +88,7 @@ Como desenvolvedor, quero uma verificação de fumaça que abra o jogo real no b
 - **FR-001**: O harness MUST executar partidas completas de forma headless (sem browser), dirigindo o motor pelas mesmas operações que a interface usa, para as contagens de **2, 3 e 6 jogadores**.
 - **FR-002**: Cada jogador simulado MUST, em cada ponto de decisão, enumerar somente as ações válidas segundo as regras vigentes e escolher uma ao acaso; a escolha MUST cobrir todo o repertório de ações do jogo (rolar, comprar, recusar, leiloar, construir, vender, hipotecar, des-hipotecar, propor/aceitar/recusar trocas, jogar cartas da mão, usar Bus Ticket, pedir/pagar empréstimo, pagar/rolar na prisão, encerrar turno).
 - **FR-003**: Toda aleatoriedade da simulação (dados, embaralhamento, decisões dos agentes) MUST derivar de uma única seed por partida; a mesma seed MUST reproduzir exatamente a mesma partida.
-- **FR-004**: O harness MUST verificar, ao fim de cada turno, os invariantes de estado: (a) nenhum saldo é não-numérico e nenhum saldo fica negativo fora do estado de dívida previsto pelas regras; (b) transferências entre jogadores conservam a soma (o que um paga o outro recebe); (c) estoque global de casas/hotéis nunca fica negativo nem excede o total definido; (d) posições dos peões sempre no intervalo válido do tabuleiro; (e) limite de mão ≤ 3 cartas por jogador; (f) contadores de Bus Ticket nunca negativos; (g) toda propriedade tem no máximo 1 dono e todo dono existe.
+- **FR-004**: O harness MUST verificar, ao fim de cada turno, os invariantes de estado: (a) nenhum saldo é não-numérico e nenhum saldo fica negativo fora do estado de dívida previsto pelas regras; (b) transferências entre jogadores conservam a soma (o que um paga o outro recebe); (c) estoque global de casas/hotéis nunca fica negativo nem excede o total definido; (d) posições dos peões sempre no intervalo válido do tabuleiro; (e) limite de mão ≤ 3 cartas por jogador; (f) contadores de Bus Ticket nunca negativos; (g) toda propriedade tem no máximo 1 dono e todo dono existe; **(h) conservação de dinheiro** — TODO mecanismo que move caixa (aluguel, imposto, Free Parking, GO, TaxMan, juros de empréstimo, as 32 cartas, ofensivas, hipoteca/construção, leilões, troca, falência) move exatamente o valor recomputado de forma independente do reducer, verificado em TODO dispatch (não só ao fim do turno) — TaxMan e falência-sem-herdeiro são sinks legítimos (validam o valor destruído, não acusam violação de conservação).
 - **FR-005**: O harness MUST falhar imediatamente se o motor lançar exceção ou se uma ação que os gates deveriam recusar for aceita. Verificação por sonda: **a cada turno, 1 ação deliberadamente inválida** é sorteada de um catálogo (derivada da mesma seed da partida) e disparada — o gate MUST recusá-la e o estado MUST permanecer inalterado.
 - **FR-006**: Toda partida simulada MUST terminar no estado de encerramento com exatamente 1 vencedor dentro de um teto de rodadas configurável; estourar o teto é falha reportável.
 - **FR-007**: Em qualquer falha (exceção, invariante violado, ação inválida aceita, teto estourado), o relatório MUST incluir: seed, contagem de jogadores, rodada, ação em execução e descrição da violação.
@@ -98,13 +98,15 @@ Como desenvolvedor, quero uma verificação de fumaça que abra o jogo real no b
 - **FR-011**: O lote padrão headless MUST fazer parte da suíte de testes padrão do projeto — toda execução da suíte roda o lote completo (100 partidas × 3 contagens), dentro do teto de duração de SC-002.
 - **FR-012**: Nada desta feature MUST ser incluído no bundle do produto nem alterar comportamento de produção; agentes e verificadores vivem exclusivamente na área de testes.
 - **FR-013**: A simulação MUST usar a configuração padrão do produto (flags de tema/mecânicas como estão, ex.: Speed Die desativado por D-003) — sem modos especiais que desviem do jogo real.
+- **FR-014**: O relatório MUST incluir COBERTURA — contagem de ocorrências, por mecanismo de dinheiro (FR-004h), somada em todo o lote — e apontar explicitamente quais mecanismos do catálogo tiveram 0 ocorrências (gap de cobertura), sem truncar ou esconder a lista.
+- **FR-015**: `sim:batch`/`sim:replay` e os 3 shards headless MUST, além de imprimir no console, persistir o relatório em disco (JSON completo + Markdown resumido, `reports/`, git-ignorado) — artefato inspecionável sem precisar re-rodar a simulação.
 
 ### Key Entities
 
 - **Agente simulado**: jogador automatizado dev-only; possui apenas uma política de decisão (aleatória seedada sobre ações válidas). Não existe no `GameState` — é um consumidor externo do motor, indistinguível de um humano do ponto de vista das regras.
 - **Partida simulada**: uma execução completa do jogo com N agentes (N ∈ {2, 3, 6}), identificada por uma seed; produz um veredito (ok/falha) e métricas (rodadas até o fim, ações executadas).
 - **Invariante de estado**: propriedade que deve valer em todo estado alcançável (FR-004); a lista é parte desta spec e cresce junto com novas mecânicas.
-- **Relatório de simulação**: resumo do lote (FR-008) + detalhe de cada falha (FR-007) com seed reprodutível.
+- **Relatório de simulação**: resumo do lote (FR-008) + detalhe de cada falha (FR-007) + cobertura por mecanismo (FR-014) com seed reprodutível; persistido em disco (FR-015).
 
 ## Success Criteria *(mandatory)*
 
@@ -113,9 +115,10 @@ Como desenvolvedor, quero uma verificação de fumaça que abra o jogo real no b
 - **SC-001**: O lote padrão (100 partidas × 3 contagens) completa com **0 falhas** no estado atual do motor — ou cada falha encontrada é reproduzível por seed em 100% das tentativas.
 - **SC-002**: O lote padrão headless completa em **menos de 2 minutos** em máquina de desenvolvimento, permitindo uso rotineiro em pre-commit/CI.
 - **SC-003**: Reexecutar qualquer partida pela seed produz estado final **idêntico** ao da execução original em 100% dos casos.
-- **SC-004**: Um bug injetado deliberadamente em qualquer categoria de invariante (FR-004a–g) é detectado pelo lote padrão em pelo menos 95% das execuções do lote.
+- **SC-004**: Um bug injetado deliberadamente em qualquer categoria de invariante (FR-004a–h) é detectado pelo lote padrão em pelo menos 95% das execuções do lote. Validado manualmente 2026-07-17 para (c) e para 3 mecanismos de (h) (aluguel, hipoteca, carta Honorários) — detecção imediata em todos os casos.
 - **SC-005**: O smoke E2E (3 partidas, 10 rodadas cada) completa em menos de 5 minutos e falha ao ser executado contra uma UI com erro de runtime introduzido propositalmente.
 - **SC-006**: 100% das partidas do lote padrão terminam com exatamente 1 vencedor dentro do teto de rodadas.
+- **SC-007**: O relatório de cobertura (FR-014) não mostra 0 ocorrências para nenhum mecanismo de (h) exercitável por uma ação de agente isolada; mecanismos que dependem de um subsistema raro por natureza (empréstimo: propor+aceitar; imunidade ativa no pouso) podem ficar em 0 no lote padrão — cobertos, nesse caso, por teste unitário dedicado (`conservation.test.ts`), documentado explicitamente como limitação aceita, não escondida.
 
 ## Assumptions
 

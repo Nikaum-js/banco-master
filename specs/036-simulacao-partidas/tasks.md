@@ -26,8 +26,8 @@ incluídos para garantir que o fuzzer não minta sobre o que valida.
 
 **Purpose**: dependência e scripts novos do repositório.
 
-- [ ] T001 Adicionar `@playwright/test` como devDependency (`bun add -d @playwright/test`) e criar `playwright.config.ts` na raiz (browsers: chromium; `testDir: 'e2e'`; `webServer` apontando para `bun run dev`).
-- [ ] T002 [P] Adicionar scripts `"sim:replay": "bun run scripts/sim-replay.ts"`, `"sim:batch": "bun run scripts/sim-batch.ts"` e `"test:e2e": "playwright test"` ao `package.json`.
+- [X] T001 Adicionar `@playwright/test` como devDependency (`bun add -d @playwright/test`) e criar `playwright.config.ts` na raiz (browsers: chromium; `testDir: 'e2e'`; `webServer` apontando para `bun run dev`).
+- [X] T002 [P] Adicionar scripts `"sim:replay": "bun run scripts/sim-replay.ts"`, `"sim:batch": "bun run scripts/sim-batch.ts"` e `"test:e2e": "playwright test"` ao `package.json`.
 
 ---
 
@@ -37,10 +37,10 @@ incluídos para garantir que o fuzzer não minta sobre o que valida.
 
 **⚠️ CRITICAL**: nenhuma user story headless (US1/US2) começa antes desta fase.
 
-- [ ] T003 [P] Criar `tests/sim/engine/types.ts`: `SimAction` (união discriminada cobrindo todas as famílias da tabela de `data-model.md` — turno, casa/compra, leilão, pregão de terrenos, construção, hipoteca, cartas, dívida/falência, empréstimo, troca), `DecisionPoint`, `SimResult`, `SimFailure`, `SimReport`.
-- [ ] T004 [P] Implementar `tests/sim/engine/rng.ts`: `mulberry32(seed: number): RNG`, compatível com o tipo `RNG = () => number` de `src/game/turn/dice.ts` (research.md D3).
-- [ ] T005 Implementar `tests/sim/engine/driver.ts`: `createSimSession(seed, playerIds): SimSession` usando `createSeedState`+`weightedShuffle` de `src/game/store.ts` com a RNG da seed (NUNCA `freshGame`, que usa `Math.random()`); `ctx: TurnCtx` com `now()` lógico controlável pelo próprio session (contador, não `Date.now()`); wrappers para TODOS os comandos que `src/game/store.ts` expõe, chamando os MESMOS reducers puros (research.md D1).
-- [ ] T006 Em `tests/sim/engine/driver.ts`, adicionar `closeExpiredAuctions(session)`: quando não resta lance válido no leilão de propriedade ou em algum lote do pregão de terrenos, avança o relógio lógico até o `deadline` e chama `closeAuction`/`closeExpiredLandLots` diretamente (research.md D2).
+- [X] T003 [P] Criar `tests/sim/engine/types.ts`: `SimAction` (união discriminada cobrindo todas as famílias da tabela de `data-model.md` — turno, casa/compra, leilão, pregão de terrenos, construção, hipoteca, cartas, dívida/falência, empréstimo, troca), `DecisionPoint`, `SimResult`, `SimFailure`, `SimReport`.
+- [X] T004 [P] Implementar `tests/sim/engine/rng.ts`: `mulberry32(seed: number): RNG`, compatível com o tipo `RNG = () => number` de `src/game/turn/dice.ts` (research.md D3).
+- [X] T005 Implementar `tests/sim/engine/driver.ts`: `createSimSession(seed, playerIds): SimSession` usando `createSeedState`+`weightedShuffle` de `src/game/store.ts` com a RNG da seed (NUNCA `freshGame`, que usa `Math.random()`); `ctx: TurnCtx` com `now()` lógico controlável pelo próprio session (contador, não `Date.now()`); wrappers para TODOS os comandos que `src/game/store.ts` expõe, chamando os MESMOS reducers puros (research.md D1).
+- [X] T006 Em `tests/sim/engine/driver.ts`, adicionar `closeExpiredAuctions(session)`: quando não resta lance válido no leilão de propriedade ou em algum lote do pregão de terrenos, avança o relógio lógico até o `deadline` e chama `closeAuction`/`closeExpiredLandLots` diretamente (research.md D2).
 
 **Checkpoint**: driver consegue rodar `rollDice`→`resolvePending`→`finalizeTurn` de ponta a ponta sobre uma seed fixa, sem timers reais.
 
@@ -54,21 +54,21 @@ incluídos para garantir que o fuzzer não minta sobre o que valida.
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T007 [P] [US1] Criar `tests/sim/engine/actions.test.ts`: casos onde `enumerateActions` inclui/exclui corretamente uma ação por **decisor** — ex. `place-bid`/`pass-bid` só para jogadores em `activeBidders`; `respond-loan` só para o credor de `pendingLoan`; `accept-trade`/`reject-trade` só para `pendingTrade.toId`; `respond-reaction` só para `reactorId` (que pode ≠ jogador ativo).
-- [ ] T008 [P] [US1] Criar `tests/sim/engine/invariants.test.ts`: para cada código FR-004(a–g), um `GameState` de exemplo com a violação injetada é detectado, e o mesmo estado sem a violação não acusa falso positivo.
-- [ ] T009 [P] [US1] Criar `tests/sim/engine/invalidProbe.test.ts`: cada uma das 12 entradas do catálogo (`data-model.md` § InvalidProbeCatalog) é recusada como no-op (sem exceção, estado idêntico antes/depois) quando aplicada num estado onde ela é inválida.
+- [X] T007 [P] [US1] Criar `tests/sim/engine/actions.test.ts`: casos onde `enumerateActions` inclui/exclui corretamente uma ação por **decisor** — ex. `place-bid`/`pass-bid` só para jogadores em `activeBidders`; `respond-loan` só para o credor de `pendingLoan`; `accept-trade`/`reject-trade` só para `pendingTrade.toId`; `respond-reaction` só para `reactorId` (que pode ≠ jogador ativo).
+- [X] T008 [P] [US1] Criar `tests/sim/engine/invariants.test.ts`: para cada código FR-004(a–g), um `GameState` de exemplo com a violação injetada é detectado, e o mesmo estado sem a violação não acusa falso positivo.
+- [X] T009 [P] [US1] Criar `tests/sim/engine/invalidProbe.test.ts`: cada uma das 12 entradas do catálogo (`data-model.md` § InvalidProbeCatalog) é recusada como no-op (sem exceção, estado idêntico antes/depois) quando aplicada num estado onde ela é inválida.
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Implementar `tests/sim/engine/actions.ts`: `enumerateActions(session): DecisionPoint[]` seguindo a prioridade de `research.md` D4 (1. resolução bloqueante com decisor específico → 2. ações oportunistas fora-de-turno de outros jogadores → 3. ação do turno do jogador ativo). Depende de T003, T005.
-- [ ] T011 [US1] Implementar `tests/sim/engine/agent.ts`: `pickAction(rng, decisionPoints): { actorId, action }` — escolhe 1 `DecisionPoint` (obrigatórios têm prioridade sobre oportunistas) e 1 `SimAction` dele, usando a RNG compartilhada da partida.
-- [ ] T012 [US1] Implementar `tests/sim/engine/invalidProbe.ts`: catálogo fixo das 12 sondas (`data-model.md`), `pickProbe(rng): ProbeEntry` e `applyProbe(session, entry): boolean` (roda sobre `structuredClone` descartável; retorna `true` se o resultado foi no-op).
-- [ ] T013 [US1] Implementar `tests/sim/engine/invariants.ts`: `checkInvariants(prev, next): Violation[]` cobrindo literalmente FR-004(a–g) (`research.md` D6).
-- [ ] T014 [US1] Implementar `tests/sim/engine/runGame.ts`: `runGame(seed, playerCount, roundCap = 300): SimResult` — orquestra o loop completo (enumerar → `agent.pickAction` → aplicar via `driver` → 1x/turno `invalidProbe` → `checkInvariants` ao fechar o turno → checar `phase==='ended'`/teto de rodadas), produzindo `SimFailure` com seed/contagem/rodada/ação/detalhe na primeira violação (FR-007).
-- [ ] T015 [US1] Criar `tests/sim/headless/2p.test.ts`: roda 100 seeds determinísticas (derivadas de um seed-base fixo) com 2 jogadores, monta um `SimReport` local e `expect(report.failed).toBe(0)` (mensagem de falha inclui a 1ª `SimFailure`) — shard de paralelismo (`research.md` D8).
-- [ ] T016 [P] [US1] Criar `tests/sim/headless/3p.test.ts`: idem para 3 jogadores.
-- [ ] T017 [P] [US1] Criar `tests/sim/headless/6p.test.ts`: idem para 6 jogadores.
-- [ ] T018 [US1] Rodar `bun run test` e medir a duração do lote completo (SC-002, < 2 min). Se não couber, particionar mais os shards por contagem (ex. 2 arquivos por contagem) sem reduzir o tamanho do lote (100/contagem — FR-008/FR-011).
+- [X] T010 [US1] Implementar `tests/sim/engine/actions.ts`: `enumerateActions(session): DecisionPoint[]` seguindo a prioridade de `research.md` D4 (1. resolução bloqueante com decisor específico → 2. ações oportunistas fora-de-turno de outros jogadores → 3. ação do turno do jogador ativo). Depende de T003, T005.
+- [X] T011 [US1] Implementar `tests/sim/engine/agent.ts`: `pickAction(rng, decisionPoints): { actorId, action }` — escolhe 1 `DecisionPoint` (obrigatórios têm prioridade sobre oportunistas) e 1 `SimAction` dele, usando a RNG compartilhada da partida.
+- [X] T012 [US1] Implementar `tests/sim/engine/invalidProbe.ts`: catálogo fixo das 12 sondas (`data-model.md`), `pickProbe(rng): ProbeEntry` e `applyProbe(session, entry): boolean` (roda sobre `structuredClone` descartável; retorna `true` se o resultado foi no-op).
+- [X] T013 [US1] Implementar `tests/sim/engine/invariants.ts`: `checkInvariants(prev, next): Violation[]` cobrindo literalmente FR-004(a–g) (`research.md` D6).
+- [X] T014 [US1] Implementar `tests/sim/engine/runGame.ts`: `runGame(seed, playerCount, roundCap = 300): SimResult` — orquestra o loop completo (enumerar → `agent.pickAction` → aplicar via `driver` → 1x/turno `invalidProbe` → `checkInvariants` ao fechar o turno → checar `phase==='ended'`/teto de rodadas), produzindo `SimFailure` com seed/contagem/rodada/ação/detalhe na primeira violação (FR-007).
+- [X] T015 [US1] Criar `tests/sim/headless/2p.test.ts`: roda 100 seeds determinísticas (derivadas de um seed-base fixo) com 2 jogadores, monta um `SimReport` local e `expect(report.failed).toBe(0)` (mensagem de falha inclui a 1ª `SimFailure`) — shard de paralelismo (`research.md` D8).
+- [X] T016 [P] [US1] Criar `tests/sim/headless/3p.test.ts`: idem para 3 jogadores.
+- [X] T017 [P] [US1] Criar `tests/sim/headless/6p.test.ts`: idem para 6 jogadores.
+- [X] T018 [US1] Rodar `bun run test` e medir a duração do lote completo (SC-002, < 2 min). Se não couber, particionar mais os shards por contagem (ex. 2 arquivos por contagem) sem reduzir o tamanho do lote (100/contagem — FR-008/FR-011).
 
 **Checkpoint**: `bun run test` roda o lote padrão como parte da suíte normal; 300 partidas ok, sob 2 min.
 
@@ -82,13 +82,13 @@ incluídos para garantir que o fuzzer não minta sobre o que valida.
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T019 [P] [US2] Criar `tests/sim/engine/determinism.test.ts`: `runGame(seed, N)` chamado duas vezes com a mesma seed produz resultados **deep-equal**, para ao menos 1 seed de cada contagem (2/3/6).
+- [X] T019 [P] [US2] Criar `tests/sim/engine/determinism.test.ts`: `runGame(seed, N)` chamado duas vezes com a mesma seed produz resultados **deep-equal**, para ao menos 1 seed de cada contagem (2/3/6).
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Implementar `scripts/sim-replay.ts`: `bun run scripts/sim-replay.ts -- --seed=<n> --players=<2|3|6>` chama `runGame`, imprime o `SimResult` completo (`contracts/relatorio-simulacao.md`), exit code `1` se `outcome==='fail'`.
-- [ ] T021 [US2] Implementar `scripts/sim-batch.ts`: `bun run scripts/sim-batch.ts -- --games=<n> [--counts=2,3,6] [--base-seed=<n>]`, gera seeds determinísticas a partir de `base-seed` + índice, roda `runGame` para cada uma, monta e imprime `SimReport`, exit code `1` se `failed > 0`.
-- [ ] T022 [US2] Revisar `runGame.ts`/`SimFailure` para confirmar que seed+playerCount+round+action+detail bastam, sozinhos, para reproduzir qualquer falha com `sim:replay` (FR-007/FR-009) — ajustar se faltar algum dado.
+- [X] T020 [US2] Implementar `scripts/sim-replay.ts`: `bun run scripts/sim-replay.ts -- --seed=<n> --players=<2|3|6>` chama `runGame`, imprime o `SimResult` completo (`contracts/relatorio-simulacao.md`), exit code `1` se `outcome==='fail'`.
+- [X] T021 [US2] Implementar `scripts/sim-batch.ts`: `bun run scripts/sim-batch.ts -- --games=<n> [--counts=2,3,6] [--base-seed=<n>]`, gera seeds determinísticas a partir de `base-seed` + índice, roda `runGame` para cada uma, monta e imprime `SimReport`, exit code `1` se `failed > 0`.
+- [X] T022 [US2] Revisar `runGame.ts`/`SimFailure` para confirmar que seed+playerCount+round+action+detail bastam, sozinhos, para reproduzir qualquer falha com `sim:replay` (FR-007/FR-009) — ajustar se faltar algum dado.
 
 **Checkpoint**: uma seed reportada por qualquer falha do lote é reexecutável com 1 comando (`bun run sim:replay -- --seed=... --players=...`) e reproduz o mesmo resultado.
 
@@ -102,12 +102,12 @@ incluídos para garantir que o fuzzer não minta sobre o que valida.
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] Confirmar/ajustar `playwright.config.ts` (de T001): `webServer` sobe `bun run dev` (ou preview do build), timeout coerente com SC-005.
-- [ ] T024 [US3] Implementar `e2e/script.ts`: política fixa e determinística por tipo de modal (comprar se o caixa cobrir, senão recusar; nunca propor troca; sempre confirmar revelação de carta; encerrar o turno assim que possível) — `research.md` D10, reusada pelos 3 specs.
-- [ ] T025 [P] [US3] Criar `e2e/2players.spec.ts`: cria partida com 2 jogadores pela UI, roda ≥10 rodadas via `script.ts`, assere ausência de erro de runtime e presença de tabuleiro/painéis/dados do início ao fim.
-- [ ] T026 [P] [US3] Criar `e2e/3players.spec.ts`: idem para 3 jogadores.
-- [ ] T027 [P] [US3] Criar `e2e/6players.spec.ts`: idem para 6 jogadores.
-- [ ] T028 [US3] Rodar `bunx playwright test` e medir a duração total (SC-005, < 5 min).
+- [X] T023 [US3] Confirmar/ajustar `playwright.config.ts` (de T001): `webServer` sobe `bun run dev` (ou preview do build), timeout coerente com SC-005.
+- [X] T024 [US3] Implementar `e2e/script.ts`: política fixa e determinística por tipo de modal (comprar se o caixa cobrir, senão recusar; nunca propor troca; sempre confirmar revelação de carta; encerrar o turno assim que possível) — `research.md` D10, reusada pelos 3 specs.
+- [X] T025 [P] [US3] Criar `e2e/2players.spec.ts`: cria partida com 2 jogadores pela UI, roda ≥10 rodadas via `script.ts`, assere ausência de erro de runtime e presença de tabuleiro/painéis/dados do início ao fim.
+- [X] T026 [P] [US3] Criar `e2e/3players.spec.ts`: idem para 3 jogadores.
+- [X] T027 [P] [US3] Criar `e2e/6players.spec.ts`: idem para 6 jogadores.
+- [X] T028 [US3] Rodar `bunx playwright test` e medir a duração total (SC-005, < 5 min).
 
 **Checkpoint**: smoke E2E cobre as 3 contagens de jogadores via UI real, dentro do orçamento de tempo.
 
@@ -115,10 +115,10 @@ incluídos para garantir que o fuzzer não minta sobre o que valida.
 
 ## Phase 6: Polish & Cross-Cutting
 
-- [ ] T029 [P] Validar `quickstart.md` executando cada comando listado (`bun run test`, `bun run sim:replay -- ...`, `bun run sim:batch -- ...`, `bunx playwright test`).
-- [ ] T030 Validação manual de SC-004: comentar temporariamente uma guarda de invariante no motor (ex. permitir `houses` negativo em `src/game/economy/construction.ts`), confirmar que o lote headless falha apontando o código FR-004 certo, reverter a alteração.
-- [ ] T031 Rodar `bunx tsc --noEmit` + `bun run test` completo (suíte existente + lote headless) + `bun run build` — regressão zero na suíte pré-existente.
-- [ ] T032 Atualizar `HANDOVER.md` registrando a feature 036 concluída (lote headless na suíte padrão, comandos `sim:replay`/`sim:batch`, smoke E2E).
+- [X] T029 [P] Validar `quickstart.md` executando cada comando listado (`bun run test`, `bun run sim:replay -- ...`, `bun run sim:batch -- ...`, `bunx playwright test`).
+- [X] T030 Validação manual de SC-004: comentar temporariamente uma guarda de invariante no motor (ex. permitir `houses` negativo em `src/game/economy/construction.ts`), confirmar que o lote headless falha apontando o código FR-004 certo, reverter a alteração.
+- [X] T031 Rodar `bunx tsc --noEmit` + `bun run test` completo (suíte existente + lote headless) + `bun run build` — regressão zero na suíte pré-existente.
+- [X] T032 Atualizar `HANDOVER.md` registrando a feature 036 concluída (lote headless na suíte padrão, comandos `sim:replay`/`sim:batch`, smoke E2E).
 
 ---
 
@@ -178,6 +178,44 @@ Task: "headless/6p.test.ts — 100 seeds, 6 jogadores"
 4. US2 (reprodução por seed) → validar `sim:replay`/`sim:batch`.
 5. US3 (smoke E2E) → validar `bunx playwright test`, pode ser feita em paralelo com US1/US2 (não compartilha código).
 6. Polish: regressão completa, `HANDOVER.md` atualizado.
+
+---
+
+## Phase 7: Conservação de dinheiro + cobertura + relatórios persistidos (extensão pós-036, 2026-07-17)
+
+**Goal**: fechar a lacuna apontada pelo usuário — `checkB` (invariants.ts) só cobria 3 ações
+(quitar/conceder empréstimo, aceitar troca); aluguel/imposto/32 cartas/leilões/hipoteca/
+construção/TaxMan/falência não tinham checagem de que o dinheiro se move corretamente.
+
+- [X] T033 Criar `tests/sim/engine/conservation.ts`: `checkConservation(prev,next,action)` com
+      ledger de deltas esperados (Grupo A por `action.kind`, Grupo B por diff de estado —
+      GO/TaxMan/cartas disparam por várias ações diferentes). Novo código `Violation` = `'h'`.
+- [X] T034 `checkAuctionClose(prev,next)`: fechamento de leilão (propriedade/terreno) não é um
+      `SimAction` — checagem própria, chamada no mesmo ponto que `closeExhaustedAuctions`.
+- [X] T035 Coverage: `runGame.ts` acumula `Record<string,number>` (mecanismo → ocorrências);
+      `SimResult`/`SimReport` ganham `coverage`; `report.ts` soma e aponta gaps (`coverageGaps`).
+- [X] T036 Persistência: `tests/sim/engine/reportIO.ts` (`writeReport` → JSON + Markdown em
+      `reports/`, git-ignorado); `--report=<path>` em `sim-batch.ts`/`sim-replay.ts`; os 3 shards
+      headless escrevem `reports/headless-{2p,3p,6p}`.
+- [X] T037 `tests/sim/engine/conservation.test.ts`: 23 casos (caso correto via reducer real +
+      caso adulterado detectado) cobrindo aluguel, imposto, Free Parking, hipoteca/deshipoteca,
+      construção/hangar, compra, leilão, ofensivas (aquisição/despejo/auditoria), troca com taxa,
+      empréstimo (quitar/conceder), multa de prisão, falência, cartas imediatas, imunidade de
+      aluguel, juros de empréstimo no GO.
+- [X] T038 `bun run test` (46 arquivos, 347 testes) sob 2min (SC-002) — 8 bugs reais do PRÓPRIO
+      checker corrigidos durante o desenvolvimento (guarda `isBankrupt` ausente, reset do pote do
+      Free Parking, depleção sequencial de lotes de terreno pro mesmo vencedor, Diplomacia
+      interceptando ofensiva antes de aplicar, revalidação de troca obsoleta, dado interno do
+      TaxMan em utilidade não recuperável do estado, assimetria de juros na carta Volta ao GO,
+      alinhamento de log por conteúdo em vez de índice fixo).
+- [X] T039 Validação manual estilo SC-004 para 3 mecanismos novos (aluguel, hipoteca, carta
+      Honorários) — bug injetado, detectado com o mecanismo certo no `detail`, revertido.
+- [X] T040 `bunx playwright test` (regressão) + `spec.md` (FR-004h/FR-014/FR-015, SC-004/SC-007)
+      + `HANDOVER.md` atualizados.
+
+**Checkpoint**: `[h]` cobre todo mecanismo de dinheiro mapeado; relatório de cobertura expõe
+gaps sem escondê-los (4 mecanismos ficam em 0 no lote — subsistema de empréstimo raro pela
+política aleatória — cobertos por teste unitário dedicado, documentado como limitação aceita).
 
 ---
 
