@@ -991,6 +991,16 @@ export function DiceArena() {
     }
   }, [])
 
+  // 044/T071 (FR-032): `ROLL_DURATION_MS` travava a flag `rolling` por 1050ms fixos,
+  // INDEPENDENTE de `prefers-reduced-motion` — o peão não andava e o botão não voltava
+  // antes disso, mesmo para quem pediu menos movimento. O freio vem do MESMO `useMotion()`
+  // que o resto do vocabulário usa (D7 do plan): zera sob movimento reduzido, intacto senão
+  // — a animação do dado em si (`useDieAnimation` abaixo) não muda, só o comando deixa de
+  // esperar por ela. O handshake `rolling`/`animating` com `GameDriver` (tokenAnim.ts)
+  // continua valendo nos dois casos: só muda POR QUANTO TEMPO ele segura.
+  const { reduced } = useMotion()
+  const rollDurationMs = reduced ? 0 : ROLL_DURATION_MS
+
   // Só o dono da decisão vê os controles (spec 038, FR-002). Sem sala, `mayAct` é sempre
   // true e a arena segue idêntica ao cliente único (FR-029/SC-007).
   const local = useLocalView()
@@ -1008,7 +1018,7 @@ export function DiceArena() {
     timeoutRef.current = setTimeout(() => {
       setRolling(false)
       useTokenAnim.getState().setRolling(false) // dado caiu → peão pode andar
-    }, ROLL_DURATION_MS)
+    }, rollDurationMs)
   }
 
   // Tentar sair da prisão na dupla — anima o dado igual ao rolar normal.
@@ -1021,7 +1031,7 @@ export function DiceArena() {
     timeoutRef.current = setTimeout(() => {
       setRolling(false)
       useTokenAnim.getState().setRolling(false)
-    }, ROLL_DURATION_MS)
+    }, rollDurationMs)
   }
 
   const { isDoubleReroll, status } = v

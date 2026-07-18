@@ -169,7 +169,13 @@ export function ModalLayer() {
   const confirmCardReveal = (): void => dispatch({ kind: 'confirm-card-reveal' })
   const spendBusTicket = (dest: number): void => dispatch({ kind: 'use-bus-ticket', dest })
   const busArmed = useBusTicketUI((s) => s.armed)
+  // 044/T070 (FR-031): `boarding` fica true do clique na parada até a viagem terminar de
+  // decorar. Sem isso, `canUseBusTicket(game)` — que já reflete o ticket gasto e o turno já
+  // avançado — derrubaria `showBusArmed` no MESMO frame do dispatch, fechando o seletor
+  // antes de a animação de embarque sequer aparecer.
+  const busBoarding = useBusTicketUI((s) => s.boarding)
   const disarmBus = useBusTicketUI((s) => s.disarm)
+  const setBusBoarding = useBusTicketUI((s) => s.setBoarding)
 
   const view = activeModal(game)
   const local = useLocalView()
@@ -181,8 +187,10 @@ export function ModalLayer() {
   const activePlayer = game.players[game.turnOrder[game.activeSeat]]
   // Seletor de uso de ticket GUARDADO: aberto pelo HUD. Usável antes de rolar OU no fim do turno (034).
   // Elegibilidade vem do MOTOR (`canUseBusTicket`): a cópia que morava aqui não checava
-  // `paused`, então com o jogo pausado o seletor abria e o clique era no-op.
-  const showBusArmed = busArmed && canUseBusTicket(game)
+  // `paused`, então com o jogo pausado o seletor abria e o clique era no-op. `|| busBoarding`
+  // mantém o seletor na tela enquanto a viagem ainda está decorando por cima do estado já
+  // avançado (T070) — sem isso o modal sumiria no instante do dispatch.
+  const showBusArmed = busArmed && (canUseBusTicket(game) || busBoarding)
 
   return (
     <AnimatePresence>
@@ -195,7 +203,9 @@ export function ModalLayer() {
             fromPos={activePlayer.pos}
             title="Usar Bus Ticket"
             subtitle="Vá para uma casa do mesmo lado"
-            onPick={(pos) => { spendBusTicket(pos); disarmBus() }}
+            onPick={spendBusTicket}
+            onBoardingChange={setBusBoarding}
+            onEmbarked={disarmBus}
             onCancel={disarmBus}
           />
         </Overlay>
@@ -322,7 +332,22 @@ export function ModalLayer() {
 // parada sob o cursor. Clicar EMBARCA: o ônibus viaja até lá e só então o
 // movimento acontece. Layout fluido (células flex, posição em %): nunca estoura
 // a largura do modal — sem scroll horizontal.
-function BusLine({ fromPos, onPick, onBoard }: { fromPos: number; onPick: (pos: number) => void; onBoard?: () => void }) {
+// Duração da decoração de embarque (ônibus deslizando + rótulo "Embarcando…") — puramente
+// visual desde o T070: o comando já saiu antes dela começar a contar. Zerada sob movimento
+// reduzido (`reduced`), igual ao resto do vocabulário (D7 do plan).
+const EMBARK_MS = 560
+
+function BusLine({
+  fromPos,
+  onPick,
+  onBoard,
+  onEmbarked,
+}: {
+  fromPos: number
+  onPick: (pos: number) => void
+  onBoard?: () => void
+  onEmbarked?: () => void
+}) {
   const { reduced } = useMotion()
   const players = useGameStore((s) => s.game.players)
   const turnOrder = useGameStore((s) => s.game.turnOrder)
@@ -348,14 +373,17 @@ function BusLine({ fromPos, onPick, onBoard }: { fromPos: number; onPick: (pos: 
   const busPct = ((busIdx + 0.5) / n) * 100
   const steps = hover != null && departing == null ? hover - fromPos : 0 // lado é contíguo no BOARD → distância = diferença de pos
 
-  // Embarque: o ônibus viaja até a parada e SÓ ENTÃO o movimento dispara —
-  // a viagem vira parte da resposta, em vez de um teleporte seco.
+  // Embarque (044/T070, FR-031): o COMANDO sai na hora — `onPick` já não fica represado
+  // atrás da viagem visual. O que antes era "espera 560ms, então move" virou "move, e a
+  // viagem decora por cima do estado já avançado". Sob movimento reduzido, a decoração some
+  // (`EMBARK_MS` zerado) e `onEmbarked` dispara já no próximo tick, sem espera nenhuma.
   const embark = (pos: number) => {
     if (departing != null) return
     setDeparting(pos)
     setHover(null)
     onBoard?.()
-    window.setTimeout(() => onPick(pos), 560)
+    onPick(pos)
+    window.setTimeout(() => onEmbarked?.(), reduced ? 0 : EMBARK_MS)
   }
 
   return (
@@ -484,12 +512,19 @@ function BusPicker({
   title,
   subtitle,
   onPick,
+  onBoardingChange,
+  onEmbarked,
   onCancel,
 }: {
   fromPos: number
   title: string
   subtitle: string
   onPick: (pos: number) => void
+  /** 044/T070: avisa o pai (que decide se o seletor continua montado) assim que o
+   * embarque começa — o comando já saiu, isto é só o sinal de "ainda decorando". */
+  onBoardingChange?: (boarding: boolean) => void
+  /** 044/T070: a viagem terminou de decorar — agora sim é hora de fechar o seletor. */
+  onEmbarked?: () => void
   onCancel?: () => void
 }) {
   const tickets = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]].busTickets)
@@ -506,7 +541,12 @@ function BusPicker({
         }
       />
       <div className="px-5 pt-4 pb-3">
-        <BusLine fromPos={fromPos} onPick={onPick} onBoard={() => setBoarding(true)} />
+        <BusLine
+          fromPos={fromPos}
+          onPick={onPick}
+          onBoard={() => { setBoarding(true); onBoardingChange?.(true) }}
+          onEmbarked={onEmbarked}
+        />
         <p className="label text-cream-muted text-center mt-2.5 leading-snug">Passe o cursor pela linha e clique na parada para embarcar.</p>
       </div>
       {/* Canhoto do bilhete — picote com furos nas bordas + contador + cancelar */}

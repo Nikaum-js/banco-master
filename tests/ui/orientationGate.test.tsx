@@ -1,19 +1,30 @@
 // @vitest-environment jsdom
-// Portão de orientação (044, T035 — US4/D6 do plan). A garantia central que este teste
-// prova: girar o aparelho NUNCA desmonta a árvore de jogo por baixo — só o aviso aparece
-// e desaparece por cima. Desmontar dispararia o `dispose()` da sessão online (a mesma
-// armadilha que a 042 documentou pra D1 do plan dela): a mesa registraria uma saída só
-// porque alguém girou o celular.
+// Portão de orientação (044, T035/T075 — US4/D6 do plan). A garantia central que este
+// teste prova: girar o aparelho NUNCA desmonta a árvore de jogo por baixo — só o aviso
+// aparece e desaparece por cima. Desmontar dispararia o `dispose()` da sessão online (a
+// mesma armadilha que a 042 documentou pra D1 do plan dela): a mesa registraria uma saída
+// só porque alguém girou o celular.
+//
+// T075: o aviso não é mais "qualquer retrato" — é `(orientation: portrait) and
+// (max-width: 1100px)`, o MESMO limiar que `.board-stage` usa (index.css) pra empilhar os
+// painéis. O mock abaixo trata essa string composta como UMA query só (é isso que o
+// browser calcula de verdade num único `matchMedia`): `setPortrait(true)` simula "retrato
+// E estreito o bastante pra precisar do aviso"; `setPortrait(false)` simula tanto
+// paisagem quanto retrato LARGO o bastante pra mesa caber empilhada — o componente não
+// precisa (nem consegue) diferenciar a causa, só o resultado combinado.
 //
 // jsdom não implementa `window.matchMedia` (confirmado: `window.matchMedia is not a
 // function` num jsdom novo, sem polyfill) — por isso o mock abaixo é o mesmo tipo de
 // fronteira que o `motion-dom` já trata como ausente (`if (window.matchMedia) … else
-// false`). O mock respeita a query pedida (não confunde a query de orientação com a de
+// false`). O mock respeita a query pedida (não confunde a query do portão com a de
 // `prefers-reduced-motion` que o `Overlay`/`useMotion` também consulta por baixo).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { useEffect, useRef } from 'react'
 import { OrientationGate } from '@/game/ui/OrientationGate'
+
+// A query exata que `OrientationGate` usa (T075) — mesmo limiar do `.board-stage`.
+const GATE_QUERY = '(orientation: portrait) and (max-width: 1100px)'
 
 afterEach(() => {
   cleanup()
@@ -22,29 +33,29 @@ afterEach(() => {
 
 type Listener = (e: MediaQueryListEvent) => void
 
-// Uma "MediaQueryList" fake por query — só a de `(orientation: portrait)` é controlada
+// Uma "MediaQueryList" fake por query — só a query do portão (`GATE_QUERY`) é controlada
 // pelo teste; qualquer outra (ex.: `prefers-reduced-motion`, que o `useMotion()` do
 // `Overlay` também lê) recebe uma fake neutra (`matches: false`, sem listener ativo).
-function installMatchMedia(initialPortrait: boolean) {
-  let portrait = initialPortrait
-  const portraitListeners = new Set<Listener>()
+function installMatchMedia(initialNeedsRotate: boolean) {
+  let needsRotate = initialNeedsRotate
+  const gateListeners = new Set<Listener>()
 
   const mediaQueryLists = new Map<string, MediaQueryList>()
   function mqlFor(query: string): MediaQueryList {
     const cached = mediaQueryLists.get(query)
     if (cached) return cached
-    const isPortraitQuery = query === '(orientation: portrait)'
+    const isGateQuery = query === GATE_QUERY
     const mql = {
       get matches() {
-        return isPortraitQuery ? portrait : false
+        return isGateQuery ? needsRotate : false
       },
       media: query,
       onchange: null,
       addEventListener: (_type: 'change', cb: Listener) => {
-        if (isPortraitQuery) portraitListeners.add(cb)
+        if (isGateQuery) gateListeners.add(cb)
       },
       removeEventListener: (_type: 'change', cb: Listener) => {
-        if (isPortraitQuery) portraitListeners.delete(cb)
+        if (isGateQuery) gateListeners.delete(cb)
       },
       addListener: () => {},
       removeListener: () => {},
@@ -58,9 +69,9 @@ function installMatchMedia(initialPortrait: boolean) {
 
   return {
     setPortrait(next: boolean) {
-      portrait = next
+      needsRotate = next
       act(() => {
-        portraitListeners.forEach((cb) => cb({ matches: next } as MediaQueryListEvent))
+        gateListeners.forEach((cb) => cb({ matches: next } as MediaQueryListEvent))
       })
     },
   }
@@ -80,7 +91,7 @@ function SessionMarker() {
   return <div data-testid="session">sessão viva</div>
 }
 
-describe('OrientationGate (T035)', () => {
+describe('OrientationGate (T035/T075)', () => {
   beforeEach(() => {
     sessionMounts = 0
   })
@@ -127,5 +138,42 @@ describe('OrientationGate (T035)', () => {
     )
     expect(screen.queryByRole('dialog', { name: 'Gire o aparelho' })).toBeNull()
     expect(screen.getByTestId('session')).toBeTruthy()
+  })
+
+  // T075: o aviso deixou de disparar em QUALQUER retrato — só abaixo do limiar de largura
+  // em que a mesa não cabe empilhada. Os dois casos abaixo cobrem os dois lados desse
+  // limiar; o terceiro prova que o limiar em si é o de 1100px (mesmo breakpoint do
+  // `.board-stage`), não um número inventado só pro teste.
+  it('retrato ABAIXO do limiar (celular em pé): aviso aparece', () => {
+    installMatchMedia(true)
+    render(
+      <OrientationGate>
+        <SessionMarker />
+      </OrientationGate>,
+    )
+    expect(screen.getByRole('dialog', { name: 'Gire o aparelho' })).toBeTruthy()
+  })
+
+  it('retrato ACIMA do limiar (monitor vertical ou tablet em pé, mesa cabe empilhada): sem aviso', () => {
+    // `false` aqui representa o resultado JÁ COMBINADO que o browser calcularia pra
+    // `(orientation: portrait) and (max-width: 1100px)` quando a largura ultrapassa
+    // 1100px mesmo em pé — a mesma mesa que `.board-stage` já serve empilhada.
+    installMatchMedia(false)
+    render(
+      <OrientationGate>
+        <SessionMarker />
+      </OrientationGate>,
+    )
+    expect(screen.queryByRole('dialog', { name: 'Gire o aparelho' })).toBeNull()
+  })
+
+  it('o limiar É 1100px — a mesma largura que `.board-stage` usa pra empilhar os painéis', () => {
+    installMatchMedia(false)
+    render(
+      <OrientationGate>
+        <SessionMarker />
+      </OrientationGate>,
+    )
+    expect(window.matchMedia).toHaveBeenCalledWith(GATE_QUERY)
   })
 })

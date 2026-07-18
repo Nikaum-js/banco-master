@@ -1,13 +1,19 @@
 // Tela de "gire o aparelho" (044/T033 — US4/D6 do plan, D-039). O tabuleiro só é servido
-// em paisagem (SRS §12.6): em retrato, este componente cobre a árvore com um aviso, SEM
-// desmontar `children`.
+// em paisagem (SRS §12.6): em retrato ABAIXO DO LIMIAR de largura, este componente cobre
+// a árvore com um aviso, SEM desmontar `children`.
 //
 // A razão de nunca desmontar é dura (D6): `children` é a árvore inteira, incluindo o
 // `OnlineGate` — desmontá-lo dispararia o `dispose()` da sessão online e a mesa registraria
 // uma saída só porque alguém girou o celular, pausando a partida de todo mundo. Por isso
 // `children` fica na MESMA posição do JSX em toda renderização; só o aviso por cima é
-// condicional. Nenhum estado React entra no caminho crítico — `usePortrait()` só decide se
-// o aviso aparece, nunca se a árvore de baixo existe.
+// condicional. Nenhum estado React entra no caminho crítico — `useNeedsRotate()` só decide
+// se o aviso aparece, nunca se a árvore de baixo existe.
+//
+// T075 (achado da Fase 4): o aviso disparava em QUALQUER retrato — um monitor vertical ou
+// um tablet em pé, onde a mesa CABE (porque `.board-stage` já empilha os painéis abaixo de
+// 1100px, index.css), recebia "gire o aparelho" sem motivo nenhum. D6 do plan já previa
+// "retrato ABAIXO DO LIMIAR" — o limiar é exatamente esse mesmo breakpoint de 1100px, para
+// o aviso e o CSS concordarem sobre quando a mesa deixa de caber em 3 colunas.
 //
 // Acessibilidade: o aviso É uma tela do caminho de jogo (D-039), então reusa o MESMO
 // primitivo `Overlay`/`ModalShell` (shell.tsx) que todo modal do jogo usa — foco ao
@@ -17,7 +23,10 @@ import { useSyncExternalStore, type ReactNode } from 'react'
 import { RotateCw } from 'lucide-react'
 import { Overlay, ModalShell } from '@/game/ui/shell'
 
-const QUERY = '(orientation: portrait)'
+// Mesmo limiar que `.board-stage` usa pra empilhar os painéis (index.css, `@media
+// (max-width: 1100px)`): abaixo dele a mesa não cabe em 3 colunas — girar ajuda. Dali pra
+// cima ela já cabe empilhada, então o aviso seria falso alarme.
+const QUERY = '(orientation: portrait) and (max-width: 1100px)'
 
 // Sem `window.matchMedia` (SSR, ambiente de teste sem polyfill) o produto não trava: a
 // suposição segura é "não é retrato" — o mesmo espírito defensivo que `motion-dom` usa pro
@@ -45,16 +54,16 @@ function getServerSnapshot(): boolean {
   return false
 }
 
-function usePortrait(): boolean {
+function useNeedsRotate(): boolean {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 }
 
 export function OrientationGate({ children }: { children: ReactNode }) {
-  const portrait = usePortrait()
+  const needsRotate = useNeedsRotate()
   return (
     <>
       {children}
-      {portrait && <RotateNotice />}
+      {needsRotate && <RotateNotice />}
     </>
   )
 }
