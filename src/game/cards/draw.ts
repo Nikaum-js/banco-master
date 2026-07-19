@@ -1,6 +1,6 @@
 // Saque e uso de cartas. cardResolve preenche a porta de resolução de acaso/tesouro (002).
 import type { ResolveCtx, ResolutionOutcome, TurnPorts } from '../turn/resolution'
-import type { GameState } from '../turn/types'
+import type { GameState, Player } from '../turn/types'
 import type { CardSlot, DeckId } from './types'
 import { cardById } from './catalog'
 import { applyEffect } from './effects'
@@ -11,6 +11,16 @@ import { addTempEffect } from '../economy/tempEffects'
 import { reactorFor, applyOffensive } from './reacao'
 import { removeFromHand } from './hand'
 import { logEvent } from '../log'
+
+// Movimento por carta continua sendo parte da resolução da casa alcançada pelos dados.
+// Portanto, ele não pode apagar uma nova rolagem já conquistada por dupla. A única
+// exceção é um destino que encerra o turno (como "Vá para a Prisão"), que `land` marca
+// explicitamente e onde a nova rolagem deve permanecer cancelada.
+function landAfterCardMovement(state: GameState, player: Player): void {
+  const mayRollAgain = state.turn.mayRollAgain
+  land(state.turn, player, null)
+  if (state.turn.state !== 'encerrado') state.turn.mayRollAgain = mayRollAgain
+}
 
 // Nome legível a partir do id da carta ('investidor-anjo-2' → 'Investidor Anjo').
 // Carta imediata é pública (§12.2), então o anúncio pode citar o nome.
@@ -81,7 +91,7 @@ export function cardResolve(rctx: ResolveCtx, predrawn?: CardSlot): ResolutionOu
   // Cartas de MOVIMENTO (Avance/Volte 3) resolvem a casa de destino como um pouso
   // normal (comprar/pagar aluguel/etc.). gotojail no destino → 'encerrado' (resolvePending trata).
   if (card.effect === 'avance3' || card.effect === 'volte3') {
-    land(state.turn, player, null)
+    landAfterCardMovement(state, player)
     return { done: false }
   }
   return { done: true }
@@ -234,6 +244,6 @@ export function resolveCardShortcut(state: GameState, dir: 'frente' | 'tras', ct
   else player.pos = (player.pos - 3 + BOARD_SIZE) % BOARD_SIZE // ré: sem bônus de GO (§10.6)
   s.decks[deckId].push(cardId)
   s.resolution = null // limpa o card-shortcut
-  land(s.turn, player, null) // resolve o destino normalmente
+  landAfterCardMovement(s, player) // resolve o destino sem apagar a dupla que trouxe até a carta
   return finishIfEnded(s, ctx)
 }
