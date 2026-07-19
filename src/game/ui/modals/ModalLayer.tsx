@@ -11,20 +11,25 @@ import { identityOf } from '@/net/identity'
 import { WaitingBar } from '@/net/ui/WaitingBar'
 import { activeModal, type ModalView, type HandCardView } from './activeModal'
 import type { Rarity } from '@/game/cards/types'
-import { BOARD, type PropertySquare } from '@/lib/boardData'
+import { BOARD, GROUPS, type PropertySquare, type Square } from '@/lib/boardData'
 import { busSideOf, canUseBusTicket } from '@/game/turn/turnMachine'
 import { AUCTION_WINDOW } from '@/game/economy/purchase'
 import { RARITY_COLOR, RARITY_LABEL, cardLabel, CARD_DESC } from '@/game/ui/cards/cardMeta'
 import { cardById } from '@/game/cards/catalog'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { PlayerFace } from '@/boards/PlayerFace'
-import { GROUP_COLOR } from '@/boards/groupColors'
 import { SquareIcon } from '@/boards/glyphs/squares'
-import { GavelIcon, CoinIcon, HouseIcon, HotelIcon } from '@/game/ui/icons'
+import {
+  PlotBadgeIcon,
+  HouseBadgeIcon,
+  HotelBadgeIcon,
+  SkyscraperBadgeIcon,
+} from '@/boards/glyphs/badges'
+import { CoinIcon, GavelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 import { useModalTitleId } from '@/game/ui/a11y/dialog'
-import { useMotion, MOTION, EASE } from '@/game/ui/motion'
+import { useMotion } from '@/game/ui/motion'
 import { money } from '@/lib/money'
 import { deedPresentation } from '@/game/ui/deed/presentation'
 
@@ -212,7 +217,6 @@ export function ModalLayer() {
           <BusPicker
             fromPos={activePlayer.pos}
             title="Usar Bus Ticket"
-            subtitle="Vá para uma casa do mesmo lado"
             onPick={spendBusTicket}
             onBoardingChange={setBusBoarding}
             onEmbarked={disarmBus}
@@ -356,6 +360,88 @@ export function ModalLayer() {
 // reduzido (`reduced`), igual ao resto do vocabulário (D7 do plan).
 const EMBARK_MS = 560
 
+function busStopAccent(ownerColor?: string): string {
+  return ownerColor ?? 'var(--color-ink-400)'
+}
+
+function busStopFooterAccent(square: Square, ownerColor?: string): string {
+  if (ownerColor) return ownerColor
+
+  switch (square.kind) {
+    case 'acaso':
+    case 'tax':
+      return 'var(--color-signal)'
+    case 'tesouro':
+    case 'bus-ticket':
+    case 'airport':
+      return 'var(--color-brass)'
+    case 'utility':
+      return square.icon === 'fuel'
+        ? 'var(--color-group-green)'
+        : square.icon === 'bolt'
+          ? 'var(--color-brass-glow)'
+          : 'var(--color-group-orange)'
+    case 'property':
+    case 'corner-go':
+    case 'corner-jail':
+    case 'corner-parking':
+    case 'corner-gotojail':
+      return 'var(--color-ink-400)'
+  }
+}
+
+function busStopMeta(square: Square): string {
+  switch (square.kind) {
+    case 'property':
+      return square.capital ?? GROUPS[square.group].name
+    case 'airport':
+      return `Aeroporto · ${square.iata}`
+    case 'utility':
+      return 'Serviço público'
+    case 'tax':
+      return 'Imposto'
+    case 'acaso':
+      return 'Carta de Acaso'
+    case 'tesouro':
+      return 'Carta de Tesouro'
+    case 'bus-ticket':
+      return 'Ponto de ônibus'
+    case 'corner-go':
+    case 'corner-jail':
+    case 'corner-parking':
+    case 'corner-gotojail':
+      return 'Canto do tabuleiro'
+  }
+}
+
+function busStopValue(square: Square, ownerName?: string): string {
+  if (ownerName) return `Dono · ${ownerName}`
+  if ('price' in square) return `Livre · R$ ${square.price}`
+  if (square.kind === 'tax') return `Cobrança · R$ ${square.amount}`
+  if (square.kind === 'acaso' || square.kind === 'tesouro') return 'Compre uma carta'
+  if (square.kind === 'bus-ticket') return 'Ganhe 1 bilhete'
+  return 'Parada especial'
+}
+
+function BusStopGlyph({ square, size = 24 }: { square: Square; size?: number }) {
+  if (square.kind === 'property') {
+    return (
+      <span
+        className="bus-stop-flag"
+        style={{ width: size, height: size }}
+      >
+        <img
+          src={`https://flagcdn.com/${square.uf.toLowerCase()}.svg`}
+          alt=""
+          className="block h-full w-full object-cover"
+          draggable={false}
+        />
+      </span>
+    )
+  }
+  return <SquareIcon square={square} size={size} />
+}
+
 function BusLine({
   fromPos,
   onPick,
@@ -402,7 +488,6 @@ function BusLine({
   const targetPos = departing ?? hover
   const busIdx = targetPos != null ? cells.findIndex((sq) => sq.pos === targetPos) : fromIdx
   const busPct = ((busIdx + 0.5) / n) * 100
-  const steps = hover != null && departing == null ? hover - fromPos : 0 // lado é contíguo no BOARD → distância = diferença de pos
 
   // Embarque (044/T070, FR-031): o COMANDO sai na hora — `onPick` já não fica represado
   // atrás da viagem visual. O que antes era "espera 560ms, então move" virou "move, e a
@@ -418,32 +503,18 @@ function BusLine({
   }
 
   return (
-    <div className="flex flex-col" onMouseLeave={() => departing == null && setHover(null)}>
-      {/* Estrada tracejada + ônibus; a placa de distância fica FIXA no centro
-          (nunca estoura a borda do modal) */}
-      <div className="relative h-12">
-        <span className="absolute left-1/2 -translate-x-1/2 top-0 z-20">
-          <AnimatePresence>
-            {(departing != null || (hover != null && hover !== fromPos)) && (
-              <motion.span
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 4 }}
-                transition={{ duration: reduced ? 0 : MOTION.fast, ease: EASE.standard }}
-                className="block label text-nano text-coffee-950 bg-gold-glow rounded-full px-2 py-0.5 whitespace-nowrap shadow-[var(--shadow-card)]"
-              >
-                {departing != null
-                  ? 'Embarcando…'
-                  : `${Math.abs(steps)} ${Math.abs(steps) === 1 ? 'casa' : 'casas'} ${steps > 0 ? 'à frente' : 'atrás'}`}
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </span>
+    <div className="bus-route flex min-w-0 max-w-full flex-col" onMouseLeave={() => departing == null && setHover(null)}>
+      {departing != null && (
+        <span className="sr-only" aria-live="polite">Embarcando…</span>
+      )}
+
+      {/* Estrada tracejada + ônibus. */}
+      <div className="relative h-10">
         <span className="absolute left-2 right-2 bottom-[15px] border-t-2 border-dashed border-brass/35" aria-hidden />
         <motion.div
           initial={false}
           animate={{ left: `${busPct}%`, scale: departing != null ? 1.1 : 1 }}
-          transition={{ type: 'spring', stiffness: 130, damping: 19, mass: 1 }}
+          transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 130, damping: 19, mass: 1 }}
           className="absolute bottom-0 -ml-[18px] w-[36px] flex justify-center z-10 pointer-events-none"
         >
           <span className="w-8 h-8 rounded-full bg-gold text-coffee-950 grid place-items-center border-2 border-coffee-950 shadow-[var(--shadow-card)]">
@@ -463,67 +534,79 @@ function BusLine({
 
       {/* Paradas — células flex (encolhem juntas, sem scroll), mesma linguagem
           informativa do tabuleiro (stripe, posse, bandeira, peões) */}
-      <div className="flex">
+      <div className="bus-stop-grid">
         {cells.map((sq) => {
           const isFrom = sq.pos === fromPos
           const isProp = sq.kind === 'property'
-          const stripe = isProp ? GROUP_COLOR[(sq as PropertySquare).group]
-            : sq.kind === 'airport' || sq.kind === 'utility' ? 'var(--color-brass)' : 'transparent'
-          const price = 'price' in sq ? sq.price : null
           // Posse (igual ao tabuleiro): casa com dono "veste" a cor dele (tint + moldura)
-          // e NÃO mostra preço — só casa livre exibe valor.
+          // e troca o valor livre pelo nome do dono.
           const ownerId = titles[sq.pos]?.ownerId
-          const ownerColor = ownerId ? identityOf(room, ownerId).color : undefined
+          const owner = ownerId ? identityOf(room, ownerId) : undefined
+          const accent = busStopAccent(owner?.color)
           const faces = facesAt[sq.pos] ?? []
+          const price = !owner && 'price' in sq ? sq.price : null
+          const footerAccent = busStopFooterAccent(sq, owner?.color)
+          const semanticValue = busStopValue(sq, owner?.name)
+          const ariaLabel = `${sq.name}. ${busStopMeta(sq)}.${isFrom ? ' Ponto de partida.' : ` ${semanticValue}. ${Math.abs(sq.pos - fromPos)} casas de distância.`}`
           return (
-            <span key={sq.pos} className="flex-1 min-w-0 px-0.5">
+            <span key={sq.pos} className="bus-stop-cell">
               <button
                 type="button"
                 disabled={isFrom || departing != null}
+                aria-label={ariaLabel}
+                aria-current={isFrom ? 'location' : undefined}
                 onClick={() => embark(sq.pos)}
                 onMouseEnter={() => departing == null && setHover(sq.pos)}
                 onFocus={() => departing == null && setHover(sq.pos)}
                 className={cn(
-                  'relative w-full h-[112px] rounded-[4px] border flex flex-col overflow-hidden transition-all',
+                  'bus-stop-card',
                   isFrom
-                    ? 'border-cream bg-coffee-600 cursor-default'
+                    ? 'bus-stop-card--current cursor-default'
                     : departing === sq.pos
-                      ? 'border-gold bg-gold/25 -translate-y-0.5 shadow-[var(--shadow-glow)]'
-                      : 'border-gold/70 bg-coffee-900/60 hover:bg-gold/25 hover:border-gold hover:-translate-y-0.5 cursor-pointer disabled:cursor-default',
+                      ? 'bus-stop-card--departing'
+                      : 'cursor-pointer disabled:cursor-default',
+                  owner && 'bus-stop-card--owned',
                 )}
+                style={{
+                  '--bus-stop-accent': accent,
+                  '--bus-stop-owner': owner?.color ?? 'transparent',
+                  '--bus-stop-footer-accent': footerAccent,
+                } as React.CSSProperties}
               >
-                <span className="h-2 w-full shrink-0" style={{ background: stripe }} />
-                {/* Posse — veste a cor do dono (tint + moldura), como na célula do tabuleiro */}
-                {ownerColor && !isFrom && (
-                  <>
-                    <span className="absolute inset-0 pointer-events-none" style={{ background: ownerColor, opacity: 0.16 }} aria-hidden />
-                    <span className="absolute inset-0 pointer-events-none" style={{ boxShadow: `inset 0 0 0 2px ${ownerColor}` }} aria-hidden />
-                  </>
-                )}
-                <span className="flex-1 flex flex-col items-center justify-center gap-0.5 px-0.5 text-center min-h-0 w-full">
-                  {/* Propriedade = bandeira do país; demais tipos = glifo da casa (acaso/Tesouro/aeroporto/utilidade/taxa/cantos) */}
-                  {isProp ? (
-                    <span
-                      className="block rounded-full border border-coffee-950/70 overflow-hidden shrink-0"
-                      style={{ width: 20, height: 20, boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--color-brass) 50%, transparent)' }}
-                    >
-                      <img
-                        src={`https://flagcdn.com/${(sq as PropertySquare).uf.toLowerCase()}.svg`}
-                        alt={(sq as PropertySquare).uf}
-                        className="w-full h-full object-cover block"
-                        draggable={false}
-                      />
-                    </span>
-                  ) : (
-                    <span className="text-gold leading-none"><SquareIcon square={sq} size={20} /></span>
-                  )}
-                  <span className="w-full text-cream leading-tight text-micro break-words line-clamp-2">{isFrom ? 'SUA PARADA' : sq.name}</span>
-                  {!ownerColor && price != null && <span className="currency text-gold-glow leading-none" style={{ fontSize: '10px' }}>R$ {price}</span>}
+                <span className="bus-stop-card__stripe" aria-hidden />
+                <span className="bus-stop-card__topline">
+                  <span>#{String(sq.pos).padStart(2, '0')}</span>
+                  {!isFrom && owner && <i style={{ background: owner.color }} title={`Dono: ${owner.name}`} />}
                 </span>
-                <span className="flex items-center justify-center gap-px flex-wrap shrink-0 pb-1 min-h-[16px]">
-                  {faces.slice(0, 4).map((f, j) => (
-                    <PlayerFace key={j} color={f.color} avatar={f.avatar} skin={f.skin} active={f.active} size={16} />
-                  ))}
+                <span className="bus-stop-card__body">
+                  <span className={cn('bus-stop-card__glyph', !isProp && 'text-gold')}>
+                    <BusStopGlyph square={sq} size={24} />
+                  </span>
+                  <span className="bus-stop-card__name">{sq.short ?? sq.name}</span>
+                </span>
+                <span
+                  className={cn(
+                    'bus-stop-card__footer',
+                    faces.length > 0
+                      ? 'bus-stop-card__footer--players'
+                      : price != null
+                        ? 'bus-stop-card__footer--price'
+                        : 'bus-stop-card__footer--accent',
+                  )}
+                  aria-hidden
+                >
+                  {faces.length > 0 ? (
+                    <span className="bus-stop-card__faces">
+                      {faces.slice(0, 3).map((f, j) => (
+                        <PlayerFace key={j} color={f.color} avatar={f.avatar} skin={f.skin} active={f.active} size={20} />
+                      ))}
+                    </span>
+                  ) : price != null ? (
+                    <span className="bus-stop-card__price">
+                      <span>R$</span>
+                      {price}
+                    </span>
+                  ) : null}
                 </span>
               </button>
             </span>
@@ -540,7 +623,6 @@ function BusLine({
 function BusPicker({
   fromPos,
   title,
-  subtitle,
   onPick,
   onBoardingChange,
   onEmbarked,
@@ -548,7 +630,6 @@ function BusPicker({
 }: {
   fromPos: number
   title: string
-  subtitle: string
   onPick: (pos: number) => void
   /** 044/T070: avisa o pai (que decide se o seletor continua montado) assim que o
    * embarque começa — o comando já saiu, isto é só o sinal de "ainda decorando". */
@@ -560,13 +641,12 @@ function BusPicker({
   const tickets = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]].busTickets)
   const [boarding, setBoarding] = useState(false)
   return (
-    <ModalShell className="w-[760px] max-w-[96vw]">
+    <ModalShell className="bus-picker-modal w-[980px] max-w-[calc(100vw-2rem)] overflow-y-auto !overflow-x-hidden">
       <ModalHeader
         title={title}
-        subtitle={subtitle}
         icon={<Bus size={19} />}
       />
-      <div className="px-5 pt-4 pb-3">
+      <div className="bus-picker-body min-w-0 max-w-full px-5 pt-3 pb-3">
         <BusLine
           fromPos={fromPos}
           onPick={onPick}
@@ -579,13 +659,13 @@ function BusPicker({
       <div className="relative border-t-2 border-dashed border-coffee-500/60">
         <span className="absolute -left-[10px] -top-[10px] w-5 h-5 rounded-full bg-coffee-950 border-2 border-coffee-500" aria-hidden />
         <span className="absolute -right-[10px] -top-[10px] w-5 h-5 rounded-full bg-coffee-950 border-2 border-coffee-500" aria-hidden />
-        <div className="pl-6 pr-4 py-2.5 flex items-center gap-3 bg-coffee-900/60">
+        <div className="pl-6 pr-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2 bg-coffee-900/60">
           <span className="flex items-center gap-2">
             <Bus size={15} className="text-gold" />
             <span className="label text-cream-muted">Bilhete de ônibus</span>
             <span className="currency text-gold-glow text-sm tabular-nums leading-none">×{tickets}</span>
           </span>
-          <span className="label text-cream-muted/85 text-nano">1 bilhete será usado na viagem</span>
+          <span className="label min-w-[10rem] flex-1 text-cream-muted/85 text-nano">1 bilhete será usado na viagem</span>
           {onCancel && (
             <Button variant="secondary" onClick={onCancel} disabled={boarding} className="ml-auto">
               Cancelar
@@ -613,40 +693,122 @@ function DiscardRow({ card, onPick }: { card: HandCardView; onPick: () => void }
   )
 }
 
-// Faixas de aluguel exibidas no deed do leilão (até hotel).
 type AuctionSquare = Extract<ModalView, { kind: 'auction' }>['square']
-function deedRows(sq: AuctionSquare): { label: string; value: string }[] {
-  const deed = deedPresentation(sq)
-  if (!deed) return []
-  return deed.rentRows.map((row, index) => ({
-    label: deed.kind === 'property' && index === 0 ? 'Com aluguel' : row.label,
-    value: row.kind === 'money' ? `R$ ${row.value}` : `${row.value}× dados`,
-  }))
-}
-
-function DeedStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex flex-col items-center gap-0.5 flex-1">
-      <span className="text-gold">{icon}</span>
-      <span className="currency text-cream text-sm leading-none">{value}</span>
-      <span className="label text-cream-muted text-nano">{label}</span>
-    </div>
-  )
-}
+type AuctionDeed = NonNullable<ReturnType<typeof deedPresentation>>
+type AuctionTierKind = 'base' | 'house' | 'hotel' | 'skyscraper'
 
 function DeedIcon({ sq }: { sq: AuctionSquare }) {
   const deed = deedPresentation(sq)
   if (deed?.flagCode) {
     return (
-      <div className="w-10 h-10 rounded-full bg-coffee-900 border-2 border-coffee-950 overflow-hidden shrink-0 shadow-[var(--shadow-card)]">
+      <div className="title-auction-lot__flag">
         <img src={`https://flagcdn.com/${deed.flagCode.toLowerCase()}.svg`} alt={deed.flagCode} className="w-full h-full object-cover" draggable={false} />
       </div>
     )
   }
-  return <span className="text-gold shrink-0"><SquareIcon square={sq} size={34} /></span>
+  return <span className="title-auction-lot__glyph"><SquareIcon square={sq} size={32} /></span>
 }
 
-// Tela de leilão (D-021/redesign) — overlay 2 colunas: lances+timer | deed.
+function AuctionTierMarkers({ kind, count }: { kind: AuctionTierKind; count: number }) {
+  if (kind === 'base') return <PlotBadgeIcon />
+  if (kind === 'house') {
+    return Array.from({ length: count }, (_, index) => <HouseBadgeIcon key={index} />)
+  }
+  if (kind === 'hotel') {
+    return Array.from({ length: count }, (_, index) => <HotelBadgeIcon key={index} />)
+  }
+  return <SkyscraperBadgeIcon />
+}
+
+function AuctionRentTier({
+  label,
+  value,
+  kind,
+  count = 1,
+  marker,
+}: {
+  label: string
+  value: string
+  kind: AuctionTierKind
+  count?: number
+  marker?: React.ReactNode
+}) {
+  return (
+    <div className="title-auction-tier" data-tier={kind}>
+      <span className="title-auction-tier__identity">{label}</span>
+      <span className="title-auction-tier__mark" aria-hidden>
+        {marker ?? <AuctionTierMarkers kind={kind} count={count} />}
+      </span>
+      <span className="title-auction-tier__value">{value}</span>
+    </div>
+  )
+}
+
+function AuctionDeedPanel({ sq, deed }: { sq: AuctionSquare; deed: AuctionDeed }) {
+  const facts = [
+    { label: 'Preço', value: money(deed.price) },
+    ...(deed.kind === 'property'
+      ? [{ label: 'Casa', value: money(deed.buildCost) }]
+      : deed.kind === 'airport'
+        ? [{ label: 'Hangar', value: money(deed.hangar.cost) }]
+        : []),
+    { label: 'Hipoteca', value: money(deed.mortgage) },
+  ]
+
+  return (
+    <section className="title-auction-deed" aria-label={`Título ${deed.name}`}>
+      <p className="title-auction-section-label">
+        {deed.kind === 'property' ? 'Progressão de aluguel' : 'Renda do título'}
+      </p>
+
+      <div className="title-auction-tier-grid">
+        {deed.kind === 'property' ? (
+          <>
+            <AuctionRentTier label="Terreno" value={money(deed.rents.base)} kind="base" />
+            <AuctionRentTier label="1 casa" value={money(deed.rents.house1)} kind="house" />
+            <AuctionRentTier label="2 casas" value={money(deed.rents.house2)} kind="house" count={2} />
+            <AuctionRentTier label="3 casas" value={money(deed.rents.house3)} kind="house" count={3} />
+            <AuctionRentTier label="4 casas" value={money(deed.rents.house4)} kind="house" count={4} />
+            <AuctionRentTier label="Hotel" value={money(deed.rents.hotel)} kind="hotel" />
+            <AuctionRentTier label="2º hotel" value={money(deed.rents.hotel2)} kind="hotel" count={2} />
+            <AuctionRentTier label="Arranha-céu" value={money(deed.rents.skyscraper)} kind="skyscraper" />
+          </>
+        ) : (
+          deed.rentRows.map((row, index) => (
+            <AuctionRentTier
+              key={row.key}
+              label={row.label}
+              value={row.kind === 'money' ? money(row.value) : `${row.value}× dados`}
+              kind="base"
+              marker={(
+                <span className="title-auction-tier__square-icons">
+                  {Array.from({ length: index + 1 }, (_, markerIndex) => (
+                    <SquareIcon key={markerIndex} square={sq} size={13} />
+                  ))}
+                </span>
+              )}
+            />
+          ))
+        )}
+      </div>
+
+      <dl
+        className="title-auction-deed__facts"
+        aria-label="Valores do título"
+        style={{ gridTemplateColumns: `repeat(${facts.length}, minmax(0, 1fr))` }}
+      >
+        {facts.map((fact) => (
+          <div key={fact.label} className="title-auction-deed__fact">
+            <dt>{fact.label}</dt>
+            <dd>{fact.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+}
+
+// Tela pública do leilão. A regra continua no motor; aqui só organizamos o pregão.
 function AuctionCard({
   view,
   activeId,
@@ -670,123 +832,144 @@ function AuctionCard({
   }, [])
   const msLeft = Math.max(0, view.deadline - now)
   const secLeft = Math.ceil(msLeft / 1000)
-  const fillPct = Math.max(0, Math.min(100, 100 - (msLeft / AUCTION_WINDOW) * 100)) // enche; reseta a cada lance
+  const timeLeftPct = Math.max(0, Math.min(100, (msLeft / AUCTION_WINDOW) * 100))
   const sq = view.square
   const deed = deedPresentation(sq)
   if (!deed) return null
+  const highBidderIdentity = view.highBidder ? identityOf(room, view.highBidder) : null
+  const highBidderIsPresent = view.highBidder
+    ? players.some((player) => player.id === view.highBidder)
+    : false
 
   return (
-    <ModalShell className="w-[600px] max-w-[95vw]">
+    <ModalShell className="title-auction-modal w-[600px] max-w-[95vw]">
       <ModalHeader
         center
-        title="Leilão"
-        subtitle="quem der mais, leva"
+        title="Leilão ao vivo"
+        subtitle="O maior lance leva o título"
         icon={<GavelIcon size={22} />}
         className="[&_h3]:text-xl"
       />
-      {/* Nome + ícone, centralizado */}
-      <div className="flex items-center justify-center gap-2.5 px-4 pt-4 pb-3">
+
+      <div
+        className="title-auction-lot"
+        style={{ '--title-auction-accent': deed.accent } as React.CSSProperties}
+      >
         <DeedIcon sq={sq} />
-        <h2 className="display text-cream text-2xl leading-none">{sq.name}</h2>
+        <div className="title-auction-lot__copy">
+          <span>Título em disputa</span>
+          <h2>{sq.name}</h2>
+          {deed.subtitle && <p>{deed.subtitle}</p>}
+        </div>
+        <span className="title-auction-lot__number">Lote {String(view.pos).padStart(2, '0')}</span>
       </div>
 
-      <div className="flex divide-x divide-coffee-500/50 border-t border-coffee-500/40">
-        {/* Coluna esquerda — lances + timer */}
-        <div className="flex-1 p-5 flex flex-col gap-6">
-          <div>
-            <p className="label text-cream-muted">Lance atual</p>
+      <div className="title-auction-layout">
+        <section className="title-auction-live" aria-label="Pregão">
+          <div className="title-auction-live__heading">
+            <p className="title-auction-section-label">Maior lance</p>
+            <span className="title-auction-live__status">
+              <i aria-hidden />
+              Ao vivo
+            </span>
+          </div>
+
+          <div className="title-auction-current">
             <motion.p
               key={view.currentBid}
               initial={reduced ? false : { scale: 1.14 }}
               animate={{ scale: 1 }}
               transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 16 }}
-              className="currency text-5xl leading-none mt-2 origin-left"
-              style={{
-                backgroundImage: 'var(--gradient-brass-shine)',
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                color: 'transparent',
-                filter: 'drop-shadow(0 2px 10px color-mix(in srgb, var(--color-brass) 45%, transparent))',
-              }}
+              className="title-auction-current__amount"
+              aria-live="polite"
             >
               {money(view.currentBid)}
             </motion.p>
-            <div className="flex items-center gap-1.5 mt-2 text-xs text-cream-muted">
-              <span>Maior:</span>
-              {view.highBidder ? (
+            <div className="title-auction-leader">
+              {highBidderIdentity && highBidderIsPresent ? (
                 <>
-                  {(() => {
-                    const identity = identityOf(room, view.highBidder)
-                    return players.some((player) => player.id === view.highBidder)
-                      ? <PlayerFace color={identity.color} avatar={identity.avatar} skin={identity.skin} size={18} />
-                      : null
-                  })()}
-                  <span className="text-cream">{identityOf(room, view.highBidder).name}</span>
+                  <PlayerFace
+                    color={highBidderIdentity.color}
+                    avatar={highBidderIdentity.avatar}
+                    skin={highBidderIdentity.skin}
+                    size={24}
+                  />
+                  <span>
+                    <small>Na frente</small>
+                    <strong>{highBidderIdentity.name}</strong>
+                  </span>
                 </>
               ) : (
-                <span className="text-cream">ninguém ainda</span>
+                <span>
+                  <small>Na frente</small>
+                  <strong>Sem lances</strong>
+                </span>
               )}
             </div>
           </div>
 
-          {/* Timer: enche até 100% → encerra; reseta a cada lance */}
-          <div>
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <GavelIcon size={13} className={secLeft <= 3 ? 'text-signal' : 'text-cream-muted'} />
-              <span className={cn('label leading-none', secLeft <= 3 ? 'text-signal' : 'text-cream-muted')}>
-                Termina em {secLeft}s…
-              </span>
+          <div className="title-auction-clock" data-urgent={secLeft <= 3 || undefined}>
+            <div className="title-auction-clock__copy">
+              <span>Fecha em</span>
+              <strong>{secLeft}s</strong>
             </div>
-            <div className="h-2.5 rounded-full bg-coffee-950/60 overflow-hidden">
+            <div
+              className="title-auction-clock__track"
+              role="progressbar"
+              aria-label={`Leilão fecha em ${secLeft} segundos`}
+              aria-valuemin={0}
+              aria-valuemax={Math.ceil(AUCTION_WINDOW / 1000)}
+              aria-valuenow={secLeft}
+            >
               <div
-                className={cn('h-full rounded-full', secLeft <= 3 ? 'bg-signal' : 'bg-gold')}
-                style={{ width: `${fillPct}%`, transition: 'width 0.2s linear' }}
+                className="title-auction-clock__fill"
+                style={{ width: `${timeLeftPct}%` }}
               />
             </div>
           </div>
 
-          <div>
-            <p className="label text-cream-muted mb-2">{stillBidding ? 'Meu lance…' : 'Você passou'}</p>
-            <div className="flex gap-2">
-              {[2, 10, 100].map((inc) => {
-                const next = view.currentBid + inc
-                return (
-                  <Button
-                    key={inc}
-                    disabled={next > cash || !stillBidding}
-                    onClick={() => placeBid(activeId, next)}
-                    className="flex-1 flex-col px-1 py-3 gap-0"
-                  >
-                    <span className="currency text-base leading-none text-coffee-950">R$ {next}</span>
-                    <span className="currency mt-1.5 leading-none text-coffee-950" style={{ fontSize: '11px' }}>+R$ {inc}</span>
-                  </Button>
-                )
-              })}
+          <div className="title-auction-bids">
+            <div className="title-auction-bids__heading">
+              <p className="title-auction-section-label">
+                {stillBidding ? 'Seu próximo lance' : 'Fora do pregão'}
+              </p>
+              <span>Caixa {money(cash)}</span>
             </div>
-          </div>
-        </div>
 
-        {/* Coluna direita — deed (aluguéis + preço/casa/hotel) */}
-        <div className="flex-1 p-5">
-          <div className="rounded-[var(--radius-card)] border border-coffee-500 bg-coffee-900/50 overflow-hidden h-full flex flex-col">
-            <div className="px-4 py-2.5 text-center border-b border-coffee-500/60" style={{ background: `color-mix(in srgb, ${deed.accent} 22%, transparent)` }}>
-              <p className="display text-cream text-base leading-none">{deed.name}</p>
-            </div>
-            <div className="px-4 py-3 flex flex-col gap-2 flex-1">
-              {deedRows(sq).map((r) => (
-                <div key={r.label} className="flex items-baseline justify-between gap-3 text-[13px]">
-                  <span className="text-cream-muted">{r.label}</span>
-                  <span className="currency text-cream">{r.value}</span>
-                </div>
-              ))}
-            </div>
-            <div className="px-3 py-3 border-t border-coffee-500/60 flex items-stretch gap-2">
-              <DeedStat icon={<CoinIcon size={16} />} label="Preço" value={`R$ ${deed.price}`} />
-              {deed.kind === 'property' && <DeedStat icon={<HouseIcon size={16} />} label="Casa" value={`R$ ${deed.buildCost}`} />}
-              {deed.kind === 'property' && <DeedStat icon={<HotelIcon size={16} />} label="Hotel" value={`R$ ${deed.buildCost}`} />}
-            </div>
+            {stillBidding ? (
+              <div className="title-auction-bid-grid">
+                {[2, 10, 100].map((inc) => {
+                  const next = view.currentBid + inc
+                  return (
+                    <Button
+                      key={inc}
+                      variant="secondary"
+                      disabled={next > cash}
+                      onClick={() => placeBid(activeId, next)}
+                      className="title-auction-bid-option"
+                      aria-label={`Dar lance de ${money(next)}`}
+                    >
+                      <span className="title-auction-bid-option__cue">
+                        <CoinIcon size={11} />
+                        Dar lance
+                      </span>
+                      <strong className="title-auction-bid-option__amount">{money(next)}</strong>
+                      <small className="title-auction-bid-option__increment">+ {money(inc)}</small>
+                    </Button>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="title-auction-bids__inactive">
+                <GavelIcon size={15} />
+                Você saiu deste leilão
+              </div>
+            )}
           </div>
-        </div>
+
+        </section>
+
+        <AuctionDeedPanel sq={sq} deed={deed} />
       </div>
     </ModalShell>
   )

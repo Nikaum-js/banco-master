@@ -73,6 +73,8 @@ function cardImmediatePhrase(name: string, delta: number): LogSentence {
         : [text('Aniversário: cada adversário pagaria $10, mas não há outro jogador para cobrar')]
     case 'Honorarios':
       return [text('pagou '), money(-delta), text(' de honorários')]
+    case 'Boom Economico':
+      return [text('Boom econômico: todos que ainda estão na partida receberam '), money(delta)]
     default: // erroBanco, boomEconomico e demais efeitos baseados só em caixa
       if (delta < 0) return [text('pagou '), money(-delta)]
       if (delta > 0) return [text('recebeu '), money(delta)]

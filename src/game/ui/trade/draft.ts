@@ -114,10 +114,15 @@ export function updateTradeDraft(game: GameState, draft: TradeDraft, action: Tra
     case 'set-tickets':
       return replaceSide(draft, action.party, { ...side, tickets: amountWithin(action.amount, player.busTickets) })
     case 'toggle-grant': {
-      if (!ownedProps(game, player.id).includes(action.pos) || side.props.has(action.pos)) return draft
+      if (!ownedProps(game, player.id).includes(action.pos)) return draft
       const grants = { ...side.grants }
       if (action.pos in grants) delete grants[action.pos]
-      else grants[action.pos] = TRADE_LAPS_PRESETS[0]
+      else {
+        grants[action.pos] = TRADE_LAPS_PRESETS[0]
+        const props = new Set(side.props)
+        props.delete(action.pos)
+        return replaceSide(draft, action.party, { ...side, props, grants })
+      }
       return replaceSide(draft, action.party, { ...side, grants })
     }
     case 'set-grant-laps': {

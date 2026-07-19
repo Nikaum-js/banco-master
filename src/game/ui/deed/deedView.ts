@@ -7,6 +7,7 @@ import type { GroupKey } from '@/lib/boardData'
 import { BOARD } from '@/lib/boardData'
 import {
   cityLevel,
+  buildLevelLimit,
   buildCost,
   canBuildHouse,
   canSellBuilding,
@@ -29,6 +30,7 @@ export type BuildBlock =
   | 'hipoteca-no-grupo'
   | 'topo'
   | 'uniformidade'
+  | 'limite-posse'
   | 'grupo-incompleto'
   | 'caixa'
   | null
@@ -81,9 +83,10 @@ function buildBlock(game: GameState, pos: number): BuildBlock {
   if (cur >= 7) return 'topo'
   const min = Math.min(...cities.map((p) => cityLevel(game.titles[p])))
   if (cur !== min) return 'uniformidade'
+  if (cur === 6 && cities.length !== size) return 'grupo-incompleto' // Skyscraper exige país completo
+  if (cur >= buildLevelLimit(cities.length, size)) return 'limite-posse'
   const cash = game.players.find((pl) => pl.id === owner)?.cash ?? 0
   if (cash < buildCost(sq)) return 'caixa'
-  if (cur === 6 && cities.length !== size) return 'grupo-incompleto' // arranha-céu exige grupo completo
   return null
 }
 

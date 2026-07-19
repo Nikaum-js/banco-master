@@ -149,6 +149,591 @@
 }
 
 /* =====================================================================
+   Leilão de título — pregão ao vivo + escritura.
+   A moldura continua sendo o ModalShell canônico; esta camada organiza
+   somente o conteúdo e repete a progressão visual do tooltip de propriedade.
+   ===================================================================== */
+@layer components {
+  .title-auction-modal {
+    --title-auction-accent: var(--color-brass);
+  }
+
+  .title-auction-lot {
+    position: relative;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.35rem 1.25rem 0;
+    padding: 0.7rem 0.8rem 0.7rem 1rem;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--title-auction-accent) 34%, var(--color-ink-500));
+    border-radius: var(--radius-sharp);
+    background:
+      linear-gradient(100deg, color-mix(in srgb, var(--title-auction-accent) 10%, transparent), transparent 52%),
+      color-mix(in srgb, var(--color-ink-950) 68%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--title-auction-accent) 8%, transparent);
+  }
+
+  .title-auction-lot::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--title-auction-accent);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--title-auction-accent) 48%, transparent);
+  }
+
+  .title-auction-lot__flag,
+  .title-auction-lot__glyph {
+    width: 2.75rem;
+    height: 2.75rem;
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    overflow: hidden;
+    color: var(--title-auction-accent);
+    border: 1px solid color-mix(in srgb, var(--title-auction-accent) 56%, var(--color-ink-500));
+    background: color-mix(in srgb, var(--title-auction-accent) 7%, var(--color-ink-950));
+    box-shadow:
+      inset 0 0 0 3px color-mix(in srgb, var(--color-ink-950) 28%, transparent),
+      0 5px 16px -12px color-mix(in srgb, var(--title-auction-accent) 58%, transparent);
+  }
+
+  .title-auction-lot__flag {
+    border-radius: 50%;
+  }
+
+  .title-auction-lot__glyph {
+    border-radius: var(--radius-sharp);
+  }
+
+  .title-auction-lot__copy {
+    min-width: 0;
+  }
+
+  .title-auction-lot__copy > span {
+    display: block;
+    color: var(--color-brass-glow);
+    font-family: var(--font-sans);
+    font-size: 0.54rem;
+    font-weight: 720;
+    letter-spacing: 0.14em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .title-auction-lot__copy h2 {
+    margin-top: 0.28rem;
+    overflow: hidden;
+    color: var(--color-starlight);
+    font-family: var(--font-display);
+    font-size: 1.28rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .title-auction-lot__copy p {
+    margin-top: 0.22rem;
+    overflow: hidden;
+    color: var(--color-starlight-muted);
+    font-size: 0.66rem;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .title-auction-lot__number {
+    align-self: start;
+    padding: 0.25rem 0.38rem;
+    color: color-mix(in srgb, var(--title-auction-accent) 78%, var(--color-starlight-muted));
+    border: 1px solid color-mix(in srgb, var(--title-auction-accent) 28%, var(--color-ink-500));
+    border-radius: var(--radius-sharp);
+    background: color-mix(in srgb, var(--color-ink-950) 66%, transparent);
+    font-family: var(--font-sans);
+    font-size: 0.5rem;
+    font-weight: 720;
+    letter-spacing: 0.1em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .title-auction-layout {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    gap: 0.7rem;
+    padding: 0.7rem 1.25rem 1.25rem;
+  }
+
+  .title-auction-live,
+  .title-auction-deed {
+    min-width: 0;
+    border: 1px solid var(--color-ink-500);
+    border-radius: var(--radius-sharp);
+    background:
+      linear-gradient(145deg, color-mix(in srgb, var(--color-brass) 4%, transparent), transparent 52%),
+      color-mix(in srgb, var(--color-ink-950) 58%, transparent);
+  }
+
+  .title-auction-live {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 0.8rem;
+  }
+
+  .title-auction-live__heading,
+  .title-auction-bids__heading,
+  .title-auction-clock__copy {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .title-auction-section-label {
+    color: var(--color-brass-glow);
+    font-family: var(--font-sans);
+    font-size: 0.58rem;
+    font-weight: 750;
+    letter-spacing: 0.12em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .title-auction-live__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    color: var(--color-signal-glow);
+    font-family: var(--font-sans);
+    font-size: 0.5rem;
+    font-weight: 720;
+    letter-spacing: 0.1em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .title-auction-live__status i {
+    width: 0.35rem;
+    height: 0.35rem;
+    border-radius: 50%;
+    background: var(--color-signal);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-signal) 13%, transparent);
+  }
+
+  .title-auction-current {
+    padding: 0.05rem 0 0.15rem;
+  }
+
+  .title-auction-current__amount {
+    width: fit-content;
+    color: transparent;
+    background: var(--gradient-brass-shine);
+    background-clip: text;
+    filter: drop-shadow(0 4px 13px color-mix(in srgb, var(--color-brass) 26%, transparent));
+    font-family: var(--font-currency);
+    font-size: clamp(2.35rem, 7vw, 3.4rem);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    letter-spacing: -0.045em;
+    line-height: 0.95;
+    transform-origin: left center;
+    -webkit-background-clip: text;
+  }
+
+  .title-auction-leader {
+    min-height: 1.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.58rem;
+  }
+
+  .title-auction-leader > span {
+    min-width: 0;
+  }
+
+  .title-auction-leader small,
+  .title-auction-leader strong {
+    display: block;
+  }
+
+  .title-auction-leader small {
+    color: var(--color-starlight-muted);
+    font-size: 0.55rem;
+    line-height: 1;
+  }
+
+  .title-auction-leader strong {
+    margin-top: 0.2rem;
+    overflow: hidden;
+    color: var(--color-starlight);
+    font-size: 0.73rem;
+    font-weight: 650;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .title-auction-clock {
+    padding: 0.62rem 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--color-brass) 24%, var(--color-ink-500));
+    border-radius: var(--radius-sharp);
+    background: color-mix(in srgb, var(--color-ink-950) 68%, transparent);
+  }
+
+  .title-auction-clock__copy span {
+    color: var(--color-starlight-muted);
+    font-family: var(--font-sans);
+    font-size: 0.54rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .title-auction-clock__copy strong {
+    color: var(--color-brass-glow);
+    font-family: var(--font-currency);
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  .title-auction-clock__track {
+    height: 0.3rem;
+    margin-top: 0.5rem;
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+    background: var(--color-ink-abyss);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-ink-500) 54%, transparent);
+  }
+
+  .title-auction-clock__fill {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--gradient-brass);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--color-brass) 44%, transparent);
+    transition: width 200ms linear;
+  }
+
+  .title-auction-clock[data-urgent] {
+    border-color: color-mix(in srgb, var(--color-signal) 54%, var(--color-ink-500));
+  }
+
+  .title-auction-clock[data-urgent] .title-auction-clock__copy strong {
+    color: var(--color-signal-glow);
+  }
+
+  .title-auction-clock[data-urgent] .title-auction-clock__fill {
+    background: var(--gradient-signal);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--color-signal) 48%, transparent);
+  }
+
+  .title-auction-bids {
+    margin-top: auto;
+  }
+
+  .title-auction-bids__heading > span {
+    overflow: hidden;
+    color: var(--color-starlight-muted);
+    font-size: 0.56rem;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .title-auction-bid-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+  }
+
+  .ui-button.title-auction-bid-option {
+    --ui-button-accent: var(--color-group-skyblue);
+    --ui-button-accent-hot: var(--color-starlight);
+    min-width: 0;
+    min-height: 4.15rem;
+    flex-direction: column;
+    gap: 0.18rem;
+    padding: 0.42rem 0.18rem 0.5rem;
+    border-color: color-mix(in srgb, var(--color-group-skyblue) 62%, var(--color-ink-500));
+    border-radius: var(--radius-sharp);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--color-group-skyblue) 17%, transparent), transparent 66%),
+      color-mix(in srgb, var(--color-ink-700) 54%, var(--color-ink-950));
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--color-group-skyblue) 20%, transparent),
+      0 8px 20px -18px color-mix(in srgb, var(--color-group-skyblue) 70%, transparent);
+  }
+
+  .ui-button.title-auction-bid-option:hover:not(:disabled) {
+    border-color: var(--color-group-skyblue);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--color-group-skyblue) 26%, transparent), transparent 70%),
+      color-mix(in srgb, var(--color-group-skyblue) 12%, var(--color-ink-900));
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--color-starlight) 16%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--color-group-skyblue) 18%, transparent),
+      0 12px 24px -18px color-mix(in srgb, var(--color-group-skyblue) 76%, transparent);
+  }
+
+  .title-auction-bid-option__cue,
+  .title-auction-bid-option__amount,
+  .title-auction-bid-option__increment {
+    position: relative;
+    z-index: 2;
+    max-width: 100%;
+    overflow: hidden;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .title-auction-bid-option__cue {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    color: var(--color-group-skyblue);
+    font-family: var(--font-sans);
+    font-size: 0.42rem;
+    font-weight: 760;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .title-auction-bid-option__cue svg {
+    flex: 0 0 auto;
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--color-group-skyblue) 40%, transparent));
+  }
+
+  .title-auction-bid-option__amount {
+    color: var(--color-starlight);
+    font-family: var(--font-currency);
+    font-size: 0.76rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 760;
+  }
+
+  .title-auction-bid-option__increment {
+    color: color-mix(in srgb, var(--color-group-skyblue) 78%, var(--color-starlight));
+    font-family: var(--font-currency);
+    font-size: 0.48rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+
+  .title-auction-bid-option:disabled .title-auction-bid-option__cue,
+  .title-auction-bid-option:disabled .title-auction-bid-option__amount,
+  .title-auction-bid-option:disabled .title-auction-bid-option__increment {
+    color: inherit;
+  }
+
+  .title-auction-bids__inactive {
+    min-height: 3.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    margin-top: 0.5rem;
+    color: var(--color-starlight-muted);
+    border: 1px solid var(--color-ink-500);
+    border-radius: var(--radius-sharp);
+    background: color-mix(in srgb, var(--color-ink-950) 54%, transparent);
+    font-size: 0.68rem;
+  }
+
+  .title-auction-deed {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.8rem;
+  }
+
+  .title-auction-tier-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.3rem;
+  }
+
+  .title-auction-tier {
+    --title-auction-tier-accent: var(--color-brass);
+    position: relative;
+    min-width: 0;
+    min-height: 2.6rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "identity mark"
+      "value value";
+    align-items: center;
+    gap: 0.18rem 0.35rem;
+    overflow: hidden;
+    padding: 0.42rem 0.48rem 0.4rem;
+    border: 1px solid color-mix(in srgb, var(--title-auction-tier-accent) 24%, var(--color-ink-500));
+    border-radius: var(--radius-sharp);
+    background:
+      linear-gradient(110deg, color-mix(in srgb, var(--title-auction-tier-accent) 7%, transparent), transparent 58%),
+      color-mix(in srgb, var(--color-ink-950) 54%, transparent);
+  }
+
+  .title-auction-tier::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 2px;
+    background: color-mix(in srgb, var(--title-auction-tier-accent) 58%, var(--color-ink-500));
+  }
+
+  .title-auction-tier[data-tier="skyscraper"] {
+    --title-auction-tier-accent: var(--color-signal-glow);
+  }
+
+  .title-auction-tier__identity {
+    grid-area: identity;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--color-starlight-muted);
+    font-size: 0.58rem;
+    font-weight: 680;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .title-auction-tier__mark {
+    grid-area: mark;
+    min-width: 1.25rem;
+    height: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1px;
+    color: var(--title-auction-tier-accent);
+    line-height: 0;
+  }
+
+  .title-auction-tier__mark svg {
+    width: auto;
+    height: 0.9rem;
+    color: var(--title-auction-tier-accent);
+    filter: drop-shadow(0 2px 3px color-mix(in srgb, var(--title-auction-tier-accent) 18%, transparent));
+  }
+
+  .title-auction-tier__square-icons {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1px;
+  }
+
+  .title-auction-tier__value {
+    grid-area: value;
+    color: var(--color-brass-glow);
+    font-family: var(--font-currency);
+    font-size: 0.74rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .title-auction-tier[data-tier="skyscraper"] .title-auction-tier__value {
+    color: var(--color-signal-glow);
+  }
+
+  .title-auction-deed__facts {
+    display: grid;
+    margin-top: auto;
+    overflow: hidden;
+    border: 1px solid var(--color-ink-500);
+    border-radius: var(--radius-sharp);
+    background: var(--color-ink-500);
+  }
+
+  .title-auction-deed__fact {
+    min-width: 0;
+    padding: 0.5rem 0.38rem;
+    background: color-mix(in srgb, var(--color-ink-950) 76%, transparent);
+  }
+
+  .title-auction-deed__fact + .title-auction-deed__fact {
+    border-left: 1px solid var(--color-ink-500);
+  }
+
+  .title-auction-deed__fact dt {
+    color: var(--color-starlight-muted);
+    font-size: 0.48rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .title-auction-deed__fact dd {
+    margin-top: 0.3rem;
+    overflow: hidden;
+    color: var(--color-brass-glow);
+    font-family: var(--font-currency);
+    font-size: 0.66rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .title-auction-clock__fill {
+      transition: none;
+    }
+  }
+
+  @media (max-width: 540px) {
+    .title-auction-lot {
+      margin-inline: 0.75rem;
+    }
+
+    .title-auction-lot__number {
+      display: none;
+    }
+
+    .title-auction-layout {
+      grid-template-columns: 1fr;
+      padding-inline: 0.75rem;
+    }
+  }
+
+  @media (max-height: 520px) and (min-width: 541px) {
+    .title-auction-layout {
+      padding-bottom: 0.85rem;
+    }
+
+    .title-auction-live,
+    .title-auction-deed {
+      padding: 0.65rem;
+    }
+
+    .title-auction-live {
+      gap: 0.62rem;
+    }
+
+    .title-auction-tier {
+      min-height: 2.3rem;
+      padding-block: 0.34rem;
+    }
+  }
+}
+
+/* =====================================================================
    Freio de movimento reduzido (044/US5, D7 do plan; FR-030) — um bloco
    zera as TRÊS durações do vocabulário, e toda transição CSS que resolve
    duração por `var(--motion-*)` para de se mover de uma vez. O fato
@@ -745,6 +1330,112 @@
     animation: dice-button-icon 560ms var(--ease-snap) infinite;
   }
 
+  /* Bus Ticket é uma ferramenta de turno, não o CTA. A superfície fria e a
+     tipografia em dois níveis o separam do latão reservado à ação principal. */
+  .ui-button.bus-ticket-action {
+    --ui-button-accent: var(--color-ink-300);
+    --ui-button-accent-hot: var(--color-starlight);
+    color: var(--color-starlight);
+    border-color: color-mix(in srgb, var(--color-ink-300) 54%, var(--color-ink-600));
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--color-ink-600) 52%, transparent), transparent),
+      var(--color-ink-900);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--color-starlight) 7%, transparent),
+      0 8px 18px -18px color-mix(in srgb, var(--color-ink-200) 48%, transparent);
+  }
+
+  .ui-button.bus-ticket-action > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  .ui-button.bus-ticket-action:hover:not(:disabled),
+  .ui-button.bus-ticket-action:focus-visible {
+    color: var(--color-starlight);
+    border-color: color-mix(in srgb, var(--color-ink-200) 72%, var(--color-ink-500));
+    background: color-mix(in srgb, var(--color-ink-600) 44%, var(--color-ink-900));
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--color-starlight) 10%, transparent),
+      0 10px 22px -18px color-mix(in srgb, var(--color-ink-100) 54%, transparent);
+  }
+
+  .bus-ticket-action__icon {
+    display: grid;
+    flex: 0 0 auto;
+    width: 1.75rem;
+    height: 1.75rem;
+    place-items: center;
+    color: var(--color-starlight-muted);
+    border: 1px solid var(--color-ink-400);
+    border-radius: var(--radius-sharp);
+    background: color-mix(in srgb, var(--color-ink-950) 82%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-starlight) 5%, transparent);
+    transition:
+      color var(--motion-fast) var(--ease-standard),
+      border-color var(--motion-fast) var(--ease-standard),
+      transform var(--motion-fast) var(--ease-snap);
+  }
+
+  .bus-ticket-action__label {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    line-height: 1;
+  }
+
+  .bus-ticket-action__eyebrow {
+    color: var(--color-starlight-muted);
+    font-family: var(--font-sans);
+    font-size: 0.5rem;
+    font-weight: 650;
+    letter-spacing: 0.15em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .bus-ticket-action__name {
+    margin-top: 0.1875rem;
+    color: var(--color-starlight);
+    font-size: 0.875rem;
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+
+  .bus-ticket-action__count {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    padding-left: 0.5rem;
+    color: var(--color-brass-glow);
+    border-left: 1px solid var(--color-ink-500);
+    font-family: var(--font-currency);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1;
+    transition:
+      color var(--motion-fast) var(--ease-standard),
+      border-color var(--motion-fast) var(--ease-standard);
+  }
+
+  .ui-button.bus-ticket-action:hover:not(:disabled) .bus-ticket-action__icon,
+  .ui-button.bus-ticket-action:focus-visible .bus-ticket-action__icon {
+    color: var(--color-starlight);
+    border-color: var(--color-ink-200);
+    transform: translateX(1px);
+  }
+
+  .ui-button.bus-ticket-action:hover:not(:disabled) .bus-ticket-action__count,
+  .ui-button.bus-ticket-action:focus-visible .bus-ticket-action__count {
+    color: var(--color-brass-glow);
+    border-color: var(--color-ink-300);
+  }
+
   @keyframes dice-button-ready {
     0%, 100% {
       box-shadow:
@@ -795,6 +1486,13 @@
 
     .ui-button::after {
       display: none;
+    }
+
+    .bus-ticket-action__icon,
+    .ui-button.bus-ticket-action:hover:not(:disabled) .bus-ticket-action__icon,
+    .ui-button.bus-ticket-action:focus-visible .bus-ticket-action__icon {
+      transform: none;
+      transition: none;
     }
   }
 
@@ -1500,15 +2198,15 @@
     min-width: 0;
     min-height: 4.375rem;
     display: grid;
-    grid-template-columns: 1.25rem 2.75rem minmax(0, 1fr) auto;
+    grid-template-columns: 2.75rem minmax(0, 1fr) auto;
     grid-template-areas:
-      "seat portrait identity identity"
-      "seat portrait meta money";
+      "portrait identity identity"
+      "portrait meta money";
     grid-template-rows: auto auto;
     align-items: center;
     gap: 0.3125rem 0.625rem;
     overflow: visible;
-    padding: 0.625rem 0.6875rem 0.625rem 0;
+    padding: 0.625rem 0.6875rem;
     color: var(--color-starlight);
     border: 1px solid color-mix(in srgb, var(--player-accent) 22%, var(--color-ink-500));
     border-radius: var(--radius-card);
@@ -1517,8 +2215,7 @@
       radial-gradient(80% 110% at 100% 0%, color-mix(in srgb, var(--color-brass) 3%, transparent), transparent 70%),
       color-mix(in srgb, var(--color-ink-900) 80%, transparent);
     box-shadow:
-      inset 0 1px 0 rgb(238 242 251 / 0.025),
-      inset 1.25rem 0 0 color-mix(in srgb, var(--color-ink-950) 42%, transparent);
+      inset 0 1px 0 rgb(238 242 251 / 0.025);
     transition:
       border-color var(--motion-base) var(--ease-standard),
       background-color var(--motion-base) var(--ease-standard),
@@ -1559,7 +2256,6 @@
       linear-gradient(180deg, color-mix(in srgb, var(--color-ink-700) 80%, transparent), color-mix(in srgb, var(--color-ink-900) 88%, transparent));
     box-shadow:
       inset 0 1px 0 color-mix(in srgb, var(--color-brass-glow) 13%, transparent),
-      inset 1.25rem 0 0 color-mix(in srgb, var(--color-ink-950) 42%, transparent),
       0 0 0 1px color-mix(in srgb, var(--color-brass) 22%, transparent),
       0 12px 24px -20px color-mix(in srgb, var(--color-brass) 60%, transparent);
   }
@@ -1583,8 +2279,7 @@
       ),
       color-mix(in srgb, var(--color-ink-950) 78%, transparent);
     box-shadow:
-      inset 0 1px 0 rgb(238 242 251 / 0.02),
-      inset 1.25rem 0 0 color-mix(in srgb, var(--color-ink-950) 58%, transparent);
+      inset 0 1px 0 rgb(238 242 251 / 0.02);
   }
 
   .player-row--bankrupt::before {
@@ -1622,33 +2317,6 @@
     z-index: 5;
     right: 0.6875rem;
     top: 0.25rem;
-  }
-
-  .player-row__seat {
-    grid-area: seat;
-    align-self: stretch;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.25rem;
-    color: color-mix(in srgb, var(--player-accent) 74%, var(--color-starlight-muted));
-    font-family: var(--font-slab);
-    font-size: 0.5625rem;
-    font-variant-numeric: tabular-nums;
-    font-weight: 650;
-    line-height: 1;
-  }
-
-  .player-row__seat::after {
-    content: "";
-    width: 1px;
-    height: 0.875rem;
-    background: color-mix(in srgb, var(--player-accent) 42%, transparent);
-  }
-
-  .player-row--active .player-row__seat {
-    color: var(--color-brass-glow);
   }
 
   .player-row__portrait {
@@ -2589,7 +3257,7 @@
   .home-map-panel__counter,
   .home-map-panel__paste {
     color: var(--home-map-accent);
-    font-family: var(--font-label);
+    font-family: var(--font-sans);
     font-size: 0.58rem;
     font-weight: 650;
     letter-spacing: var(--tracking-caps);
@@ -4710,6 +5378,595 @@
     outline-offset: -2px;
   }
 
+  .trade-proposal-header .modal-header__close {
+    right: 1rem;
+    top: 1rem;
+    width: 36px;
+    height: 36px;
+    color: var(--color-brass-glow);
+    border-color: color-mix(in srgb, var(--color-brass) 42%, var(--color-ink-500));
+    background: color-mix(in srgb, var(--color-brass) 7%, var(--color-ink-950));
+    box-shadow:
+      inset 0 0 0 3px color-mix(in srgb, var(--color-ink-950) 28%, transparent),
+      0 3px 12px rgb(2 6 16 / 0.22);
+  }
+
+  .trade-proposal-header .modal-header__close:hover {
+    color: var(--color-starlight);
+    border-color: var(--color-brass);
+    background: color-mix(in srgb, var(--color-brass) 13%, var(--color-ink-950));
+  }
+
+  /* Negociação: títulos são documentos de valor, não chips. A mesma peça
+     preserva nome, território e preço no modal e no painel. */
+  .trade-deed-item {
+    --trade-deed-accent: var(--color-brass);
+    position: relative;
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 0.7rem;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 58px;
+    padding: 0.62rem 0.75rem 0.62rem 0.9rem;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--trade-deed-accent) 32%, var(--color-ink-500));
+    border-radius: var(--radius-sharp);
+    background:
+      linear-gradient(100deg, color-mix(in srgb, var(--trade-deed-accent) 9%, transparent), transparent 46%),
+      color-mix(in srgb, var(--color-ink-900) 88%, transparent);
+  }
+
+  .trade-deed-item__rail {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--trade-deed-accent);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--trade-deed-accent) 32%, transparent);
+  }
+
+  .trade-deed-item__avatar {
+    display: block;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--trade-deed-accent) 58%, var(--color-ink-500));
+    border-radius: 50%;
+    background: var(--color-ink-950);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-ink-950) 35%, transparent);
+  }
+
+  .trade-deed-item__avatar--glyph {
+    display: grid;
+    place-items: center;
+    color: var(--trade-deed-accent);
+    border-radius: var(--radius-sharp);
+  }
+
+  .trade-deed-item__identity {
+    min-width: 0;
+  }
+
+  .trade-deed-item__name {
+    color: var(--color-starlight);
+    font-family: var(--font-sans);
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1.08;
+    overflow-wrap: anywhere;
+  }
+
+  .trade-deed-item__subtitle {
+    margin-top: 0.18rem;
+    color: var(--color-starlight-muted);
+    font-size: 0.68rem;
+    line-height: 1.15;
+  }
+
+  .trade-deed-item__facts {
+    min-width: 70px;
+    padding-left: 0.7rem;
+    border-left: 1px solid var(--color-ink-500);
+  }
+
+  .trade-deed-item__facts > div {
+    min-width: 0;
+    text-align: right;
+  }
+
+  .trade-deed-item__facts dt {
+    color: var(--color-starlight-muted);
+    font-family: var(--font-sans);
+    font-size: 0.52rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .trade-deed-item__facts dd {
+    margin-top: 0.22rem;
+    color: color-mix(in srgb, var(--trade-deed-accent) 76%, var(--color-starlight));
+    font-family: var(--font-slab);
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .trade-deed-item--compact {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0.42rem 0.5rem 0.42rem 0.7rem;
+  }
+
+  .trade-deed-item--compact .trade-deed-item__name {
+    font-size: 0.75rem;
+  }
+
+  .trade-deed-item--compact .trade-deed-item__subtitle {
+    font-size: 0.6rem;
+  }
+
+  .trade-deed-item--compact .trade-deed-item__facts {
+    min-width: 58px;
+    padding-left: 0.5rem;
+  }
+
+  .trade-deed-item--compact .trade-deed-item__facts dt {
+    font-size: 0.48rem;
+  }
+
+  .trade-deed-item--compact .trade-deed-item__facts dd {
+    margin-top: 0.18rem;
+    font-size: 0.64rem;
+  }
+
+  .trade-property-term {
+    --trade-property-accent: var(--color-brass);
+    position: relative;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "avatar identity actions"
+      "duration duration duration";
+    align-items: center;
+    gap: 0.42rem;
+    overflow: hidden;
+    padding: 0.42rem 0.42rem 0.42rem 0.62rem;
+    border: 1px solid color-mix(in srgb, var(--trade-property-accent) 22%, var(--color-ink-500));
+    border-radius: var(--radius-sharp);
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--trade-property-accent) 6%, transparent), transparent 48%),
+      color-mix(in srgb, var(--color-ink-950) 64%, transparent);
+    transition:
+      border-color var(--motion-fast) var(--ease-standard),
+      background-color var(--motion-fast) var(--ease-standard);
+  }
+
+  .trade-property-term::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: color-mix(in srgb, var(--trade-property-accent) 72%, var(--color-ink-500));
+  }
+
+  .trade-property-term[data-selected] {
+    border-color: color-mix(in srgb, var(--trade-property-accent) 60%, var(--color-brass));
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--trade-property-accent) 11%, transparent), transparent 52%),
+      color-mix(in srgb, var(--color-ink-900) 78%, transparent);
+  }
+
+  .trade-property-term__avatar {
+    grid-area: avatar;
+  }
+
+  .trade-property-term__identity {
+    grid-area: identity;
+    min-width: 0;
+  }
+
+  .trade-property-term__identity strong,
+  .trade-property-term__identity small {
+    display: block;
+    overflow: hidden;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .trade-property-term__identity strong {
+    color: var(--color-starlight);
+    font-size: 0.7rem;
+    font-weight: 650;
+  }
+
+  .trade-property-term__identity small {
+    margin-top: 0.18rem;
+    color: var(--color-starlight-muted);
+    font-size: 0.52rem;
+  }
+
+  .trade-property-term__actions {
+    grid-area: actions;
+    display: flex;
+    align-items: center;
+    gap: 0.22rem;
+    padding: 0.16rem;
+    border: 1px solid color-mix(in srgb, var(--color-ink-500) 76%, transparent);
+    border-radius: var(--radius-sharp);
+    background: color-mix(in srgb, var(--color-ink-abyss) 66%, transparent);
+  }
+
+  .trade-property-term__action {
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.28rem 0.4rem;
+    color: var(--color-starlight-muted);
+    border: 1px solid transparent;
+    border-radius: calc(var(--radius-sharp) - 1px);
+    background: transparent;
+    font-family: var(--font-sans);
+    font-size: 0.48rem;
+    font-weight: 720;
+    letter-spacing: 0.055em;
+    line-height: 1;
+    text-transform: uppercase;
+    transition:
+      color var(--motion-fast) var(--ease-standard),
+      border-color var(--motion-fast) var(--ease-standard),
+      background-color var(--motion-fast) var(--ease-standard);
+  }
+
+  .trade-property-term__action:hover {
+    color: var(--color-brass-glow);
+    background: color-mix(in srgb, var(--color-brass) 7%, transparent);
+  }
+
+  .trade-property-term__action--active {
+    color: var(--color-ink-950);
+    border-color: var(--color-brass);
+    background: var(--color-brass-glow);
+  }
+
+  .trade-property-term__action--active:hover {
+    color: var(--color-ink-950);
+    background: var(--color-brass-glow);
+  }
+
+  .trade-property-term__check {
+    width: 0.7rem;
+    height: 0.7rem;
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+  }
+
+  .trade-property-term__check svg {
+    width: 0.44rem;
+    height: 0.44rem;
+  }
+
+  .trade-property-term__duration {
+    grid-area: duration;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding-top: 0.38rem;
+    border-top: 1px solid color-mix(in srgb, var(--trade-property-accent) 16%, var(--color-ink-500));
+  }
+
+  .trade-property-term__duration > span {
+    margin-right: auto;
+    color: var(--color-starlight-muted);
+    font-family: var(--font-sans);
+    font-size: 0.46rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .trade-property-term__duration-option {
+    min-height: 24px;
+    padding: 0.25rem 0.42rem;
+    color: var(--color-starlight-muted);
+    border: 1px solid var(--color-ink-500);
+    border-radius: var(--radius-sharp);
+    background: color-mix(in srgb, var(--color-ink-700) 58%, transparent);
+    font-family: var(--font-sans);
+    font-size: 0.48rem;
+    font-weight: 680;
+    line-height: 1;
+  }
+
+  .trade-property-term__duration-option:hover {
+    color: var(--color-brass-glow);
+    border-color: color-mix(in srgb, var(--color-brass) 58%, var(--color-ink-500));
+  }
+
+  .trade-property-term__duration-option--active {
+    color: var(--color-ink-950);
+    border-color: var(--color-brass);
+    background: var(--color-brass-glow);
+  }
+
+  .trade-proposal-scale {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    padding: 0.7rem 1rem 0.55rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-ink-500) 72%, transparent);
+    background: color-mix(in srgb, var(--color-ink-950) 25%, transparent);
+  }
+
+  .trade-scale-player {
+    display: flex;
+    flex: 0 0 88px;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+    text-align: center;
+  }
+
+  .trade-scale-player > span:last-child {
+    width: 100%;
+    color: var(--color-brass-glow);
+    font-size: 0.66rem;
+    line-height: 1.12;
+    overflow-wrap: anywhere;
+  }
+
+  .trade-read-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .trade-read-side {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  .trade-read-side + .trade-read-side {
+    border-left: 1px solid color-mix(in srgb, var(--color-brass) 28%, var(--color-ink-500));
+  }
+
+  .trade-read-side__header {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.62rem 0.9rem;
+    border-bottom: 1px solid var(--color-ink-500);
+    background: color-mix(in srgb, var(--color-ink-900) 62%, transparent);
+  }
+
+  .trade-read-side__label {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.22rem 0.45rem;
+  }
+
+  .trade-read-side__heading {
+    color: var(--color-brass-glow);
+    font-family: var(--font-sans);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    line-height: 1.1;
+    text-transform: uppercase;
+  }
+
+  .trade-read-side__context {
+    color: var(--color-starlight-muted);
+    font-size: 0.62rem;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+
+  .trade-read-side__content {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    gap: 0.55rem;
+    overflow: auto;
+    padding: 0.72rem 0.9rem 0.9rem;
+  }
+
+  .trade-value-item {
+    display: flex;
+    align-items: center;
+    gap: 0.68rem;
+    min-height: 58px;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-brass) 32%, var(--color-ink-500));
+    border-left: 4px solid var(--color-brass);
+    border-radius: var(--radius-sharp);
+    background:
+      linear-gradient(100deg, color-mix(in srgb, var(--color-brass) 8%, transparent), transparent 48%),
+      color-mix(in srgb, var(--color-ink-900) 88%, transparent);
+  }
+
+  .trade-value-item__icon {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    place-items: center;
+    color: var(--color-brass-glow);
+    border: 1px solid color-mix(in srgb, var(--color-brass) 38%, var(--color-ink-500));
+    border-radius: var(--radius-sharp);
+    background: var(--color-ink-950);
+  }
+
+  .trade-value-item p {
+    color: var(--color-starlight-muted);
+    font-family: var(--font-sans);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.1;
+    text-transform: uppercase;
+  }
+
+  .trade-value-item strong {
+    display: block;
+    margin-top: 0.24rem;
+    color: var(--color-brass-glow);
+    font-family: var(--font-slab);
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.08;
+    overflow-wrap: anywhere;
+  }
+
+  .trade-value-item--immunity {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 0.7rem;
+    min-height: 58px;
+    padding: 0.62rem 0.75rem;
+    border-left-width: 4px;
+  }
+
+  .trade-value-item__identity {
+    min-width: 0;
+  }
+
+  .trade-value-item--immunity p {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    line-height: 1.2;
+    text-transform: none;
+  }
+
+  .trade-value-item__facts {
+    min-width: 76px;
+    padding-left: 0.7rem;
+    border-left: 1px solid var(--color-ink-500);
+    text-align: right;
+  }
+
+  .trade-value-item__facts > span {
+    display: block;
+    color: var(--color-starlight-muted);
+    font-family: var(--font-sans);
+    font-size: 0.52rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .trade-value-item__facts > strong {
+    margin-top: 0.22rem;
+    color: var(--color-brass-glow);
+    font-family: var(--font-sans);
+    font-size: 0.66rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .trade-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.42rem;
+    padding: 0.72rem;
+    border: 1px solid color-mix(in srgb, var(--color-brass) 42%, var(--color-ink-500));
+    border-radius: var(--radius-card);
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--color-brass) 5%, transparent), transparent 42%),
+      color-mix(in srgb, var(--color-ink-800) 84%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-brass) 7%, transparent);
+  }
+
+  .trade-row__route {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.42rem;
+    min-height: 34px;
+  }
+
+  .trade-row__player {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  .trade-row__player span:last-child {
+    color: var(--color-starlight);
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    line-height: 1.12;
+    overflow-wrap: anywhere;
+  }
+
+  .trade-panel__list {
+    display: grid;
+    gap: 0.58rem;
+    max-height: 17rem;
+    padding-right: 0.18rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-brass) 45%, transparent) transparent;
+  }
+
+  .trade-row__action {
+    min-height: 29px;
+    align-self: flex-end;
+    gap: 0.35rem;
+    padding: 0.28rem 0.32rem 0.28rem 0.55rem;
+    color: color-mix(in srgb, var(--color-brass-glow) 76%, var(--color-starlight-muted));
+    border-color: color-mix(in srgb, var(--color-brass) 24%, var(--color-ink-500));
+    background: color-mix(in srgb, var(--color-ink-950) 36%, transparent);
+    font-size: 0.52rem;
+    letter-spacing: 0.1em;
+  }
+
+  .trade-row__action:hover {
+    color: var(--color-brass-glow);
+    border-color: color-mix(in srgb, var(--color-brass) 52%, var(--color-ink-500));
+    background: color-mix(in srgb, var(--color-brass) 6%, var(--color-ink-950));
+  }
+
+  .trade-row__action-arrow {
+    display: grid;
+    width: 19px;
+    height: 19px;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--color-brass) 38%, transparent);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-brass) 6%, transparent);
+  }
+
+  .trade-panel__new-action {
+    min-height: 44px;
+    margin-top: 0.72rem;
+    padding-block: 0.6rem;
+  }
+
   /* Popovers de título preservam a cor da cidade/tipo como filete, sem
      abandonar a mesma superfície azul dos modais. */
   .deed-popover {
@@ -4767,6 +6024,254 @@
       linear-gradient(180deg, var(--color-ink-800), var(--color-ink-900));
   }
 
+  .bus-stop-grid {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .bus-stop-cell {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .bus-stop-card {
+    --bus-stop-accent: var(--color-brass);
+    --bus-stop-owner: transparent;
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    height: 8.5rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--color-starlight);
+    border: 1px solid color-mix(in srgb, var(--bus-stop-accent) 58%, var(--color-ink-500));
+    border-radius: var(--radius-sharp);
+    background:
+      linear-gradient(color-mix(in srgb, var(--bus-stop-owner) 11%, transparent), color-mix(in srgb, var(--bus-stop-owner) 5%, transparent)),
+      radial-gradient(90% 42% at 50% 0%, color-mix(in srgb, var(--bus-stop-accent) 9%, transparent), transparent 72%),
+      color-mix(in srgb, var(--color-ink-900) 86%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--bus-stop-accent) 9%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, var(--bus-stop-owner) 48%, transparent);
+    transform: translateY(0);
+    transition:
+      transform var(--motion-fast) var(--ease-snap),
+      border-color var(--motion-fast) var(--ease-standard),
+      background-color var(--motion-fast) var(--ease-standard),
+      box-shadow var(--motion-fast) var(--ease-standard),
+      opacity var(--motion-fast) var(--ease-standard);
+  }
+
+  .bus-stop-card:hover:not(:disabled),
+  .bus-stop-card:focus-visible {
+    border-color: var(--bus-stop-accent);
+    background:
+      linear-gradient(color-mix(in srgb, var(--bus-stop-owner) 14%, transparent), color-mix(in srgb, var(--bus-stop-owner) 7%, transparent)),
+      radial-gradient(100% 54% at 50% 0%, color-mix(in srgb, var(--bus-stop-accent) 18%, transparent), transparent 76%),
+      color-mix(in srgb, var(--color-ink-800) 92%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--bus-stop-accent) 16%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, var(--bus-stop-owner) 58%, transparent),
+      0 10px 18px -14px color-mix(in srgb, var(--bus-stop-accent) 74%, transparent);
+    transform: translateY(-3px);
+  }
+
+  .bus-stop-card:focus-visible {
+    outline: 2px solid var(--color-brass-glow);
+    outline-offset: 2px;
+  }
+
+  .bus-stop-card:active:not(:disabled) {
+    transform: translateY(1px) scale(0.985);
+  }
+
+  .bus-stop-card:disabled:not(.bus-stop-card--current):not(.bus-stop-card--departing) {
+    opacity: 0.46;
+  }
+
+  .bus-stop-card--current {
+    border-color: color-mix(in srgb, var(--color-starlight) 82%, var(--bus-stop-accent));
+    background:
+      linear-gradient(color-mix(in srgb, var(--bus-stop-owner) 10%, transparent), color-mix(in srgb, var(--bus-stop-owner) 5%, transparent)),
+      linear-gradient(180deg, color-mix(in srgb, var(--color-starlight) 8%, var(--color-ink-800)), var(--color-ink-800));
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--color-starlight) 24%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--color-ink-950) 68%, transparent);
+  }
+
+  .bus-stop-card--departing {
+    border-color: var(--bus-stop-accent);
+    background:
+      radial-gradient(100% 68% at 50% 0%, color-mix(in srgb, var(--bus-stop-accent) 24%, transparent), transparent 78%),
+      color-mix(in srgb, var(--color-ink-800) 90%, transparent);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--bus-stop-accent) 25%, transparent),
+      0 0 20px -8px color-mix(in srgb, var(--bus-stop-accent) 72%, transparent);
+    transform: translateY(-3px);
+  }
+
+  .bus-stop-card__stripe {
+    width: 100%;
+    height: 0.125rem;
+    flex: 0 0 auto;
+    background: var(--color-ink-500);
+  }
+
+  .bus-stop-card--owned .bus-stop-card__stripe {
+    height: 0.25rem;
+    background: var(--bus-stop-owner);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--color-ink-950) 64%, transparent);
+  }
+
+  .bus-stop-card__topline {
+    min-height: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.125rem;
+    padding: 0.1875rem 0.3125rem 0;
+    color: var(--color-starlight-muted);
+    font-size: 0.5rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.08em;
+    line-height: 1;
+  }
+
+  .bus-stop-card__topline > i {
+    width: 0.375rem;
+    height: 0.375rem;
+    flex: 0 0 auto;
+    border: 1px solid color-mix(in srgb, white 46%, transparent);
+    border-radius: 999px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-ink-950) 72%, transparent);
+  }
+
+  .bus-stop-card__body {
+    min-width: 0;
+    min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1875rem;
+    padding: 0.125rem 0.25rem 0.25rem;
+    text-align: center;
+  }
+
+  .bus-stop-card__glyph {
+    min-height: 1.5rem;
+    display: grid;
+    place-items: center;
+    color: var(--bus-stop-accent);
+    line-height: 0;
+    filter: drop-shadow(0 2px 4px color-mix(in srgb, var(--color-ink-950) 52%, transparent));
+  }
+
+  .bus-stop-flag {
+    display: block;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-brass) 52%, var(--color-ink-950));
+    border-radius: 999px;
+    background: var(--color-ink-950);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--color-ink-950) 68%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, white 16%, transparent);
+  }
+
+  .bus-stop-card__name {
+    width: 100%;
+    overflow: hidden;
+    display: -webkit-box;
+    color: var(--color-starlight);
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 650;
+    line-height: 1.02;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .bus-stop-card__footer {
+    --bus-stop-footer-accent: var(--color-ink-400);
+    width: 100%;
+    min-height: 1.625rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-top: 1px solid var(--color-ink-500);
+  }
+
+  .bus-stop-card__footer--price {
+    border-top-color: color-mix(in srgb, var(--color-starlight-muted) 24%, var(--color-ink-500));
+    background: transparent;
+  }
+
+  .bus-stop-card__footer--accent {
+    border-top-color: color-mix(in srgb, var(--bus-stop-footer-accent) 68%, var(--color-ink-500));
+    background:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--bus-stop-footer-accent) 12%, var(--color-ink-950)),
+        color-mix(in srgb, var(--bus-stop-footer-accent) 24%, var(--color-ink-950)),
+        color-mix(in srgb, var(--bus-stop-footer-accent) 12%, var(--color-ink-950))
+      );
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bus-stop-footer-accent) 18%, transparent);
+  }
+
+  .bus-stop-card__footer--players {
+    border-top-color: color-mix(in srgb, var(--color-starlight-muted) 24%, var(--color-ink-500));
+    background: transparent;
+  }
+
+  .bus-stop-card__price {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.125rem;
+    padding: 1px 5px;
+    color: var(--color-gold-glow);
+    border: 1px solid color-mix(in srgb, var(--color-brass) 45%, transparent);
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--color-ink-950) 85%, transparent);
+    box-shadow: var(--shadow-card);
+    font-family: var(--font-currency);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .bus-stop-card__price > span {
+    font-size: 0.8em;
+    opacity: 0.75;
+  }
+
+  .bus-stop-card__faces {
+    display: flex;
+  }
+
+  .bus-stop-card__faces > * + * {
+    margin-left: -0.1875rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bus-stop-card,
+    .bus-stop-card:hover:not(:disabled),
+    .bus-stop-card:focus-visible,
+    .bus-stop-card:active:not(:disabled),
+    .bus-stop-card--departing {
+      transition: none;
+      transform: none;
+    }
+  }
+
   @media (max-width: 640px) {
     .atlas-surface::before {
       inset: 4px;
@@ -4787,6 +6292,40 @@
 
     .modal-header:has(.modal-header__close) {
       padding-inline: 3.5rem;
+    }
+
+    .trade-read-grid {
+      grid-template-columns: 1fr;
+      overflow: visible;
+    }
+
+    .trade-read-side + .trade-read-side {
+      border-top: 1px solid color-mix(in srgb, var(--color-brass) 28%, var(--color-ink-500));
+      border-left: 0;
+    }
+
+    .trade-read-side__content {
+      overflow: visible;
+    }
+
+    .trade-scale-player {
+      flex-basis: 56px;
+    }
+
+    .bus-picker-body {
+      padding-inline: 0.75rem;
+    }
+
+    .bus-stop-grid {
+      gap: 0.125rem;
+    }
+
+    .bus-stop-card {
+      height: 8rem;
+    }
+
+    .bus-stop-card__name {
+      font-size: 0.625rem;
     }
   }
 }

@@ -5,7 +5,7 @@
 // Reusa o vocabulário visual do leilão (deed/avatar) e o shell canônico de modal.
 // Único ponto com efeito: dispara proposeTrade/acceptTrade/rejectTrade. A regra
 // (validade) vem de validateTrade. Troca-se propriedade + dinheiro + Bus Tickets (D-028).
-import { useReducer, useEffect, type ReactNode } from 'react'
+import { useReducer, useEffect, type CSSProperties, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Bus, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -13,7 +13,6 @@ import { useGameStore } from '@/game/store'
 import { useTradeUI } from './tradeUI'
 import { useLocalView, useRoomStore } from '@/net/roomStore'
 import { identityOf } from '@/net/identity'
-import { WaitingBar } from '@/net/ui/WaitingBar'
 import { validateTrade } from '@/game/economy/trade'
 import type { Trade, Immunity } from '@/game/economy/types'
 import { BOARD, type Square } from '@/lib/boardData'
@@ -35,8 +34,12 @@ import {
   type TradeGrantMap,
 } from './draft'
 import { deedPresentation } from '@/game/ui/deed/presentation'
+import { TradeDeedItem } from './TradeDeedItem'
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n))
+const lapsLabel = (laps: number | null): string => (
+  laps === null ? 'Permanente' : `${laps} ${laps === 1 ? 'volta' : 'voltas'}`
+)
 function CheckGlyph() {
   return (
     <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="var(--color-ink-950)" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -60,8 +63,24 @@ function Card({ children }: { children: ReactNode }) {
   )
 }
 
-function Header({ title, subtitle, onClose }: { title: string; subtitle?: string; onClose?: () => void }) {
-  return <ModalHeader center title={title} subtitle={subtitle} onClose={onClose} className="[&_h3]:text-xl" />
+function Header({
+  title,
+  subtitle,
+  onClose,
+}: {
+  title: string
+  subtitle?: string
+  onClose?: () => void
+}) {
+  return (
+    <ModalHeader
+      center
+      title={title}
+      subtitle={subtitle}
+      onClose={onClose}
+      className={cn('[&_h3]:text-xl', onClose && 'trade-proposal-header')}
+    />
+  )
 }
 
 // ---------------------------------------------------------------------
@@ -84,33 +103,96 @@ function DeedAvatar({ sq, size = 22 }: { sq: Square; size?: number }) {
   )
 }
 
-// Chip de título — faixa de cor do grupo + avatar + nome. Clicável (toggle) ou
-// estático (read-only, no modal recebido).
-function DeedChip({ pos, on, onToggle, readOnly }: { pos: number; on?: boolean; onToggle?: () => void; readOnly?: boolean }) {
+// Uma propriedade aparece uma única vez no compositor. No próprio item, o jogador
+// escolhe se quer negociar o título ou conceder imunidade naquele endereço.
+function PropertyTermRow({
+  pos,
+  canTrade,
+  titleSelected,
+  grantLaps,
+  onToggleTitle,
+  onToggleGrant,
+  onSetGrantLaps,
+}: {
+  pos: number
+  canTrade: boolean
+  titleSelected: boolean
+  grantLaps: number | null | undefined
+  onToggleTitle: () => void
+  onToggleGrant: () => void
+  onSetGrantLaps: (laps: number | null) => void
+}) {
   const sq = BOARD[pos]
   const deed = deedPresentation(sq)
   if (!deed) return null
-  const inner = (
-    <>
-      <span className="self-stretch w-1.5 shrink-0 rounded-l-[var(--radius-sharp)]" style={{ background: deed.accent }} aria-hidden />
-      <DeedAvatar sq={sq} size={22} />
-      <span className="flex-1 min-w-0 py-1">
-        <span className="block text-cream text-xs leading-tight truncate">{deed.name}</span>
-        {deed.subtitle && <span className="block text-cream-muted leading-none truncate text-nano">{deed.subtitle}</span>}
-      </span>
-      {!readOnly && (
-        <span className={cn('shrink-0 mr-2 w-[18px] h-[18px] rounded-full flex items-center justify-center transition-colors', on ? 'bg-gold' : 'border border-coffee-500/70')}>
-          {on && <CheckGlyph />}
-        </span>
-      )}
-    </>
-  )
-  const base = 'flex items-center gap-2 w-full rounded-[var(--radius-sharp)] text-left border overflow-hidden'
-  if (readOnly) return <div className={cn(base, 'border-coffee-500/70 bg-coffee-900/50')}>{inner}</div>
+  const grantSelected = grantLaps !== undefined
+
   return (
-    <button type="button" onClick={onToggle} className={cn(base, 'transition-colors', on ? 'border-gold bg-gold/15' : 'border-coffee-500 bg-coffee-900 hover:border-gold/60')}>
-      {inner}
-    </button>
+    <div
+      className="trade-property-term"
+      data-selected={(titleSelected || grantSelected) || undefined}
+      style={{ '--trade-property-accent': deed.accent } as CSSProperties}
+    >
+      <span className="trade-property-term__avatar">
+        <DeedAvatar sq={sq} size={24} />
+      </span>
+      <span className="trade-property-term__identity">
+        <strong>{deed.name}</strong>
+        {deed.subtitle && <small>{deed.subtitle}</small>}
+      </span>
+
+      <div className="trade-property-term__actions" role="group" aria-label={`Negociar ${deed.name}`}>
+        {canTrade && (
+          <button
+            type="button"
+            aria-pressed={titleSelected}
+            aria-label={`Incluir o título ${deed.name}`}
+            title="Transferir a propriedade"
+            onClick={onToggleTitle}
+            className={cn('trade-property-term__action', titleSelected && 'trade-property-term__action--active')}
+          >
+            <span className="trade-property-term__check" aria-hidden>{titleSelected && <CheckGlyph />}</span>
+            Título
+          </button>
+        )}
+        <button
+          type="button"
+          aria-pressed={grantSelected}
+          aria-label={`Conceder imunidade em ${deed.name}`}
+          title="Manter a propriedade e conceder imunidade"
+          onClick={onToggleGrant}
+          className={cn('trade-property-term__action', grantSelected && 'trade-property-term__action--active')}
+        >
+          <Shield size={11} aria-hidden />
+          Imunidade
+        </button>
+      </div>
+
+      {grantSelected && (
+        <div className="trade-property-term__duration" aria-label={`Duração da imunidade em ${deed.name}`}>
+          <span>Duração</span>
+          {TRADE_LAPS_PRESETS.map((laps) => (
+            <button
+              key={laps}
+              type="button"
+              aria-pressed={grantLaps === laps}
+              onClick={() => onSetGrantLaps(laps)}
+              className={cn('trade-property-term__duration-option', grantLaps === laps && 'trade-property-term__duration-option--active')}
+            >
+              {lapsLabel(laps)}
+            </button>
+          ))}
+          <button
+            type="button"
+            aria-pressed={grantLaps === null}
+            onClick={() => onSetGrantLaps(null)}
+            className={cn('trade-property-term__duration-option', grantLaps === null && 'trade-property-term__duration-option--active')}
+          >
+            Permanente
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -139,86 +221,30 @@ function TransferRow({ pos, laps, on, onToggle }: { pos: number; laps: number | 
     >
       <ToggleDot on={on} />
       <span className="flex-1 min-w-0 truncate text-cream text-xs">Transferir {BOARD[pos].name}</span>
-      <span className="text-cream-muted text-nano shrink-0">{laps === null ? 'permanente' : `${laps}v restantes`}</span>
+      <span className="text-cream-muted text-nano shrink-0">
+        {laps === null ? 'Permanente' : `${lapsLabel(laps)} restantes`}
+      </span>
     </button>
   )
 }
 
-// Conceder imunidade NOVA sobre uma propriedade própria mantida (não cedida na troca).
-// Ao marcar, abre os presets de duração — sem seleção prévia, permanente é a leitura
-// errada por padrão (o concedente quase sempre quer prazo, não "pra sempre").
-function GrantRow({ pos, laps, onToggle, onSetLaps }: { pos: number; laps: number | null | undefined; onToggle: () => void; onSetLaps: (laps: number | null) => void }) {
-  const on = laps !== undefined
-  return (
-    <div className={cn('flex flex-col gap-1.5 px-2 py-1.5 rounded-[var(--radius-sharp)] border transition-colors', on ? 'border-gold bg-gold/15' : 'border-coffee-500 bg-coffee-900')}>
-      {/* 044/T031: sem padding próprio, esta linha tinha ~18px de alvo de toque (a altura
-          do ToggleDot) — abaixo do mínimo de 24px. `min-h-6` garante o piso sem mexer no
-          tamanho do texto/dot visível. */}
-      <button type="button" onClick={onToggle} className="flex items-center gap-2 w-full min-h-6 text-left">
-        <ToggleDot on={on} />
-        <span className="flex-1 min-w-0 truncate text-cream text-xs">Conceder em {BOARD[pos].name}</span>
-      </button>
-      {on && (
-        <div className="flex items-center gap-1 pl-[26px]">
-          {TRADE_LAPS_PRESETS.map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => onSetLaps(n)}
-              // 044/T031: `text-micro` (9px) + `py-1` ficava perto de 19px de alvo —
-              // `min-h-6` fecha os 24px mínimos sem aumentar o texto.
-              className={cn(
-                'label text-micro px-2 py-1 min-h-6 inline-flex items-center rounded-[var(--radius-sharp)] border transition-colors',
-                laps === n ? 'bg-gold text-coffee-900 border-gold' : 'bg-coffee-700 text-cream-muted border-coffee-500 hover:border-gold/60',
-              )}
-            >
-              {n}v
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => onSetLaps(null)}
-            className={cn(
-              'label text-micro px-2 py-1 min-h-6 inline-flex items-center rounded-[var(--radius-sharp)] border transition-colors',
-              laps === null ? 'bg-gold text-coffee-900 border-gold' : 'bg-coffee-700 text-cream-muted border-coffee-500 hover:border-gold/60',
-            )}
-          >
-            Permanente
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Bloco de imunidade de um lado da troca (024 US3 + 028) — some quando não há nada
-// pra transferir nem conceder (a maioria das trocas não mexe em imunidade).
+// Imunidades já recebidas são ativos próprios e continuam numa faixa separada.
+// A concessão nova mora no item da propriedade acima, sem repetir a lista de endereços.
 function ImmunitySide({
   transferable,
   transfers,
   onToggleTransfer,
-  grantable,
-  grants,
-  onToggleGrant,
-  onSetLaps,
 }: {
   transferable: Immunity[]
   transfers: Set<number>
   onToggleTransfer: (pos: number) => void
-  grantable: number[]
-  grants: TradeGrantMap
-  onToggleGrant: (pos: number) => void
-  onSetLaps: (pos: number, laps: number | null) => void
 }) {
-  if (transferable.length === 0 && grantable.length === 0) return null
+  if (transferable.length === 0) return null
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="label text-cream-muted text-micro flex items-center gap-1"><Shield size={11} /> Imunidade</p>
+      <p className="label text-cream-muted text-micro flex items-center gap-1"><Shield size={11} /> Imunidades recebidas</p>
       {transferable.map((im) => (
         <TransferRow key={`t${im.pos}`} pos={im.pos} laps={im.lapsRemaining} on={transfers.has(im.pos)} onToggle={() => onToggleTransfer(im.pos)} />
-      ))}
-      {grantable.map((pos) => (
-        <GrantRow key={`g${pos}`} pos={pos} laps={grants[pos]} onToggle={() => onToggleGrant(pos)} onSetLaps={(laps) => onSetLaps(pos, laps)} />
       ))}
     </div>
   )
@@ -462,9 +488,9 @@ function FaceTag({
   active?: boolean
 }) {
   return (
-    <div className="flex flex-col items-center gap-1 w-[64px] shrink-0">
+    <div className="trade-scale-player">
       <PlayerFace color={color} avatar={avatar} skin={skin} size={36} active={active} />
-      <span className="label text-gold max-w-full truncate">{name}</span>
+      <span className="label text-gold">{name}</span>
     </div>
   )
 }
@@ -480,8 +506,12 @@ function Side({
   ownerCash,
   ownerTickets,
   props,
+  grantable,
   selected,
+  grants,
   onToggle,
+  onToggleGrant,
+  onSetGrantLaps,
   cash,
   onCash,
   tickets,
@@ -495,16 +525,27 @@ function Side({
   ownerCash: number
   ownerTickets: number
   props: number[]
+  grantable: number[]
   selected: Set<number>
+  grants: TradeGrantMap
   onToggle: (pos: number) => void
+  onToggleGrant: (pos: number) => void
+  onSetGrantLaps: (pos: number, laps: number | null) => void
   cash: number
   onCash: (n: number) => void
   tickets: number
   onTickets: (n: number) => void
   immunity?: ReactNode
 }) {
+  const propertyPositions = [...new Set([
+    ...props,
+    ...grantable,
+    ...Object.keys(grants).map(Number),
+  ])]
+  const grantCount = Object.keys(grants).length
   const summary = [
     selected.size > 0 ? `${selected.size} ${selected.size === 1 ? 'título' : 'títulos'}` : '',
+    grantCount > 0 ? `${grantCount} ${grantCount === 1 ? 'imunidade' : 'imunidades'}` : '',
     cash > 0 ? money(cash) : '',
     tickets > 0 ? `${tickets} ticket${tickets > 1 ? 's' : ''}` : '',
   ].filter(Boolean).join(' + ')
@@ -522,9 +563,18 @@ function Side({
 
       <div className="flex-1 overflow-auto px-3 pt-2.5 pb-3 flex flex-col gap-2.5">
         <div className="flex flex-col gap-1">
-          {props.length === 0 && <EmptyState title="Nada para negociar" className="py-3" />}
-          {props.map((pos) => (
-            <DeedChip key={pos} pos={pos} on={selected.has(pos)} onToggle={() => onToggle(pos)} />
+          {propertyPositions.length === 0 && <EmptyState title="Nada para negociar" className="py-3" />}
+          {propertyPositions.map((pos) => (
+            <PropertyTermRow
+              key={pos}
+              pos={pos}
+              canTrade={props.includes(pos)}
+              titleSelected={selected.has(pos)}
+              grantLaps={grants[pos]}
+              onToggleTitle={() => onToggle(pos)}
+              onToggleGrant={() => onToggleGrant(pos)}
+              onSetGrantLaps={(laps) => onSetGrantLaps(pos, laps)}
+            />
           ))}
         </div>
 
@@ -627,8 +677,12 @@ function Composer({ onClose }: { onClose: () => void }) {
           ownerCash={proposer.cash}
           ownerTickets={proposer.busTickets}
           props={view.fromProps}
+          grantable={view.fromGrantable}
           selected={offered}
+          grants={fromGrants}
           onToggle={fromChange.property}
+          onToggleGrant={fromChange.grant}
+          onSetGrantLaps={fromChange.grantLaps}
           cash={fromCash}
           onCash={fromChange.cash}
           tickets={fromTickets}
@@ -638,10 +692,6 @@ function Composer({ onClose }: { onClose: () => void }) {
               transferable={view.fromImmunities}
               transfers={fromTransfers}
               onToggleTransfer={fromChange.transfer}
-              grantable={view.fromGrantable}
-              grants={fromGrants}
-              onToggleGrant={fromChange.grant}
-              onSetLaps={fromChange.grantLaps}
             />
           }
         />
@@ -653,8 +703,12 @@ function Composer({ onClose }: { onClose: () => void }) {
           ownerCash={recipient?.cash ?? 0}
           ownerTickets={recipient?.busTickets ?? 0}
           props={view.toProps}
+          grantable={view.toGrantable}
           selected={requested}
+          grants={toGrants}
           onToggle={toChange.property}
+          onToggleGrant={toChange.grant}
+          onSetGrantLaps={toChange.grantLaps}
           cash={toCash}
           onCash={toChange.cash}
           tickets={toTickets}
@@ -664,10 +718,6 @@ function Composer({ onClose }: { onClose: () => void }) {
               transferable={view.toImmunities}
               transfers={toTransfers}
               onToggleTransfer={toChange.transfer}
-              grantable={view.toGrantable}
-              grants={toGrants}
-              onToggleGrant={toChange.grant}
-              onSetLaps={toChange.grantLaps}
             />
           }
         />
@@ -686,7 +736,8 @@ function Composer({ onClose }: { onClose: () => void }) {
 // Recebido — resumo read-only da proposta + aceitar/recusar.
 // ---------------------------------------------------------------------
 function ReadSide({
-  title,
+  heading,
+  context,
   color,
   avatar,
   skin,
@@ -696,7 +747,8 @@ function ReadSide({
   immunityGrants = [],
   immunityTransfers = [],
 }: {
-  title: string
+  heading: string
+  context: string
   color: string
   avatar: AvatarId
   skin: SkinId
@@ -708,50 +760,85 @@ function ReadSide({
 }) {
   const empty = props.length === 0 && cash === 0 && tickets === 0 && immunityGrants.length === 0 && immunityTransfers.length === 0
   return (
-    <div className="flex-1 min-w-0 flex flex-col">
-      <div className="px-3 pt-3 pb-2 flex items-center gap-2 shrink-0 border-b border-coffee-700/40">
-        <PlayerFace color={color} avatar={avatar} skin={skin} size={18} />
-        <p className="label text-gold truncate">{title}</p>
+    <section className="trade-read-side">
+      <div className="trade-read-side__header">
+        <PlayerFace color={color} avatar={avatar} skin={skin} size={26} />
+        <div className="trade-read-side__label">
+          <p className="trade-read-side__heading">{heading}</p>
+          <p className="trade-read-side__context">{context}</p>
+        </div>
       </div>
-      <div className="flex-1 overflow-auto px-3 pt-2.5 pb-3 flex flex-col gap-1.5">
+      <div className="trade-read-side__content">
         {empty && <EmptyState title="Nada por este lado" className="py-3" />}
         {props.map((pos) => (
-          <DeedChip key={pos} pos={pos} readOnly />
+          <TradeDeedItem key={pos} pos={pos} />
         ))}
         {cash > 0 && (
-          <span className="bill self-start">
-            <CoinIcon size={13} className="text-gold" />
-            {money(cash)}
-          </span>
+          <div className="trade-value-item">
+            <span className="trade-value-item__icon"><CoinIcon size={18} /></span>
+            <div>
+              <p>Dinheiro</p>
+              <strong>{money(cash)}</strong>
+            </div>
+          </div>
         )}
         {tickets > 0 && (
-          <span className="bill self-start">
-            <Bus size={13} className="text-gold" />
-            {tickets} Bus Ticket{tickets > 1 ? 's' : ''}
-          </span>
+          <div className="trade-value-item">
+            <span className="trade-value-item__icon"><Bus size={18} /></span>
+            <div>
+              <p>Bus Ticket{tickets > 1 ? 's' : ''}</p>
+              <strong>{tickets}</strong>
+            </div>
+          </div>
         )}
         {immunityTransfers.map((pos) => (
-          <span key={`t${pos}`} className="bill self-start">
-            <Shield size={13} className="text-gold" />
-            Imunidade de {BOARD[pos].name} transferida
-          </span>
+          <div key={`t${pos}`} className="trade-value-item trade-value-item--immunity">
+            <span className="trade-value-item__icon"><Shield size={18} /></span>
+            <div className="trade-value-item__identity">
+              <p>Imunidade transferida</p>
+            </div>
+            <div className="trade-value-item__facts">
+              <span>Local</span>
+              <strong>{BOARD[pos].name}</strong>
+            </div>
+          </div>
         ))}
         {immunityGrants.map((g) => (
-          <span key={`g${g.pos}`} className="bill self-start">
-            <Shield size={13} className="text-gold" />
-            Imunidade em {BOARD[g.pos].name} ({g.laps === null ? 'permanente' : `${g.laps} voltas`})
-          </span>
+          <div key={`g${g.pos}`} className="trade-value-item trade-value-item--immunity">
+            <span className="trade-value-item__icon"><Shield size={18} /></span>
+            <div className="trade-value-item__identity">
+              <p>Imunidade em {BOARD[g.pos].name}</p>
+            </div>
+            <div className="trade-value-item__facts">
+              <span>Duração</span>
+              <strong>{lapsLabel(g.laps)}</strong>
+            </div>
+          </div>
         ))}
       </div>
-    </div>
+    </section>
   )
 }
 
-function Received({ trade }: { trade: Trade }) {
+function Received({
+  proposalId,
+  trade,
+  canRespond,
+}: {
+  proposalId: number
+  trade: Trade
+  canRespond: boolean
+}) {
   const dispatch = useGameStore((s) => s.dispatch)
-  const acceptTrade = (): void => dispatch({ kind: 'accept-trade' })
-  const rejectTrade = (): void => dispatch({ kind: 'reject-trade' })
-  const dismiss = useTradeUI((s) => s.dismiss)
+  const closeProposal = useTradeUI((s) => s.closeProposal)
+  const acceptTrade = (): void => {
+    dispatch({ kind: 'accept-trade', proposalId })
+    closeProposal()
+  }
+  const rejectTrade = (): void => {
+    dispatch({ kind: 'reject-trade', proposalId })
+    closeProposal()
+  }
   const game = useGameStore((s) => s.game)
   const room = useRoomStore((s) => s.room)
   const stillValid = validateTrade(game, trade)
@@ -761,12 +848,17 @@ function Received({ trade }: { trade: Trade }) {
 
   return (
     <Card>
-      {/* X fecha SEM responder — a proposta segue na mesa (reabre pelo painel lateral) */}
-      <Header title="Proposta de negociação" subtitle={`${to.name} decide se aceita ou recusa`} onClose={dismiss} />
+      {/* Fechar adia a decisão — a proposta segue na mesa e reabre pelo painel lateral. */}
+      <Header
+        title="Proposta de negociação"
+        subtitle={canRespond
+          ? `${from.name} enviou esta proposta para você`
+          : `${from.name} enviou esta proposta para ${to.name}`}
+        onClose={closeProposal}
+      />
 
       {/* Mesa read-only: a mesma balança, já carregada com a proposta */}
-      <div className="px-4 pt-3 pb-2 bg-coffee-950/25 border-b border-coffee-700/50 shrink-0 flex items-center justify-center gap-1">
-        <FaceTag color={from.color} avatar={from.avatar} skin={from.skin} name={from.name} />
+      <div className="trade-proposal-scale">
         <TradeScale
           leftPositions={trade.fromProps}
           leftCash={trade.fromCash}
@@ -775,13 +867,13 @@ function Received({ trade }: { trade: Trade }) {
           rightCash={trade.toCash}
           rightTickets={trade.toBusTickets ?? 0}
         />
-        <FaceTag color={to.color} avatar={to.avatar} skin={to.skin} name={to.name} />
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden flex divide-x divide-coffee-500/40">
+      <div className="trade-read-grid">
         {/* Do ponto de vista do destinatário (toId): recebe o que `from` dá; dá o que `from` pede. */}
         <ReadSide
-          title={`${to.name} recebe`}
+          heading={canRespond ? 'Você recebe' : `${to.name} recebe`}
+          context={`de ${from.name}`}
           color={from.color}
           avatar={from.avatar}
           skin={from.skin}
@@ -792,7 +884,8 @@ function Received({ trade }: { trade: Trade }) {
           immunityTransfers={trade.fromImmunityTransfers}
         />
         <ReadSide
-          title={`${to.name} dá`}
+          heading={canRespond ? 'Você paga' : `${to.name} entrega`}
+          context={`para ${from.name}`}
           color={to.color}
           avatar={to.avatar}
           skin={to.skin}
@@ -804,48 +897,51 @@ function Received({ trade }: { trade: Trade }) {
         />
       </div>
 
-      {!stillValid && (
+      {!stillValid && canRespond && (
         <p className="mx-5 mt-2 px-3 py-2 rounded-[var(--radius-sharp)] border border-logo/50 bg-logo/10 text-logo text-xs">
           A proposta ficou inválida porque o estado do jogo mudou. Recuse para continuar.
         </p>
       )}
 
-      {/* Convenção de rodapé: secundário à ESQUERDA, primário à DIREITA */}
-      <div className="px-5 py-3 border-t-2 border-coffee-950 shrink-0 flex gap-2">
-        <Button className="flex-1 py-2.5" variant="secondary" onClick={() => rejectTrade()}>Recusar</Button>
-        <Button className="flex-1 py-2.5" onClick={() => acceptTrade()} disabled={!stillValid}>Aceitar</Button>
-      </div>
+      {canRespond && (
+        <div className="px-5 py-3 border-t-2 border-coffee-950 shrink-0 flex gap-2">
+          <Button className="flex-1 py-2.5" variant="secondary" onClick={rejectTrade}>Recusar</Button>
+          <Button className="flex-1 py-2.5" onClick={acceptTrade} disabled={!stillValid}>Aceitar</Button>
+        </div>
+      )}
     </Card>
   )
 }
 
 export function TradeLayer() {
-  const pendingTrade = useGameStore((s) => s.game.pendingTrade)
+  const proposals = useGameStore((s) => s.game.tradeProposals)
   const open = useTradeUI((s) => s.open)
   const hide = useTradeUI((s) => s.hide)
-  const dismissed = useTradeUI((s) => s.dismissed)
+  const selectedProposalId = useTradeUI((s) => s.selectedProposalId)
+  const selectedProposal = proposals.find((proposal) => proposal.id === selectedProposalId)
+  const local = useLocalView()
+  const canRespond = selectedProposal
+    ? local.mayActAction({ kind: 'accept-trade', proposalId: selectedProposal.id })
+    : false
 
-  // Proposta saiu da mesa (aceita/recusada) → o próximo recebimento abre de novo.
+  // A proposta pode ser respondida por outro cliente enquanto está aberta localmente.
   useEffect(() => {
-    if (!pendingTrade) useTradeUI.setState({ dismissed: false })
-  }, [pendingTrade])
-
-  // Proposta pendente tem prioridade (precisa de resposta) — a menos que o
-  // destinatário tenha fechado pra decidir depois (dismissed).
-  const showComposer = open && !pendingTrade
-  // Online, a proposta recebida abre no DESTINATÁRIO (spec 038, FR-002); quem propôs vê
-  // o aviso de espera. Sem sala, `mayAct` é sempre true e nada muda (cliente único).
-  const iAnswer = useLocalView().mayAct('accept-trade')
+    if (selectedProposalId !== null && !selectedProposal) {
+      useTradeUI.getState().closeProposal()
+    }
+  }, [selectedProposal, selectedProposalId])
 
   return (
     <AnimatePresence>
-      {pendingTrade && !iAnswer ? (
-        <WaitingBar key="trade-waiting" playerId={pendingTrade.toId} what="resposta à proposta" />
-      ) : pendingTrade && !dismissed ? (
+      {selectedProposal ? (
         <Backdrop key="received">
-          <Received trade={pendingTrade} />
+          <Received
+            proposalId={selectedProposal.id}
+            trade={selectedProposal.trade}
+            canRespond={canRespond}
+          />
         </Backdrop>
-      ) : showComposer ? (
+      ) : open ? (
         <Backdrop key="composer">
           <Composer onClose={hide} />
         </Backdrop>

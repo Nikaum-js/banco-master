@@ -1,6 +1,5 @@
-// Store de UI mínimo da negociação: abre/fecha o compositor (o botão "Negociar" mora no
-// `ActionsPanel`) e controla o "fechar sem responder" da proposta recebida — `dismissed`
-// esconde o modal, mas a proposta segue na mesa (o painel lateral reabre via `respond()`).
+// Store de UI mínimo da negociação: o compositor e a proposta selecionada são estados
+// independentes. A coleção real continua no GameState; aqui vive só a navegação local.
 //
 // Fora do `TradeLayer.tsx` porque não é componente: o `shared.tsx` importa só o store, e
 // puxá-lo do módulo de componentes custava o fast refresh da camada de troca.
@@ -8,16 +7,16 @@ import { create } from 'zustand'
 
 export const useTradeUI = create<{
   open: boolean
-  dismissed: boolean
+  selectedProposalId: number | null
   show: () => void
   hide: () => void
-  dismiss: () => void
-  respond: () => void
+  view: (proposalId: number) => void
+  closeProposal: () => void
 }>((set) => ({
   open: false,
-  dismissed: false,
-  show: () => set({ open: true }),
+  selectedProposalId: null,
+  show: () => set({ open: true, selectedProposalId: null }),
   hide: () => set({ open: false }),
-  dismiss: () => set({ dismissed: true }),
-  respond: () => set({ dismissed: false }),
+  view: (proposalId) => set({ open: false, selectedProposalId: proposalId }),
+  closeProposal: () => set({ selectedProposalId: null }),
 }))

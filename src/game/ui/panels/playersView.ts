@@ -46,7 +46,11 @@ export const PLAYER_COLORS = ['#d9a650', '#3b8bd0', '#36dde7', '#00bca5', '#e773
 export function playersView(game: GameState, room: Room | null = null, myUid: string | null = null): Player[] {
   const activeId = game.players[game.turnOrder[game.activeSeat]]?.id
   const mySeat = room && myUid ? seatByUid(room, myUid) : undefined
-  return game.players.map((p) => {
+  const playersInTurnOrder = game.turnOrder
+    .map((playerIndex) => game.players[playerIndex])
+    .filter((player): player is GameState['players'][number] => player !== undefined)
+
+  return playersInTurnOrder.map((p) => {
     const identity = identityOf(room, p.id)
     return {
       id: p.id,

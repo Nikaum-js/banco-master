@@ -11,7 +11,6 @@ import { cityLevel } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
 import { deedView, type BuildBlock } from '@/game/ui/deed/deedView'
 import { deedPresentation } from '@/game/ui/deed/presentation'
-import { GROUP_COLOR } from './groupColors'
 import '@/game/ui/deed/propertyPopover.css'
 import { PlayerFace } from './PlayerFace'
 import { useTradeUI } from '@/game/ui/trade/tradeUI'
@@ -19,8 +18,8 @@ import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { markLayout, popoverPlacement, sideOf, type Side } from './topology'
 import { SquareIcon, CardGlyph, LotteryGlyph } from './glyphs/squares'
 import {
-  CalmGlyph, TradeArrowGlyph, PlusGlyph, SwapMiniGlyph, CheckTinyGlyph,
   PlotBadgeIcon, HouseBadgeIcon, HotelBadgeIcon, SkyscraperBadgeIcon, HangarBadgeIcon,
+  CalmGlyph, TradeArrowGlyph, PlusGlyph, SwapMiniGlyph,
 } from './glyphs/badges'
 import { ChartPattern, GridPattern } from './glyphs/patterns'
 import { playersView, PLAYER_COLORS, type Player } from '@/game/ui/panels/playersView'
@@ -32,7 +31,7 @@ import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import { ShopIcon, GavelIcon, DiceIcon, CoinIcon, HouseIcon } from '@/game/ui/icons'
 import { Button, SectionHeader, Chip, EmptyState, MoneyPulse } from '@/game/ui/primitives'
 import { useMoneyPulse } from '@/game/ui/useMoneyPulse'
-import type { TempEffect, Trade } from '@/game/economy/types'
+import type { TempEffect, TradeProposal } from '@/game/economy/types'
 import { money } from '@/lib/money'
 import { describeLogEntry } from '@/game/ui/log/describeLog'
 import { logIcon } from '@/game/ui/log/logIcon'
@@ -527,7 +526,7 @@ function EffectMarkBadge({ badge }: { badge: { tag: string; tone: 'logo' | 'gold
 function effectRow(e: TempEffect, i: number): {
   key: string; label: string; desc: string; detail: string; tag: string; laps: number; tone: 'logo' | 'gold'
 } {
-  const laps = `${e.lapsRemaining}v`
+  const laps = `${e.lapsRemaining} ${e.lapsRemaining === 1 ? 'volta' : 'voltas'}`
   const place = BOARD[e.pos ?? 0]?.name ?? '—'
   switch (e.kind) {
     case 'apagao': return { key: `a${i}`, label: 'Apagão', desc: `Hangares inativos · ${laps}`, detail: 'Hangares inativos', tag: 'A', laps: e.lapsRemaining, tone: 'logo' }
@@ -554,60 +553,6 @@ function EffectBadge({ tag, tone, size = 20 }: { tag: string; tone: 'logo' | 'go
     >
       {tag}
     </motion.span>
-  )
-}
-
-// Trades em aberto + concluídas recentes — SRS §11. Dados reais via tradesView (027).
-// Avatar pequeno do item: bandeira circular (propriedade) ou glifo (aeroporto/utilidade).
-function TradeItemAvatar({ sq, size = 16 }: { sq: Square; size?: number }) {
-  if (sq.kind === 'property') {
-    const uf = (sq as PropertySquare).uf
-    return (
-      <span className="rounded-full bg-coffee-950 overflow-hidden shrink-0" style={{ width: size, height: size, boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--color-brass) 50%, transparent)' }}>
-        <img src={`https://flagcdn.com/${uf.toLowerCase()}.svg`} alt={uf} className="w-full h-full object-cover block" draggable={false} />
-      </span>
-    )
-  }
-  return <span className="text-gold shrink-0 flex items-center justify-center" style={{ width: size, height: size }}><SquareIcon square={sq} size={size} /></span>
-}
-
-// Chip de um item da troca — faixa da cor do grupo + bandeira-avatar + nome.
-function TradeItemChip({ pos }: { pos: number }) {
-  const sq = BOARD[pos]
-  const accent = sq.kind === 'property' ? GROUP_COLOR[(sq as PropertySquare).group] : 'var(--color-brass)'
-  return (
-    <span className="inline-flex items-center gap-1 pl-0.5 pr-1.5 py-0.5 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500/70 overflow-hidden" title={sq.name}>
-      <span className="self-stretch w-1 rounded-[var(--radius-sharp)] shrink-0" style={{ background: accent }} aria-hidden />
-      <TradeItemAvatar sq={sq} size={16} />
-      <span className="text-cream text-xs leading-none truncate max-w-[96px]">{sq.name}</span>
-    </span>
-  )
-}
-
-// Perna da troca (Oferece / Pede) — chips das propriedades + cédula do dinheiro
-// + Bus Tickets (D-028).
-function TradeLeg({ label, props, cash, tickets = 0 }: { label: string; props: number[]; cash: number; tickets?: number }) {
-  const empty = props.length === 0 && cash <= 0 && tickets <= 0
-  return (
-    <div className="flex items-start gap-2">
-      <span className="label text-cream-muted w-11 shrink-0 pt-1 text-micro">{label}</span>
-      <div className="flex-1 min-w-0 flex flex-wrap gap-1">
-        {empty && <span className="text-cream-muted text-xs italic">nada</span>}
-        {props.map((pos) => <TradeItemChip key={pos} pos={pos} />)}
-        {cash > 0 && (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sharp)] bg-coffee-800 border border-coffee-500/70 border-l-2 border-l-gold">
-            <CoinIcon size={12} className="text-gold" />
-            <span className="currency text-gold-glow text-xs leading-none tabular-nums">{money(cash)}</span>
-          </span>
-        )}
-        {tickets > 0 && (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sharp)] bg-coffee-800 border border-coffee-500/70 border-l-2 border-l-gold" title="Bus Tickets">
-            <Bus size={12} className="text-gold" />
-            <span className="currency text-gold-glow text-xs leading-none tabular-nums">×{tickets}</span>
-          </span>
-        )}
-      </div>
-    </div>
   )
 }
 
@@ -638,8 +583,8 @@ export function PlayersPanel() {
           )}
         />
         <ol className="players-roster" aria-label="Participantes da partida">
-          {players.map((p, index) => (
-            <PlayerRow key={p.id ?? p.name} player={p} seat={index + 1} />
+          {players.map((p) => (
+            <PlayerRow key={p.id ?? p.name} player={p} />
           ))}
         </ol>
         {/* Negociar movido pra a seção única "Negociações" (painel direito). */}
@@ -683,7 +628,7 @@ export function PlayersPanel() {
   )
 }
 
-function PlayerRow({ player: p, seat }: { player: Player; seat: number }) {
+function PlayerRow({ player: p }: { player: Player }) {
   // Feedback de caixa (024.1; extraído em 044/T020 pra `primitives.tsx` — mesmo pulso
   // que PotCard usa e que a tela de dívida do GameHUD passou a reusar).
   const pulse = useMoneyPulse(p.money)
@@ -702,10 +647,6 @@ function PlayerRow({ player: p, seat }: { player: Player; seat: number }) {
       style={{ '--player-accent': p.color } as React.CSSProperties}
     >
       <MoneyPulse pulse={pulse} className="player-row__pulse" />
-
-      <span className="player-row__seat" aria-hidden>
-        {String(seat).padStart(2, '0')}
-      </span>
 
       <span className="player-row__portrait" aria-hidden>
         <PlayerFace
@@ -818,22 +759,25 @@ function TurnActionBtn({
   )
 }
 
-// Ação opcional pré-rolagem/fim de turno (034). Vive na zona de ação da
-// DiceArena e usa o mesmo Button canônico das demais decisões do jogo.
-function BusTicketStub({ count, onClick }: { count: number; onClick: () => void }) {
+// Ação opcional pré-rolagem/fim de turno (034). Divide a mesma linha da
+// ação principal da DiceArena, com hierarquia secundária.
+function BusTicketAction({ count, onClick }: { count: number; onClick: () => void }) {
   return (
-    <Button
-      variant="ghost"
+    <TurnActionBtn
+      variant="secondary"
       onClick={onClick}
-      className="group w-full justify-start px-3 py-2.5 text-left"
+      className="bus-ticket-action min-w-0 flex-[1.35] justify-start gap-2 px-2 text-sm"
+      title={`Usar Bus Ticket · ${count} ${count === 1 ? 'disponível' : 'disponíveis'}`}
     >
-      <Bus size={16} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
-      <span className="min-w-0 flex-1">
-        <span className="block display display--tight text-sm leading-none tracking-wide">Usar Bus Ticket</span>
-        <span className="block label text-cream-muted leading-none mt-1 text-nano">mover no mesmo lado</span>
+      <span className="bus-ticket-action__icon" aria-hidden="true">
+        <Bus size={18} />
       </span>
-      <span className="shrink-0 flex items-center px-3 currency text-gold-glow text-sm tabular-nums">×{count}</span>
-    </Button>
+      <span className="bus-ticket-action__label">
+        <span className="bus-ticket-action__eyebrow">Usar</span>
+        <span className="bus-ticket-action__name">Bus Ticket</span>
+      </span>
+      <span className="bus-ticket-action__count tabular-nums">×{count}</span>
+    </TurnActionBtn>
   )
 }
 
@@ -985,21 +929,30 @@ export function DiceArena() {
             </TurnActionBtn>
           </div>
         ) : canFinalize ? (
-          <TurnActionBtn variant="primary" onClick={() => finalizeTurn()}>
-            Finalizar turno
-          </TurnActionBtn>
+          <div className="flex gap-2 w-full">
+            {canBus && <BusTicketAction count={activeBusTickets} onClick={() => useBusTicketUI.getState().arm()} />}
+            <TurnActionBtn variant="primary" onClick={() => finalizeTurn()} className="min-w-0 flex-1 px-3 text-sm">
+              Finalizar turno
+            </TurnActionBtn>
+          </div>
         ) : (
-          <TurnActionBtn
-            variant="primary"
-            disabled={!canRoll}
-            icon={<DiceIcon size={18} className="shrink-0" />}
-            onClick={handleRoll}
-            className={cn('dice-roll-button', rolling && 'dice-roll-button--rolling')}
-          >
-            {rolling ? 'Rolando…' : 'Rolar dados'}
-          </TurnActionBtn>
+          <div className="flex gap-2 w-full">
+            {canBus && <BusTicketAction count={activeBusTickets} onClick={() => useBusTicketUI.getState().arm()} />}
+            <TurnActionBtn
+              variant="primary"
+              disabled={!canRoll}
+              icon={<DiceIcon size={18} className="shrink-0" />}
+              onClick={handleRoll}
+              className={cn(
+                'dice-roll-button min-w-0 flex-1',
+                canBus && 'px-3 text-sm',
+                rolling && 'dice-roll-button--rolling',
+              )}
+            >
+              {rolling ? 'Rolando…' : 'Rolar dados'}
+            </TurnActionBtn>
+          </div>
         )}
-        {canBus && <BusTicketStub count={activeBusTickets} onClick={() => useBusTicketUI.getState().arm()} />}
       </div>
       )}
     </div>
@@ -1100,9 +1053,7 @@ export function ActionsPanel() {
   const game = useGameStore((s) => s.game)
   const room = useRoomStore((s) => s.room)
   const pot = game.centerPot
-  // 027 — painel ao vivo. `tradesView` era um módulo de duas expressões com um chamador:
-  // a interface (tipo + módulo + arquivo de teste) era maior que a implementation.
-  const trades = { pending: game.pendingTrade, history: [...game.tradeHistory].reverse() }
+  const proposals = game.tradeProposals
   const identityById = Object.fromEntries(
     game.players.map((p) => [p.id, identityOf(room, p.id)]),
   )
@@ -1118,24 +1069,29 @@ export function ActionsPanel() {
       <div className="side-panel-section">
         <SectionHeader
           title="Negociações"
-          meta={trades.pending ? <Chip tone="gold">1 ativa</Chip> : <Chip>nenhuma</Chip>}
+          meta={proposals.length > 0
+            ? <Chip tone="gold">{proposals.length} {proposals.length === 1 ? 'ativa' : 'ativas'}</Chip>
+            : <Chip>nenhuma</Chip>}
         />
-        {!trades.pending && trades.history.length === 0 ? (
+        {proposals.length === 0 ? (
           <EmptyState
             icon={<SwapMiniGlyph />}
             title="Nenhuma proposta na mesa"
             hint="Troque propriedades e dinheiro com outros jogadores"
           />
         ) : (
-          <div className="flex flex-col gap-2">
-            {trades.pending && <TradeRow key="pending" trade={trades.pending} done={false} identityById={identityById} />}
-            {trades.history.map((t, i) => <TradeRow key={`h${i}`} trade={t} done identityById={identityById} />)}
+          <div className="trade-panel__list" aria-label="Propostas ativas">
+            {proposals.map((proposal) => (
+              <TradeRow key={proposal.id} proposal={proposal} identityById={identityById} />
+            ))}
           </div>
         )}
         <Button
           variant="ghost"
           onClick={() => useTradeUI.getState().show()}
-          className="w-full mt-3 label text-gold text-[0.625rem]"
+          aria-label="Nova negociação"
+          title="Criar uma nova proposta"
+          className="trade-panel__new-action w-full label text-gold text-[0.625rem]"
         >
           <PlusGlyph size={11} />
           <span className="side-action-label">Nova negociação</span>
@@ -1147,58 +1103,40 @@ export function ActionsPanel() {
 }
 
 function TradeRow({
-  trade,
-  done,
+  proposal,
   identityById,
 }: {
-  trade: Trade
-  done: boolean
+  proposal: TradeProposal
   identityById: Record<string, ReturnType<typeof identityOf>>
 }) {
-  const { reduced } = useMotion()
+  const { trade } = proposal
   const from = identityById[trade.fromId] ?? identityOf(null, trade.fromId)
   const to = identityById[trade.toId] ?? identityOf(null, trade.toId)
   return (
-    <div
-      className={cn(
-        'flex flex-col gap-2 px-3 py-2.5 rounded-[var(--radius-card)] border',
-        done ? 'bg-coffee-800/40 border-coffee-500 opacity-75' : 'bg-coffee-700 border-gold/70 shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-brass)_25%,transparent)]',
-      )}
-    >
-      <div className="flex items-center gap-1.5 min-w-0">
-        <PlayerFace color={from.color} avatar={from.avatar} skin={from.skin} size={22} />
-        <span className="display display--tight text-cream text-sm leading-none truncate">{from.name}</span>
-        <TradeArrowGlyph size={11} />
-        <PlayerFace color={to.color} avatar={to.avatar} skin={to.skin} size={22} />
-        <span className="display display--tight text-cream text-sm leading-none truncate">{to.name}</span>
-        {done ? (
-          <Chip className="ml-auto" title="Negociação aceita">
-            <span className="text-gold"><CheckTinyGlyph size={9} /></span> Aceita
-          </Chip>
-        ) : (
-          <Chip tone="gold" className="ml-auto" title="Aguardando resposta">
-            <motion.span
-              className="w-1.5 h-1.5 rounded-full bg-gold inline-block shrink-0"
-              animate={reduced ? undefined : { opacity: [0.35, 1, 0.35] }}
-              transition={{ duration: 1.4, repeat: Infinity }}
-              aria-hidden
-            />
-            Aguardando
-          </Chip>
-        )}
+    <div className="trade-row">
+      <div className="trade-row__route" aria-label={`${from.name} propõe uma troca com ${to.name}`}>
+        <div className="trade-row__player">
+          <PlayerFace color={from.color} avatar={from.avatar} skin={from.skin} size={28} />
+          <span>{from.name}</span>
+        </div>
+        <TradeArrowGlyph size={13} />
+        <div className="trade-row__player">
+          <PlayerFace color={to.color} avatar={to.avatar} skin={to.skin} size={28} />
+          <span>{to.name}</span>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-1.5 px-1">
-        <TradeLeg label="Oferece" props={trade.fromProps} cash={trade.fromCash} tickets={trade.fromBusTickets ?? 0} />
-        <TradeLeg label="Pede" props={trade.toProps} cash={trade.toCash} tickets={trade.toBusTickets ?? 0} />
-      </div>
-
-      {/* Proposta fechada sem resposta ("decidir depois") reabre por aqui */}
-      {!done && (
-        <Button variant="ghost" onClick={() => useTradeUI.getState().respond()} className="w-full label text-gold text-[0.625rem]">
-          Responder proposta
-        </Button>
-      )}
+      <Button
+        variant="ghost"
+        onClick={() => useTradeUI.getState().view(proposal.id)}
+        aria-label={`Ver proposta de ${from.name} para ${to.name}`}
+        className="trade-row__action label text-gold"
+      >
+        <span>Ver proposta</span>
+        <span className="trade-row__action-arrow" aria-hidden>
+          <TradeArrowGlyph size={12} />
+        </span>
+      </Button>
     </div>
   )
 }
@@ -1767,6 +1705,7 @@ const BUILD_BLOCK_MSG: Record<NonNullable<BuildBlock>, string> = {
   'hipoteca-no-grupo': 'Há propriedade hipotecada no grupo',
   topo: 'Esta cidade já está no nível máximo',
   uniformidade: 'Suba as outras cidades do grupo antes de construir aqui.',
+  'limite-posse': 'Tenha mais cidades deste país para avançar.',
   'grupo-incompleto': 'Tenha todas as cidades do país para construir o arranha-céu.',
   caixa: 'Caixa insuficiente',
 }

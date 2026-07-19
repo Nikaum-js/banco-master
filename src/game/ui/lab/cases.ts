@@ -112,7 +112,7 @@ function baseGame(): GameState {
 function resetEphemeralUI(): void {
   useBusTicketUI.setState({ armed: false, boarding: false })
   useHandCardUI.setState({ cardId: null })
-  useTradeUI.setState({ open: false, dismissed: false })
+  useTradeUI.setState({ open: false, selectedProposalId: null })
 }
 
 export function prepareVisualLabCase(id: VisualLabCaseId): void {
@@ -172,29 +172,37 @@ export function prepareVisualLabCase(id: VisualLabCaseId): void {
       game.players[0].hand = ['aquisicao-hostil-1', 'auditoria-fiscal-1', 'diplomacia-1']
       break
     case 'trade-compose':
-      useTradeUI.setState({ open: true })
+      useTradeUI.setState({ open: true, selectedProposalId: null })
       break
     case 'trade-received':
-      game.pendingTrade = {
-        fromId: 'p1',
-        toId: 'p2',
-        fromProps: [1, 3],
-        fromCash: 150,
-        toProps: [13],
-        toCash: 100,
-        fromBusTickets: 1,
-        toBusTickets: 1,
-      }
+      game.tradeProposals = [{
+        id: 1,
+        trade: {
+          fromId: 'p1',
+          toId: 'p2',
+          fromProps: [1, 3],
+          fromCash: 150,
+          toProps: [13],
+          toCash: 100,
+          fromBusTickets: 1,
+          toBusTickets: 1,
+        },
+      }]
+      useTradeUI.setState({ open: false, selectedProposalId: 1 })
       break
     case 'trade-invalid':
-      game.pendingTrade = {
-        fromId: 'p1',
-        toId: 'p2',
-        fromProps: [13],
-        fromCash: 2_000,
-        toProps: [1],
-        toCash: 0,
-      }
+      game.tradeProposals = [{
+        id: 1,
+        trade: {
+          fromId: 'p1',
+          toId: 'p2',
+          fromProps: [13],
+          fromCash: 2_000,
+          toProps: [1],
+          toCash: 0,
+        },
+      }]
+      useTradeUI.setState({ open: false, selectedProposalId: 1 })
       break
     case 'land-auction':
       for (const pos of [33, 34, 35]) setTitle(game, pos, null)
