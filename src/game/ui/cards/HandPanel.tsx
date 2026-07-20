@@ -44,7 +44,10 @@ function EmptyHandGlyph({ size = 22 }: { size?: number }) {
 function HandSlots({ count }: { count: number }) {
   const label = `${count} de 3 cartas na mão`
   return (
-    <span className="flex items-center gap-1" title={label} aria-label={label}>
+    // `role="img"`: `aria-label` só é permitido em elementos com role — sem ele, um
+    // `<span>` puro ignora o nome acessível (axe `aria-prohibited-attr`). O conteúdo é só
+    // o glifo de slots (decorativo); a leitura correta é o rótulo, como uma imagem.
+    <span className="flex items-center gap-1" title={label} role="img" aria-label={label}>
       {[0, 1, 2].map((i) => (
         <span
           key={i}

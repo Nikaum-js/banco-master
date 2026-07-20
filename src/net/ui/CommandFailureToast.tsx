@@ -22,7 +22,7 @@ export function CommandFailureToast() {
           aria-live="polite"
         >
           <p className="label text-red-300 leading-none">Sua ação não foi aplicada</p>
-          <p className="text-cream-muted/70 mt-1" style={{ fontSize: 10 }}>Ocorrência: {failure.occurrenceId}</p>
+          <p className="text-cream-muted/85 mt-1" style={{ fontSize: 10 }}>Ocorrência: {failure.occurrenceId}</p>
         </motion.div>
       )}
     </AnimatePresence>

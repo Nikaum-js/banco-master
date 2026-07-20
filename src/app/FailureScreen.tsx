@@ -47,7 +47,7 @@ export function FailureScreen({ variant, mode, roomId, occurrenceId, canRetry, o
           <p className="text-cream leading-snug">{bodyText(variant, mode)}</p>
 
           {mode === 'room' && (
-            <p className="text-cream-muted/70" style={{ fontSize: 10 }}>
+            <p className="text-cream-muted/85" style={{ fontSize: 10 }}>
               Nada se perde: saldo, propriedades, cartas e prazos ficam exatamente como estão.
             </p>
           )}
@@ -73,7 +73,7 @@ export function FailureScreen({ variant, mode, roomId, occurrenceId, canRetry, o
             </Button>
           )}
 
-          <p className="text-cream-muted/60" style={{ fontSize: 10 }}>Ocorrência: {occurrenceId}</p>
+          <p className="text-cream-muted/85" style={{ fontSize: 10 }}>Ocorrência: {occurrenceId}</p>
         </div>
       </ModalShell>
     </div>

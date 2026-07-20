@@ -67,7 +67,7 @@ export function IdentityForm({
           placeholder="Como aparecer na mesa"
           maxLength={16}
           autoFocus
-          className="px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream placeholder:text-cream-muted/50 focus:border-gold/60"
+          className="px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream placeholder:text-cream-muted/85 focus:border-gold/60"
         />
       </label>
 
@@ -167,7 +167,7 @@ export function RoomLobby({
             {s.token === myToken && <Chip tone="gold">você</Chip>}
             {s.isHost && <Chip>anfitrião</Chip>}
             {!s.connected && <Chip tone="alert">offline</Chip>}
-            <span className="label text-cream-muted/60 tabular-nums">{i + 1}º</span>
+            <span className="label text-cream-muted/85 tabular-nums">{i + 1}º</span>
             {isHost && !s.isHost && onKick && (
               <button
                 type="button"
@@ -202,7 +202,7 @@ export function RoomLobby({
         {/* Código de reentrada do PRÓPRIO assento (041, D-033/FR-030): visível desde o lobby,
             para quem nunca anotou conseguir ler antes de precisar. */}
         {room.seats.find((s) => s.token === myToken)?.reentryCode && (
-          <p className="label text-cream-muted/60">
+          <p className="label text-cream-muted/85">
             Seu código de reentrada:{' '}
             <span className="text-cream tracking-[0.2em] font-mono">{room.seats.find((s) => s.token === myToken)!.reentryCode}</span>
           </p>
@@ -277,10 +277,10 @@ export function ReentryForm({
           placeholder="Ex.: 7F3K9M"
           maxLength={6}
           autoFocus
-          className="px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream placeholder:text-cream-muted/50 tracking-[0.3em] uppercase focus:border-gold/60"
+          className="px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream placeholder:text-cream-muted/85 tracking-[0.3em] uppercase focus:border-gold/60"
         />
       </label>
-      <p className="label text-cream-muted/70 leading-snug">
+      <p className="label text-cream-muted/85 leading-snug">
         O código fica ao lado do link da sala, no seu próprio assento — visível durante toda a partida.
       </p>
       {message && <p className="text-signal-glow text-sm leading-snug">{message}</p>}

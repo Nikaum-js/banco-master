@@ -559,7 +559,7 @@ function BusPicker({
             <span className="label text-cream-muted">Bilhete de ônibus</span>
             <span className="currency text-gold-glow text-sm tabular-nums leading-none">×{tickets}</span>
           </span>
-          <span className="label text-cream-muted/70 text-nano">1 bilhete será usado na viagem</span>
+          <span className="label text-cream-muted/85 text-nano">1 bilhete será usado na viagem</span>
           {onCancel && (
             <Button variant="secondary" onClick={onCancel} disabled={boarding} className="ml-auto">
               Cancelar

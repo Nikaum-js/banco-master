@@ -832,7 +832,10 @@ function PlayerRow({ player: p }: { player: Player }) {
         p.active
           ? 'bg-coffee-700 border-gold shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-brass)_30%,transparent)]'
           : 'bg-coffee-800/60 border-coffee-500',
-        p.bankrupt && 'opacity-50',
+        // 044/T073: era `opacity-50` — mediu abaixo de 4,5:1 pro texto "Falido"/valor
+        // desta linha. Sobe o piso pra manter o texto legível; a linha ainda fica
+        // visivelmente mais apagada que as ativas (borda/fundo já mudam por conta própria).
+        p.bankrupt && 'opacity-90',
       )}
     >
       <MoneyPulse pulse={pulse} className="right-3 top-1.5" />
@@ -872,7 +875,10 @@ function PlayerRow({ player: p }: { player: Player }) {
         )}
         style={{ fontSize: '16px' }}
       >
-        <span className="text-gold-soft text-[11px] mr-0.5">R$</span>
+        {/* 044/T073: `text-gold-soft` cai abaixo de 4,5:1 quando diluído pelo `opacity-*`
+            da linha "Falido" (margem de sobra pequena demais pra qualquer diluição) — usa
+            a MESMA cor do valor ao lado nesse estado, que já fica dentro do limiar. */}
+        <span className={cn('text-[11px] mr-0.5', p.bankrupt ? 'text-cream-muted' : 'text-gold-soft')}>R$</span>
         {p.money.toLocaleString('pt-BR')}
       </p>
     </div>
@@ -1551,7 +1557,11 @@ function CenterLog() {
         />
       ) : (
         <AccessoryErrorBoundary label="Histórico">
-        <ol className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-2">
+        <ol
+          tabIndex={0}
+          aria-label="Histórico de lançamentos"
+          className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-2"
+        >
           {/* trilho da linha do tempo, atravessando os avatares */}
           <span aria-hidden className="absolute top-2 bottom-2 w-px bg-coffee-500/45" style={{ left: 23 }} />
           {history.map((l, i) => {
@@ -1764,8 +1774,11 @@ export function PropertyPopover({
         transition={{ type: 'spring', stiffness: 380, damping: 26 }}
         style={{ position: 'relative' }}
       >
-        {/* Body do balão — overflow-hidden pra cortar o conteúdo no border-radius */}
+        {/* Body do balão — overflow-hidden pra cortar o conteúdo no border-radius.
+            `tabIndex={0}` (044/T051, axe `scrollable-region-focusable`): quando o conteúdo
+            da propriedade estoura `max-h`, a rolagem precisa estar alcançável pelo teclado. */}
         <div
+          tabIndex={0}
           className="
             w-[270px]
             bg-coffee-800 border-2 border-coffee-500

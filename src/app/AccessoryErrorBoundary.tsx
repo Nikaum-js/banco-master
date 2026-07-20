@@ -28,7 +28,7 @@ export class AccessoryErrorBoundary extends Component<AccessoryBoundaryProps, Ac
 
   render(): ReactNode {
     if (this.state.broken) {
-      return <p className="label text-cream-muted/60 px-2 py-1">{this.props.label} indisponível</p>
+      return <p className="label text-cream-muted/85 px-2 py-1">{this.props.label} indisponível</p>
     }
     return this.props.children
   }

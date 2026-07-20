@@ -247,7 +247,7 @@ function CashField({ value, max, onChange }: { value: number; max: number; onCha
             value={value || ''}
             placeholder="0"
             onChange={(e) => onChange(clamp(Number(e.target.value) || 0, 0, max))}
-            className="w-full bg-transparent outline-none currency tabular-nums text-gold-glow text-sm placeholder:text-cream-muted/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="w-full bg-transparent outline-none currency tabular-nums text-gold-glow text-sm placeholder:text-cream-muted/85 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
         </span>
         <button
@@ -274,7 +274,7 @@ function TicketField({ value, max, onChange }: { value: number; max: number; onC
       <Bus size={14} className="text-gold shrink-0" />
       <span className="label text-cream-muted flex-1 min-w-0 truncate">Bus Tickets</span>
       <button type="button" className={stepBtn} disabled={value <= 0} onClick={() => onChange(value - 1)} aria-label="Menos um ticket">−</button>
-      <span className={cn('currency text-sm tabular-nums w-5 text-center leading-none', value > 0 ? 'text-gold-glow' : 'text-cream-muted/60')}>{value}</span>
+      <span className={cn('currency text-sm tabular-nums w-5 text-center leading-none', value > 0 ? 'text-gold-glow' : 'text-cream-muted/85')}>{value}</span>
       <button type="button" className={stepBtn} disabled={value >= max} onClick={() => onChange(value + 1)} aria-label="Mais um ticket">+</button>
       <span className="label text-cream-muted text-nano shrink-0">de {max}</span>
     </div>
@@ -358,7 +358,7 @@ function Pan({ side, deg, positions, cash, tickets }: { side: 'left' | 'right'; 
       <span
         className={cn(
           'currency tabular-nums leading-none mt-1 px-1.5 py-0.5 rounded-full border',
-          value > 0 ? 'text-gold-glow border-brass/30 bg-coffee-950/50' : 'text-cream-muted/50 border-transparent',
+          value > 0 ? 'text-gold-glow border-brass/30 bg-coffee-950/50' : 'text-cream-muted/85 border-transparent',
         )}
         style={{ fontSize: '10px' }}
       >

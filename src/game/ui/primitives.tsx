@@ -73,7 +73,11 @@ export function Chip({
         'label inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-pill)] border leading-none tabular-nums shrink-0',
         tone === 'neutral' && 'text-cream-muted border-coffee-500 bg-coffee-900',
         tone === 'gold' && 'text-gold border-gold/40 bg-gold/10',
-        tone === 'alert' && 'text-logo border-logo/40 bg-logo/10',
+        // 044/T051: `bg-logo/10` sobre painéis escuros mede 4,38:1 (abaixo de 4,5:1) — o
+        // tingimento vermelho da própria mancha de fundo é a causa, não o token do texto
+        // (`text-logo` continua o mesmo). `bg-coffee-900` (mesma base do tom neutro) resolve
+        // sem perder identidade: borda e texto continuam vermelhos.
+        tone === 'alert' && 'text-logo border-logo/40 bg-coffee-900',
         className,
       )}
     >
@@ -145,7 +149,7 @@ export function EmptyState({ icon, title, hint, className }: { icon?: ReactNode;
       )}
       <p className="label text-cream-muted leading-snug">{title}</p>
       {hint && (
-        <p className="text-cream-muted/70 leading-snug" style={{ fontSize: '10px' }}>
+        <p className="text-cream-muted/85 leading-snug" style={{ fontSize: '10px' }}>
           {hint}
         </p>
       )}

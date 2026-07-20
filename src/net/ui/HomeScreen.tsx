@@ -27,7 +27,7 @@ export function HomeScreen({ onCreate, onJoin, onLocal }: { onCreate: () => void
 
           <div className="flex items-center gap-3">
             <span className="h-px flex-1 bg-coffee-500" />
-            <span className="label text-cream-muted/70">ou</span>
+            <span className="label text-cream-muted/85">ou</span>
             <span className="h-px flex-1 bg-coffee-500" />
           </div>
 
@@ -41,7 +41,7 @@ export function HomeScreen({ onCreate, onJoin, onLocal }: { onCreate: () => void
                   if (e.key === 'Enter' && roomId) onJoin(roomId)
                 }}
                 placeholder="Cole o link ou o código da sala"
-                className="flex-1 min-w-0 px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream placeholder:text-cream-muted/50 focus:border-gold/60"
+                className="flex-1 min-w-0 px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream placeholder:text-cream-muted/85 focus:border-gold/60"
               />
               <Button variant="secondary" disabled={!roomId} onClick={() => roomId && onJoin(roomId)}>
                 Entrar
@@ -52,7 +52,7 @@ export function HomeScreen({ onCreate, onJoin, onLocal }: { onCreate: () => void
           <button
             type="button"
             onClick={onLocal}
-            className="label text-cream-muted/70 hover:text-cream underline underline-offset-4 decoration-coffee-500 mx-auto"
+            className="label text-cream-muted/85 hover:text-cream underline underline-offset-4 decoration-coffee-500 mx-auto"
           >
             Jogar local, neste dispositivo
           </button>
