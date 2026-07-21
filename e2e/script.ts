@@ -126,3 +126,13 @@ export async function driveTurns(page: Page, minTurns: number): Promise<void> {
     if (!clicked) await page.waitForTimeout(150)
   }
 }
+
+// Cenário semeado de fim de jogo (044/T049, D10 do plan). Só a NAVEGAÇÃO mora aqui — quem
+// decide o estado (mesa de 2, um jogador perto da falência) é o motor, pelos mesmos reducers
+// de produção; o mecanismo vive em `src/game/ui/e2eScenario.ts` (lido por `?scenario=endgame`
+// no boot), mesmo tipo de andaime que `?players=N` já é desde a 036. Usado por
+// `fullMatch.spec.ts` e `a11y.spec.ts` (tela de fim de jogo) — nenhum dos dois joga uma
+// partida do zero; isso é o que o `sim:batch` prova, em lote, no motor.
+export async function gotoEndgameScenario(page: Page): Promise<void> {
+  await page.goto('/?players=2&scenario=endgame')
+}

@@ -3,7 +3,7 @@
 // na mesma pilha, tornando os testes headless determinísticos. É o transporte da suíte
 // `tests/net/` e prova SC-001/003/004/005 sem infra. O `supabaseTransport` implementa a mesma
 // porta sobre Realtime/Postgres.
-import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
+import type { AcceptedCommand, CommandEnvelope, CommandFailure, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import { mergeSnapshot, type Secrets } from './perspective'
 import { reattachByCode, toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
 
@@ -12,6 +12,7 @@ type BroadcastCb = (cmd: AcceptedCommand, origin: 'public' | 'private') => void
 type RoomCb = (room: PublicRoom) => void
 type PresenceCb = (change: PresenceChange) => void
 type JoinReqCb = (who: JoinRequest, fromUid: string) => void
+type CommandRejCb = (toUid: string, info: CommandFailure) => void
 type JoinRejCb = (uid: string, reason: JoinError) => void
 type StatusCb = (status: ConnStatus) => void
 type PresenceSyncCb = (uids: ReadonlySet<string>) => void
@@ -27,6 +28,7 @@ interface Connection {
   onBroadcast: BroadcastCb[]
   onRoom: RoomCb[]
   onJoinRejected: JoinRejCb[]
+  onCommandRejected: CommandRejCb[]
   onStatus: StatusCb[]
   onPresenceSync: PresenceSyncCb[]
   channelUp: boolean // falta injetável (041, D14): canal caído sem contar como takeover
@@ -72,7 +74,7 @@ export class LocalHub {
     const takeover = prior !== undefined
     if (prior) this.conns.delete(prior.id)
     const conn: Connection = {
-      id: this.nextId++, uid, onBroadcast: [], onRoom: [], onJoinRejected: [],
+      id: this.nextId++, uid, onBroadcast: [], onRoom: [], onJoinRejected: [], onCommandRejected: [],
       onStatus: preAttached?.onStatus ?? [], onPresenceSync: preAttached?.onPresenceSync ?? [], channelUp: true,
     }
     this.conns.set(conn.id, conn)
@@ -156,7 +158,7 @@ export class LocalHub {
     this.storedRoom = room
   }
 
-  // Paridade com `preserve_seat_codes` (043, T043/D-038): o código é imutável depois de
+  // Paridade com `preserve_seat_codes` (043, T043/D-043): o código é imutável depois de
   // mintado, e é a gravação que garante — casando por `playerId`, que a reanexação preserva
   // (FR-027). Nenhuma escrita, nem a da autoridade, apaga um código já guardado.
   private preserveSeatCodes(room: Room): Room {
@@ -224,6 +226,12 @@ export class LocalHub {
   rejectJoin(uid: string, reason: JoinError, fromUid: string): void {
     if (fromUid !== this.currentHostUid()) return
     for (const conn of this.conns.values()) for (const cb of conn.onJoinRejected) cb(uid, reason)
+  }
+
+  // Recusa por FALHA (042) — mesmo desenho de `rejectJoin`: trafega a todos, cada conexão
+  // filtra o que é seu pelo uid-alvo.
+  rejectCommand(toUid: string, info: CommandFailure): void {
+    for (const conn of this.conns.values()) for (const cb of conn.onCommandRejected) cb(toUid, info)
   }
 
   // Paridade de recusa: só a autoridade difunde (043, T013) — espelha a política de
@@ -394,6 +402,16 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
       hub.rejectJoin(target, reason, uid)
     },
 
+    rejectCommand(toUid, info): void {
+      hub.rejectCommand(toUid, info)
+    },
+
+    onCommandRejected(cb): Unsubscribe {
+      if (!conn) return () => {}
+      conn.onCommandRejected.push(cb)
+      return detach(conn.onCommandRejected, cb)
+    },
+
     onJoinRejected(cb): Unsubscribe {
       if (!conn) return () => {}
       conn.onJoinRejected.push(cb)
@@ -410,7 +428,7 @@ export function localTransport(hub: LocalHub, uid: string): Transport {
 
     // Paridade com `room_preview` (043, T022/T025): redige o código de todo mundo, EXCETO o
     // do próprio uid — é daqui que `Client.myReentryCode()` lê o dono, e só o dono (D5).
-    // A AUTORIDADE recebe todos (T043/D-038): no lobby não há snapshot, então esta é a única
+    // A AUTORIDADE recebe todos (T043/D-043): no lobby não há snapshot, então esta é a única
     // leitura de onde ela remonta a sala que vai gravar em seguida.
     async loadRoom(): Promise<Room | null> {
       const r = await hub.loadRoom()

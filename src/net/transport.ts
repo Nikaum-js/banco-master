@@ -27,7 +27,7 @@ import type { JoinError, PieceId, PublicRoom, Room } from './room'
 
 // Comando em trânsito guest→host: carrega o `playerId` DECLARADO pelo remetente. O host
 // confere contra a identidade real da conexão — o `uid` da conexão que entregou o comando,
-// nunca de um campo do payload (FR-007, D-035).
+// nunca de um campo do payload (FR-007, D-042).
 export interface CommandEnvelope {
   senderId: string // playerId declarado (o host valida contra o uid da conexão)
   action: PlayerAction
@@ -66,6 +66,13 @@ export interface PresenceChange {
   takeover: boolean
 }
 
+// Recusa por FALHA no caminho de autoridade (042, FR-020/022) — nunca por regra. Como
+// `rejectJoin`, trafega no canal compartilhado (nada sensível nela, só o `occurrenceId`);
+// quem filtra pelo próprio uid é o assinante (`client.ts`), não a porta.
+export interface CommandFailure {
+  occurrenceId: string
+}
+
 // Pedido de assento no lobby (FR-002). NÃO carrega identidade: o host usa o `uid` da CONEXÃO
 // (`fromUid`) como identidade do assento — quem pede não escolhe quem é.
 //
@@ -85,7 +92,7 @@ export type ConnStatus = 'connected' | 'reconnecting'
 export type Unsubscribe = () => void
 
 export interface Transport {
-  readonly uid: string // ERA `token` (043, D-035) — emitido pelo servidor, nunca escolhido
+  readonly uid: string // ERA `token` (043, D-042) — emitido pelo servidor, nunca escolhido
 
   connect(): Promise<void>
   disconnect(): void
@@ -96,6 +103,10 @@ export interface Transport {
   // payload. "A identidade não viaja, ela é o endereço": nenhum campo de identidade
   // sobrevive no `CommandEnvelope`, e nenhuma assinatura é necessária.
   onSubmit(cb: (cmd: CommandEnvelope, fromUid: string) => void): Unsubscribe
+
+  // host → remetente: recusa por FALHA ao aplicar um comando (042, contracts/transport-delta.md)
+  rejectCommand(toToken: string, info: CommandFailure): void
+  onCommandRejected(cb: (toToken: string, info: CommandFailure) => void): Unsubscribe
 
   // host → todos
   broadcast(cmd: AcceptedCommand): void

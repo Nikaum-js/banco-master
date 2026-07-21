@@ -1,4 +1,4 @@
-# D-038 — O código de reentrada é imutável, e a autoridade o lê
+# D-043 — O código de reentrada é imutável, e a autoridade o lê
 
 **Data:** 2026-07-27 · **Status:** aceita
 **Decisão:** o `reentryCode` de um assento passa a ter duas propriedades garantidas **pelo servidor**, não pela boa-fé de quem escreve:

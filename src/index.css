@@ -110,6 +110,19 @@
   --ease-snap:  cubic-bezier(0.16, 1, 0.3, 1);
   --ease-press: cubic-bezier(0.4, 0, 0.6, 1);
 
+  /* ---------- Vocabulário de movimento (044/US5, D7 do plan) ----------
+     Um lugar decide duração e curva; `src/game/ui/motion.ts` redigita os
+     MESMOS números pro lado do `motion/react` (CSS e JS são consumidores
+     que não compartilham runtime — mudou aqui, muda lá também).
+     --ease-standard: transição de estado simples (fade, cor).
+     --ease-emphasis: entrada que pede destaque (pop, slide) — mesma curva
+     de `--ease-snap`, já validada nesta identidade visual. */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 420ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
+
   /* ---------- Tracking ---------- */
   --tracking-display: 0.04em;
   --tracking-mono: 0.06em;
@@ -119,6 +132,22 @@
   /* ---------- Micro-tipografia (gera text-micro / text-nano) ---------- */
   --text-micro: 0.5625rem; /* 9px — sublabels de card/chip */
   --text-nano: 0.5rem;     /* 8px — legendas mínimas (stat de deed) */
+}
+
+/* =====================================================================
+   Freio de movimento reduzido (044/US5, D7 do plan; FR-030) — um bloco
+   zera as TRÊS durações do vocabulário, e toda transição CSS que resolve
+   duração por `var(--motion-*)` para de se mover de uma vez. O fato
+   (cor, texto, posição final) continua — só a interpolação some.
+   O lado `motion/react` tem o freio equivalente em `useMotion()`
+   (`src/game/ui/motion.ts`), que não lê este token (runtime diferente)
+   e por isso consulta `useReducedMotion` diretamente. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+  }
 }
 
 /* =====================================================================
@@ -641,6 +670,51 @@
 
   @media (max-width: 720px) {
     .board-stage { --stage-pad: 4px; }
+  }
+
+  /* =================================================================
+     Paisagem estreita — celular/tablet em paisagem (044/T036, FR-023 a
+     FR-025; D6 do plan; alvos verificados: 740×360 e 1024×768).
+
+     O breakpoint de 1100px acima foi pensado pra RETRATO: empilha porque,
+     de pé, sobra altura e falta largura. Em paisagem estreita é o
+     CONTRÁRIO — a altura é o recurso escasso — e empilhar destruiria o
+     tabuleiro (ele ficaria menor que a própria altura da tela). Por isso
+     este bloco vem DEPOIS do de 1100px e devolve as três colunas: os
+     painéis viram uma faixa estreita ao lado do tabuleiro — uma "gaveta"
+     alcançável (rolagem vertical própria, que `.side-panel` já tem) — em
+     vez de uma coluna fixa larga competindo por espaço com o tabuleiro.
+
+     A largura do tabuleiro entra na conta (não só a altura, como no bloco
+     base): sem isso, num tablet 1024×768 o quadrado tentaria ~760px e
+     sobrariam só ~130px pras DUAS gavetas somadas — estourando a largura
+     da viewport (FR-025: nenhuma rolagem horizontal). Calculando a partir
+     da gaveta mínima, o tabuleiro nunca disputa espaço que a gaveta já
+     reservou. */
+  @media (orientation: landscape) and (max-width: 1100px),
+    (orientation: landscape) and (max-height: 560px) {
+    .board-stage {
+      --side-min: 112px;
+      --side-max: 190px;
+      grid-template-columns:
+        minmax(var(--side-min), 1fr)
+        auto
+        minmax(var(--side-min), 1fr);
+    }
+    .board-frame {
+      width: min(
+        calc(100svh - var(--stage-pad) * 2),
+        calc(100vw - var(--side-min) * 2 - var(--stage-pad) * 2 - 20px)
+      );
+      height: auto;
+    }
+    .side-panel,
+    .side-panel:first-child,
+    .side-panel:last-of-type {
+      max-width: var(--side-max);
+    }
+    .side-panel:first-child { justify-self: end; }
+    .side-panel:last-of-type { justify-self: start; }
   }
 
   /* =================================================================

@@ -45,10 +45,23 @@
 - [D-032](D-032-log-de-eventos-tipado-narrativa-e-da-ui.md) — Log de eventos tipado: o motor emite fatos, a narrativa (e a identidade) é da UI
 - [D-033](D-033-codigo-de-reentrada-por-assento.md) — Código de reentrada por assento: reconexão de outro dispositivo (refina §11.3/§11.4 e D-019)
 - [D-034](D-034-persistencia-indisponivel-pausa-a-partida.md) — Persistência indisponível pausa a partida (refina §11.4; pausa ganha causa explícita)
-- [D-035](D-035-identidade-de-transporte-atestada-pelo-servidor.md) — Identidade de transporte atestada pelo servidor (sessão anônima; refina D-019/D-020/D-033)
+- [D-035](D-035-falha-de-interface-nao-derruba-a-partida.md) — Falha de interface não derruba a partida: fronteira abaixo da sessão, sem causa de pausa nova (refina §11.4 e o princípio VII)
 - [D-036](D-036-acesso-a-sala-autorizado-no-servidor.md) — Acesso à sala autorizado no servidor; o link entra, não lê (refina D-019)
 - [D-037](D-037-estado-por-perspectiva-a-mao-nao-trafega.md) — Estado por perspectiva: a mão não trafega para quem não é o dono (revoga D-030; refina §10.3)
-- [D-038](D-038-o-codigo-de-reentrada-e-imutavel-e-a-autoridade-o-le.md) — O código de reentrada é imutável, e a autoridade o lê (refina D-033/D-036/D-037)
+- [D-038](D-038-fim-de-jogo-tem-classificacao-e-resumo.md) — Fim de jogo tem classificação e resumo: ordem inversa de eliminação, patrimônio e duração no estado (refina §9.5/§12.2)
+- [D-039](D-039-acessibilidade-aa-no-caminho-de-jogo.md) — Acessibilidade AA no caminho de jogo, com gate no CI; paisagem é a orientação de jogo (novo §12.6)
+- [D-040](D-040-telemetria-minima-anonima.md) — Telemetria mínima anônima: contagem no Supabase, exceção no Sentry; id de sala nunca em claro (novo §12.7)
+- [D-041](D-041-publicacao-em-vercel-com-gate-verde.md) — Publicação na Vercel: preview por PR, produção promovida só com gate verde (decisão técnica)
+- [D-042](D-042-identidade-de-transporte-atestada-pelo-servidor.md) — Identidade de transporte atestada pelo servidor (sessão anônima; refina D-019/D-020/D-033)
+- [D-043](D-043-o-codigo-de-reentrada-e-imutavel-e-a-autoridade-o-le.md) — O código de reentrada é imutável, e a autoridade o lê (refina D-033/D-036/D-037)
+
+> ℹ️ **Renumeração na integração da 043** (a colisão que este arquivo avisava): a worktree da 043
+> tinha escrito a identidade de transporte como `D-035` e o código de reentrada como `D-038`, e
+> os dois ids já estavam ocupados no `main` — `D-035` pela 042 (falha de interface) e `D-038`
+> pela 044 (fim de jogo). Como o `main` já publicou os dele, quem renumerou foi a 043:
+> `D-035 → D-042` e `D-038 → D-043`. `D-036`/`D-037` estavam reservadas para ela e ficaram como
+> estavam. Um id duplicado é pior que um id renumerado antes de existir em qualquer lugar — e
+> nenhuma das duas ADRs da 043 tinha saído da worktree.
 
 ### Rejeitadas
 - [D-R01](D-R01-sistema-de-draft-rejeitada.md) — Sistema de draft de propriedades no início

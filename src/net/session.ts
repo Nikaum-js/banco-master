@@ -1,4 +1,4 @@
-// Sessão anônima por link (spec 037/043, FR-003, D-035). A identidade é o `uid` emitido pela
+// Sessão anônima por link (spec 037/043, FR-003, D-042). A identidade é o `uid` emitido pela
 // sessão anônima do Supabase (src/net/supabaseClient.ts), não mais um UUID de `localStorage`:
 // quem persiste a sessão entre reloads agora é o próprio supabase-js, e é essa persistência que
 // sobrevive ao F5. O que sobra aqui é só o link — a credencial de *entrada*, não a identidade.

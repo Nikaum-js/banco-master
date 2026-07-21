@@ -63,7 +63,7 @@ describe.each(ADAPTERS)('segredo do assento — %s', (_name, fixture) => {
     assertNoLeak(seen, [CODES.host, CODES.a, CODES.b])
   })
 
-  // 043, T043 (D-038): quem NÃO é a autoridade lê o próprio código e só ele. A autoridade lê
+  // 043, T043 (D-043): quem NÃO é a autoridade lê o próprio código e só ele. A autoridade lê
   // todos — ela os mintou, ela os grava, e é a partir desta leitura que um anfitrião que deu F5
   // no lobby remonta a sala. Redigir para ela fazia a remontagem apagar o código de todo mundo.
   it('loadRoom (prévia): jogador lê o PRÓPRIO código e só o próprio; a autoridade lê todos', async () => {
@@ -88,7 +88,7 @@ describe.each(ADAPTERS)('segredo do assento — %s', (_name, fixture) => {
     expect(bView?.seats.find((s) => s.uid === 't-b')?.reentryCode).toBe(CODES.b)
   })
 
-  // Defesa em profundidade (043, T043 / D-038): o código é IMUTÁVEL depois de mintado, e quem
+  // Defesa em profundidade (043, T043 / D-043): o código é IMUTÁVEL depois de mintado, e quem
   // garante isso é a GRAVAÇÃO, não quem chama. Nenhuma escrita — nem a da própria autoridade —
   // pode zerar ou trocar o código de um assento que já tem um. Foi por falta disto que uma
   // sala remontada de uma leitura redigida destruía os códigos em silêncio: o erro tinha um

@@ -56,6 +56,14 @@ export interface Turn {
 
 export type GamePhase = 'lobby' | 'playing' | 'ended'
 
+// Queda registrada na ORDEM em que a falência foi processada (044, §9.4). Guarda a
+// rodada junto do id porque a rodada da queda não é derivável de um estado que já
+// avançou — um campo, não dois que possam discordar (data-model §1).
+export interface EliminationRecord {
+  playerId: string
+  round: number
+}
+
 // Causa da pausa (041, D-034): a mesa pode estar parada por mais de um motivo ao
 // mesmo tempo — a partida só retoma quando nenhuma causa ativa resta.
 export type PauseCause = 'disconnect' | 'persistence'
@@ -93,4 +101,23 @@ export interface GameState {
   landAuctionArmed: boolean // trava de episódio do pregão (031): true = pode disparar nesta "descida" a ≤3
   tradeHistory: Trade[] // trocas aceitas (027); mais recentes ao fim, bounded ~12
   notice: Notice | null // notificação informativa ativa (030, §12.2); null = nenhuma
+
+  /** Quedas na ORDEM em que a falência foi processada (044, §9.4). Primeiro a cair =
+   *  índice 0. Único insumo da classificação final (D-038). Nunca reordenado, nunca
+   *  removido: `bankrupt` roda uma vez por devedor, e `eliminated` é definitivo. */
+  eliminationOrder: EliminationRecord[]
+
+  /** Voltas completas na ordem de assentos desde o início (044). Começa em 1 (a
+   *  partida começa NA primeira rodada). Incrementa em `advanceSeat` quando a busca
+   *  do próximo assento dá a volta na ordem — nunca decresce, é o mesmo em toda tela. */
+  round: number
+
+  /** Instante do início da partida (044), injetado (`ctx.now`/`Date.now()` na borda,
+   *  nunca dentro de um reducer). `0` = sem relógio (partidas de teste) — a duração
+   *  então é apresentada como indisponível. */
+  startedAt: number
+
+  /** Instante em que `phase` virou `'ended'` (044), gravado por `checkEndGame` a
+   *  partir do mesmo relógio injetado. `null` enquanto a partida não terminou. */
+  endedAt: number | null
 }

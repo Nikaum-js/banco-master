@@ -30,6 +30,8 @@ function stubTransport() {
     onJoinRejected: () => () => {},
     reattach: () => Promise.resolve({ ok: true }),
     onReattachNotice: () => () => {},
+    rejectCommand: () => {},
+    onCommandRejected: () => () => {},
     publishRoom: () => {},
     onRoom: () => () => {},
     saveRoom,

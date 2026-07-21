@@ -308,7 +308,7 @@ export function fakeSupabase(): FakeSupabase {
             return Promise.resolve({ data: { ok: true }, error: null })
           }
           // 043, T022 — espelho de `room_preview`: sem `reentryCode` de ninguém, EXCETO o do
-          // assento de quem chamou (D5). A AUTORIDADE recebe todos (T043/D-038): no lobby não
+          // assento de quem chamou (D5). A AUTORIDADE recebe todos (T043/D-043): no lobby não
           // há snapshot, e é desta leitura que ela remonta a sala que grava em seguida.
           if (fn === 'room_preview') {
             const row = broker.rows.get(`rooms:${roomId}`)
@@ -352,7 +352,7 @@ export function fakeSupabase(): FakeSupabase {
             const seats = (claimedSeats as { uid: string; isHost: boolean }[]) ?? []
             return seats.some((s) => s.isHost && s.uid === uid)
           }
-          // Espelho de `preserve_seat_codes` (043, T043/D-038): o código já gravado sobrevive a
+          // Espelho de `preserve_seat_codes` (043, T043/D-043): o código já gravado sobrevive a
           // qualquer escrita, casando por `playerId` — nem a autoridade o apaga.
           type SeatRow = { playerId: string; reentryCode?: string }
           function preserveSeatCodes(claimedSeats: unknown): unknown {

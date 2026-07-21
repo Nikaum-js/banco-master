@@ -289,6 +289,49 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     expect(recusas).toEqual([{ uid: 't-a', reason: 'bad-code' }])
   })
 
+  // — RECUSA POR FALHA (042, contracts/transport-delta.md) — mesma semântica de `rejectJoin`:
+  // trafega no canal compartilhado (nada sensível, só `occurrenceId`); quem filtra pelo
+  // próprio token é o assinante (`client.ts`), não a porta. —
+
+  it('rejectCommand: o payload carrega o toToken/occurrenceId exatos, pra quem assina filtrar', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    const alvo = f.make('t-alvo')
+    // 043: `rejectCommand` viaja no `:lobby`, onde só a AUTORIDADE escreve — e autoridade é
+    // quem consta como anfitrião na linha persistida. Em produção isso é dado (só `host.accept`
+    // recusa, e a essa altura a sala existe há muito); aqui a montagem precisa estabelecê-lo.
+    await asHost(host, ['t-alvo'])
+    await host.connect()
+    await alvo.connect()
+
+    const recebido: { toToken: string; occurrenceId: string }[] = []
+    alvo.onCommandRejected((toToken, info) => recebido.push({ toToken, occurrenceId: info.occurrenceId }))
+
+    host.rejectCommand('t-alvo', { occurrenceId: 'ABC123' })
+
+    expect(recebido).toEqual([{ toToken: 't-alvo', occurrenceId: 'ABC123' }])
+  })
+
+  it('rejectCommand: duas recusas seguidas para o mesmo token chegam as duas', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    const alvo = f.make('t-alvo')
+    // 043: `rejectCommand` viaja no `:lobby`, onde só a AUTORIDADE escreve — e autoridade é
+    // quem consta como anfitrião na linha persistida. Em produção isso é dado (só `host.accept`
+    // recusa, e a essa altura a sala existe há muito); aqui a montagem precisa estabelecê-lo.
+    await asHost(host, ['t-alvo'])
+    await host.connect()
+    await alvo.connect()
+
+    const recebidos: string[] = []
+    alvo.onCommandRejected((_toToken, info) => recebidos.push(info.occurrenceId))
+
+    host.rejectCommand('t-alvo', { occurrenceId: 'PRIMEIRO' })
+    host.rejectCommand('t-alvo', { occurrenceId: 'SEGUNDO' })
+
+    expect(recebidos).toEqual(['PRIMEIRO', 'SEGUNDO'])
+  })
+
   // — PRESENÇA: onde os adapters divergiam —
 
   it('conectar emite presença sem takeover — a autoridade observando o assento', async () => {

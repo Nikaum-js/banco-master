@@ -1,4 +1,4 @@
--- Spec 043 (D-035/D-036/D-037) — endurecimento de identidade de transporte. A identidade do
+-- Spec 043 (D-042/D-036/D-037) — endurecimento de identidade de transporte. A identidade do
 -- participante deixa de ser um token auto-declarado e passa a ser a sessão anônima atestada
 -- pelo Supabase Auth (`auth.uid()`). A partir dela: quem escreve onde (tópicos), quem lê o quê
 -- (funções em vez de `select` direto) e o que sai da casa da autoridade (perspectiva).
@@ -22,7 +22,7 @@ alter table public.rooms add column if not exists secrets jsonb not null default
 
 comment on column public.rooms.seats is
   'Assentos: playerId/uid/nome/cor/peça/host/connected/reentryCode (043: uid substitui token — '
-  'D-035). jsonb sem schema fixo; a forma vive em src/net/room.ts.';
+  'D-042). jsonb sem schema fixo; a forma vive em src/net/room.ts.';
 comment on column public.rooms.secrets is
   '043, D-037: { hands: { "<uid>": CardId[] }, decks: { acaso: CardId[], tesouro: CardId[] } }. '
   'O servidor nunca interpreta — só seleciona chave (read_snapshot, Fase 5). '
@@ -277,7 +277,7 @@ $$;
 -- o que torna a enumeração impossível (sem id, não devolve nada).
 -- ============================================================================================
 
--- 043, T043 (D-038): a AUTORIDADE recebe os assentos íntegros, como em `read_snapshot`. Não é
+-- 043, T043 (D-043): a AUTORIDADE recebe os assentos íntegros, como em `read_snapshot`. Não é
 -- conveniência — no lobby não existe snapshot, então esta é a ÚNICA leitura de onde um
 -- anfitrião que deu F5 pode remontar a sala, e é essa sala que ele grava em seguida. Com a
 -- prévia redigida para ele, a remontagem apagava o código de todo convidado. Para quem não é a
@@ -399,7 +399,7 @@ $$;
 -- não conseguiria escrever `seats: []`.
 -- ============================================================================================
 
--- 043, T043 (D-038) — o `reentryCode` é IMUTÁVEL depois de mintado, e é a GRAVAÇÃO que garante
+-- 043, T043 (D-043) — o `reentryCode` é IMUTÁVEL depois de mintado, e é a GRAVAÇÃO que garante
 -- isso, não a boa-fé de quem chama. Toda escrita conserva o código já guardado para cada
 -- assento, casando por `playerId` (estável: a reanexação troca `uid`, nunca `playerId` —
 -- FR-027). Assento novo entra com o código que o anfitrião mintou; assento removido some com a

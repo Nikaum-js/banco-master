@@ -18,8 +18,9 @@ import { buildGameCtx, buildInitialGame } from './setup'
 
 // Jogo novo pronto pra jogar: seed + baralhos embaralhados (FR-001). Usado no
 // boot e no "Novo jogo" (reset ao fim da partida). A composição vive em `setup.ts`.
+// `Date.now()` só aparece AQUI, na borda (044/D3) — nunca dentro de um reducer.
 function freshGame(ids: string[]): GameState {
-  return buildInitialGame(ids, () => Math.random())
+  return buildInitialGame(ids, () => Math.random(), Date.now())
 }
 
 export interface GameStore {

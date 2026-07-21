@@ -38,8 +38,14 @@ export function isBankrupt(state: GameState, playerId: string, debt: number): bo
 }
 
 // Fim de jogo: resta 1 não-eliminado → phase 'ended'. Muta o estado.
-export function checkEndGame(state: GameState): void {
-  if (state.players.filter((p) => !p.eliminated).length <= 1) state.phase = 'ended'
+// `now` é o relógio INJETADO (044/D3) — o mesmo `ctx.now` que `bankrupt` já tem em mãos;
+// nunca `Date.now()` aqui dentro. Sem relógio (testes), grava o sentinela `0`, igual a
+// `startedAt`: `matchSummary` já trata `startedAt === 0` como "duração indisponível".
+export function checkEndGame(state: GameState, now?: () => number): void {
+  if (state.players.filter((p) => !p.eliminated).length <= 1) {
+    state.phase = 'ended'
+    state.endedAt = now?.() ?? 0
+  }
 }
 
 // Paga a dívida pendente se o caixa cobrir. No-op senão (jogador precisa liquidar ou falir).
@@ -109,6 +115,7 @@ export function declareBankruptcy(state: GameState, ctx: TurnCtx): GameState {
   }
   debtor.cash = 0
   debtor.eliminated = true // token sai do tabuleiro (LiveTokens pula eliminados)
+  s.eliminationOrder.push({ playerId: debtor.id, round: s.round }) // 044/D2 — só fato registrado
   logEvent(s, { kind: 'bankruptcy', who: debtor.id }) // 021/040
 
   // Empréstimos liquidados: o do devedor (herdado via §9.3) e os em que ele era CREDOR (R8).
@@ -119,7 +126,7 @@ export function declareBankruptcy(state: GameState, ctx: TurnCtx): GameState {
 
   s.resolution = null
   s.turn.pendingResolve = false
-  checkEndGame(s)
+  checkEndGame(s, ctx.now)
   if (s.phase !== 'ended') advanceSeat(s, ctx)
 
   // Espólio a pregão (039, §9.2 / D-031) — POR ÚLTIMO, e de propósito:

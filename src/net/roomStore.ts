@@ -21,6 +21,9 @@ interface RoomState {
   /** 043, D-036/T026: o PRÓPRIO código de reentrada — vem da PRÉVIA (`Client.myReentryCode()`),
    * nunca de `room` (que não carrega código nenhum, nem o do dono). */
   myReentryCode: string | null
+  /** Último comando MEU recusado por FALHA na autoridade (042, FR-020/022) — espelhado do
+   * `client`, sinal de sessão, nunca de partida. */
+  commandFailure: { occurrenceId: string } | null
   setRoom(room: Room | null): void
   setSession(uid: string | null): void
   setConnection(connection: ConnectionState): void
@@ -33,11 +36,12 @@ export const useRoomStore = create<RoomState>((set) => ({
   myUid: null,
   connection: 'connected',
   myReentryCode: null,
+  commandFailure: null,
   setRoom: (room) => set({ room }),
   setSession: (myUid) => set({ myUid }),
   setConnection: (connection) => set({ connection }),
   setMyReentryCode: (myReentryCode) => set({ myReentryCode }),
-  reset: () => set({ room: null, myUid: null, connection: 'connected', myReentryCode: null }),
+  reset: () => set({ room: null, myUid: null, connection: 'connected', myReentryCode: null, commandFailure: null }),
 }))
 
 // Perspectiva local viva. Sem sala → modo 'local' (nada bloqueado), preservando o

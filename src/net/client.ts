@@ -25,7 +25,7 @@ export interface ClientOptions {
 }
 
 export interface Client {
-  readonly uid: string // ERA `token` (043, D-035) — identidade atestada desta aba, usada p/ achar o próprio assento
+  readonly uid: string // ERA `token` (043, D-042) — identidade atestada desta aba, usada p/ achar o próprio assento
   join(): Promise<void> // conecta, lê o snapshot (entrada/reconexão) e passa a aplicar a difusão
   requestJoin(who: JoinRequest): Promise<void> // pede assento no lobby (FR-002) — host aceita e publica a sala
   leave(): void
@@ -34,6 +34,10 @@ export interface Client {
   room(): Room | null
   playerId(): string | null
   joinError(): JoinError | null
+  /** Último comando MEU recusado por FALHA na autoridade (042, FR-020/022) — distinto de
+   * recusa por regra, que continua silenciosa. `null` quando não há nenhuma pendente de
+   * mostrar; limpo no próximo `send()` ou reconexão. */
+  lastCommandFailure(): { occurrenceId: string } | null
   paused(): boolean
   seq(): number
   connection(): ConnectionState
@@ -72,6 +76,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
   const history: { seq: number; preGame: GameState; cmd: AcceptedCommand; origin: 'public' | 'private' }[] = []
   let playerId: string | null = null
   let joinError: JoinError | null = null
+  let commandFailure: { occurrenceId: string } | null = null
   let myReentryCode: string | null = null
   const pending: { cmd: AcceptedCommand; origin: 'public' | 'private' }[] = [] // difusões chegadas antes do snapshot (buffer de corrida)
   const listeners = new Set<() => void>()
@@ -223,6 +228,11 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
         if (!game && r.status !== 'lobby') void resync(0)
         notify()
       }))
+      subs.push(transport.onCommandRejected((toUid, info) => {
+        if (toUid !== transport.uid) return // recusa dirigida a outro remetente
+        commandFailure = info
+        notify()
+      }))
       subs.push(transport.onJoinRejected((target, reason) => {
         if (target !== transport.uid) return // recusa dirigida a outro pedinte
         joinError = reason
@@ -281,6 +291,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
 
     send(action: PlayerAction): void {
       if (!playerId) return
+      commandFailure = null // nova tentativa — a recusa anterior não é mais a última palavra
       transport.submit({ senderId: playerId, action }) // pessimista: não aplica local; espera a difusão
     },
 
@@ -288,6 +299,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
     room: () => room,
     playerId: () => playerId,
     joinError: () => joinError,
+    lastCommandFailure: () => commandFailure,
     paused: () => Boolean(game?.paused),
     seq: () => seq,
     connection: () => connection,

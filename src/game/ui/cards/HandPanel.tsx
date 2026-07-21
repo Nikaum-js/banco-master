@@ -3,12 +3,13 @@
 // FR-005) — nunca a do jogador da vez, senão a tela de todo mundo viraria a dele a cada
 // turno. Sem sala (cliente único), o assento local é o jogador ativo, que é o comportamento
 // de sempre. Demais jogadores aparecem só como contador (PlayersPanel, §12.3/FR-006).
-import { motion, AnimatePresence, useReducedMotion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
 import { useLocalView } from '@/net/roomStore'
 import { handCardsView } from './handView'
 import { useHandCardUI } from './handCardUI'
+import { useMotion } from '@/game/ui/motion'
 import { Button, SectionHeader, EmptyState } from '@/game/ui/primitives'
 
 function LockGlyph({ size = 11 }: { size?: number }) {
@@ -43,7 +44,10 @@ function EmptyHandGlyph({ size = 22 }: { size?: number }) {
 function HandSlots({ count }: { count: number }) {
   const label = `${count} de 3 cartas na mão`
   return (
-    <span className="flex items-center gap-1" title={label} aria-label={label}>
+    // `role="img"`: `aria-label` só é permitido em elementos com role — sem ele, um
+    // `<span>` puro ignora o nome acessível (axe `aria-prohibited-attr`). O conteúdo é só
+    // o glifo de slots (decorativo); a leitura correta é o rótulo, como uma imagem.
+    <span className="flex items-center gap-1" title={label} role="img" aria-label={label}>
       {[0, 1, 2].map((i) => (
         <span
           key={i}
@@ -60,7 +64,7 @@ function HandSlots({ count }: { count: number }) {
 export function HandPanel() {
   const game = useGameStore((s) => s.game)
   const dispatch = useGameStore((s) => s.dispatch)
-  const reduced = useReducedMotion()
+  const { reduced } = useMotion()
   const view = useLocalView()
   // Assento local; sem sala, o dono da tela é o jogador da vez (cliente único).
   const myId = view.seatId ?? game.players[game.turnOrder[game.activeSeat]]?.id

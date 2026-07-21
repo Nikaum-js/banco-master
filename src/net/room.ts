@@ -48,7 +48,7 @@ export type RoomStatus = 'lobby' | 'playing' | 'paused' | 'ended'
 
 export interface Seat {
   playerId: string // id serializável usado pelo GameState ('p1'..'p8')
-  uid: string // ERA `token` (043, D-035) — identidade atestada pelo servidor, chave de reconexão
+  uid: string // ERA `token` (043, D-042) — identidade atestada pelo servidor, chave de reconexão
   name: string // nome exibido (livre)
   color: string // cor (única por sala)
   piece?: PieceId // peça visual (única por sala, §12.5/spec 038); ausente em salas da 037
@@ -69,7 +69,7 @@ export interface Room {
 // Sala PUBLICADA (043, D-036/data-model §3) — o que trafega em `publishRoom`/`onRoom`. Sem
 // `reentryCode` de NINGUÉM, nem do dono: código é credencial PORTADORA (§2 de policies.md),
 // e a difusão alcança todo mundo igual — não há "exceto quem chamou" numa transmissão. O
-// `uid` permanece: não é credencial, conhecê-lo não permite usá-lo (D-035).
+// `uid` permanece: não é credencial, conhecê-lo não permite usá-lo (D-042).
 export type PublicSeat = Omit<Seat, 'reentryCode'>
 export interface PublicRoom {
   id: string
@@ -99,7 +99,7 @@ export type JoinResult = { ok: true; room: Room; seat: Seat } | { ok: false; rea
 export type JoinError = 'room-full' | 'color-taken' | 'piece-taken' | 'already-started' | 'unknown-uid' | 'kicked' | 'bad-code'
 
 export interface Identity {
-  uid: string // ERA `token` (043, D-035) — emitido pelo servidor, nunca escolhido pelo participante
+  uid: string // ERA `token` (043, D-042) — emitido pelo servidor, nunca escolhido pelo participante
   name: string
   color: string
   piece?: PieceId // escolhida no lobby (spec 038); opcional para compatibilidade com a 037

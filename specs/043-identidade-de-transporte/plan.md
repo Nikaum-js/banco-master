@@ -2,7 +2,7 @@
 
 **Spec**: [spec.md](./spec.md) · **Modelo**: [data-model.md](./data-model.md) · **Contratos**: [contracts/transport.md](./contracts/transport.md), [contracts/policies.md](./contracts/policies.md)
 
-**Data**: 2026-07-26 · **ADRs de origem**: [D-035](../../docs/adr/D-035-identidade-de-transporte-atestada-pelo-servidor.md), [D-036](../../docs/adr/D-036-acesso-a-sala-autorizado-no-servidor.md), [D-037](../../docs/adr/D-037-estado-por-perspectiva-a-mao-nao-trafega.md) · **SRS**: v1.8 (§10.3, §11.5)
+**Data**: 2026-07-26 · **ADRs de origem**: [D-042](../../docs/adr/D-042-identidade-de-transporte-atestada-pelo-servidor.md), [D-036](../../docs/adr/D-036-acesso-a-sala-autorizado-no-servidor.md), [D-037](../../docs/adr/D-037-estado-por-perspectiva-a-mao-nao-trafega.md) · **SRS**: v1.8 (§10.3, §11.5)
 
 ---
 
@@ -43,7 +43,7 @@ O que **não** acontece: nenhum salto HTTP entra no caminho do comando de jogo (
 
 | Princípio | Conformidade |
 |---|---|
-| **I. SRS é verdade absoluta** | Nada nasce aqui: §10.3 e a nova §11.5 foram bumpadas para v1.8 **antes**, apoiadas em D-035/D-036/D-037. A única regra que muda de comportamento (privacidade de distribuição) passou por ADR que revoga a anterior. |
+| **I. SRS é verdade absoluta** | Nada nasce aqui: §10.3 e a nova §11.5 foram bumpadas para v1.8 **antes**, apoiadas em D-042/D-036/D-037. A única regra que muda de comportamento (privacidade de distribuição) passou por ADR que revoga a anterior. |
 | **II. Discovery antes de código** | Spec escrita, quatro decisões de produto travadas com o usuário antes dela, três ambiguidades resolvidas no clarify, ADRs registradas antes deste plano. |
 | **III. Tesouro precisa impactar** | Não aplicável — nenhum efeito de carta muda. O que muda é quem **vê** a carta. |
 | **IV. Catch-up é discreto** | Não aplicável. |

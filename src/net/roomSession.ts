@@ -14,6 +14,8 @@ import { createHost, type Host, type HostOptions } from './host'
 import { createRoom, hostSeat, newReentryCode, seatByUid, type JoinError, type PieceId, type Room } from './room'
 import { newRoomId } from './session'
 import type { Transport, Unsubscribe } from './transport'
+import { nullTelemetry, type Telemetry, type TelemetryEvent } from '@/telemetry/port'
+import { matchKey } from '@/telemetry/matchKey'
 
 /** Ritual de início (`order`) é de ENTRADA, nunca de reconexão — ver `isReentry`.
  * `'reentry'` (041, D-033): partida em curso, sem assento — perder o aparelho não é mais
@@ -36,7 +38,7 @@ export interface RoomSessionState {
   readonly isHost: boolean
   /** Id da sala, quando já existe. */
   readonly roomId: string | null
-  /** Identidade atestada desta sessão (043, D-035) — `null` até o transporte conectar. */
+  /** Identidade atestada desta sessão (043, D-042) — `null` até o transporte conectar. */
   readonly uid: string | null
   /** 043, D-036/T026: o PRÓPRIO código de reentrada (da prévia — `room` nunca carrega
    * código nenhum, nem o do dono). `null` até a prévia resolver. */
@@ -63,6 +65,11 @@ export interface RoomSession {
   tick(): void
   /** Solta assinaturas e o store. NÃO derruba a conexão (ver `OnlineGate`). */
   dispose(): void
+  /** Fronteira de último recurso (042, D-035): ao contrário de `dispose()`, ESTE encerra a
+   * presença — chama antes de exibir a tela de falha, pra ausência chegar à mesa como
+   * desconexão (§11.3), sem causa de pausa nova. Seguro chamar sem sessão iniciada, e seguro
+   * chamar mais de uma vez. */
+  leaveOnFatalError(): void
 }
 
 export interface RoomSessionOptions {
@@ -81,6 +88,9 @@ export interface RoomSessionOptions {
   mintReentryCode?(): string
   /** RNG/relógio do host. Injetáveis para o sorteio de ordem ser reprodutível nos testes. */
   hostOptions?: HostOptions
+  /** Padrão `nullTelemetry` (044, D-040). Emite `room_created` aqui e é repassado ao host
+   * (`match_started`/`match_ended`/`match_paused`) — a MESMA instância, um destino só. */
+  telemetry?: Telemetry
 }
 
 export function createRoomSession(opts: RoomSessionOptions): RoomSession {
@@ -88,6 +98,17 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
   const describeError = opts.describeError ?? ((e: unknown) => String(e))
   const mintRoomId = opts.newRoomId ?? newRoomId
   const mintReentryCode = opts.mintReentryCode ?? (() => newReentryCode(Math.random))
+  const telemetry = opts.telemetry ?? nullTelemetry
+
+  // T1/T2 do contrato: a sessão não pode sentir uma falha de telemetria — mesma segunda
+  // linha de defesa de `host.ts` (o adaptador de produção já engole os próprios erros).
+  function trackSafely(event: TelemetryEvent): void {
+    try {
+      telemetry.track(event)
+    } catch {
+      // FR-037
+    }
+  }
 
   let transport: Transport | null = null
   let client: Client | null = null
@@ -168,7 +189,9 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
 
   async function takeAuthority(initial: Room): Promise<void> {
     if (host || !transport) return
-    const h = createHost(transport, initial, opts.hostOptions)
+    // A MESMA instância de telemetria da sessão desce ao host (044): `room_created` sai
+    // daqui, `match_started`/`match_ended`/`match_paused` saem de lá — um destino só.
+    const h = createHost(transport, initial, { ...opts.hostOptions, telemetry })
     host = h
     subs.push(h.subscribe(() => emit({ room: h.room() })))
     await h.open()
@@ -215,6 +238,9 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
         const id = mintRoomId()
         await openSession(id)
         await takeAuthority(createRoom(id, { uid: transport!.uid, ...who, reentryCode: mintReentryCode() }))
+        // 044/T045: só AQUI, na criação de verdade — `enter()` também chama `takeAuthority`
+        // quando o host reassume a própria sala (F5), e isso não é "sala criada" de novo.
+        trackSafely({ kind: 'room_created', matchKey: await matchKey(id) })
         emit({ phase: 'lobby', busy: false })
         return id
       } catch (e) {
@@ -268,6 +294,18 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
     tick: () => host?.tick(),
 
     dispose(): void {
+      for (const un of subs) un()
+      subs.length = 0
+      listeners.length = 0
+      disconnectStore?.()
+      disconnectStore = null
+    },
+
+    leaveOnFatalError(): void {
+      host?.stop()
+      client?.leave()
+      client = null
+      host = null
       for (const un of subs) un()
       subs.length = 0
       listeners.length = 0

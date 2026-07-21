@@ -24,7 +24,7 @@ export function getSupabase(): SupabaseClient {
   return client
 }
 
-// Identidade atestada (043, D-035/D1): sessão existente ?? sessão anônima nova. NUNCA um
+// Identidade atestada (043, D-042/D1): sessão existente ?? sessão anônima nova. NUNCA um
 // valor escolhido pelo participante — é o `sub` do JWT emitido pelo Supabase Auth. Chamada
 // ANTES de qualquer transporte subir (contrato §1 de policies.md): `realtime.setAuth()` é
 // obrigatório para canal privado, e sem ele a política de tópico recusa a assinatura.

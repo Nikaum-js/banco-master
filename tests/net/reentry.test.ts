@@ -223,7 +223,7 @@ describe('reentrada por código — sessão (041, D-033 → 043, D4, RPC)', () =
     expect(revived.playerId()).toBe(hostSeat.playerId)
   })
 
-  // 043, T043 (D-038) — o caminho MAIS comum dos três que apagavam código: o anfitrião dá F5
+  // 043, T043 (D-043) — o caminho MAIS comum dos três que apagavam código: o anfitrião dá F5
   // no lobby. Não há snapshot ainda, então `roomSession.enter` reassume a autoridade a partir
   // de `Client.room()` — que não carrega código NENHUM (a difusão nunca os carrega, T023) — e
   // o `open()` seguinte grava essa sala. Sem a leitura íntegra da autoridade e a preservação

@@ -61,7 +61,7 @@ type PublicRoom = { id, status, seats: PublicSeat[] }
 type PublicSeat = Omit<Seat, 'reentryCode'>
 ```
 
-O `uid` **permanece** na sala publicada: ele não é credencial — conhecê-lo não permite usá-lo (é o ponto inteiro da D-035). O `reentryCode` sai, porque ele é credencial portadora.
+O `uid` **permanece** na sala publicada: ele não é credencial — conhecê-lo não permite usá-lo (é o ponto inteiro da D-042). O `reentryCode` sai, porque ele é credencial portadora.
 
 O dono lê o próprio código pela função de prévia, que o devolve **apenas** para o assento de quem chamou.
 

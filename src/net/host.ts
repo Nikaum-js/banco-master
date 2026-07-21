@@ -8,6 +8,9 @@ import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
 import { actorOf, applyCommand, type GameAction, type PlayerAction, type SystemAction } from '@/game/commands'
 import { buildGameCtx, buildInitialGame } from '@/game/setup'
+import { matchSummary } from '@/game/summary'
+import { nullTelemetry, type Telemetry, type TelemetryEvent } from '@/telemetry/port'
+import { matchKey } from '@/telemetry/matchKey'
 import { recordingCtx } from './recorder'
 import { redactAccepted, splitSnapshot } from './perspective'
 import {
@@ -25,6 +28,7 @@ import {
   type Room,
 } from './room'
 import type { AcceptedCommand, CommandEnvelope, JoinRequest, PresenceChange, Transport, Unsubscribe } from './transport'
+import { registerFailure } from '@/app/failureRegistry'
 
 // Ações de sistema nunca carregam carta — `actorOf` (D9/T034) só existe para `PlayerAction`.
 const SYSTEM_KINDS = new Set<GameAction['kind']>(['close-auction', 'close-land-lots', 'close-land-auction', 'pause', 'resume'])
@@ -35,6 +39,7 @@ function isPlayerAction(action: GameAction): action is PlayerAction {
 export interface HostOptions {
   rng?: RNG // padrão Math.random; injetável nos testes (seed)
   now?: () => number // padrão Date.now; relógio lógico nos testes
+  telemetry?: Telemetry // padrão `nullTelemetry` (044, D-040) — emissão é do host, nunca da tela
 }
 
 export interface Host {
@@ -53,7 +58,7 @@ export interface Host {
 export function createHost(transport: Transport, initialRoom: Room, opts: HostOptions = {}): Host {
   const rng: RNG = opts.rng ?? (() => Math.random())
   const now = opts.now ?? (() => Date.now())
-  const baseCtx: TurnCtx = buildGameCtx(rng, now)
+  const telemetry = opts.telemetry ?? nullTelemetry
 
   let room = initialRoom
   let game: GameState | null = null
@@ -62,6 +67,26 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   const subs: Unsubscribe[] = []
   const listeners = new Set<() => void>()
   let watchedUids = new Set<string>() // 043, T015 — assentos cujo tópico privado a autoridade assina
+  const baseCtx: TurnCtx = buildGameCtx(rng, now)
+
+  // Hash do id de sala (044, contrato §matchKey) — calculado UMA vez e reusado nos três
+  // eventos do host. `roomId` nunca muda depois de criado, e T7 do contrato pede um evento
+  // por fato, não um hash novo a cada emissão.
+  let cachedMatchKey: string | null = null
+  async function ensureMatchKey(): Promise<void> {
+    cachedMatchKey ??= await matchKey(room.id)
+  }
+
+  // T1/T2 do contrato: a partida NUNCA sente uma falha de telemetria. O adaptador de
+  // produção já engole os próprios erros (`supabaseSink.ts`); isto aqui é a segunda linha
+  // de defesa, para um adaptador mal-comportado (ou injetado em teste) não derrubar `accept`.
+  function trackSafely(event: TelemetryEvent): void {
+    try {
+      telemetry.track(event)
+    } catch {
+      // FR-037: falha de envio não pausa, não bloqueia comando, não repete.
+    }
+  }
 
   function notify(): void {
     for (const cb of listeners) cb()
@@ -97,13 +122,24 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
 
   // Aplica um comando (de jogador OU de sistema) pelo caminho de autoridade: grava o
   // não-determinismo, checa no-op (FR-009), incrementa seq, persiste e difunde. Retorna se
-  // foi aceito.
-  function accept(action: GameAction): boolean {
+  // foi aceito. `fromUid` (042, FR-020/022) só existe pra comando DE JOGADOR — comando de
+  // sistema (tick, pausa) não tem um remetente único a quem recusar, só registra a falha.
+  function accept(action: GameAction, fromUid?: string): boolean {
     if (!game) return false
+    const wasEnded = game.phase === 'ended' // 044/T045: T7 do contrato — só emite na TRANSIÇÃO
     const { ctx, drain } = recordingCtx(baseCtx)
     // ANTES da mutação (043, T034) — quem recebe a cópia privada, se houver uma a recortar.
     const ownerId = isPlayerAction(action) ? actorOf(game, action) : null
-    const next = applyCommand(game, action, ctx)
+    let next: GameState
+    try {
+      next = applyCommand(game, action, ctx)
+    } catch (error) {
+      // 042, D5 do plan: `game`/`seq` só são reatribuídos DEPOIS daqui — uma exceção nunca
+      // avança o estado pela metade (FR-021 por construção, não por asserção extra).
+      const occurrenceId = registerFailure({ where: 'host.accept', phase: room.status, seq, error })
+      if (fromUid) transport.rejectCommand(fromUid, { occurrenceId })
+      return false
+    }
     if (next === game) return false // no-op / inválido → descarta (FR-009)
     game = next
     seq += 1
@@ -126,6 +162,18 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
       if (hostSeat && hostSeat.uid !== ownerSeat?.uid) transport.broadcastPrivate(hostSeat.uid, cmd)
     }
     transport.broadcast(pub) // FR-010/011
+
+    // 044/T045 (FR-033/034, T7 do contrato): emitido AQUI, na autoridade — nunca na tela.
+    // Oito clientes renderizando o fim de jogo emitiriam oito `match_ended`; só o `accept`
+    // que de fato mudou o estado dispara, uma vez por fato.
+    const key = cachedMatchKey ?? '' // sempre preenchido a esta altura (ensureMatchKey já rodou em start/open)
+    if (action.kind === 'pause') {
+      trackSafely({ kind: 'match_paused', matchKey: key, cause: action.cause })
+    }
+    if (!wasEnded && game.phase === 'ended') {
+      const summary = matchSummary(game)
+      trackSafely({ kind: 'match_ended', matchKey: key, players: game.players.length, rounds: summary.rounds, durationMs: summary.durationMs })
+    }
     return true
   }
 
@@ -137,7 +185,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     if (game.paused) return // durante a pausa, comando de jogo é rejeitado (FR-017, US3-2)
     const actor = actorOf(game, env.action)
     if (actor === null || actor !== seat.playerId) return // remetente não é o ator do comando (FR-007)
-    accept(env.action)
+    accept(env.action, fromUid)
   }
 
   // Pedido de assento no lobby (FR-002/005). A identidade do assento é o uid da CONEXÃO —
@@ -175,7 +223,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     syncPause()
   }
 
-  // 043, T043 (D-038): recarregar não pode ser DESAPRENDER. A autoridade grava a sala que
+  // 043, T043 (D-043): recarregar não pode ser DESAPRENDER. A autoridade grava a sala que
   // acabou de montar, então todo assento que chegar sem `reentryCode` — porque veio de uma
   // difusão (que nunca os carrega, T023) ou de uma leitura feita antes de esta sessão ser a
   // autoridade — precisa recuperá-lo de `source` antes de a sala virar o que se persiste.
@@ -279,11 +327,13 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
 
   async function startInternal(): Promise<void> {
     await ensureOpen()
-    game = buildInitialGame(playerIdsInOrder(room), rng)
+    await ensureMatchKey()
+    game = buildInitialGame(playerIdsInOrder(room), rng, now()) // 044/D3: mesmo relógio que o recorder grava/replica
     seq = 0
     const { publicGame, secrets } = splitSnapshot(game, room)
     await transport.saveSnapshot({ seq, game: publicGame, secrets, room }) // 1º snapshot (FR-006/013): clientes leem ao entrar
     transport.publishRoom(toPublicRoom(room)) // status já 'playing' (definido por startGame antes de criar o host)
+    trackSafely({ kind: 'match_started', matchKey: cachedMatchKey ?? '', players: game.players.length })
     notify()
   }
 
@@ -299,13 +349,17 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
       } else {
         // Sem partida ainda (lobby): a sala com que esta autoridade foi construída pode vir de
         // `Client.room()`, que NUNCA carrega código (T023) — é o caso do anfitrião que dá F5
-        // antes de iniciar. A prévia é íntegra para a autoridade (T043/D-038), e é dela que os
+        // antes de iniciar. A prévia é íntegra para a autoridade (T043/D-043), e é dela que os
         // códigos voltam; sem isto o `taken` de `newReentryCode` mintaria contra um conjunto de
         // vazios, e a sala em memória divergiria da linha persistida.
         const stored = await transport.loadRoom()
         if (stored) room = withKnownCodes(room, stored)
       }
       await ensureOpen()
+      // Host reassumindo (F5/reload, FR-015): `match_started` já foi emitido na sessão
+      // anterior — só precisamos do hash em cache para `accept()` poder emitir
+      // `match_paused`/`match_ended` depois, se for o caso.
+      if (game) await ensureMatchKey()
       transport.publishRoom(toPublicRoom(room))
       notify()
     },

@@ -38,7 +38,7 @@ describe('anti-spoof de identidade (SC-005)', () => {
   })
 })
 
-// 043 (D3/D-035) — o caso que era impossível de provar antes da Fase 2: até ali, o `uid` do
+// 043 (D3/D-042) — o caso que era impossível de provar antes da Fase 2: até ali, o `uid` do
 // remetente vinha de um CAMPO no payload (`{ cmd, uid }`), e nada impedia um cliente cru de
 // escrever ali o que quisesse. A partir da topologia de três tópicos, esse campo NEM EXISTE
 // MAIS no payload de `submit` — o `fromUid` que chega a `onSubmit` vem do CANAL, e forjar o

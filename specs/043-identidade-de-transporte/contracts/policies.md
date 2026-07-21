@@ -58,7 +58,7 @@ Todas `security definer`, `search_path` fixo em vazio (mesmo cuidado do linter 0
 
 ### `room_preview(room_id text) → jsonb`
 
-Devolve `{ id, status, seats: PublicSeat[] }` — sem `reentryCode` de ninguém, **exceto** o do assento de quem chamou. O **anfitrião** recebe os assentos íntegros ([D-038](../../../docs/adr/D-038-o-codigo-de-reentrada-e-imutavel-e-a-autoridade-o-le.md)): no lobby não existe snapshot, então esta é a única leitura de onde a autoridade remonta a sala que vai gravar em seguida.
+Devolve `{ id, status, seats: PublicSeat[] }` — sem `reentryCode` de ninguém, **exceto** o do assento de quem chamou. O **anfitrião** recebe os assentos íntegros ([D-043](../../../docs/adr/D-043-o-codigo-de-reentrada-e-imutavel-e-a-autoridade-o-le.md)): no lobby não existe snapshot, então esta é a única leitura de onde a autoridade remonta a sala que vai gravar em seguida.
 
 Sustenta a escada de entrada da 038 e a leitura do próprio código pelo dono (FR-019). Não devolve estado de partida. Sem id, não devolve nada — é o que torna a enumeração impossível.
 
@@ -71,7 +71,7 @@ Recusa quem não tem assento na sala. Para quem tem, devolve por **seleção de 
 
 ### `preserve_seat_codes(room_id text, new_seats jsonb) → jsonb`
 
-Usada por `write_room` e `write_snapshot`, nunca pelo cliente. Conserva o `reentryCode` já guardado de cada assento, casando por `playerId`. **O código é imutável depois de mintado** ([D-038](../../../docs/adr/D-038-o-codigo-de-reentrada-e-imutavel-e-a-autoridade-o-le.md)): nenhuma gravação o altera ou apaga, nem a da própria autoridade. É o que impede que qualquer caminho futuro que remonte a sala a partir de uma leitura redigida destrua os códigos em silêncio.
+Usada por `write_room` e `write_snapshot`, nunca pelo cliente. Conserva o `reentryCode` já guardado de cada assento, casando por `playerId`. **O código é imutável depois de mintado** ([D-043](../../../docs/adr/D-043-o-codigo-de-reentrada-e-imutavel-e-a-autoridade-o-le.md)): nenhuma gravação o altera ou apaga, nem a da própria autoridade. É o que impede que qualquer caminho futuro que remonte a sala a partir de uma leitura redigida destrua os códigos em silêncio.
 
 Não interpreta nem `game` nem `secrets`: a divisão e o merge são TypeScript (`src/net/perspective.ts`), e é assim que o servidor não passa a conhecer o esquema do `GameState` nem o do log (040).
 

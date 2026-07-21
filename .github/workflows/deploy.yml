@@ -1,0 +1,86 @@
+name: Deploy
+
+# Produção é promovida pelo RESULTADO do CI, nunca pelo push (044, D-041/FR-041).
+#
+# A integração nativa de qualquer plataforma publica no push e roda os testes em paralelo —
+# o que significa que a versão quebrada JÁ ESTÁ no ar quando o teste fica vermelho. Numa
+# partida em curso, versão quebrada publicada é a mesa inteira caindo ao mesmo tempo, e a
+# fronteira de erro da 042 contém a tela, não o deploy ruim.
+#
+# Previews de PR NÃO passam por aqui: ficam com a integração nativa da Vercel, porque
+# preview quebrado é exatamente o que se quer poder ver na revisão.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # Botão de emergência: republicar sem esperar um push novo.
+  workflow_dispatch:
+
+concurrency:
+  # Um deploy por vez; um push novo cancela a promoção anterior ainda em voo.
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  production:
+    name: promover produção
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # O gate inteiro: só promove se o CI daquele commit fechou verde. `workflow_dispatch`
+    # não traz `workflow_run`, então a segunda condição libera a republicação manual.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Publica exatamente o commit que o CI aprovou — não o topo de `main`, que pode
+          # ter andado enquanto os gates rodavam.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Instalar dependências
+        run: bun install --frozen-lockfile
+
+      - name: Instalar Vercel CLI
+        run: bun add -g vercel@latest
+
+      - name: Puxar configuração de produção
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      # `VERCEL=1` liga a validação de env obrigatória do `vite.config.ts` (FR-047):
+      # faltando credencial, o build falha aqui em vez de publicar uma tela branca.
+      - name: Construir
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+        env:
+          VERCEL: '1'
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VITE_COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Publicar
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Publicado: $url" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      # Migrations NÃO entram aqui, por decisão (D-041/D12 do plan): elas são irreversíveis,
+      # o deploy roda a cada merge, e a ordem correta entre schema e código muda conforme a
+      # mudança. São passo deliberado do operador — ver `docs/RUNBOOK.md` §1.

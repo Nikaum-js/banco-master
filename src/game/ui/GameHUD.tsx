@@ -11,9 +11,16 @@
 // hipotecar/vender e juntar caixa antes de "Pagar". Demais climas podem ter leve dim.
 // Ações OPCIONAIS não moram aqui: Bus Ticket é canhoto na DiceArena; quitar
 // empréstimo vive no LoanPanel lateral. Sem nada pendente → não renderiza.
-import { type ReactNode, useState } from 'react'
+//
+// 044/T024 (US3/D-039): reação e empréstimo (`dim`) BLOQUEIAM a tela de verdade (o backdrop
+// cobre tudo e recebe clique) — viram diálogo de verdade (role="dialog", trap de foco,
+// restauração), via `useDialogA11y`/`ModalTitleContext` de `shell.tsx` (mesmo mecanismo do
+// `Overlay`, sem duplicar). SEM `dismissible`: são decisões (D-039 ponto 2 cita "reação"
+// nominalmente) — Esc não fecha. A dívida (`dim=false`) fica de fora de propósito: o
+// tabuleiro PRECISA continuar alcançável (hipotecar/vender), um trap ali quebraria isso.
+import { type ReactNode, useId, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Crown, HandCoins, Landmark, ShieldAlert } from 'lucide-react'
+import { HandCoins, Landmark, ShieldAlert } from 'lucide-react'
 import { PlayerFace } from '@/boards/shared'
 import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
 import { useGameStore } from '@/game/store'
@@ -23,8 +30,11 @@ import { WaitingBar } from '@/net/ui/WaitingBar'
 import { isBankrupt } from '@/game/falencia/falencia'
 import { eligibleLenders, interestOf, loanShortfall } from '@/game/emprestimos/emprestimos'
 import { activeHudView } from '@/game/ui/panels/activeHudView'
-import { Confetti } from '@/game/ui/NoticeLayer'
-import { Button, Chip } from '@/game/ui/primitives'
+import { EndGameScreen } from '@/game/ui/EndGameScreen'
+import { Button, Chip, MoneyPulse } from '@/game/ui/primitives'
+import { useMoneyPulse } from '@/game/ui/useMoneyPulse'
+import { useMotion } from '@/game/ui/motion'
+import { useDialogA11y, ModalTitleContext, useModalTitleId } from '@/game/ui/a11y/dialog'
 import type { LoanRequest } from '@/game/economy/types'
 import { money as fmt } from '@/lib/money'
 
@@ -90,12 +100,25 @@ function DecisionShell({
   dim = false,
   children,
 }: { dim?: boolean; children: ReactNode }) {
+  // 044/T024: só o clima `dim` bloqueia a tela de verdade (backdrop cobre tudo e recebe
+  // clique) — só ele vira diálogo (foco entra, trap, restaura). A dívida (`dim=false`)
+  // fica de fora: pointer-events-none no container, tabuleiro tem que continuar alcançável.
+  const containerRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
+  useDialogA11y(containerRef, { active: dim })
   return (
-    <div
-      className={`fixed inset-0 z-[60] flex items-center justify-center p-4 ${dim ? 'bg-coffee-950/70 backdrop-blur-[2px]' : 'pointer-events-none'}`}
-    >
-      {children}
-    </div>
+    <ModalTitleContext.Provider value={titleId}>
+      <div
+        ref={dim ? containerRef : undefined}
+        role={dim ? 'dialog' : undefined}
+        aria-modal={dim ? true : undefined}
+        aria-labelledby={dim ? titleId : undefined}
+        tabIndex={dim ? -1 : undefined}
+        className={`fixed inset-0 z-[60] flex items-center justify-center p-4 outline-none ${dim ? 'bg-coffee-950/70 backdrop-blur-[2px]' : 'pointer-events-none'}`}
+      >
+        {children}
+      </div>
+    </ModalTitleContext.Provider>
   )
 }
 
@@ -107,12 +130,13 @@ function CardFrame({
   width = 420,
   children,
 }: { accent: string; glow: string; width?: number; children: ReactNode }) {
+  const { reduced } = useMotion()
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9, y: 14 }}
+      initial={reduced ? false : { opacity: 0, scale: 0.9, y: 14 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.92, y: 8 }}
-      transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+      exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.92, y: 8 }}
+      transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 360, damping: 26 }}
       className="pointer-events-auto relative max-w-[94vw] bg-coffee-800 rounded-[var(--radius-modal)] overflow-hidden"
       style={{
         width,
@@ -147,66 +171,30 @@ export function GameHUD() {
   const active = game.players[game.turnOrder[game.activeSeat]]
   const view = useLocalView() // spec 038: controles só do assento local (FR-002)
   const online = useRoomStore((s) => s.room !== null)
+  const { reduced } = useMotion()
+  // Feedback de caixa (044/T020 — FR-029): a tela de dívida mostra o caixa do devedor
+  // mudando ao vivo (hipoteca/venda pra cobrir a fatura) sem NENHUM aviso; mesmo pulso que
+  // `PlayerRow`/`PotCard` já usam (`primitives.tsx`), não um vocabulário novo.
+  const cashPulse = useMoneyPulse(active.cash)
   // PRECEDÊNCIA das cinco telas do HUD vem de `activeHudView` (testada), não da ordem dos
   // `return` abaixo. Adicionar uma sexta tela é editar a tabela, não adivinhar a posição.
   const hud = activeHudView(game)
 
   const activeColor = colorOfPlayer(game.players, active.id) ?? 'var(--color-brass)'
 
-  // ---- Fim de jogo — celebração do vencedor (confete + coroa, estilo loteria) ----
+  // ---- Fim de jogo — classificação completa (044, US2/D-038) ----
+  // Substitui a antiga celebração isolada do vencedor: toda tela agora mostra a mesma
+  // classificação, do 1º ao último (FR-001), derivada de `matchSummary(game)` dentro do
+  // próprio `EndGameScreen`. O botão de saída mantém o comportamento de sempre — online
+  // não tem revanche (spec 038, FR-027); local pode recomeçar.
   if (hud?.kind === 'winner') {
-    const winner = game.players.find((p) => !p.eliminated)
     return (
       <AnimatePresence>
-        <motion.div
-          key="winner"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-hidden bg-coffee-950/65 backdrop-blur-[2px]"
-        >
-          <Confetti />
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0, y: 10 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 18 }}
-            className="relative text-center px-6 select-none"
-          >
-            <motion.div
-              initial={{ scale: 0, rotate: -25 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 12, delay: 0.12 }}
-              className="flex justify-center mb-3"
-            >
-              <Crown size={76} className="text-gold" style={{ filter: 'drop-shadow(0 4px 14px color-mix(in srgb, var(--color-brass) 65%, transparent))' }} />
-            </motion.div>
-            <p className="label text-gold tracking-[var(--tracking-caps)]">VENCEDOR</p>
-            <motion.p
-              initial={{ scale: 0.4, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 11, delay: 0.2 }}
-              className="display leading-none mt-2"
-              style={{ fontSize: 64, ...GOLD_TEXT }}
-            >
-              {winner ? <PlayerName playerId={winner.id} /> : '—'}
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.3 }}
-              className="mt-8 inline-block"
-            >
-              {/* Online, "novo jogo" não existe: a partida é da sala e o host não reinicia
-                  a mesa (spec 038, FR-027) — o caminho é voltar ao início e criar outra. */}
-              <Button
-                onClick={() => (online ? (window.location.search = '') : resetGame())}
-                className="px-6 py-2.5 text-base shadow-[0_4px_16px_-4px_color-mix(in_srgb,var(--color-brass)_60%,transparent)]"
-              >
-                {online ? 'Voltar ao início' : 'Novo jogo'}
-              </Button>
-            </motion.div>
-          </motion.div>
-        </motion.div>
+        <EndGameScreen
+          game={game}
+          online={online}
+          onExit={() => (online ? (window.location.search = '') : resetGame())}
+        />
       </AnimatePresence>
     )
   }
@@ -330,24 +318,34 @@ export function GameHUD() {
                   </span>
                 </div>
 
-                {/* Trilho de fluxo com seta animada do devedor → credor */}
+                {/* Trilho de fluxo com seta animada do devedor → credor. Loop ambiente de
+                    1.1s, fora do vocabulário por design (D7 — coreografia de urgência da
+                    "conta vencida", mesma categoria da exceção do fim de jogo); some sob
+                    movimento reduzido — a seta parada ainda comunica o sentido do fluxo. */}
                 <div className="relative flex-1 h-px my-4">
                   <div className="absolute inset-0 top-1/2 -translate-y-1/2 h-[2px] bg-coffee-500" />
-                  <motion.div
-                    className="absolute top-1/2 -translate-y-1/2 h-[2px]"
-                    style={{ background: 'linear-gradient(90deg, transparent, var(--color-signal-glow))' }}
-                    initial={{ width: '0%' }}
-                    animate={{ width: '100%' }}
-                    transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-                  />
-                  <motion.span
-                    className="absolute top-1/2 -translate-y-1/2 text-signal-glow text-lg leading-none"
-                    initial={{ left: '0%', opacity: 0 }}
-                    animate={{ left: '92%', opacity: [0, 1, 1, 0] }}
-                    transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-                  >
-                    →
-                  </motion.span>
+                  {!reduced && (
+                    <>
+                      <motion.div
+                        className="absolute top-1/2 -translate-y-1/2 h-[2px]"
+                        style={{ background: 'linear-gradient(90deg, transparent, var(--color-signal-glow))' }}
+                        initial={{ width: '0%' }}
+                        animate={{ width: '100%' }}
+                        transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                      <motion.span
+                        className="absolute top-1/2 -translate-y-1/2 text-signal-glow text-lg leading-none"
+                        initial={{ left: '0%', opacity: 0 }}
+                        animate={{ left: '92%', opacity: [0, 1, 1, 0] }}
+                        transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+                      >
+                        →
+                      </motion.span>
+                    </>
+                  )}
+                  {reduced && (
+                    <span className="absolute top-1/2 -translate-y-1/2 left-[92%] text-signal-glow text-lg leading-none">→</span>
+                  )}
                 </div>
 
                 {/* Credor — PlayerFace na cor do assento, ou banco */}
@@ -363,16 +361,22 @@ export function GameHUD() {
                 </div>
               </div>
 
-              {/* Valor devido — número enorme em cobre, com pulso de glow contínuo */}
+              {/* Valor devido — número enorme em cobre, com pulso de glow contínuo. Outro
+                  loop ambiente fora do vocabulário (D7); sem ele sob movimento reduzido, o
+                  glow fica fixo no ponto médio — o valor (o FATO) nunca deixou de aparecer. */}
               <motion.p
                 className="text-center currency leading-none mt-4"
                 style={{ fontSize: 46, ...SIGNAL_TEXT }}
-                animate={{ filter: [
-                  'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 40%, transparent))',
-                  'drop-shadow(0 3px 20px color-mix(in srgb, var(--color-signal) 70%, transparent))',
-                  'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 40%, transparent))',
-                ] }}
-                transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                animate={reduced ? {
+                  filter: 'drop-shadow(0 3px 17px color-mix(in srgb, var(--color-signal) 55%, transparent))',
+                } : {
+                  filter: [
+                    'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 40%, transparent))',
+                    'drop-shadow(0 3px 20px color-mix(in srgb, var(--color-signal) 70%, transparent))',
+                    'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 40%, transparent))',
+                  ],
+                }}
+                transition={reduced ? { duration: 0 } : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
               >
                 {fmt(hud.amount)}
               </motion.p>
@@ -393,8 +397,9 @@ export function GameHUD() {
                   />
                 </div>
                 <div className="flex items-center justify-between mt-1.5">
-                  <span className="label text-cream-muted">
+                  <span className="label text-cream-muted relative inline-block">
                     Caixa <span className="text-cream currency">{fmt(active.cash)}</span>
+                    <MoneyPulse pulse={cashPulse} className="left-1/2 -translate-x-1/2 -top-4" />
                   </span>
                   {shortfall > 0 && (
                     <span className="label text-signal-glow">
@@ -448,6 +453,9 @@ export function GameHUD() {
 // Cabeçalho das reações — faixa dourada, ícone num selo redondo escuro, título +
 // subtítulo curto. Clima de "interrupção/alerta" sóbrio.
 function ReactionHead({ icon, title, subtitle }: { icon: ReactNode; title: string; subtitle: string }) {
+  // 044/T024: o id vem do `DecisionShell(dim)` que envolve este card — mesmo mecanismo do
+  // `ModalHeader` de shell.tsx, pro título virar `aria-labelledby` do diálogo.
+  const titleId = useModalTitleId()
   return (
     <div
       className="relative flex items-center gap-3 px-5 py-3 border-b-2 border-coffee-950"
@@ -463,7 +471,7 @@ function ReactionHead({ icon, title, subtitle }: { icon: ReactNode; title: strin
         {icon}
       </motion.div>
       <div className="min-w-0">
-        <h3 className="display text-xl leading-none text-coffee-900">{title}</h3>
+        <h3 id={titleId ?? undefined} className="display text-xl leading-none text-coffee-900">{title}</h3>
         <p className="label text-coffee-900/80 leading-none mt-1 normal-case">{subtitle}</p>
       </div>
     </div>

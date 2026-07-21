@@ -1,4 +1,4 @@
-# D-035 — Identidade de transporte atestada pelo servidor
+# D-042 — Identidade de transporte atestada pelo servidor
 
 **Data:** 2026-07-26 · **Status:** aceita
 **Decisão:** A identidade de quem fala no canal da sala passa a ser **emitida e verificada pelo servidor**, nunca declarada pelo cliente. Toda sessão obtém uma **sessão anônima** do Supabase (`signInAnonymously` — JWT com `sub` estável, sem e-mail, sem senha, sem perfil) antes de qualquer tráfego, e é esse `sub` que identifica o assento. O token do `localStorage` deixa de ser identidade: vira, no máximo, lembrança local de qual sessão usar. O canal da sala passa a ser **privado**, e a autorização de quem lê e quem escreve cada classe de mensagem vive em política do servidor:

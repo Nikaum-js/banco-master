@@ -10,7 +10,7 @@
 
 **Depende de**: spec [037](../037-sala-online-estado-sincronizado/spec.md) (a porta `Transport`, o host autoritativo e o anti-spoof que esta spec passa a apoiar em dado confiável), spec [038](../038-partida-online-jogavel/spec.md) (perspectiva de jogador local, escada de entrada por link, kick no lobby), spec [041](../041-resiliencia-de-sessao/spec.md) (contrato executável da porta, presença/takeover, `durableWrites`, reentrada por código)
 
-**Regra de origem**: SRS §10.3, §11.2, §11.4 e a nova §11.5; princípios VI (privacidade estratégica de cartas) e VII (resiliência de sessão). Três regras **novas** entram por ADR escrita antes desta spec: [D-035](../../docs/adr/D-035-identidade-de-transporte-atestada-pelo-servidor.md) (identidade atestada pelo servidor), [D-036](../../docs/adr/D-036-acesso-a-sala-autorizado-no-servidor.md) (acesso à sala autorizado no servidor) e [D-037](../../docs/adr/D-037-estado-por-perspectiva-a-mao-nao-trafega.md) (estado por perspectiva — revoga a D-030). SRS bumped para v1.8.
+**Regra de origem**: SRS §10.3, §11.2, §11.4 e a nova §11.5; princípios VI (privacidade estratégica de cartas) e VII (resiliência de sessão). Três regras **novas** entram por ADR escrita antes desta spec: [D-042](../../docs/adr/D-042-identidade-de-transporte-atestada-pelo-servidor.md) (identidade atestada pelo servidor), [D-036](../../docs/adr/D-036-acesso-a-sala-autorizado-no-servidor.md) (acesso à sala autorizado no servidor) e [D-037](../../docs/adr/D-037-estado-por-perspectiva-a-mao-nao-trafega.md) (estado por perspectiva — revoga a D-030). SRS bumped para v1.8.
 
 ---
 
@@ -243,7 +243,7 @@ As cartas que guardei na mão não chegam ao cliente de ninguém além do meu. Q
 
 - **Sessões anônimas habilitadas** no projeto Supabase, e o free tier comporta o volume do MVP. Sessão anônima não é conta: não há cadastro, e-mail, senha nem perfil entre partidas — a D-019 continua valendo na promessa que importa (entra quem tem o link).
 - **Pré-lançamento**: não há jogadores reais nem partidas em curso a preservar. Salas persistidas são descartáveis, e a compatibilidade com o formato antigo não é requisito.
-- **O anfitrião é confiável por construção** enquanto a autoridade rodar no navegador dele (D-020). Esta spec fecha jogador contra jogador e estranho contra sala; não fecha o anfitrião. Está escrito no §10.3, na D-035 e na D-037 — a leitura ingênua ("agora está tudo privado") seria pior que a limitação.
+- **O anfitrião é confiável por construção** enquanto a autoridade rodar no navegador dele (D-020). Esta spec fecha jogador contra jogador e estranho contra sala; não fecha o anfitrião. Está escrito no §10.3, na D-042 e na D-037 — a leitura ingênua ("agora está tudo privado") seria pior que a limitação.
 - **O id da sala não é enumerável na prática** (vem de UUID). O pedido de assento continua aberto a quem apresenta o id, porque é assim que um convidado entra; o que ele deixa de conseguir é ler qualquer coisa antes de ser aceito.
 - **A verificação de política roda contra infra real.** Policy de banco e de canal não é demonstrável com fake — o fake prova o adapter, não a regra que roda em produção. Aplicar as migrations no projeto vivo é passo desta spec, com confirmação explícita antes de cada aplicação.
 

@@ -11,6 +11,7 @@ import { useTokenAnim } from '@/game/ui/tokenAnim'
 import { play } from '@/game/ui/sound/engine'
 import { PlayerFace } from '@/boards/shared'
 import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
+import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 
 const BOARD_SIZE = 48
 const STEP_MS = 150 // tempo entre passos
@@ -25,7 +26,12 @@ type Walk = { shown: Record<string, number>; pop: Record<string, number> }
 
 // Hook: posição exibida por jogador, andando de 1 em 1 até a posição real.
 // `paused` (dados rolando): congela o peão — só anda quando o dado para.
-function useWalkedPositions(targets: Record<string, number>, paused: boolean): Walk {
+// `reduced` (044/US5, D7 — FR-030): com movimento reduzido o peão CHEGA
+// INSTANTANEAMENTE — nada de passo a passo nem do intervalo de STEP_MS. O handshake com
+// `tokenAnim` (animating→GameDriver segura a resolução) continua valendo: `arrived` ainda
+// dispara, só que no mesmo commit, e o `set(walking)` do efeito abaixo cai pra `false` no
+// próximo render — o modal de compra não abre antes da hora, só não tem mais o passeio.
+function useWalkedPositions(targets: Record<string, number>, paused: boolean, reduced: boolean): Walk {
   const [walk, setWalk] = useState<Walk>(() => ({ shown: targets, pop: {} }))
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const shown = walk.shown
@@ -42,13 +48,13 @@ function useWalkedPositions(targets: Record<string, number>, paused: boolean): W
       if (cur === undefined) { next[id] = tgt; continue } // jogador novo: entra na posição
       if (cur === tgt) { next[id] = cur; continue }
       const fwd = (tgt - cur + BOARD_SIZE) % BOARD_SIZE
-      if (fwd >= 1 && fwd <= WALK_MAX) {
+      if (!reduced && fwd >= 1 && fwd <= WALK_MAX) {
         next[id] = (cur + 1) % BOARD_SIZE // anda 1
         moving = true
         walked = true
         if (next[id] === tgt) arrived.push(id)
       } else {
-        next[id] = tgt // teleporte/para trás: snap (sem tick — só chegada)
+        next[id] = tgt // reduzido, teleporte ou recuo: chega de uma vez (sem tick)
         moving = true
         arrived.push(id)
       }
@@ -57,6 +63,7 @@ function useWalkedPositions(targets: Record<string, number>, paused: boolean): W
     // Remove ids que sumiram (eliminados não importam aqui).
     const changed = Object.keys(next).some((id) => next[id] !== shown[id]) || Object.keys(shown).length !== Object.keys(next).length
     if (changed) {
+      const delay = reduced ? 0 : (moving ? STEP_MS : 0)
       timer.current = setTimeout(() => {
         setWalk((cur) => {
           if (!arrived.length) return { shown: next, pop: cur.pop }
@@ -65,10 +72,10 @@ function useWalkedPositions(targets: Record<string, number>, paused: boolean): W
           return { shown: next, pop }
         })
         if (arrived.length) play('step-land') // um som por chegada, mesmo com N peões (035)
-      }, moving ? STEP_MS : 0)
+      }, delay)
       return () => { if (timer.current) clearTimeout(timer.current) }
     }
-  }, [targets, shown, paused])
+  }, [targets, shown, paused, reduced])
 
   return walk
 }
@@ -77,6 +84,7 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
   const game = useGameStore((s) => s.game)
   const rolling = useTokenAnim((s) => s.rolling)
   const activeId = game.players[game.turnOrder[game.activeSeat]]?.id
+  const { reduced } = useMotion()
 
   // Alvo de posição por jogador (não-eliminado). Memoizado: é a dependência dos efeitos
   // da caminhada, e um objeto novo a cada render os reexecutaria sem nada ter mudado.
@@ -85,7 +93,7 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
     game.players.forEach((p) => { if (!p.eliminated) t[p.id] = p.pos })
     return t
   }, [game.players])
-  const { shown, pop } = useWalkedPositions(targets, rolling)
+  const { shown, pop } = useWalkedPositions(targets, rolling, reduced)
 
   // Sinaliza ao GameDriver se o peão do jogador da vez ainda está andando —
   // o driver segura a resolução da casa até o peão chegar (024.1).
@@ -107,16 +115,19 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
 
   return (
     <>
-      {/* Realce pulsante na casa de destino enquanto o peão da vez caminha */}
+      {/* Realce na casa de destino enquanto o peão da vez caminha. O pulso ambiente
+          (0.9s, fora do vocabulário — não é enter/exit) some sob movimento reduzido; e
+          como o peão agora chega instantaneamente (`reduced`), esta casa quase nunca fica
+          tempo suficiente na tela pra o pulso importar — o realce fixo é só defensivo. */}
       {activeWalking && activeTarget !== undefined && (
         <motion.div
           key="dest-highlight"
           className="relative z-20 pointer-events-none"
           style={gridArea(activeTarget)}
           initial={{ opacity: 0 }}
-          animate={{ opacity: [0.4, 0.85, 0.4] }}
+          animate={reduced ? { opacity: 0.6 } : { opacity: [0.4, 0.85, 0.4] }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
+          transition={reduced ? { duration: 0 } : { duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
         >
           <div className="absolute inset-0.5 rounded-[3px] ring-2 ring-gold/80 shadow-[0_0_12px_color-mix(in_srgb,var(--color-brass)_60%,transparent)]" />
         </motion.div>
@@ -133,7 +144,7 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
           <motion.div
             key={p.id}
             layout
-            transition={{ duration: 0.14, ease: 'easeInOut' }}
+            transition={{ duration: reduced ? 0 : MOTION.fast, ease: EASE.standard }}
             className="relative z-30 pointer-events-none"
             style={gridArea(pos)}
           >
@@ -142,12 +153,13 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
               className="absolute left-1/2 top-1/2"
               style={{ transform: `translate(calc(-50% + ${off.x}px), calc(-50% + ${off.y}px))` }}
             >
-              {/* key={tick} remonta e replay a escala a cada CHEGADA (plop) */}
+              {/* key={tick} remonta e replay a escala a cada CHEGADA (plop) — some sob
+                  movimento reduzido: a chegada em si já está no `shown` (o FATO fica). */}
               <motion.div
                 key={`pop-${pop[p.id] ?? 0}`}
                 initial={{ scale: 1 }}
-                animate={{ scale: [1, 1.22, 1] }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
+                animate={reduced ? { scale: 1 } : { scale: [1, 1.22, 1] }}
+                transition={{ duration: MOTION.base, ease: EASE.standard }}
               >
                 <PlayerFace color={PLAYER_COLORS[i % PLAYER_COLORS.length]} size={size} active={p.id === activeId} />
               </motion.div>

@@ -19,10 +19,10 @@
 // agora é uma garantia da AUTORIDADE (que soma `own` + todo assento observado) — um convidado
 // só enxerga o próprio tópico, e é assim que deveria ser: ele nunca precisou ver a presença
 // alheia, só a autoridade precisa reconciliar `seats[].connected` (FR-021 da 041).
-import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
+import type { AcceptedCommand, CommandEnvelope, CommandFailure, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import { mergeSnapshot, type Secrets } from './perspective'
 import { toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
-import { normalizeLog } from '@/game/log'
+import { normalizeGame, normalizeLog } from '@/game/log'
 import type { PauseState } from '@/game/turn/types'
 
 // Migração de dados (041, data-model — Migração de dados): salas persistidas ANTES desta
@@ -35,11 +35,13 @@ function normalizePaused(paused: unknown, readAt: number): PauseState | null {
   return null // `false` ou ausente
 }
 
-// Absorve `normalizeLog` (021/040) e a migração de `paused` legado — o mesmo ponto onde
+// Absorve `normalizeLog` (021/040), a migração de `paused` legado e os quatro campos de
+// fim de jogo (044, `normalizeGame`) — o mesmo ponto onde
 // `loadSnapshot` já normalizava o log agora normaliza o snapshot inteiro.
 export function normalizeSnapshot(game: PersistedSnapshot['game'], now: () => number = Date.now): PersistedSnapshot['game'] {
   return {
     ...game,
+    ...normalizeGame(game),
     log: normalizeLog(game.log ?? []),
     paused: normalizePaused((game as { paused?: unknown }).paused, now()),
   }
@@ -76,7 +78,7 @@ interface RoomRow {
   game: PersistedSnapshot['game'] | null
 }
 
-const EVENT = { submit: 'submit', accepted: 'accepted', room: 'room', join: 'join', rejected: 'rejected', reattached: 'reattached' } as const
+const EVENT = { submit: 'submit', accepted: 'accepted', room: 'room', join: 'join', rejected: 'rejected', reattached: 'reattached', commandRejected: 'command-rejected' } as const
 const seatTopic = (roomId: string, uid: string): string => `room:${roomId}:s:${uid}`
 
 export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: string): Transport {
@@ -86,6 +88,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
   const presenceCbs: ((change: PresenceChange) => void)[] = []
   const joinReqCbs: ((who: JoinRequest, fromUid: string) => void)[] = []
   const joinRejCbs: ((target: string, reason: JoinError) => void)[] = []
+  const commandRejCbs: ((toUid: string, info: CommandFailure) => void)[] = []
   const statusCbs: ((status: ConnStatus) => void)[] = []
   const presenceSyncCbs: ((uids: ReadonlySet<string>) => void)[] = []
   const reattachCbs: (() => void)[] = []
@@ -298,6 +301,14 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
       const p = payload as { uid: string; reason: JoinError }
       for (const cb of joinRejCbs) cb(p.uid, p.reason)
     })
+    // Recusa por FALHA na autoridade (042, FR-020/022). Viaja no lobby pelo mesmo motivo da
+    // recusa de entrada: é dirigida a um uid, mas não carrega nada sensível — quem filtra o
+    // que é seu é o assinante. `:lobby` é também o único canal que TODO participante lê,
+    // inclusive quem ainda não tem assento.
+    .on('broadcast', { event: EVENT.commandRejected }, ({ payload }) => {
+      const p = payload as { toUid: string; info: CommandFailure }
+      for (const cb of commandRejCbs) cb(p.toUid, p.info)
+    })
     .on('broadcast', { event: EVENT.room }, ({ payload }) => {
       const r = payload as PublicRoom
       for (const cb of roomCbs) cb(r)
@@ -436,6 +447,14 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     onJoinRequest(cb): Unsubscribe {
       joinReqCbs.push(cb)
       return off(joinReqCbs, cb)
+    },
+
+    rejectCommand(toUid: string, info: CommandFailure): void {
+      void lobby.send({ type: 'broadcast', event: EVENT.commandRejected, payload: { toUid, info } })
+    },
+    onCommandRejected(cb): Unsubscribe {
+      commandRejCbs.push(cb)
+      return off(commandRejCbs, cb)
     },
 
     rejectJoin(target: string, reason: JoinError): void {
