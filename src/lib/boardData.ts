@@ -56,13 +56,21 @@ export interface SquareBase {
   short?: string
 }
 
+/** Ícone de apresentação de propriedade em mapas SEM bandeira (055/D-069). */
+export type PropertyIconId =
+  | 'chimney' | 'factory' | 'anvil' | 'crane' | 'house'
+  | 'gear' | 'clock' | 'train' | 'lamp' | 'building' | 'bank' | 'mansion'
+
 export interface PropertySquare extends SquareBase {
   kind: 'property'
   group: GroupKey
   price: number
   rent: number
-  uf: string
+  /** Código ISO do país (mapa Cidades do Mundo). Mapas sem bandeira não o definem. */
+  uf?: string
   capital?: string
+  /** Ícone de apresentação quando não há bandeira (mapa Cidade da Fuligem). */
+  icon?: PropertyIconId
 }
 
 export interface AirportSquare extends SquareBase {
