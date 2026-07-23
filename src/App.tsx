@@ -9,7 +9,6 @@ import { NoticeLayer } from '@/game/ui/NoticeLayer'
 import { SoundLayer } from '@/game/ui/sound/SoundLayer'
 import { AudioControl } from '@/game/ui/sound/AudioControl'
 import { SoundBoard } from '@/game/ui/sound/SoundBoard'
-import { DiceShowcase } from '@/game/ui/sound/DiceShowcase'
 import { DebugLogger } from '@/game/ui/DebugLogger'
 
 // O tabuleiro Clássico É a tela inicial. A rolagem é o DiceArena central; o
@@ -18,11 +17,8 @@ import { DebugLogger } from '@/game/ui/DebugLogger'
 // (prisão/dívida/reação) e some quando não há nada a decidir. DebugLogger (dev)
 // joga o estado no console do browser a cada mudança.
 export default function App() {
-  // `?sons` abre o board de auditoria dos SFX; `?dados` a escolha da animação
-  // do dado (dev) — ambos no lugar do jogo.
-  const params = new URLSearchParams(window.location.search)
-  if (params.has('sons')) return <SoundBoard />
-  if (params.has('dados')) return <DiceShowcase />
+  // `?sons` abre o board de auditoria dos SFX (dev) no lugar do jogo.
+  if (new URLSearchParams(window.location.search).has('sons')) return <SoundBoard />
   return (
     <>
       <Board01Classic />
