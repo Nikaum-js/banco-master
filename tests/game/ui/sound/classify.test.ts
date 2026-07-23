@@ -24,8 +24,11 @@ describe('classifyLogEntry (035 — tail do log → cue)', () => {
     // O texto privado da carta na mão ("Acaso: Investidor Anjo") não deve soar pelo log.
   })
 
+  it('compra CONFIRMADA toca o buy — cair na casa (prompt) é silencioso', () => {
+    expect(classifyLogEntry(log('comprou Paris por $200'))).toBe('buy')
+  })
+
   it('eventos já cobertos por canais tipados → null (evita disparo duplo, FR-007)', () => {
-    expect(classifyLogEntry(log('comprou Paris por $200'))).toBeNull()
     expect(classifyLogEntry(log('rolou 3+4'))).toBeNull()
     expect(classifyLogEntry(log('pagou dívida $300'))).toBeNull()
     expect(classifyLogEntry(log('p1 ↔ p2: troca aceita'))).toBeNull() // C1: trade fora desta fatia
@@ -47,7 +50,7 @@ describe('cueForRoll (035 — variações de rolagem)', () => {
 
 describe('cueForResolution (035 — kinds de resolução)', () => {
   it('cobre os kinds com som e ignora os demais', () => {
-    expect(cueForResolution('purchase')).toBe('buy')
+    expect(cueForResolution('purchase')).toBeNull() // prompt de compra é silencioso
     expect(cueForResolution('auction')).toBe('auction-bid')
     expect(cueForResolution('card-reveal')).toBe('card-reveal')
     expect(cueForResolution('card-shortcut')).toBe('card-shortcut')

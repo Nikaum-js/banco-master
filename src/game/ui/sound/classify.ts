@@ -14,9 +14,10 @@ export function cueForRoll(roll: Roll): SoundCue {
 }
 
 // Borda de subida de resolução → cue (FR-003/FR-004). `auction` aqui = abertura.
+// `purchase` (prompt de compra ao cair na casa) é SILENCIOSO — o cha-ching do `buy`
+// toca só na compra CONFIRMADA (log `comprou ...`), não na oferta.
 export function cueForResolution(kind: ResolutionSlice['kind']): SoundCue | null {
   switch (kind) {
-    case 'purchase': return 'buy'
     case 'auction': return 'auction-bid'
     case 'card-reveal': return 'card-reveal'
     case 'card-shortcut': return 'card-shortcut'
@@ -43,6 +44,7 @@ export function cueForNotice(kind: Notice['kind']): SoundCue | null {
 // `card-draw` é GENÉRICO — nunca varia por raridade (privacidade, FR-016).
 export function classifyLogEntry(e: LogEntry): SoundCue | null {
   const w = e.what
+  if (w.startsWith('comprou ')) return 'buy' // compra CONFIRMADA (não o prompt)
   if (w.includes('de imposto')) return 'tax-paid'
   if (w.includes('de aluguel a')) return 'rent-paid'
   if (w.includes('pelo GO') || w.includes('no GO')) return 'go-bonus'
