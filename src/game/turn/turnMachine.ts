@@ -121,14 +121,19 @@ export function finishIfEnded(s: GameState, ctx: TurnCtx): GameState {
   return s
 }
 
-// Prepara o turno do jogador ativo atual.
+// Prepara o turno do jogador ativo atual. `lastRoll` NÃO zera na virada: como
+// numa mesa real, os dados continuam mostrando a última rolagem até alguém
+// rolar de novo — em passes forçados no MESMO dispatch (tentativa falha de
+// prisão, 3ª dupla), zerar cortava a animação do dado pro fallback 1-1.
+// Nenhuma decisão de jogo lê lastRoll fora do próprio turno (gates são por
+// turn.state/awaitingChoice/pendingResolve).
 export function startTurn(s: GameState): void {
   const player = activePlayer(s)
   s.turn = {
     state: player.jail.inJail ? 'prisao-decisao' : 'aguardando-rolagem',
     seat: s.activeSeat,
     consecutiveDoubles: 0,
-    lastRoll: null,
+    lastRoll: s.turn?.lastRoll ?? null,
     pendingResolve: false,
     mayRollAgain: false,
     awaitingChoice: null,
@@ -295,6 +300,7 @@ export function jailDecision(state: GameState, decision: 'pay' | 'card' | 'try',
   // try: rola 2 brancos — Speed Die NÃO é usado na tentativa de sair (SRS §13.2).
   const roll = rollDiceFn(ctx.rng, { speedDie: false })
   turn.lastRoll = roll
+  logEvent(s, player.id, `rolou ${roll.white[0]}+${roll.white[1]}`) // 021 — tentativa também soa/registra
   if (roll.isDouble) {
     player.jail = { inJail: false, attempts: 0 }
     advance(s, player,roll.move, ctx.ports)
