@@ -450,6 +450,18 @@ não estalar. `drawKnife3` e `chips-handle-2` do Kenney vêm ~20 dB baixos — n
 5. **Coesão/contraste:** o único ding AGUDO do conjunto; sino de balcão vs. o gongo
    grave da `immunity` e o sino embutido na registradora do `buy`.
 
+### turn-end — turno finalizado
+1. **Som:** dados sendo RECOLHIDOS da mesa de madeira — o gesto universal de "passei a
+   vez" numa mesa real. Intenção: pontuação discreta de fim de frase; a mesa respira e
+   o próximo assume.
+2. **Referência:** Monopoly Plus marca a troca de vez com foley de mesa; Richup usa um
+   blip — anti-referência.
+3. **Duração:** 0,7 s, discreto (−17 LUFS) — acontece o tempo todo.
+4. **Escolha:** Kenney *Casino Audio* → `dice-grab-1.ogg`, normalizado (CC0).
+5. **Coesão/contraste:** fecha o ciclo que o `dice-roll` abre (dados jogados → dados
+   recolhidos); arrastado e ascendente, inconfundível com os arremessos e com o ding do
+   `your-turn`.
+
 ### win — venceu o jogo
 1. **Som:** fanfarra de metais REAL, frase curta ascendente e resolvida — pódio, taça,
    cidade aos seus pés. Intenção: triunfo pleno; o único momento de exagero permitido.
@@ -537,6 +549,7 @@ não estalar. `drawKnife3` e `chips-handle-2` do Kenney vêm ~20 dB baixos — n
 | jail-in | `doorClose_3` + `metalLatch` | layer |
 | jail-out | `doorOpen_1.ogg` | — |
 | your-turn | Mixkit "Service bell" #931 | trim |
+| turn-end | `dice-grab-1.ogg` | normalizar |
 | win | Mixkit fanfare #226 | trim 3,5 s |
 | bankruptcy | Mixkit "Losing piano" #2024 | — |
 | pause | `switch1.ogg` | — |

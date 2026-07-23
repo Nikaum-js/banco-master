@@ -13,7 +13,7 @@ export type SoundCue =
   | 'card-draw' | 'card-reveal' | 'card-shortcut' | 'card-play' | 'card-discard'
   | 'apagao' | 'greve' | 'hostile-takeover' | 'reaction' | 'immunity'
   | 'free-parking' | 'jail-in' | 'jail-out' | 'win' | 'bankruptcy'
-  | 'your-turn' | 'pause' | 'resume'
+  | 'your-turn' | 'turn-end' | 'pause' | 'resume'
 
 // Auto-mapa: qualquer arquivo `<cue>.{webm,mp3,ogg,wav}` em src/assets/sfx vira CUE_SRC[cue].
 // import.meta.glob é do Vite (e suportado pelo vitest); em ambiente sem assets retorna {}.

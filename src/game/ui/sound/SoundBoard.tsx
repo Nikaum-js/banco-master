@@ -86,6 +86,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     title: 'Estado e fim de jogo',
     items: [
       { cue: 'your-turn', label: 'Sua vez' },
+      { cue: 'turn-end', label: 'Finalizar turno' },
       { cue: 'win', label: 'Vitória' },
       { cue: 'bankruptcy', label: 'Falência' },
       { cue: 'pause', label: 'Jogo pausado' },

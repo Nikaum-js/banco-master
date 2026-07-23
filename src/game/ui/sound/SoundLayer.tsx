@@ -31,6 +31,7 @@ function buildLevel(t: Title): number {
 
 interface Prev {
   roll: GameState['turn']['lastRoll']
+  seat: number
   resKind: string | null
   noticeKind: string | null
   jail: Record<string, boolean>
@@ -58,6 +59,7 @@ function snapshot(g: GameState): Prev {
   })
   return {
     roll: g.turn.lastRoll,
+    seat: g.turn.seat,
     resKind: g.resolution?.kind ?? null,
     noticeKind: g.notice?.kind ?? null,
     jail,
@@ -99,6 +101,9 @@ export function SoundLayer() {
     // — Canal 1: transições tipadas —
     // Rolagem (objeto novo a cada rollDice).
     if (game.turn.lastRoll && game.turn.lastRoll !== p.roll) fire(cueForRoll(game.turn.lastRoll))
+
+    // Turno finalizado (a vez passou de assento) — os dados recolhidos da mesa.
+    if (next.seat !== p.seat && next.phase !== 'ended') fire('turn-end')
 
     // Resolução (borda de subida do kind).
     if (game.resolution && game.resolution.kind !== p.resKind) {
