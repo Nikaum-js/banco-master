@@ -102,11 +102,6 @@ export function SoundLayer() {
     // Rolagem (objeto novo a cada rollDice).
     if (game.turn.lastRoll && game.turn.lastRoll !== p.roll) fire(cueForRoll(game.turn.lastRoll))
 
-    // Turno finalizado (a vez passou de assento) — os dados recolhidos da mesa.
-    // TODO(multiplayer): quando existir jogador local (Supabase), disparar também
-    // 'your-turn' (sino de balcão) no cliente cujo assento === next.seat.
-    if (next.seat !== p.seat && next.phase !== 'ended') fire('turn-end')
-
     // Resolução (borda de subida do kind).
     if (game.resolution && game.resolution.kind !== p.resKind) {
       const cue = cueForResolution(game.resolution.kind)
@@ -170,6 +165,13 @@ export function SoundLayer() {
       if (gained) fire('money-gain')
       else if (lost) fire('money-loss')
     }
+
+    // Turno finalizado (a vez passou de assento) — os dados recolhidos da mesa.
+    // Só toca em virada QUIETA: se outro cue soou neste tick (compra, aluguel...),
+    // a própria ação já fechou o turno sonoramente — não empilhar (FR-007/FR-009).
+    // TODO(multiplayer): quando existir jogador local (Supabase), disparar também
+    // 'your-turn' (sino de balcão) no cliente cujo assento === next.seat.
+    if (next.seat !== p.seat && next.phase !== 'ended' && played.length === 0) fire('turn-end')
   }, [game])
 
   return null
