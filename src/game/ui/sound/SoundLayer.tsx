@@ -103,6 +103,8 @@ export function SoundLayer() {
     if (game.turn.lastRoll && game.turn.lastRoll !== p.roll) fire(cueForRoll(game.turn.lastRoll))
 
     // Turno finalizado (a vez passou de assento) — os dados recolhidos da mesa.
+    // TODO(multiplayer): quando existir jogador local (Supabase), disparar também
+    // 'your-turn' (sino de balcão) no cliente cujo assento === next.seat.
     if (next.seat !== p.seat && next.phase !== 'ended') fire('turn-end')
 
     // Resolução (borda de subida do kind).
