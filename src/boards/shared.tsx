@@ -1870,12 +1870,13 @@ function TradeRow({ trade, done, colorById }: { trade: Trade; done: boolean; col
 // translateZ(metade_do_cubo). transform-style: preserve-3d no cubo
 // + perspective no scene preserva profundidade.
 // ---------------------------------------------------------------------
-const DIE_PX = 56               // w-14 / h-14
-const HALF = DIE_PX / 2
+// Exportados pro DiceShowcase (?dados) montar o MESMO cubo nas prévias.
+export const DIE_PX = 56        // w-14 / h-14
+export const HALF = DIE_PX / 2
 
 // Rotação a aplicar no CUBO INTEIRO pra trazer a face do valor N pra câmera.
 // Layout de d6 ocidental: faces opostas somam 7 (1↔6, 2↔5, 3↔4).
-const FACE_REST: Record<number, [number, number]> = {
+export const FACE_REST: Record<number, [number, number]> = {
   1: [   0,   0 ], // frente
   2: [   0, -90 ], // direita
   3: [ -90,   0 ], // topo
@@ -1889,7 +1890,7 @@ const DOT_LAYOUT: Record<number, number[]> = {
   5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9],
 }
 
-function DotFace({ value, transform }: { value: number; transform: string }) {
+export function DotFace({ value, transform }: { value: number; transform: string }) {
   const dots = DOT_LAYOUT[value]
   return (
     <div
