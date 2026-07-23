@@ -10,14 +10,6 @@ interface Item {
   label: string
 }
 
-// Candidatos temporários em avaliação (arquivos extras em assets/sfx, fora do
-// catálogo de cues). Removê-los quando a escolha for feita.
-const DICE_OPTIONS = [
-  { file: 'dice-roll-opcao-1', label: 'Opção 1 — seco na mesa (atual)' },
-  { file: 'dice-roll-opcao-2', label: 'Opção 2 — chacoalho no copo + arremesso' },
-  { file: 'dice-roll-opcao-3', label: 'Opção 3 — rolada gorda (mais quiques)' },
-] as const
-
 const GROUPS: { title: string; items: Item[] }[] = [
   {
     title: 'Dados',
@@ -118,26 +110,6 @@ export function SoundBoard() {
         </p>
       </header>
       <main className="mx-auto flex max-w-5xl flex-col gap-8">
-        <section className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4">
-          <h2 className="mb-1 text-xs font-semibold uppercase tracking-widest text-amber-400">
-            🎲 Escolha o som do dado
-          </h2>
-          <p className="mb-3 text-xs text-slate-400">
-            Três candidatos pro <code className="rounded bg-slate-800 px-1">dice-roll</code> — ouça e me diga qual fica.
-          </p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            {DICE_OPTIONS.map(({ file, label }) => (
-              <button
-                key={file}
-                type="button"
-                onClick={() => play(file as SoundCue)}
-                className="rounded-lg border border-amber-500/50 bg-slate-900 px-3 py-3 text-left text-sm font-medium transition hover:bg-slate-800 active:scale-95"
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </section>
         {GROUPS.map((g) => (
           <section key={g.title}>
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-400">{g.title}</h2>

@@ -52,15 +52,15 @@ não estalar. `drawKnife3` e `chips-handle-2` do Kenney vêm ~20 dB baixos — n
 ## DADOS
 
 ### dice-roll — rolou os dados
-1. **Som:** dois dados de resina caindo e quicando em mesa de madeira — seco, quente,
-   grave (centroide ~3,8 kHz), zero música. Intenção: neutralidade tátil, o "clac-clac"
-   que abre todo turno sem cansar.
-2. **Referência:** Richup e Monopoly Plus usam exatamente esse knock seco de dados na
-   mesa; Monopoly GO adiciona brilho só no RESULTADO, não no lançamento.
-3. **Duração:** 0,63 s — o cue mais frequente do jogo depois do passo; precisa morrer rápido.
-4. **Escolha:** Kenney *Casino Audio* → `dice-throw-1.ogg` (CC0).
+1. **Som:** chacoalho curto no copo + arremesso quicando na mesa — o gesto COMPLETO de
+   rolar dados numa mesa premium. Intenção: antecipação (chacoalho) + resolução (quique).
+2. **Referência:** Monopoly Plus toca o shake no copo antes do lance; escolha do Nikolas
+   entre 3 candidatos auditados no soundboard (2026-07-23).
+3. **Duração:** 0,99 s — o gesto respira, mas morre seco.
+4. **Escolha (produzido):** Kenney *Casino Audio* → cauda de `dice-shake-2.ogg` (0,45 s)
+   + `dice-throw-3.ogg` a 0,42 s (CC0).
 5. **Coesão/contraste:** é o material-assinatura da mesa; contrasta com `dice-double`
-   (que ganha acento musical) e com `step-tick` (toque único e mais surdo).
+   (mesmo gesto + pizzicato) e com `step-tick` (toque único e mais surdo).
 
 ### dice-double — saiu dupla
 1. **Som:** o mesmo arremesso de dados, mas com um pizzicato ASCENDENTE colado no
@@ -69,8 +69,8 @@ não estalar. `drawKnife3` e `chips-handle-2` do Kenney vêm ~20 dB baixos — n
 2. **Referência:** Monopoly GO pinga um sparkle sobre o foley quando sai dupla — o foley
    mantém o mundo físico, o acento vende o bônus.
 3. **Duração:** ~1,1 s — mais raro que o roll, merece 0,5 s de juice extra.
-4. **Escolha (produzido):** `dice-throw-2.ogg` + cauda de `jingles_PIZZI02.ogg`
-   (sobe 274→469 Hz) a −6 dB, entrando ~80 ms após o impacto. Ambos Kenney, CC0.
+4. **Escolha (produzido):** mesmo chacoalho do `dice-roll` + `dice-throw-2.ogg` +
+   cauda de `jingles_PIZZI02.ogg` (sobe 274→469 Hz) a −6 dB no desfecho. Kenney, CC0.
 5. **Coesão/contraste:** mesma família física do `dice-roll`; o pizzicato ascendente o
    torna inconfundível de olhos fechados.
 
@@ -514,8 +514,8 @@ não estalar. `drawKnife3` e `chips-handle-2` do Kenney vêm ~20 dB baixos — n
 
 | cue | fonte | produção |
 |---|---|---|
-| dice-roll | Kenney `dice-throw-1.ogg` | — |
-| dice-double | `dice-throw-2` + `jingles_PIZZI02` | layer |
+| dice-roll | `dice-shake-2` (cauda) + `dice-throw-3` | layer |
+| dice-double | chacoalho + `dice-throw-2` + `PIZZI02` | layer |
 | dice-speed | `dice-shake-3` | trim 0,6 s |
 | dice-bus | `die-throw-4.ogg` | — |
 | step-tick | `footstep_wood_002.ogg` | −6 dB |

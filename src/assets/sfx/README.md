@@ -44,8 +44,8 @@ Auditar: `afplay src/assets/sfx/<cue>.ogg`.
 
 | cue | fonte | cue | fonte |
 |---|---|---|---|
-| dice-roll | dice-throw-1 | card-draw | card-slide-1 |
-| dice-double | dice-throw-2 + PIZZI02 | card-reveal | card-fan-1 |
+| dice-roll | dice-shake-2 + dice-throw-3 | card-draw | card-slide-1 |
+| dice-double | chacoalho + dice-throw-2 + PIZZI02 | card-reveal | card-fan-1 |
 | dice-speed | dice-shake-3 (trim) | card-play | card-place-1 |
 | dice-bus | die-throw-4 | card-discard | card-shove-1 |
 | step-tick | footstep_wood_002 | card-shortcut | cloth1 (whoosh) |
