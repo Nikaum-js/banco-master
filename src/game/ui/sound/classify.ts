@@ -38,6 +38,33 @@ export function cueForNotice(kind: Notice['kind']): SoundCue | null {
   }
 }
 
+// Chave de VALOR de uma entrada de log. O motor clona o estado inteiro a cada
+// ação (structuredClone) — identidade de objeto nunca sobrevive; qualquer
+// comparação do log tem que ser por valor.
+export function logKey(e: LogEntry): string {
+  return `${e.who}|${e.what}`
+}
+
+// Quantas entradas NOVAS existem no fim de `keys` em relação a `prevKeys`.
+// O log é append-only com shift no teto de 50: descontadas as `d` novas, o
+// prefixo restante de `keys` tem que casar com o sufixo de `prevKeys`.
+// Log inteiramente irreconhecível (reset/reconexão) → 0: não re-tocar
+// histórico (FR-011).
+export function countNewLogEntries(prevKeys: string[], keys: string[]): number {
+  for (let d = 0; d <= keys.length; d++) {
+    const keep = keys.length - d
+    if (keep > prevKeys.length) continue
+    if (keep === 0) return prevKeys.length === 0 ? keys.length : 0
+    const off = prevKeys.length - keep
+    let ok = true
+    for (let i = 0; i < keep; i++) {
+      if (prevKeys[off + i] !== keys[i]) { ok = false; break }
+    }
+    if (ok) return d
+  }
+  return 0
+}
+
 // Classifica UMA entrada de log nova → cue (ou null). Por prefixo/substring estável
 // das emissões reais do motor (spec 021). Eventos já cobertos por canais tipados
 // (compra, rolagem, dívida) retornam null aqui para não tocar duas vezes (FR-007).

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { classifyLogEntry, cueForRoll, cueForResolution, cueForNotice } from '@/game/ui/sound/classify'
+import { classifyLogEntry, countNewLogEntries, cueForRoll, cueForResolution, cueForNotice } from '@/game/ui/sound/classify'
 import type { LogEntry } from '@/game/economy/types'
 import type { Roll } from '@/game/turn/types'
 
@@ -32,6 +32,30 @@ describe('classifyLogEntry (035 — tail do log → cue)', () => {
     expect(classifyLogEntry(log('rolou 3+4'))).toBeNull()
     expect(classifyLogEntry(log('pagou dívida $300'))).toBeNull()
     expect(classifyLogEntry(log('p1 ↔ p2: troca aceita'))).toBeNull() // C1: trade fora desta fatia
+  })
+})
+
+describe('countNewLogEntries (035 — diff do log POR VALOR)', () => {
+  it('nada novo: mesmo conteúdo, mesmo com objetos recriados pelo clone do motor', () => {
+    expect(countNewLogEntries(['p1|a', 'p2|b'], ['p1|a', 'p2|b'])).toBe(0)
+  })
+
+  it('append simples e append múltiplo', () => {
+    expect(countNewLogEntries(['p1|a'], ['p1|a', 'p2|b'])).toBe(1)
+    expect(countNewLogEntries(['p1|a'], ['p1|a', 'p2|b', 'p1|c'])).toBe(2)
+  })
+
+  it('shift no teto (front sai, novas entram no fim)', () => {
+    expect(countNewLogEntries(['p1|a', 'p2|b', 'p1|c'], ['p2|b', 'p1|c', 'p2|d'])).toBe(1)
+  })
+
+  it('entradas de valor idêntico em sequência contam como novas', () => {
+    expect(countNewLogEntries(['p1|pagou $50'], ['p1|pagou $50', 'p1|pagou $50'])).toBe(1)
+  })
+
+  it('log inicial (prev vazio) toca tudo; log irreconhecível (reset) não re-toca nada', () => {
+    expect(countNewLogEntries([], ['p1|a', 'p2|b'])).toBe(2)
+    expect(countNewLogEntries(['p1|x', 'p2|y'], ['p3|q', 'p4|w'])).toBe(0) // FR-011
   })
 })
 

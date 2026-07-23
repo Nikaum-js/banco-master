@@ -11,10 +11,10 @@ import { useEffect, useRef } from 'react'
 import { useGameStore } from '@/game/store'
 import { useAudioPrefs } from './prefs'
 import { ensureUnlockListener, play, setMasterGain } from './engine'
-import { classifyLogEntry, cueForResolution, cueForRoll, cueForNotice } from './classify'
+import { classifyLogEntry, countNewLogEntries, cueForResolution, cueForRoll, cueForNotice, logKey } from './classify'
 import type { SoundCue } from './cues'
 import type { GameState } from '@/game/turn/types'
-import type { LogEntry, Title } from '@/game/economy/types'
+import type { Title } from '@/game/economy/types'
 
 // Cues que JÁ sonorizam uma movimentação de dinheiro. Se algum tocou no tick,
 // o canal de delta de caixa fica mudo (evita dobrar som no mesmo evento, FR-007).
@@ -29,8 +29,10 @@ function buildLevel(t: Title): number {
   return t.houses + (t.hotel ? 1 : 0) + (t.hotel2 ? 1 : 0) + (t.skyscraper ? 1 : 0) + (t.hangar ? 1 : 0)
 }
 
+// IMPORTANTE: o motor clona o GameState inteiro a cada ação (structuredClone),
+// então NENHUM campo aqui pode ser comparado por identidade de objeto — só
+// valores primitivos e chaves derivadas (logKeys).
 interface Prev {
-  roll: GameState['turn']['lastRoll']
   seat: number
   resKind: string | null
   noticeKind: string | null
@@ -39,7 +41,7 @@ interface Prev {
   loans: number
   landAuction: boolean
   landBids: number
-  lastLog: LogEntry | null
+  logKeys: string[]
   titles: Record<number, { level: number; mortgaged: boolean }>
   cash: Record<string, number>
 }
@@ -58,7 +60,6 @@ function snapshot(g: GameState): Prev {
     cash[p.id] = p.cash
   })
   return {
-    roll: g.turn.lastRoll,
     seat: g.turn.seat,
     resKind: g.resolution?.kind ?? null,
     noticeKind: g.notice?.kind ?? null,
@@ -67,7 +68,7 @@ function snapshot(g: GameState): Prev {
     loans: g.loans.length,
     landAuction: g.landAuction !== null,
     landBids: g.landAuction ? g.landAuction.lots.reduce((s, l) => s + (l.currentBid > 0 ? 1 : 0), 0) : 0,
-    lastLog: g.log.length ? g.log[g.log.length - 1] : null,
+    logKeys: g.log.map(logKey),
     titles: snapshotTitles(g),
     cash,
   }
@@ -99,9 +100,6 @@ export function SoundLayer() {
     }
 
     // — Canal 1: transições tipadas —
-    // Rolagem (objeto novo a cada rollDice).
-    if (game.turn.lastRoll && game.turn.lastRoll !== p.roll) fire(cueForRoll(game.turn.lastRoll))
-
     // Resolução (borda de subida do kind).
     if (game.resolution && game.resolution.kind !== p.resKind) {
       const cue = cueForResolution(game.resolution.kind)
@@ -141,18 +139,20 @@ export function SoundLayer() {
       else if (!cur.mortgaged && before.mortgaged) fire('unmortgage')
     }
 
-    // — Canal 2: tail do log (por identidade de objeto; robusto ao shift de 50) —
+    // — Canal 2: tail do log (diff POR VALOR — robusto ao clone do motor e ao
+    // shift de 50; identidade de objeto não sobrevive ao structuredClone) —
     const log = game.log
-    if (log.length && next.lastLog !== p.lastLog) {
-      let start = 0
-      if (p.lastLog) {
-        const idx = log.lastIndexOf(p.lastLog)
-        start = idx >= 0 ? idx + 1 : Math.max(0, log.length - 1) // fallback: só a última
+    const fresh = countNewLogEntries(p.logKeys, next.logKeys)
+    for (let i = log.length - fresh; i < log.length; i++) {
+      const e = log[i]
+      // A rolagem vive no log ('rolou a+b') mas o cue precisa do Roll completo
+      // (dupla/Speed/Ônibus) — classifica pelo lastRoll corrente.
+      if (e.what.startsWith('rolou ')) {
+        if (game.turn.lastRoll) fire(cueForRoll(game.turn.lastRoll))
+        continue
       }
-      for (let i = start; i < log.length; i++) {
-        const cue = classifyLogEntry(log[i])
-        if (cue) fire(cue)
-      }
+      const cue = classifyLogEntry(e)
+      if (cue) fire(cue)
     }
 
     // — Canal 3: delta de caixa (ganhar ≠ perder dinheiro) —
