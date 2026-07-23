@@ -52,7 +52,7 @@ Auditar: `afplay src/assets/sfx/<cue>.ogg`.
 | step-land | impactWood_light_000 | apagao | **Mixkit** power-down |
 | buy | **Freesound** registradora clássica | greve | **Mixkit** apito |
 | decline | bookClose | hostile-takeover | impactPunch_heavy_002 |
-| build | impactPlank_medium_001 | reaction | drawKnife3 (schwing) |
+| build | impactMining_004 (martelada) | reaction | drawKnife3 (schwing) |
 | sell | chips-stack-3 | immunity | impactBell_heavy_003 |
 | mortgage | bookPlace3 + metalClick | free-parking | chips-collide-4 |
 | unmortgage | cards-pack-take-out-2 | jail-in | doorClose_3 + metalLatch |

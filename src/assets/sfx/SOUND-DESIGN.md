@@ -145,14 +145,16 @@ não estalar. `drawKnife3` e `chips-handle-2` do Kenney vêm ~20 dB baixos — n
    deslizantes das cartas e o thud+clique do `mortgage`.
 
 ### build — construiu estrutura
-1. **Som:** tábua de madeira assentando com um estrépito de encaixe — carpintaria de
-   verdade, com peso. Intenção: satisfação de progresso físico, "subiu uma parede".
-2. **Referência:** Monopoly GO faz da construção um mini-espetáculo de marteladas; a
-   versão mesa-premium é uma tábua só, bem gorda.
-3. **Duração:** 0,78 s — ação deliberada e estratégica, pode ocupar espaço.
-4. **Escolha:** Kenney *Impact Sounds* → `impactPlank_medium_001.ogg` (CC0).
-5. **Coesão/contraste:** a madeira mais RUIDOSA do conjunto (clatter), vs. os toques
-   limpos de passo/gavel; nada a ver com o `sell` (fichas).
+1. **Som:** MARTELADA de construção com ring metálico e detritos — obra de verdade.
+   Intenção: satisfação de progresso físico, "subiu uma parede".
+2. **Referência:** Monopoly GO faz da construção um mini-espetáculo de marteladas — aqui
+   é uma martelada só, gorda e definitiva.
+3. **Duração:** 0,83 s — ação deliberada e estratégica, pode ocupar espaço.
+4. **Escolha:** Kenney *Impact Sounds* → `impactMining_004.ogg` (CC0). (A tábua
+   `impactPlank` foi descartada: chacoalho de madeira confundível com o `turn-end`,
+   que é dados recolhidos da mesa.)
+5. **Coesão/contraste:** o único MARTELO do conjunto; o ring metálico o separa de toda a
+   família madeira (passos, gavel, turn-end) sem invadir o metal-prisão.
 
 ### sell — vendeu construção
 1. **Som:** pilha curta de fichas contadas de volta pra mão — metálico-cerâmico,
@@ -520,7 +522,7 @@ não estalar. `drawKnife3` e `chips-handle-2` do Kenney vêm ~20 dB baixos — n
 | step-land | `impactWood_light_000.ogg` | — |
 | buy | Mixkit registradora (atual) | — |
 | decline | `bookClose.ogg` | — |
-| build | `impactPlank_medium_001.ogg` | — |
+| build | `impactMining_004.ogg` (martelada) | — |
 | sell | `chips-stack-3.ogg` | — |
 | mortgage | `bookPlace3` + `metalClick` | layer |
 | unmortgage | `cards-pack-take-out-2.ogg` | — |
