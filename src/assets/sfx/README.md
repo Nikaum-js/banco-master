@@ -21,9 +21,11 @@ sinos → atenção, música → momentos raros). Zero beeps sintéticos de inte
 - **33 cues** — [Kenney.nl](https://kenney.nl/assets) (**CC0**), packs *Casino Audio*,
   *Impact Sounds*, *RPG Audio*, *Music Jingles* (pizzicato) e *UI Audio* (interruptores
   físicos gravados).
-- **6 cues** — [Mixkit](https://mixkit.co/free-sound-effects/) (Mixkit Free License):
-  `buy` (registradora), `apagao` (power-down), `greve` (apito), `your-turn` ("Service
-  bell" #931), `win` (fanfarra #226, recortada), `bankruptcy` ("Losing piano" #2024).
+- **5 cues** — [Mixkit](https://mixkit.co/free-sound-effects/) (Mixkit Free License):
+  `apagao` (power-down), `greve` (apito), `your-turn` ("Service bell" #931), `win`
+  (fanfarra #226, recortada), `bankruptcy` ("Losing piano" #2024).
+- **1 cue** — [Freesound](https://freesound.org) (**CC0**): `buy` = "Cash Register
+  Purchase" (Zott820, #209578) — a registradora mecânica clássica.
 
 ## Como as escolhas foram feitas
 
@@ -47,7 +49,7 @@ Auditar: `afplay src/assets/sfx/<cue>.ogg`.
 | dice-bus | die-throw-4 | card-discard | card-shove-1 |
 | step-tick | footstep_wood_002 | card-shortcut | cloth1 (whoosh) |
 | step-land | impactWood_light_000 | apagao | **Mixkit** power-down |
-| buy | **Mixkit** registradora | greve | **Mixkit** apito |
+| buy | **Freesound** registradora clássica | greve | **Mixkit** apito |
 | decline | bookClose | hostile-takeover | impactPunch_heavy_002 |
 | build | impactPlank_medium_001 | reaction | drawKnife3 (schwing) |
 | sell | chips-stack-3 | immunity | impactBell_heavy_003 |

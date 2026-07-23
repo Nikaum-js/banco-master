@@ -127,9 +127,10 @@ não estalar. `drawKnife3` e `chips-handle-2` do Kenney vêm ~20 dB baixos — n
    recompensa da compra — o som mais gostoso do jogo, dinheiro com peso e cerimônia.
 2. **Referência:** é O som canônico de compra em todo o gênero (Monopoly GO, Rento);
    ninguém precisa aprender o que significa.
-3. **Duração:** ~1 s — pouco frequente e importante; pode respirar.
-4. **Escolha:** manter o atual `buy.wav` (Mixkit cash register, Mixkit Free License) —
-   escolha da rodada anterior que já obedecia ao NORTE.
+3. **Duração:** ~1,5 s — pouco frequente e importante; pode respirar.
+4. **Escolha (produzido):** Freesound → **"Cash Register Purchase"** (Zott820, id 209578,
+   **CC0**) — a registradora mecânica clássica: tecla + cha-ching + gaveta. Recortada de
+   0,02–1,55 s com fade de 200 ms, −15 LUFS.
 5. **Coesão/contraste:** o único "cha-ching" completo do conjunto; `rent-paid` e afins
    usam moedas/fichas sem sino — hierarquia clara de cerimônia.
 
