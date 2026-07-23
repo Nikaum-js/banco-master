@@ -453,16 +453,16 @@ não estalar. `drawKnife3` e `chips-handle-2` do Kenney vêm ~20 dB baixos — n
    grave da `immunity` e o sino embutido na registradora do `buy`.
 
 ### turn-end — turno finalizado
-1. **Som:** dados sendo RECOLHIDOS da mesa de madeira — o gesto universal de "passei a
-   vez" numa mesa real. Intenção: pontuação discreta de fim de frase; a mesa respira e
-   o próximo assume.
+1. **Som:** VIRADA DE PÁGINA — papel encorpado virando: o capítulo do turno fechou.
+   Intenção: pontuação discreta de fim de frase; a mesa respira e o próximo assume.
 2. **Referência:** Monopoly Plus marca a troca de vez com foley de mesa; Richup usa um
    blip — anti-referência.
-3. **Duração:** 0,7 s, discreto (−17 LUFS) — acontece o tempo todo.
-4. **Escolha:** Kenney *Casino Audio* → `dice-grab-1.ogg`, normalizado (CC0).
-5. **Coesão/contraste:** fecha o ciclo que o `dice-roll` abre (dados jogados → dados
-   recolhidos); arrastado e ascendente, inconfundível com os arremessos e com o ding do
-   `your-turn`.
+3. **Duração:** 0,77 s, discreto (−18 LUFS) — acontece o tempo todo.
+4. **Escolha:** Kenney *RPG Audio* → `bookFlip1.ogg`, normalizado (CC0). (Duas
+   tentativas percussivas — dados recolhidos e antes disso a tábua no `build` — colidiam
+   com as ações de compra/construção; papel não colide com nada percussivo.)
+5. **Coesão/contraste:** único som de PÁGINA do conjunto; a família cartas usa slides e
+   snaps, nunca flip — e nenhuma ação de dinheiro/construção é de papel leve.
 
 ### win — venceu o jogo
 1. **Som:** fanfarra de metais REAL, frase curta ascendente e resolvida — pódio, taça,
@@ -551,7 +551,7 @@ não estalar. `drawKnife3` e `chips-handle-2` do Kenney vêm ~20 dB baixos — n
 | jail-in | `doorClose_3` + `metalLatch` | layer |
 | jail-out | `doorOpen_1.ogg` | — |
 | your-turn | Mixkit "Service bell" #931 | trim |
-| turn-end | `dice-grab-1.ogg` | normalizar |
+| turn-end | `bookFlip1.ogg` (virada de página) | normalizar |
 | win | Mixkit fanfare #226 | trim 3,5 s |
 | bankruptcy | Mixkit "Losing piano" #2024 | — |
 | pause | `switch1.ogg` | — |

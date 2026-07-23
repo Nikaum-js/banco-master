@@ -64,4 +64,4 @@ Auditar: `afplay src/assets/sfx/<cue>.ogg`.
 | debt | jingles_PIZZI04 (grave) | pause | switch1 (desliga) |
 | loan-granted | chips-handle-2 | resume | switch10 (liga) |
 | loan-interest | creak3 (rangido) | auction-bid | chip-lay-2 |
-| auction-close | gavel duplo (impactWood_heavy_002 ×2) | turn-end | dice-grab-1 (recolhe os dados) |
+| auction-close | gavel duplo (impactWood_heavy_002 ×2) | turn-end | bookFlip1 (virada de página) |
