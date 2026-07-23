@@ -8,7 +8,7 @@ export type SoundCue =
   | 'step-tick' | 'step-land'
   | 'go-bonus' | 'tax-paid' | 'busticket-gain'
   | 'buy' | 'decline' | 'build' | 'sell' | 'mortgage' | 'unmortgage'
-  | 'rent-paid' | 'auction-bid' | 'auction-close' | 'debt'
+  | 'rent-paid' | 'money-gain' | 'money-loss' | 'auction-bid' | 'auction-close' | 'debt'
   | 'loan-granted' | 'loan-interest'
   | 'card-draw' | 'card-reveal' | 'card-shortcut' | 'card-play' | 'card-discard'
   | 'apagao' | 'greve' | 'hostile-takeover' | 'reaction' | 'immunity'

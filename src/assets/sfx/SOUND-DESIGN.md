@@ -187,14 +187,36 @@ não estalar. `drawKnife3` e `chips-handle-2` do Kenney vêm ~20 dB baixos — n
    do `mortgage` — par pergunta-resposta.
 
 ### rent-paid — aluguel pago
-1. **Som:** punhado GORDO de moedas mudando de mãos — não duas moedinhas: um maço, com
-   graves. Intenção: dor/ganho palpável; a economia deste jogo tem PESO (trava do SRS).
-2. **Referência:** Monopoly GO faz o dinheiro cascatear; Richup usa um "plim" anêmico —
-   anti-referência.
-3. **Duração:** 0,85 s — evento central do jogo, frequente mas nunca "troquinho".
-4. **Escolha:** Kenney *RPG Audio* → `handleCoins.ogg` (CC0).
-5. **Coesão/contraste:** o som de dinheiro mais encorpado do conjunto depois do `buy`;
-   moedas (não fichas) o separam de sell/lance/go.
+1. **Som:** moedas entregues + baque surdo de bolsa de couro fechando — o dinheiro SAIU,
+   com peso e um fim seco. Intenção: dor palpável de pagar; direção emocional para BAIXO.
+2. **Referência:** Monopoly GO faz o dinheiro cascatear; aqui a cascata é reservada ao
+   GANHO (`money-gain`) — pagar tem que soar como perda, não como chuva de moedas.
+3. **Duração:** 0,6 s — evento central e frequente.
+4. **Escolha (produzido):** Kenney *RPG Audio* → `handleCoins2.ogg` + `dropLeather.ogg`
+   (baque a 0,18 s, +2 dB) (CC0).
+5. **Coesão/contraste:** moedas como o resto do dinheiro, mas fechando em baque grave —
+   o oposto exato da cascata ascendente do `money-gain`.
+
+### money-gain — ganhou dinheiro (cartas, trocas, credor)
+1. **Som:** cascata de moedas ASCENDENTE e brilhante caindo na sua mão. Intenção: a
+   alegria física de receber — direção emocional para CIMA, inconfundível com pagar.
+2. **Referência:** o "coin burst" de recompensa do Monopoly GO — o som que todo jogador
+   mobile já associa a "entrou dinheiro".
+3. **Duração:** 1,35 s — ganho é raro o bastante pra respirar.
+4. **Escolha (produzido):** Mixkit → **"Coin win notification"** (id 1992,
+   `mixkit.co/free-sound-effects/money/`), primeira frase recortada (Mixkit Free License).
+5. **Coesão/contraste:** moedas como `rent-paid`/`tax-paid`, mas subindo e brilhando —
+   par de opostos com o `money-loss`.
+
+### money-loss — perdeu dinheiro (cartas, cobranças sem cue próprio)
+1. **Som:** bolsa de dinheiro pesada caindo/entregue com moedas se assentando — descida
+   grave (441→135 Hz). Intenção: o bolso esvaziou; resignação com peso.
+2. **Referência:** o "money bag" clássico de casino/board games digitais para débito.
+3. **Duração:** 1,1 s.
+4. **Escolha (produzido):** Mixkit → **"Money bag drop"** (id 1989,
+   `mixkit.co/free-sound-effects/money/`), recortado (Mixkit Free License).
+5. **Coesão/contraste:** espelho descendente do `money-gain`; mais longo e "cheio" que o
+   `rent-paid` seco (que tem cue próprio e contexto visual).
 
 ### tax-paid — pagou imposto
 1. **Som:** CARIMBO burocrático (thud de almofada) e as moedas saindo logo atrás —
@@ -490,7 +512,9 @@ não estalar. `drawKnife3` e `chips-handle-2` do Kenney vêm ~20 dB baixos — n
 | sell | `chips-stack-3.ogg` | — |
 | mortgage | `bookPlace3` + `metalClick` | layer |
 | unmortgage | `cards-pack-take-out-2.ogg` | — |
-| rent-paid | `handleCoins.ogg` | — |
+| rent-paid | `handleCoins2` + `dropLeather` | layer |
+| money-gain | Mixkit "Coin win notification" #1992 | trim |
+| money-loss | Mixkit "Money bag drop" #1989 | trim |
 | tax-paid | `bookPlace1` + `handleCoins2` | layer |
 | go-bonus | `chip-lay-3.ogg` | discreto |
 | busticket-gain | `switch16.ogg` | — |

@@ -21,9 +21,10 @@ sinos → atenção, música → momentos raros). Zero beeps sintéticos de inte
 - **33 cues** — [Kenney.nl](https://kenney.nl/assets) (**CC0**), packs *Casino Audio*,
   *Impact Sounds*, *RPG Audio*, *Music Jingles* (pizzicato) e *UI Audio* (interruptores
   físicos gravados).
-- **5 cues** — [Mixkit](https://mixkit.co/free-sound-effects/) (Mixkit Free License):
+- **7 cues** — [Mixkit](https://mixkit.co/free-sound-effects/) (Mixkit Free License):
   `apagao` (power-down), `greve` (apito), `your-turn` ("Service bell" #931), `win`
-  (fanfarra #226, recortada), `bankruptcy` ("Losing piano" #2024).
+  (fanfarra #226, recortada), `bankruptcy` ("Losing piano" #2024), `money-gain` ("Coin
+  win notification" #1992), `money-loss` ("Money bag drop" #1989).
 - **1 cue** — [Freesound](https://freesound.org) (**CC0**): `buy` = "Cash Register
   Purchase" (Zott820, #209578) — a registradora mecânica clássica.
 
@@ -55,7 +56,8 @@ Auditar: `afplay src/assets/sfx/<cue>.ogg`.
 | sell | chips-stack-3 | immunity | impactBell_heavy_003 |
 | mortgage | bookPlace3 + metalClick | free-parking | chips-collide-4 |
 | unmortgage | cards-pack-take-out-2 | jail-in | doorClose_3 + metalLatch |
-| rent-paid | handleCoins (punhado) | jail-out | doorOpen_1 |
+| rent-paid | handleCoins2 + dropLeather | jail-out | doorOpen_1 |
+| money-gain | **Mixkit** coin win (sobe) | money-loss | **Mixkit** money bag (desce) |
 | tax-paid | bookPlace1 + handleCoins2 | your-turn | **Mixkit** Service bell |
 | go-bonus | chip-lay-3 | win | **Mixkit** fanfarra (trim) |
 | busticket-gain | switch16 (picotador) | bankruptcy | **Mixkit** Losing piano |
