@@ -34,6 +34,27 @@ function ActionBtn({
   )
 }
 
+// Seta de direção do Atalho — frente segue o sentido horário do tabuleiro.
+function ArrowGlyph({ flip = false }: { flip?: boolean }) {
+  return (
+    <svg
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={flip ? { transform: 'scaleX(-1)' } : undefined}
+      aria-hidden
+    >
+      <path d="M4 12h15" />
+      <path d="m13 6 6 6-6 6" />
+    </svg>
+  )
+}
+
 // Cartão central — casca fina sobre o ModalShell canônico.
 function Card({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
@@ -93,13 +114,47 @@ export function ModalLayer() {
 
           {view.kind === 'card-shortcut' && (
             <Card>
-              <ModalHeader title="Atalho" subtitle="Mover 3 casas" />
-              <div className="px-3.5 py-3">
-                <p className="text-cream-muted text-sm mb-3">Para que direção você quer andar 3 casas?</p>
-                <div className="flex gap-2">
-                  <ActionBtn onClick={() => chooseCardShortcut('frente')}>← Frente</ActionBtn>
-                  <ActionBtn onClick={() => chooseCardShortcut('tras')} variant="secondary">Trás →</ActionBtn>
-                </div>
+              <ModalHeader title="Atalho" subtitle="Mover 3 casas — escolha a direção" />
+              {/* Cada direção é um CARTÃO DE DESTINO: seta no sentido real do
+                  tabuleiro + onde o jogador vai cair (nome + bandeira/glifo).
+                  Decisão informada, sem precisar decorar o tabuleiro. */}
+              <div className="px-3.5 py-3 flex flex-col gap-2">
+                {([
+                  { dir: 'frente' as const, label: 'Frente', steps: 3, hint: 'no sentido do jogo' },
+                  { dir: 'tras' as const, label: 'Trás', steps: -3, hint: 'no sentido contrário' },
+                ]).map(({ dir, label, steps, hint }) => {
+                  const dest = BOARD[(activePlayer.pos + steps + BOARD.length) % BOARD.length]
+                  return (
+                    <button
+                      key={dir}
+                      type="button"
+                      onClick={() => chooseCardShortcut(dir)}
+                      className="group flex items-center gap-3 w-full px-3 py-2.5 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 hover:border-gold hover:bg-coffee-700 transition-colors text-left"
+                    >
+                      <span className="w-9 h-9 shrink-0 rounded-full bg-coffee-800 border border-coffee-500 grid place-items-center text-gold-glow transition-colors group-hover:border-gold/60">
+                        <ArrowGlyph flip={dir === 'tras'} />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block display text-cream text-base leading-none">{label}</span>
+                        <span className="block text-cream-muted text-xs leading-snug mt-1 truncate">
+                          {hint} — cai em <span className="text-cream">{dest.name}</span>
+                        </span>
+                      </span>
+                      {dest.kind === 'property' ? (
+                        <span className="w-7 h-7 shrink-0 rounded-full bg-coffee-900 border border-coffee-950 overflow-hidden shadow-[var(--shadow-card)]">
+                          <img
+                            src={`https://flagcdn.com/${(dest as PropertySquare).uf.toLowerCase()}.svg`}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            draggable={false}
+                          />
+                        </span>
+                      ) : (
+                        <span className="text-gold shrink-0"><SquareIcon square={dest} size={24} /></span>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             </Card>
           )}
