@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { useGameStore } from '@/game/store'
 import { BOARD } from '@/lib/boardData'
 import { Button } from '@/game/ui/primitives'
+import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 
 const propName = (pos: number) => BOARD[pos]?.name ?? `#${pos}`
 
@@ -106,34 +107,17 @@ export function NoticeLayer() {
       )}
 
       {notice?.kind === 'hostile-takeover' && (
-        <motion.div
-          key="takeover"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          onClick={() => dismissNotice()}
-          className="fixed inset-0 z-[67] flex items-center justify-center bg-coffee-950/70 backdrop-blur-[2px] p-4"
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.92, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 8 }}
-            transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] w-[360px] max-w-[92vw] overflow-hidden"
-          >
-            <div className="px-4 py-3 border-b-2 border-coffee-950" style={{ background: 'var(--gradient-signal)' }}>
-              <h3 className="display text-lg leading-none text-cream">Aquisição Hostil</h3>
-            </div>
+        <Overlay key="takeover" z={67} onClick={() => dismissNotice()}>
+          <ModalShell className="w-[360px] max-w-[92vw]">
+            <ModalHeader tone="signal" title="Aquisição Hostil" />
             <div className="p-4">
               <p className="text-cream text-sm leading-snug">{notice.victimId} perdeu {propName(notice.pos)} para {notice.attackerId}.</p>
               <Button onClick={() => dismissNotice()} className="mt-4 w-full">
                 OK
               </Button>
             </div>
-          </motion.div>
-        </motion.div>
+          </ModalShell>
+        </Overlay>
       )}
     </AnimatePresence>
   )

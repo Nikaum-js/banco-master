@@ -15,6 +15,7 @@ import { GROUP_COLOR, SquareIcon, PlayerFace, computeRents, PLAYER_COLORS } from
 import { buildCost } from '@/game/economy/construction'
 import { GavelIcon, CoinIcon, HouseIcon, HotelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
+import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 
 // Botão de ação do modal — casca fina sobre o primitivo Button (flex-1).
 function ActionBtn({
@@ -33,41 +34,12 @@ function ActionBtn({
   )
 }
 
-// Cartão central — shell coffee idêntico ao dos popovers, mas centralizado.
+// Cartão central — casca fina sobre o ModalShell canônico.
 function Card({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.92, y: 8 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.92, y: 8 }}
-      transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-      className={cn(
-        'max-w-[92vw] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden',
-        wide ? 'w-[360px]' : 'w-[300px]',
-      )}
-      onClick={(e) => e.stopPropagation()}
-    >
+    <ModalShell className={cn('max-w-[92vw]', wide ? 'w-[360px]' : 'w-[300px]')}>
       {children}
-    </motion.div>
-  )
-}
-
-// Header com stripe colorida + título + subtítulo (reusa o visual do deed).
-function Header({ bg, icon, title, subtitle }: { bg: string; icon: React.ReactNode; title: string; subtitle?: string }) {
-  return (
-    <div className="relative px-3.5 py-3 border-b-2 border-coffee-950" style={{ background: bg }}>
-      <div className="flex items-center gap-2.5">
-        {icon && <div className="shrink-0 w-9 h-9 flex items-center justify-center">{icon}</div>}
-        <div className="flex-1 min-w-0">
-          <h3 className="display text-coffee-950 text-lg leading-none truncate">{title}</h3>
-          {subtitle && (
-            <p className="label text-coffee-950/80 mt-0.5" style={{ fontSize: '9px' }}>
-              {subtitle}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   )
 }
 
@@ -92,14 +64,7 @@ export function ModalLayer() {
   return (
     <AnimatePresence>
       {showBusArmed && (
-        <motion.div
-          key="bus-armed-backdrop"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-coffee-950/70 backdrop-blur-[2px] p-4"
-        >
+        <Overlay key="bus-armed-backdrop" z={60}>
           <BusPicker
             fromPos={activePlayer.pos}
             title="Usar Bus Ticket"
@@ -107,24 +72,17 @@ export function ModalLayer() {
             onPick={(pos) => { useBusTicketCmd(pos); disarmBus() }}
             onCancel={disarmBus}
           />
-        </motion.div>
+        </Overlay>
       )}
       {view && (
-        <motion.div
-          key="modal-backdrop"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-coffee-950/70 backdrop-blur-[2px] p-4"
-        >
+        <Overlay key="modal-backdrop" z={60}>
           {view.kind === 'auction' && (
             <AuctionCard view={view} activeId={activeId} placeBid={placeBid} />
           )}
 
           {view.kind === 'card-discard' && (
             <Card>
-              <Header bg="var(--gradient-brass)" icon={null} title="Mão cheia" subtitle="Escolha 1 carta para descartar" />
+              <ModalHeader title="Mão cheia" subtitle="Escolha 1 carta para descartar" />
               <div className="px-3.5 py-3 flex flex-col gap-2">
                 {view.cards.map((c) => (
                   <DiscardRow key={c.id} card={c} onPick={() => discardCard(c.id)} />
@@ -135,7 +93,7 @@ export function ModalLayer() {
 
           {view.kind === 'card-shortcut' && (
             <Card>
-              <Header bg="var(--gradient-brass)" icon={null} title="Atalho" subtitle="Mover 3 casas" />
+              <ModalHeader title="Atalho" subtitle="Mover 3 casas" />
               <div className="px-3.5 py-3">
                 <p className="text-cream-muted text-sm mb-3">Para que direção você quer andar 3 casas?</p>
                 <div className="flex gap-2">
@@ -153,7 +111,7 @@ export function ModalLayer() {
               exit={{ opacity: 0, scale: 0.9, y: 10 }}
               transition={{ type: 'spring', stiffness: 320, damping: 26 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-[300px] max-w-[90vw] bg-coffee-800 rounded-[var(--radius-card)] overflow-hidden border-2"
+              className="w-[300px] max-w-[90vw] bg-coffee-800 rounded-[var(--radius-modal)] overflow-hidden border-2"
               style={{ borderColor: RARITY_COLOR[view.rarity], boxShadow: `var(--shadow-dropdown), 0 0 22px color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 45%, transparent)` }}
             >
               {/* Faixa da raridade */}
@@ -190,7 +148,7 @@ export function ModalLayer() {
 
           {view.kind === 'bus-move' && (
             <Card>
-              <Header bg="var(--gradient-brass)" icon={null} title="Ônibus do Speed Die" subtitle="Escolha por qual dado mover" />
+              <ModalHeader title="Ônibus do Speed Die" subtitle="Escolha por qual dado mover" />
               <div className="px-3.5 py-3 flex flex-col gap-2">
                 {([
                   { opt: 'die0' as const, label: `Dado A (${view.white[0]})`, steps: view.white[0] },
@@ -210,7 +168,7 @@ export function ModalLayer() {
 
           {view.kind === 'triple-dest' && (
             <Card>
-              <Header bg="var(--gradient-brass)" icon={null} title="Speed Die triplo!" subtitle="Vá para qualquer casa" />
+              <ModalHeader title="Speed Die triplo!" subtitle="Vá para qualquer casa" />
               <div className="px-3.5 py-3">
                 <p className="text-cream-muted text-sm mb-2">Escolha o destino:</p>
                 <div className="max-h-[46vh] overflow-auto flex flex-col gap-1 pr-1">
@@ -231,7 +189,7 @@ export function ModalLayer() {
               </div>
             </Card>
           )}
-        </motion.div>
+        </Overlay>
       )}
     </AnimatePresence>
   )
@@ -336,15 +294,8 @@ function BusPicker({
   onCancel?: () => void
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.92, y: 8 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.92, y: 8 }}
-      transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-      onClick={(e) => e.stopPropagation()}
-      className="w-[760px] max-w-[96vw] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden"
-    >
-      <Header bg="var(--gradient-brass)" icon={null} title={title} subtitle={subtitle} />
+    <ModalShell className="w-[760px] max-w-[96vw]">
+      <ModalHeader title={title} subtitle={subtitle} />
       <div className="px-5 py-5">
         <SideRow fromPos={fromPos} onPick={onPick} />
         <p className="label text-cream-muted text-center mt-3 leading-snug">Clique numa casa da fileira para ir.</p>
@@ -354,7 +305,7 @@ function BusPicker({
           </Button>
         )}
       </div>
-    </motion.div>
+    </ModalShell>
   )
 }
 
@@ -453,18 +404,8 @@ function AuctionCard({
   const accent = isProp ? GROUP_COLOR[(sq as PropertySquare).group] : 'var(--color-brass)'
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.92, y: 8 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.92, y: 8 }}
-      transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-      onClick={(e) => e.stopPropagation()}
-      className="w-[600px] max-w-[95vw] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden"
-    >
-      {/* Título */}
-      <div className="px-4 py-3 border-b-2 border-coffee-950 text-center" style={{ background: 'var(--gradient-brass)' }}>
-        <h3 className="display text-coffee-950 text-xl leading-none tracking-wide">Leilão</h3>
-      </div>
+    <ModalShell className="w-[600px] max-w-[95vw]">
+      <ModalHeader center title="Leilão" className="[&_h3]:text-xl" />
       {/* Nome + ícone, centralizado */}
       <div className="flex items-center justify-center gap-2.5 px-4 pt-4 pb-3">
         <DeedIcon sq={sq} />
@@ -534,6 +475,6 @@ function AuctionCard({
           </div>
         </div>
       </div>
-    </motion.div>
+    </ModalShell>
   )
 }

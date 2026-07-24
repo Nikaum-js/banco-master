@@ -14,6 +14,7 @@ import { BOARD, type PropertySquare, type Square } from '@/lib/boardData'
 import { GROUP_COLOR, SquareIcon } from '@/boards/shared'
 import { CoinIcon, HouseIcon, HotelIcon, GavelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
+import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 import { THEME } from '@/game/theme'
 
 const INCREMENTS = [10, 50, 100] as const
@@ -194,24 +195,9 @@ export function LandAuctionLayer() {
 
   return (
     <AnimatePresence>
-      <motion.div
-        key="land-auction"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.18 }}
-        className="fixed inset-0 z-[68] flex items-center justify-center bg-coffee-950/70 backdrop-blur-[2px] p-4"
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-          className="bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] w-[860px] max-w-[97vw] max-h-[92vh] overflow-auto"
-        >
-          {/* Título */}
-          <div className="px-5 py-3 border-b-2 border-coffee-950 sticky top-0 z-10 text-center" style={{ background: 'var(--gradient-brass)' }}>
-            <h3 className="display text-coffee-950 text-xl leading-none tracking-wide">Leilão de Escassez</h3>
-          </div>
+      <Overlay key="land-auction" z={68}>
+        <ModalShell className="w-[860px] max-w-[97vw] max-h-[92vh] overflow-auto">
+          <ModalHeader center title="Leilão de Escassez" className="sticky top-0 z-10 [&_h3]:text-xl" />
 
           {/* Seletor de licitante (single-client) + caixa disponível */}
           <div className="px-5 py-3 border-b border-coffee-700 flex items-center gap-2 flex-wrap">
@@ -248,8 +234,8 @@ export function LandAuctionLayer() {
               <LotCard key={lot.pos} lot={lot} now={now} cashAvail={cash - committedFor(lot.pos)} onBid={bid} />
             ))}
           </div>
-        </motion.div>
-      </motion.div>
+        </ModalShell>
+      </Overlay>
     </AnimatePresence>
   )
 }

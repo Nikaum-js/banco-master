@@ -5,7 +5,7 @@
 // (validade) vem de validateTrade. Troca-se só propriedade + dinheiro.
 import { useState, useEffect, type ReactNode } from 'react'
 import { create } from 'zustand'
-import { motion, AnimatePresence } from 'motion/react'
+import { AnimatePresence } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
 import { validateTrade, tradableProps } from '@/game/economy/trade'
@@ -14,6 +14,7 @@ import { BOARD, type PropertySquare, type Square } from '@/lib/boardData'
 import { GROUP_COLOR, SquareIcon, PlayerFace, PLAYER_COLORS } from '@/boards/shared'
 import { CoinIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
+import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 
 // Store de UI mínimo: abre/fecha o compositor (botão "Negociar" mora noutro arquivo).
 export const useTradeUI = create<{ open: boolean; show: () => void; hide: () => void }>((set) => ({
@@ -48,46 +49,22 @@ function CheckGlyph() {
 }
 
 // ---------------------------------------------------------------------
-// Shell — backdrop + cartão + header + botão (vocabulário central).
+// Shell — cascas finas sobre Overlay/ModalShell/ModalHeader canônicos.
 // ---------------------------------------------------------------------
 function Backdrop({ children }: { children: ReactNode }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
-      className="fixed inset-0 z-[65] flex items-center justify-center bg-coffee-950/70 backdrop-blur-[2px] p-4"
-    >
-      {children}
-    </motion.div>
-  )
+  return <Overlay z={65}>{children}</Overlay>
 }
 
 function Card({ children }: { children: ReactNode }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95, y: 10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95, y: 10 }}
-      transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-      onClick={(e) => e.stopPropagation()}
-      className="w-[720px] max-w-[96vw] max-h-[92vh] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden flex flex-col"
-    >
+    <ModalShell className="w-[720px] max-w-[96vw] max-h-[92vh] flex flex-col">
       {children}
-    </motion.div>
+    </ModalShell>
   )
 }
 
 function Header({ title, subtitle }: { title: string; subtitle?: string }) {
-  return (
-    <div className="px-5 py-3 border-b-2 border-coffee-950 shrink-0 text-center" style={{ background: 'var(--gradient-brass)' }}>
-      <h3 className="display text-coffee-950 text-xl leading-none tracking-wide">{title}</h3>
-      {subtitle && (
-        <p className="label text-coffee-950/80 mt-1" style={{ fontSize: '9px' }}>{subtitle}</p>
-      )}
-    </div>
-  )
+  return <ModalHeader center title={title} subtitle={subtitle} className="[&_h3]:text-xl" />
 }
 
 // ---------------------------------------------------------------------

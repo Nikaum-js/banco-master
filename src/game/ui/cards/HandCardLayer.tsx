@@ -3,7 +3,7 @@
 // (puro) — exatamente os que o motor aceita. Diplomacia é interceptada pelo motor.
 import { type ReactNode } from 'react'
 import { create } from 'zustand'
-import { motion, AnimatePresence } from 'motion/react'
+import { AnimatePresence } from 'motion/react'
 import { useGameStore } from '@/game/store'
 import { BOARD } from '@/lib/boardData'
 import { cardById } from '@/game/cards/catalog'
@@ -11,6 +11,7 @@ import { ownerOf } from '@/game/economy/titles'
 import { cardLabel } from './cardMeta'
 import { cardTargets } from './handView'
 import { Button } from '@/game/ui/primitives'
+import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 
 // Store de UI efêmero: qual carta está escolhendo alvo (null = fechado).
 export const useHandCardUI = create<{ cardId: string | null; open: (id: string) => void; close: () => void }>((set) => ({
@@ -23,16 +24,9 @@ const propName = (pos: number) => BOARD[pos]?.name ?? `#${pos}`
 
 function Backdrop({ children }: { children: ReactNode }) {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
-      onClick={() => useHandCardUI.getState().close()}
-      className="fixed inset-0 z-[66] flex items-center justify-center bg-coffee-950/70 backdrop-blur-[2px] p-4"
-    >
+    <Overlay z={66} onClick={() => useHandCardUI.getState().close()}>
       {children}
-    </motion.div>
+    </Overlay>
   )
 }
 
@@ -65,18 +59,8 @@ export function HandCardLayer() {
     <AnimatePresence>
       {cardId && targets ? (
         <Backdrop key="hand-target">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.92, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 8 }}
-            transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] w-[360px] max-w-[92vw] max-h-[90vh] flex flex-col overflow-hidden"
-          >
-            <div className="px-4 py-3 border-b-2 border-coffee-950 shrink-0" style={{ background: 'var(--gradient-brass)' }}>
-              <h3 className="display text-coffee-950 text-lg leading-none">Usar {cardLabel(cardById(cardId).effect)}</h3>
-              <p className="label text-coffee-950/80 mt-0.5" style={{ fontSize: '9px' }}>Escolha o alvo</p>
-            </div>
+          <ModalShell className="w-[360px] max-w-[92vw] max-h-[90vh] flex flex-col">
+            <ModalHeader title={`Usar ${cardLabel(cardById(cardId).effect)}`} subtitle="Escolha o alvo" />
 
             <div className="flex-1 overflow-auto p-3 flex flex-col gap-1.5">
               {(targets.positions ?? []).map((pos) => {
@@ -100,7 +84,7 @@ export function HandCardLayer() {
                 Cancelar
               </Button>
             </div>
-          </motion.div>
+          </ModalShell>
         </Backdrop>
       ) : null}
     </AnimatePresence>

@@ -88,7 +88,7 @@ function DecisionShell({
 }: { dim?: boolean; children: ReactNode }) {
   return (
     <div
-      className={`fixed inset-0 z-[60] flex items-center justify-center p-4 ${dim ? 'bg-coffee-950/45 backdrop-blur-[1px]' : 'pointer-events-none'}`}
+      className={`fixed inset-0 z-[60] flex items-center justify-center p-4 ${dim ? 'bg-coffee-950/70 backdrop-blur-[2px]' : 'pointer-events-none'}`}
     >
       {children}
     </div>
