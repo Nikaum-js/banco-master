@@ -21,124 +21,166 @@ import type { GameState } from '@/game/turn/types'
 import type { TempEffect, Trade } from '@/game/economy/types'
 
 // ---------------------------------------------------------------------
-// Glifos SVG próprios para casas especiais — sistema "instrumentos de
-// bordo" do Atlas da Meia-Noite: todo selo senta num mostrador comum
-// (InstrumentDial) de latão sobre tinta profunda, com graduações de rumo.
-// Pictogramas em starlight/latão/signal — mesma família do canto ao miolo.
+// Glifos SVG próprios para casas especiais — ilustrações full-bleed com
+// personalidade, na paleta do tema via var(--color-*): latão, tinta,
+// starlight e signal. Sem aro/mostrador — o pictograma ocupa a célula.
 // Cada glifo aceita size: number|string (suporta "1em" pra escala via cqi).
 // ---------------------------------------------------------------------
 type GlyphProps = { size?: number | string }
 
-// Mostrador comum — disco de tinta, aro de latão, anel de graduações e
-// marcas cardeais. Os filhos são o pictograma específico de cada selo.
-function InstrumentDial({ children }: { children?: ReactNode }) {
-  return (
-    <>
-      <g stroke="var(--color-brass)" strokeWidth="1" strokeLinecap="round" opacity="0.8">
-        <line x1="20" y1="1.6" x2="20" y2="3.6" />
-        <line x1="20" y1="36.4" x2="20" y2="38.4" />
-        <line x1="1.6" y1="20" x2="3.6" y2="20" />
-        <line x1="36.4" y1="20" x2="38.4" y2="20" />
-      </g>
-      <circle cx="20" cy="20" r="15" fill="var(--color-ink-900)" stroke="var(--color-brass)" strokeWidth="1.6" />
-      <circle cx="20" cy="20" r="12.8" fill="none" stroke="var(--color-brass-soft)" strokeWidth="0.5" strokeDasharray="1 1.6" opacity="0.8" />
-      {children}
-    </>
-  )
-}
-
-// GO — moeda de latão "R$ 200" no mostrador (bônus de passar, SRS §13.6).
+// GO — moeda dourada gigante "R$ 200" com raios de brilho (bônus de
+// passar pelo GO, SRS §13.6). Full-bleed, sem aro de instrumento.
 function GoGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      <InstrumentDial>
-        <circle cx="20" cy="20" r="10.4" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="1.4" />
-        <circle cx="20" cy="20" r="8.6" fill="none" stroke="var(--color-brass-soft)" strokeWidth="0.5" strokeDasharray="0.9 1.3" />
-        <ellipse cx="16" cy="14.5" rx="3" ry="1.5" fill="var(--color-brass-glow)" opacity="0.6" />
-        <text x="20" y="18.6" textAnchor="middle"
-          fontFamily="Roboto Slab, Roboto Slab Variable, serif"
-          fontSize="5.4" fontWeight="800" fill="var(--color-ink-950)">R$</text>
-        <text x="20" y="26.4" textAnchor="middle"
-          fontFamily="Roboto Slab, Roboto Slab Variable, serif"
-          fontSize="7.2" fontWeight="800" fill="var(--color-ink-950)" letterSpacing="-0.06em">200</text>
-      </InstrumentDial>
+      {/* raios/sparkles ao redor */}
+      <g stroke="var(--color-brass-glow)" strokeWidth="1.1" strokeLinecap="round" opacity="0.6">
+        <line x1="20" y1="1.5" x2="20" y2="3.5" />
+        <line x1="38.5" y1="20" x2="36.5" y2="20" />
+        <line x1="20" y1="38.5" x2="20" y2="36.5" />
+        <line x1="1.5" y1="20" x2="3.5" y2="20" />
+        <line x1="33"   y1="7"  x2="31.5" y2="8.5" />
+        <line x1="33"   y1="33" x2="31.5" y2="31.5" />
+        <line x1="7"    y1="33" x2="8.5"  y2="31.5" />
+        <line x1="7"    y1="7"  x2="8.5"  y2="8.5" />
+      </g>
+      <ellipse cx="20" cy="36.5" rx="13" ry="1.2" fill="var(--color-ink-950)" opacity="0.45" />
+      {/* moeda */}
+      <circle cx="20" cy="20" r="15" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="1.8" />
+      <circle cx="20" cy="20" r="12.6" fill="none" stroke="var(--color-brass-soft)" strokeWidth="0.7" strokeDasharray="1 1.4" />
+      <ellipse cx="14" cy="12" rx="4" ry="2" fill="var(--color-brass-glow)" opacity="0.55" />
+      <text x="20" y="17.5" textAnchor="middle"
+        fontFamily="Roboto Slab, Roboto Slab Variable, serif"
+        fontSize="7.5" fontWeight="800" fill="var(--color-ink-950)">R$</text>
+      <text x="20" y="28.5" textAnchor="middle"
+        fontFamily="Roboto Slab, Roboto Slab Variable, serif"
+        fontSize="10" fontWeight="800" fill="var(--color-ink-950)" letterSpacing="-0.06em">200</text>
     </svg>
   )
 }
 
-// Prisão (visita) — cela no mostrador: prisioneiro espiando atrás das barras.
+// Prisão (visita) — cela de pedra com prisioneiro atrás das barras e
+// cadeado pendurado. Full-bleed, sem aro.
 function JailGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      <InstrumentDial>
-        {/* vão da cela */}
-        <rect x="10.5" y="10.5" width="19" height="19" rx="1" fill="var(--color-ink-abyss)" stroke="var(--color-ink-950)" strokeWidth="1" />
-        {/* prisioneiro — cabeça + olhos atrás das barras */}
-        <circle cx="20" cy="19.5" r="4.6" fill="var(--color-group-brown)" stroke="var(--color-ink-950)" strokeWidth="0.7" />
-        <circle cx="18.3" cy="19" r="0.9" fill="var(--color-starlight)" />
-        <circle cx="21.7" cy="19" r="0.9" fill="var(--color-starlight)" />
-        <circle cx="18.4" cy="19.1" r="0.45" fill="var(--color-ink-950)" />
-        <circle cx="21.8" cy="19.1" r="0.45" fill="var(--color-ink-950)" />
-        <path d="M 18 22.4 Q 20 21.6 22 22.4" stroke="var(--color-ink-950)" strokeWidth="0.7" fill="none" strokeLinecap="round" />
-        {/* travessa + barras de ferro */}
-        <rect x="10.5" y="16" width="19" height="1.6" fill="var(--color-starlight-muted)" stroke="var(--color-ink-400)" strokeWidth="0.4" />
-        <rect x="13" y="10.5" width="1.9" height="19" fill="var(--color-starlight-muted)" stroke="var(--color-ink-400)" strokeWidth="0.4" />
-        <rect x="19" y="10.5" width="1.9" height="19" fill="var(--color-starlight-muted)" stroke="var(--color-ink-400)" strokeWidth="0.4" />
-        <rect x="25" y="10.5" width="1.9" height="19" fill="var(--color-starlight-muted)" stroke="var(--color-ink-400)" strokeWidth="0.4" />
-        {/* cadeado de latão */}
-        <g transform="translate(23.6 26)">
-          <path d="M 1.4 1.6 Q 1.4 0 2.7 0 Q 4 0 4 1.6" fill="none" stroke="var(--color-brass-soft)" strokeWidth="0.8" strokeLinecap="round" />
-          <rect x="0.6" y="1.6" width="4.2" height="3.4" rx="0.5" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="0.5" />
-          <circle cx="2.7" cy="3.2" r="0.45" fill="var(--color-ink-950)" />
-        </g>
-      </InstrumentDial>
+      {/* parede de pedra externa */}
+      <rect x="1" y="1" width="38" height="38" rx="1.5"
+        fill="var(--color-ink-500)" stroke="var(--color-ink-950)" strokeWidth="1.2" />
+      {/* tijolos em padrão alternado */}
+      <g stroke="var(--color-ink-900)" strokeWidth="0.6" opacity="0.6">
+        <line x1="1"  y1="7"  x2="39" y2="7"  />
+        <line x1="1"  y1="14" x2="39" y2="14" />
+        <line x1="1"  y1="26" x2="39" y2="26" />
+        <line x1="1"  y1="33" x2="39" y2="33" />
+        <line x1="8"  y1="1"  x2="8"  y2="7" />
+        <line x1="18" y1="1"  x2="18" y2="7" />
+        <line x1="28" y1="1"  x2="28" y2="7" />
+        <line x1="4"  y1="7"  x2="4"  y2="14" />
+        <line x1="14" y1="7"  x2="14" y2="14" />
+        <line x1="24" y1="7"  x2="24" y2="14" />
+        <line x1="34" y1="7"  x2="34" y2="14" />
+        <line x1="8"  y1="33" x2="8"  y2="39" />
+        <line x1="18" y1="33" x2="18" y2="39" />
+        <line x1="28" y1="33" x2="28" y2="39" />
+      </g>
+      {/* vão da cela */}
+      <rect x="6" y="9" width="28" height="22" rx="0.5"
+        fill="var(--color-ink-abyss)" stroke="var(--color-ink-950)" strokeWidth="1" />
+      {/* prisioneiro — corpo com listras + cabeça */}
+      <path d="M 13 28 Q 13 22 20 22 Q 27 22 27 28 L 27 31 L 13 31 Z"
+        fill="var(--color-ink-400)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
+      <line x1="13" y1="25" x2="27" y2="25" stroke="var(--color-starlight-muted)" strokeWidth="0.8" />
+      <line x1="13" y1="27.5" x2="27" y2="27.5" stroke="var(--color-starlight-muted)" strokeWidth="0.8" />
+      <circle cx="20" cy="19" r="4.5" fill="#c2854f" stroke="var(--color-ink-950)" strokeWidth="0.6" />
+      <ellipse cx="18.5" cy="17" rx="1.5" ry="0.8" fill="#ffffff" opacity="0.18" />
+      <circle cx="18.2" cy="18.7" r="0.9" fill="var(--color-starlight)" />
+      <circle cx="21.8" cy="18.7" r="0.9" fill="var(--color-starlight)" />
+      <circle cx="18.3" cy="18.8" r="0.5" fill="var(--color-ink-950)" />
+      <circle cx="21.9" cy="18.8" r="0.5" fill="var(--color-ink-950)" />
+      <line x1="16.5" y1="16.6" x2="19" y2="17.4" stroke="var(--color-ink-950)" strokeWidth="0.7" strokeLinecap="round" />
+      <line x1="23.5" y1="16.6" x2="21" y2="17.4" stroke="var(--color-ink-950)" strokeWidth="0.7" strokeLinecap="round" />
+      <path d="M 17.5 21.6 Q 20 20.5 22.5 21.6" stroke="var(--color-ink-950)" strokeWidth="0.7" fill="none" strokeLinecap="round" />
+      {/* mãos agarradas nas barras */}
+      <g fill="#c2854f" stroke="var(--color-ink-950)" strokeWidth="0.4">
+        <ellipse cx="14" cy="23" rx="1.4" ry="1.1" />
+        <ellipse cx="26" cy="23" rx="1.4" ry="1.1" />
+      </g>
+      {/* travessa + barras de ferro */}
+      <rect x="6" y="15" width="28" height="2" fill="var(--color-starlight-muted)" stroke="var(--color-ink-400)" strokeWidth="0.5" />
+      <g>
+        <rect x="10" y="9" width="2.4" height="22" fill="var(--color-starlight-muted)" stroke="var(--color-ink-400)" strokeWidth="0.5" />
+        <rect x="18.8" y="9" width="2.4" height="22" fill="var(--color-starlight-muted)" stroke="var(--color-ink-400)" strokeWidth="0.5" />
+        <rect x="27.6" y="9" width="2.4" height="22" fill="var(--color-starlight-muted)" stroke="var(--color-ink-400)" strokeWidth="0.5" />
+      </g>
+      {/* cadeado pendurado */}
+      <g transform="translate(4 32)">
+        <path d="M 1.5 1.8 Q 1.5 0 3 0 Q 4.5 0 4.5 1.8" fill="none" stroke="var(--color-brass-soft)" strokeWidth="0.8" strokeLinecap="round" />
+        <rect x="0.5" y="1.8" width="5" height="4" rx="0.4" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="0.5" />
+        <circle cx="3" cy="3.6" r="0.5" fill="var(--color-ink-950)" />
+        <line x1="3" y1="3.6" x2="3" y2="5" stroke="var(--color-ink-950)" strokeWidth="0.4" />
+      </g>
     </svg>
   )
 }
 
-// Vá pra Prisão — quepe de polícia no mostrador: coroa azul-noite, cinta
-// escura com frisos de latão, viseira e estrela.
+// Vá pra Prisão — quepe de polícia: coroa azul-noite, cinta escura com
+// frisos dourados, viseira e estrela. Full-bleed, sem aro.
 function GoToJailGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      <InstrumentDial>
-        <path d="M 11 21.5 Q 11 11.5 20 11.5 Q 29 11.5 29 21.5 Z"
-          fill="#34549c" stroke="var(--color-ink-950)" strokeWidth="1.2" strokeLinejoin="round" />
-        <ellipse cx="16" cy="14.5" rx="2.6" ry="1.1" fill="#ffffff" opacity="0.16" />
-        <rect x="10.4" y="21.2" width="19.2" height="2.8" fill="var(--color-ink-950)" />
-        <line x1="10.4" y1="21.2" x2="29.6" y2="21.2" stroke="var(--color-brass-glow)" strokeWidth="0.45" opacity="0.7" />
-        <line x1="10.4" y1="24" x2="29.6" y2="24" stroke="var(--color-brass-glow)" strokeWidth="0.45" opacity="0.7" />
-        <path d="M 8.5 26.5 Q 14.5 28.8 20 28.8 Q 25.5 28.8 31.5 26.5 L 31.5 25 L 8.5 25 Z"
-          fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="0.9" strokeLinejoin="round" />
-        <polygon points="20,13.4 21.1,16.1 24,16.1 21.7,17.9 22.6,20.6 20,18.9 17.4,20.6 18.3,17.9 16,16.1 18.9,16.1"
-          fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.6" strokeLinejoin="round" />
-      </InstrumentDial>
+      <ellipse cx="20" cy="36" rx="14" ry="1.3" fill="var(--color-ink-950)" opacity="0.45" />
+      {/* coroa/topo do quepe */}
+      <path d="M 8 22 Q 8 8 20 8 Q 32 8 32 22 L 32 23 L 8 23 Z"
+        fill="#34549c" stroke="var(--color-ink-950)" strokeWidth="1.6" strokeLinejoin="round" />
+      <ellipse cx="14" cy="11.5" rx="3.5" ry="1.4" fill="#ffffff" opacity="0.18" />
+      {/* cinta com frisos dourados */}
+      <rect x="7" y="22.5" width="26" height="4" fill="var(--color-ink-950)" stroke="var(--color-ink-950)" strokeWidth="0.5" />
+      <line x1="7" y1="22.5" x2="33" y2="22.5" stroke="var(--color-brass-glow)" strokeWidth="0.5" opacity="0.7" />
+      <line x1="7" y1="26.5" x2="33" y2="26.5" stroke="var(--color-brass-glow)" strokeWidth="0.5" opacity="0.7" />
+      {/* viseira */}
+      <path d="M 4 29 Q 12 32.5 20 32.5 Q 28 32.5 36 29 L 36 27.5 L 4 27.5 Z"
+        fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M 6 29 Q 13 31 20 31 Q 27 31 34 29" stroke="var(--color-ink-400)" strokeWidth="0.6" fill="none" />
+      {/* estrela dourada */}
+      <polygon points="20,12 21.6,16 25.8,16 22.4,18.7 23.7,22.6 20,20.1 16.3,22.6 17.6,18.7 14.2,16 18.4,16"
+        fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.7" strokeLinejoin="round" />
+      <circle cx="20" cy="17.5" r="0.9" fill="var(--color-ink-950)" />
     </svg>
   )
 }
 
-// Loteria — globo de sorteio no mostrador, com 3 bolas numeradas.
+// Loteria — globo de sorteio full-bleed com 3 bolas numeradas, pedestal
+// e manivela de girar o tambor.
 function LotteryGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      <InstrumentDial>
-        <circle cx="20" cy="18" r="9.6" fill="var(--color-ink-abyss)" stroke="var(--color-brass)" strokeWidth="1.2" />
-        <ellipse cx="15.5" cy="12.5" rx="2.6" ry="1.4" fill="#ffffff" opacity="0.28" />
-        <circle cx="15.8" cy="20.6" r="2.9" fill="var(--color-signal)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
-        <text x="15.8" y="21.8" textAnchor="middle"
-          fontFamily="Roboto Slab, Roboto Slab Variable, serif"
-          fontSize="2.8" fontWeight="800" fill="var(--color-starlight)">07</text>
-        <circle cx="21.6" cy="15.2" r="3.2" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.7" />
-        <text x="21.6" y="16.4" textAnchor="middle"
-          fontFamily="Roboto Slab, Roboto Slab Variable, serif"
-          fontSize="3" fontWeight="800" fill="var(--color-ink-950)">22</text>
-        <circle cx="23.6" cy="21.4" r="2.7" fill="var(--color-group-green)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
-        <text x="23.6" y="22.5" textAnchor="middle"
-          fontFamily="Roboto Slab, Roboto Slab Variable, serif"
-          fontSize="2.6" fontWeight="800" fill="var(--color-ink-abyss)">58</text>
-        <rect x="16.5" y="27.6" width="7" height="2.6" rx="0.6" fill="var(--color-ink-500)" stroke="var(--color-ink-950)" strokeWidth="0.7" />
-        <rect x="14" y="30" width="12" height="1.8" rx="0.5" fill="var(--color-ink-950)" />
-      </InstrumentDial>
+      <ellipse cx="20" cy="36" rx="14" ry="1.3" fill="var(--color-ink-950)" opacity="0.45" />
+      {/* base/pedestal */}
+      <rect x="13" y="33.5" width="14" height="2.5" rx="0.5" fill="var(--color-ink-950)" />
+      <rect x="17" y="30" width="6" height="4" fill="var(--color-ink-500)" stroke="var(--color-ink-950)" strokeWidth="0.8" />
+      {/* esfera do globo (vidro escuro com aro dourado) */}
+      <circle cx="20" cy="17" r="13" fill="var(--color-ink-abyss)" stroke="var(--color-brass)" strokeWidth="1.8" />
+      <ellipse cx="13.5" cy="10" rx="3.5" ry="2" fill="#ffffff" opacity="0.3" />
+      {/* manivela do tambor */}
+      <line x1="33" y1="17" x2="36.2" y2="13.6" stroke="var(--color-brass-soft)" strokeWidth="1.3" strokeLinecap="round" />
+      <circle cx="36.4" cy="13.2" r="1.4" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="0.5" />
+      {/* aro inferior do drum */}
+      <ellipse cx="20" cy="28" rx="13" ry="3" fill="var(--color-ink-500)" stroke="var(--color-ink-950)" strokeWidth="1" />
+      <ellipse cx="20" cy="27.5" rx="11.5" ry="2" fill="var(--color-ink-900)" />
+      {/* 3 bolas numeradas */}
+      <circle cx="14" cy="21" r="3.4" fill="var(--color-signal)" stroke="var(--color-ink-950)" strokeWidth="0.7" />
+      <text x="14" y="22.2" textAnchor="middle"
+        fontFamily="Roboto Slab, Roboto Slab Variable, serif"
+        fontSize="3.2" fontWeight="800" fill="var(--color-starlight)">07</text>
+      <circle cx="22" cy="14.5" r="3.8" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.8" />
+      <text x="22" y="15.8" textAnchor="middle"
+        fontFamily="Roboto Slab, Roboto Slab Variable, serif"
+        fontSize="3.6" fontWeight="800" fill="var(--color-ink-950)">22</text>
+      <circle cx="26" cy="22" r="3.2" fill="var(--color-group-green)" stroke="var(--color-ink-950)" strokeWidth="0.7" />
+      <text x="26" y="23.2" textAnchor="middle"
+        fontFamily="Roboto Slab, Roboto Slab Variable, serif"
+        fontSize="3" fontWeight="800" fill="var(--color-ink-abyss)">58</text>
     </svg>
   )
 }
