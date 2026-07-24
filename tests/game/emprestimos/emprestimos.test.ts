@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { grantLoan, proposeLoan, respondLoan, payOffLoan, chargeLoanInterest, activeLoanFor } from '@/game/emprestimos/emprestimos'
 import { payDebt, declareBankruptcy } from '@/game/falencia/falencia'
-import { advance } from '@/game/turn/turnMachine'
+import { advance, resolvePending, finishIfEnded } from '@/game/turn/turnMachine'
+import { economyResolve } from '@/game/economy/resolveRentable'
 import { createSeedState, defaultPorts } from '@/game/store'
 import type { GameState } from '@/game/turn/types'
 import type { Loan } from '@/game/economy/types'
@@ -150,7 +151,7 @@ describe('Empréstimos — juros no GO e quitação (US2)', () => {
     chargeLoanInterest(g, 'p1') // interest 100 > 40
     expect(g.players[0].cash).toBe(0)
     expect(g.players[1].cash).toBe(1040) // recebeu o parcial
-    expect(g.resolution).toEqual({ kind: 'debt', amount: 60, creditorId: 'p2' })
+    expect(g.resolution).toEqual({ kind: 'debt', amount: 60, creditorId: 'p2', origin: 'loan-interest' })
   })
 
   it('SC-002: advance cruzando o GO dispara a cobrança via porta afterPassGo', () => {
@@ -178,6 +179,54 @@ describe('Empréstimos — juros no GO e quitação (US2)', () => {
     const g = withLoan({ debtorId: 'p1', creditorId: 'p2', principal: 500, ratePct: 20 })
     g.players[0].cash = 400
     expect(payOffLoan(g, 'p1')).toBe(g)
+  })
+})
+
+describe('Empréstimos — dívida de juros × resolução da casa (colisão do slot único)', () => {
+  // p1 devedor (juros 300), pos 45, caixa 40: cruza o GO (+200 → 240 parciais ao credor),
+  // fica devendo 60 e pousa em Roma (pos 1, sem dono) — a casa NÃO pode engolir a dívida.
+  function interestDebtOnLanding(): GameState {
+    const g = createSeedState(['p1', 'p2'])
+    g.loans.push({ debtorId: 'p1', creditorId: 'p2', principal: 1000, ratePct: 30 }) // juros 300
+    g.players[0].pos = 45
+    g.players[0].cash = 40
+    advance(g, g.players[0], 4, defaultPorts) // 45+4 = 49 % 48 = 1 (Roma) — cruza o GO
+    g.turn.state = 'casa-a-resolver' // o que land() faria no fluxo do rollDice
+    g.turn.pendingResolve = true
+    return g
+  }
+
+  it('resolvePending NÃO sobrescreve a dívida de juros em voo; a casa resolve após quitar', () => {
+    const g = interestDebtOnLanding()
+    expect(g.resolution).toEqual({ kind: 'debt', amount: 60, creditorId: 'p2', origin: 'loan-interest' })
+    expect(g.players[1].cash).toBe(2000 + 240) // credor recebeu o parcial
+
+    const ctxE: TurnCtx = { rng: () => 0, ports: defaultPorts, resolve: economyResolve }
+    expect(resolvePending(g, ctxE)).toBe(g) // bloqueado — a dívida precede a casa
+
+    g.players[0].cash = 60 // levantou caixa (hipoteca/venda/empréstimo)
+    const paid = payDebt(g)
+    expect(paid.resolution).toBeNull()
+    expect(paid.players[1].cash).toBe(2000 + 240 + 60) // credor recebeu os juros COMPLETOS
+    expect(paid.turn.state).toBe('casa-a-resolver') // a casa segue pendente (não foi pulada)
+    expect(paid.turn.pendingResolve).toBe(true)
+
+    const resolved = resolvePending(paid, ctxE)
+    expect(resolved.resolution).toEqual({ kind: 'purchase', pos: 1 }) // Roma abre normalmente
+  })
+
+  it('dívida em voo segura a passagem de vez em turno encerrado (GO → Vá para a Prisão)', () => {
+    const g = createSeedState(['p1', 'p2'])
+    g.turn.state = 'encerrado'
+    g.resolution = { kind: 'debt', amount: 60, creditorId: 'p2', origin: 'loan-interest' }
+    const after = finishIfEnded(g, ctx)
+    expect(after.activeSeat).toBe(0) // vez NÃO passou com dívida aberta
+    expect(after.turn.state).toBe('encerrado')
+
+    g.players[0].cash = 60
+    const paid = payDebt(g)
+    expect(paid.resolution).toBeNull()
+    expect(paid.turn.state).toBe('aguardando-finalizacao') // sem casa pendente → concluir e finalizar
   })
 })
 

@@ -95,7 +95,9 @@ export type ResolutionSlice =
   | { kind: 'card-reveal'; deckId: DeckId; cardId: string } // carta sacada revelada, aguardando "Continuar" (025)
   | { kind: 'card-discard'; deckId: DeckId; drawnId: string } // mão cheia: escolher descarte (006)
   | { kind: 'card-shortcut'; deckId: DeckId; cardId: string } // Atalho: escolher ±3 (006)
-  | { kind: 'debt'; amount: number; creditorId: string | null } // dívida pendente: pagar/falir (008)
+  // Dívida pendente: pagar/falir (008). `origin: 'loan-interest'` marca dívida nascida FORA
+  // da resolução da casa (juros no GO, §15.4) — quitar NÃO conclui a casa onde o jogador pousou.
+  | { kind: 'debt'; amount: number; creditorId: string | null; origin?: 'loan-interest' }
   // Reação pendente (017): a carta ofensiva fica "em voo" aqui até o alvo responder.
   | {
       kind: 'reaction-diplomacia'

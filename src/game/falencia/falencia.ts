@@ -44,7 +44,7 @@ export function checkEndGame(state: GameState): void {
 // Paga a dívida pendente se o caixa cobrir. No-op senão (jogador precisa liquidar ou falir).
 export function payDebt(state: GameState): GameState {
   if (state.resolution?.kind !== 'debt') return state
-  const { amount, creditorId } = state.resolution
+  const { amount, creditorId, origin } = state.resolution
   if (activePlayer(state).cash < amount) return state
   const s = clone(state)
   activePlayer(s).cash -= amount
@@ -55,7 +55,13 @@ export function payDebt(state: GameState): GameState {
     s.centerPot += amount // dívida ao banco (imposto) → pote do Free Parking
   }
   logEvent(s, activePlayer(s).id, `pagou dívida $${amount}`) // 021
-  completeResolution(s)
+  if (origin === 'loan-interest' && s.turn.state === 'casa-a-resolver') {
+    // Dívida nascida no MOVIMENTO (juros do GO, §15.4), não da casa: quitar só limpa o slot —
+    // a casa onde o jogador pousou segue pendente e resolve na sequência (GameDriver/resolvePending).
+    s.resolution = null
+  } else {
+    completeResolution(s)
+  }
   return s
 }
 

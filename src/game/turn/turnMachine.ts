@@ -116,8 +116,13 @@ export function advanceSeat(s: GameState, ctx: TurnCtx): void {
 }
 
 // Turnos forçados a encerrar (3ª dupla, prisão, tentativa falha) passam a vez na hora.
+// Exceção: dívida em voo (juros do GO a caminho do "Vá para a Prisão") — o devedor
+// quita/fali ANTES de a vez passar; payDebt conclui via completeResolution → finalizar.
 export function finishIfEnded(s: GameState, ctx: TurnCtx): GameState {
-  if (s.turn.state === 'encerrado') advanceSeat(s, ctx)
+  if (s.turn.state === 'encerrado') {
+    if (s.resolution?.kind === 'debt') return s
+    advanceSeat(s, ctx)
+  }
   return s
 }
 
@@ -236,6 +241,9 @@ export function useBusTicket(state: GameState, dest: number, ctx: TurnCtx): Game
 export function resolvePending(state: GameState, ctx: TurnCtx): GameState {
   if (state.paused) return state
   if (state.turn.state !== 'casa-a-resolver' || state.turn.awaitingChoice !== null) return state
+  // Resolução em voo (compra/leilão/dívida de juros do GO): resolver a casa agora
+  // SOBRESCREVERIA o slot único de resolution (ex.: dívida de juros sumia). No-op até liquidar.
+  if (state.resolution !== null) return state
   const s = clone(state)
   const turn = s.turn
   const player = activePlayer(s)
