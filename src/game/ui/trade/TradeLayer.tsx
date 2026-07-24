@@ -1,11 +1,14 @@
-// Negociação na UI (024) — "mesa de troca": dois jogadores (PlayerFace) frente a
-// frente, deed chips coloridos por grupo, campo de dinheiro e barra de saldo.
-// Reusa o vocabulário visual do leilão (deed/avatar) e dos tokens Café Coado.
+// Negociação na UI (024) — "mesa com balança": cada lado da troca vira peso
+// físico numa balança de latão (valor de face = preço de tabela + dinheiro) e o
+// travessão pende para o lado mais pesado — a justiça da troca se lê de relance,
+// sem aritmética. Os títulos selecionados empilham nos pratos como fichas.
+// Reusa o vocabulário visual do leilão (deed/avatar) e o shell canônico de modal.
 // Único ponto com efeito: dispara proposeTrade/acceptTrade/rejectTrade. A regra
-// (validade) vem de validateTrade. Troca-se só propriedade + dinheiro.
+// (validade) vem de validateTrade. Troca-se propriedade + dinheiro + Bus Tickets (D-028).
 import { useState, useEffect, type ReactNode } from 'react'
 import { create } from 'zustand'
-import { AnimatePresence } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
+import { Bus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
 import { validateTrade, tradableProps } from '@/game/economy/trade'
@@ -16,11 +19,24 @@ import { CoinIcon } from '@/game/ui/icons'
 import { Button, EmptyState } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 
-// Store de UI mínimo: abre/fecha o compositor (botão "Negociar" mora noutro arquivo).
-export const useTradeUI = create<{ open: boolean; show: () => void; hide: () => void }>((set) => ({
+// Store de UI mínimo: abre/fecha o compositor (botão "Negociar" mora noutro
+// arquivo) e controla o "fechar sem responder" da proposta recebida —
+// `dismissed` esconde o modal, mas a proposta segue na mesa (painel lateral
+// reabre via respond()).
+export const useTradeUI = create<{
+  open: boolean
+  dismissed: boolean
+  show: () => void
+  hide: () => void
+  dismiss: () => void
+  respond: () => void
+}>((set) => ({
   open: false,
+  dismissed: false,
   show: () => set({ open: true }),
   hide: () => set({ open: false }),
+  dismiss: () => set({ dismissed: true }),
+  respond: () => set({ dismissed: false }),
 }))
 
 const money = (v: number) => `R$ ${v.toLocaleString('pt-BR')}`
@@ -30,16 +46,6 @@ const colorOf = (players: { id: string }[], id: string) => {
   return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : 'var(--color-brass)'
 }
 
-// ---------------------------------------------------------------------
-// Glifos pequenos (sem emoji) — herdam currentColor.
-// ---------------------------------------------------------------------
-function SwapGlyph({ size = 16, className }: { size?: number; className?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
-      <path d="M7 4 3 8l4 4" /><path d="M3 8h14" /><path d="m17 20 4-4-4-4" /><path d="M21 16H7" />
-    </svg>
-  )
-}
 function CheckGlyph() {
   return (
     <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="var(--color-ink-950)" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -63,8 +69,8 @@ function Card({ children }: { children: ReactNode }) {
   )
 }
 
-function Header({ title, subtitle }: { title: string; subtitle?: string }) {
-  return <ModalHeader center title={title} subtitle={subtitle} className="[&_h3]:text-xl" />
+function Header({ title, subtitle, onClose }: { title: string; subtitle?: string; onClose?: () => void }) {
+  return <ModalHeader center title={title} subtitle={subtitle} onClose={onClose} className="[&_h3]:text-xl" />
 }
 
 // ---------------------------------------------------------------------
@@ -74,7 +80,8 @@ function DeedAvatar({ sq, size = 22 }: { sq: Square; size?: number }) {
   if (sq.kind === 'property') {
     const uf = (sq as PropertySquare).uf
     return (
-      <span className="rounded-full bg-coffee-900 border border-coffee-950 overflow-hidden shrink-0 shadow-[var(--shadow-card)]" style={{ width: size, height: size }}>
+      // `block`: fora de flex (ex. prato da balança) um span inline ignoraria width/height
+      <span className="block rounded-full bg-coffee-900 border border-coffee-950 overflow-hidden shrink-0 shadow-[var(--shadow-card)]" style={{ width: size, height: size }}>
         <img src={`https://flagcdn.com/${uf.toLowerCase()}.svg`} alt={uf} className="w-full h-full object-cover block" draggable={false} />
       </span>
     )
@@ -119,25 +126,6 @@ function DeedChip({ pos, on, onToggle, readOnly }: { pos: number; on?: boolean; 
   )
 }
 
-// Chip de jogador — rosto + nome. Selecionável (destinatário) ou estático (você).
-function PlayerChip({ color, name, selected, onSelect }: { color: string; name: string; selected?: boolean; onSelect?: () => void }) {
-  const inner = (
-    <>
-      <PlayerFace color={color} size={30} active={!!selected || !onSelect} />
-      <span className={cn('leading-none max-w-[72px] truncate font-semibold', selected || !onSelect ? 'text-gold' : 'text-cream-muted')} style={{ fontSize: '10px' }}>
-        {name}
-      </span>
-    </>
-  )
-  const base = 'flex flex-col items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-sharp)] border shrink-0'
-  if (!onSelect) return <div className={cn(base, 'border-transparent')}>{inner}</div>
-  return (
-    <button type="button" onClick={onSelect} className={cn(base, 'transition-colors', selected ? 'border-gold bg-gold/10' : 'border-coffee-500 bg-coffee-900 hover:border-gold/60')}>
-      {inner}
-    </button>
-  )
-}
-
 // Campo de dinheiro — moeda + input tabular + "tudo".
 function CashField({ value, max, onChange }: { value: number; max: number; onChange: (n: number) => void }) {
   return (
@@ -169,6 +157,202 @@ function CashField({ value, max, onChange }: { value: number; max: number; onCha
   )
 }
 
+// Bus Tickets no acordo (D-028) — stepper 0..N dos tickets do dono. Só aparece
+// quando o dono tem ao menos 1 (não polui a coluna de quem não tem).
+function TicketField({ value, max, onChange }: { value: number; max: number; onChange: (n: number) => void }) {
+  const stepBtn =
+    'w-6 h-6 rounded-full border border-coffee-500 bg-coffee-700 text-cream grid place-items-center leading-none text-sm hover:border-gold/60 hover:text-gold disabled:opacity-40 disabled:hover:border-coffee-500 disabled:hover:text-cream transition-colors'
+  return (
+    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-950/50 border border-coffee-500">
+      <Bus size={14} className="text-gold shrink-0" />
+      <span className="label text-cream-muted flex-1 min-w-0 truncate">Bus Tickets</span>
+      <button type="button" className={stepBtn} disabled={value <= 0} onClick={() => onChange(value - 1)} aria-label="Menos um ticket">−</button>
+      <span className={cn('currency text-sm tabular-nums w-5 text-center leading-none', value > 0 ? 'text-gold-glow' : 'text-cream-muted/60')}>{value}</span>
+      <button type="button" className={stepBtn} disabled={value >= max} onClick={() => onChange(value + 1)} aria-label="Mais um ticket">+</button>
+      <span className="label text-cream-muted text-nano shrink-0">de {max}</span>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------
+// Balança de latão — coração da mesa. Cada prato carrega os títulos (bandeiras
+// empilhadas) + moeda do dinheiro; o travessão pende para o lado mais pesado.
+// Peso = valor de face (preço de tabela) + dinheiro. Contrapeso visual, não regra:
+// a validade continua vindo de validateTrade.
+// ---------------------------------------------------------------------
+const faceValue = (positions: number[], cash: number): number =>
+  positions.reduce((sum, pos) => {
+    const sq = BOARD[pos]
+    return sum + ('price' in sq ? (sq as { price: number }).price : 0)
+  }, cash)
+
+function PanTokens({ positions, cash, tickets }: { positions: number[]; cash: number; tickets: number }) {
+  const shown = positions.slice(0, 5)
+  const extra = positions.length - shown.length
+  return (
+    <div className="flex items-end justify-center min-h-[20px] -mb-[3px]">
+      {shown.map((pos, i) => (
+        <span key={pos} className={cn('relative', i > 0 && '-ml-2')} style={{ zIndex: i }}>
+          <DeedAvatar sq={BOARD[pos]} size={18} />
+        </span>
+      ))}
+      {extra > 0 && (
+        <span className="relative z-10 -ml-1 label text-cream text-nano bg-coffee-700 border border-coffee-500 rounded-full px-1 leading-tight">+{extra}</span>
+      )}
+      {cash > 0 && (
+        <span className={cn('relative z-10', (positions.length > 0) && '-ml-1')}>
+          <CoinIcon size={15} className="text-gold" />
+        </span>
+      )}
+      {tickets > 0 && (
+        <span className={cn('relative z-10 flex items-end', (positions.length > 0 || cash > 0) && '-ml-0.5')}>
+          <Bus size={14} className="text-gold" />
+          {tickets > 1 && <span className="currency text-gold-glow text-nano leading-none ml-px">×{tickets}</span>}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function Pan({ side, deg, positions, cash, tickets }: { side: 'left' | 'right'; deg: number; positions: number[]; cash: number; tickets: number }) {
+  const value = faceValue(positions, cash)
+  return (
+    <motion.div
+      animate={{ rotate: -deg }}
+      transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+      style={{ transformOrigin: '50% 0%', [side === 'left' ? 'left' : 'right']: -46 }}
+      className="absolute top-0 w-[92px] flex flex-col items-center"
+    >
+      {/* argola + cordas em V + carga + prato + etiqueta de valor */}
+      <span className="w-1.5 h-1.5 rounded-full border border-brass-glow -mt-[3px]" aria-hidden />
+      <div className="relative w-[78px] h-[30px]">
+        <svg viewBox="0 0 78 30" className="absolute inset-0 w-full h-full" aria-hidden>
+          <path
+            d="M39 1 L6 29 M39 1 L72 29"
+            stroke="var(--color-brass)"
+            strokeOpacity="0.7"
+            strokeWidth="1"
+            strokeLinecap="round"
+            fill="none"
+          />
+        </svg>
+        <div className="absolute inset-x-0 bottom-0">
+          <PanTokens positions={positions} cash={cash} tickets={tickets} />
+        </div>
+      </div>
+      <span className="relative block w-[78px] h-[11px]" aria-hidden>
+        <span
+          className="absolute inset-0 rounded-b-full shadow-[0_4px_10px_-2px_rgba(2,6,16,0.7)]"
+          style={{ background: 'var(--gradient-brass)' }}
+        />
+        {/* borda do prato apanha a luz — vira "aro" em vez de barra chapada */}
+        <span className="absolute inset-x-[3px] top-0 h-[2px] rounded-full bg-brass-glow/70" />
+      </span>
+      <span
+        className={cn(
+          'currency tabular-nums leading-none mt-1 px-1.5 py-0.5 rounded-full border',
+          value > 0 ? 'text-gold-glow border-brass/30 bg-coffee-950/50' : 'text-cream-muted/50 border-transparent',
+        )}
+        style={{ fontSize: '10px' }}
+      >
+        {money(value)}
+      </span>
+    </motion.div>
+  )
+}
+
+function TradeScale({
+  leftPositions,
+  leftCash,
+  leftTickets = 0,
+  rightPositions,
+  rightCash,
+  rightTickets = 0,
+}: {
+  leftPositions: number[]
+  leftCash: number
+  leftTickets?: number
+  rightPositions: number[]
+  rightCash: number
+  rightTickets?: number
+}) {
+  const lv = faceValue(leftPositions, leftCash)
+  const rv = faceValue(rightPositions, rightCash)
+  const total = lv + rv
+  // Pende para o lado mais pesado: positivo = horário = direita desce.
+  // Bus Tickets não têm preço de tabela — vão no prato como carga, sem peso.
+  const tilt = total === 0 ? 0 : clamp((rv - lv) / total, -1, 1)
+  const deg = tilt * 6
+  const diff = Math.abs(rv - lv)
+  const balanced = total > 0 && diff / total < 0.08
+
+  return (
+    <div className="flex-1 min-w-0 flex flex-col items-center">
+      <div className="relative w-[280px] max-w-full h-[104px]" aria-hidden>
+        {/* halo quente atrás da balança (tira o "chapado" do fundo) */}
+        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-24 rounded-full bg-brass/10 blur-2xl" />
+        {/* coluna torneada: remate em losango, fuste afunilado e plinto em degraus */}
+        <span
+          className="absolute left-1/2 -translate-x-1/2 top-0 w-2 h-2 rotate-45 rounded-[2px]"
+          style={{ background: 'var(--gradient-brass-shine)' }}
+        />
+        <span
+          className="absolute left-1/2 -translate-x-1/2 top-[15px] bottom-[8px] w-[10px]"
+          style={{ background: 'var(--gradient-brass)', clipPath: 'polygon(38% 0, 62% 0, 78% 100%, 22% 100%)' }}
+        />
+        <span className="absolute left-1/2 -translate-x-1/2 bottom-[4px] w-9 h-[4px] rounded-full" style={{ background: 'var(--gradient-brass)' }} />
+        <span className="absolute left-1/2 -translate-x-1/2 bottom-0 w-14 h-[5px] rounded-full bg-brass-soft/80" />
+        {/* mostrador: arco graduado fixo sob o fulcro… */}
+        <svg viewBox="0 0 44 24" className="absolute left-1/2 -translate-x-1/2 top-[12px] w-[44px] h-[24px]">
+          <path d="M13.5 20.1 A20 20 0 0 0 30.5 20.1" stroke="var(--color-brass)" strokeOpacity="0.4" strokeWidth="1" fill="none" />
+          <path d="M22 18.4 L22 22.2" stroke="var(--color-brass-glow)" strokeOpacity="0.7" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
+        {/* …e o fiel, que amplifica a inclinação e cai no risco central quando os lados pesam igual */}
+        <motion.span
+          animate={{ rotate: deg * 4 }}
+          transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+          style={{ transformOrigin: '50% 0%', clipPath: 'polygon(0 0, 100% 0, 50% 100%)' }}
+          className={cn(
+            'absolute left-1/2 -translate-x-1/2 top-[14px] w-[3px] h-[19px] z-10 transition-colors',
+            balanced ? 'bg-brass-glow drop-shadow-[0_0_4px_var(--color-brass-glow)]' : 'bg-brass',
+          )}
+        />
+        {/* travessão com os dois pratos pendurados (pratos contra-rotacionam p/ ficar nivelados) */}
+        <motion.div
+          animate={{ rotate: deg }}
+          transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+          style={{ transformOrigin: '50% 50%', background: 'var(--gradient-brass-shine)' }}
+          className="absolute left-[46px] right-[46px] top-[12px] h-[4px] rounded-full"
+        >
+          <span className="absolute -left-[3px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-brass-glow" />
+          <span className="absolute -right-[3px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-brass-glow" />
+          <Pan side="left" deg={deg} positions={leftPositions} cash={leftCash} tickets={leftTickets} />
+          <Pan side="right" deg={deg} positions={rightPositions} cash={rightCash} tickets={rightTickets} />
+        </motion.div>
+        {/* joia do fulcro — pulsa quando a balança fecha */}
+        <motion.span
+          animate={balanced ? { scale: [1, 1.25, 1], opacity: [1, 0.85, 1] } : { scale: 1, opacity: 1 }}
+          transition={balanced ? { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } : { type: 'spring', stiffness: 120, damping: 14 }}
+          className={cn(
+            'absolute left-1/2 -translate-x-1/2 top-[10px] w-2 h-2 rounded-full bg-brass-glow z-20',
+            balanced ? 'shadow-[0_0_14px_var(--color-brass-glow)]' : 'shadow-[0_0_8px_var(--color-brass-glow)]',
+          )}
+        />
+      </div>
+    </div>
+  )
+}
+
+// Rosto + nome que flanqueia a balança (alinhado ao prato do seu lado).
+function FaceTag({ color, name, active = true }: { color: string; name: string; active?: boolean }) {
+  return (
+    <div className="flex flex-col items-center gap-1 w-[64px] shrink-0">
+      <PlayerFace color={color} size={36} active={active} />
+      <span className="label text-gold max-w-full truncate">{name}</span>
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------
 // Coluna de um lado da troca (propriedades + dinheiro).
 // ---------------------------------------------------------------------
@@ -176,28 +360,35 @@ function Side({
   title,
   color,
   ownerCash,
+  ownerTickets,
   props,
   selected,
   onToggle,
   cash,
   onCash,
+  tickets,
+  onTickets,
 }: {
   title: string
   color: string
   ownerCash: number
+  ownerTickets: number
   props: number[]
   selected: Set<number>
   onToggle: (pos: number) => void
   cash: number
   onCash: (n: number) => void
+  tickets: number
+  onTickets: (n: number) => void
 }) {
   const summary = [
     selected.size > 0 ? `${selected.size} ${selected.size === 1 ? 'título' : 'títulos'}` : '',
     cash > 0 ? money(cash) : '',
+    tickets > 0 ? `${tickets} ticket${tickets > 1 ? 's' : ''}` : '',
   ].filter(Boolean).join(' + ')
   return (
     <div className="flex-1 min-w-0 flex flex-col">
-      <div className="px-3 pt-3 pb-2 flex items-center gap-2 sticky top-0 z-10 bg-coffee-800 shrink-0 border-b border-coffee-700/40">
+      <div className="px-3 pt-3 pb-2 flex items-center gap-2 sticky top-0 z-10 bg-coffee-800/90 backdrop-blur-sm shrink-0 border-b border-coffee-700/40">
         <PlayerFace color={color} size={18} />
         <p className="label text-gold truncate">{title}</p>
         {summary && (
@@ -216,34 +407,7 @@ function Side({
         </div>
 
         <CashField value={cash} max={ownerCash} onChange={onCash} />
-      </div>
-    </div>
-  )
-}
-
-// Barra de saldo — dinheiro líquido a favor de "você" + contagem de propriedades (dá ⇄ recebe).
-function BalanceBar({ giveCount, getCount, netToYou }: { giveCount: number; getCount: number; netToYou: number }) {
-  return (
-    <div className="px-5 py-3 bg-coffee-950/50 border-t border-coffee-700 shrink-0 flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2 label text-cream-muted text-micro" title="Títulos que você dá ⇄ recebe">
-        <span>dá <span className="currency text-cream text-sm">{giveCount}</span></span>
-        <SwapGlyph size={12} className="text-cream-muted" />
-        <span>recebe <span className="currency text-cream text-sm">{getCount}</span></span>
-      </div>
-      <div className="flex items-baseline gap-2">
-        <span className="label text-cream-muted">Saldo</span>
-        {netToYou !== 0 ? (
-          <>
-            <span className={cn('currency text-lg tabular-nums leading-none', netToYou > 0 ? 'text-gold-glow' : 'text-logo')}>
-              {netToYou > 0 ? '+' : '−'}{money(Math.abs(netToYou))}
-            </span>
-            <span className={cn('label text-micro', netToYou > 0 ? 'text-gold' : 'text-logo')}>
-              {netToYou > 0 ? 'a seu favor' : 'você paga'}
-            </span>
-          </>
-        ) : (
-          <span className="label text-cream-muted text-micro">equilibrado</span>
-        )}
+        {ownerTickets > 0 && <TicketField value={tickets} max={ownerTickets} onChange={onTickets} />}
       </div>
     </div>
   )
@@ -264,10 +428,13 @@ function Composer({ onClose }: { onClose: () => void }) {
   const [requested, setRequested] = useState<Set<number>>(new Set())
   const [fromCash, setFromCash] = useState(0)
   const [toCash, setToCash] = useState(0)
+  const [fromTickets, setFromTickets] = useState(0)
+  const [toTickets, setToTickets] = useState(0)
 
   // Trocar de destinatário reseta o que dependia dele.
   useEffect(() => {
     setRequested(new Set())
+    setToTickets(0)
   }, [toId])
 
   const recipient = others.find((p) => p.id === toId)
@@ -287,28 +454,33 @@ function Composer({ onClose }: { onClose: () => void }) {
     fromCash,
     toProps: [...requested],
     toCash,
+    fromBusTickets: fromTickets,
+    toBusTickets: toTickets,
   }
-  const nonEmpty = offered.size || requested.size || fromCash > 0 || toCash > 0
+  const nonEmpty = offered.size || requested.size || fromCash > 0 || toCash > 0 || fromTickets > 0 || toTickets > 0
   const canPropose = !!recipient && !!nonEmpty && validateTrade(game, trade)
 
   const meColor = colorOf(game.players, me.id)
+  const themColor = recipient ? colorOf(game.players, recipient.id) : 'var(--color-starlight-muted)'
 
   return (
     <Card>
-      <Header title="Negociação" subtitle="Monte os dois lados e proponha" />
+      <Header title="Negociação" subtitle="Monte os dois lados e confirme" />
 
-      {/* Mesa — duelo Você ⇄ destinatário + seletor "trocar com" */}
-      <div className="px-5 py-3 bg-coffee-900 border-b border-coffee-700 shrink-0 flex flex-col gap-2.5">
-        <div className="flex items-center justify-center gap-5">
-          <div className="flex flex-col items-center gap-1">
-            <PlayerFace color={meColor} size={40} active />
-            <span className="label text-gold">Você</span>
-          </div>
-          <SwapGlyph size={22} className="text-cream-muted shrink-0" />
-          <div className="flex flex-col items-center gap-1">
-            <PlayerFace color={recipient ? colorOf(game.players, recipient.id) : 'var(--color-starlight-muted)'} size={40} active={!!recipient} />
-            <span className="label text-gold">{recipient?.id ?? '—'}</span>
-          </div>
+      {/* Mesa — Você e o destinatário flanqueiam a balança; cada prato pesa um lado.
+          Fundo translúcido: deixa o gradiente do shell respirar (nada de cor chapada). */}
+      <div className="px-4 pt-3 pb-2 bg-coffee-950/25 border-b border-coffee-700/50 shrink-0 flex flex-col gap-1.5">
+        <div className="flex items-center justify-center gap-1">
+          <FaceTag color={meColor} name="Você" />
+          <TradeScale
+            leftPositions={[...offered]}
+            leftCash={fromCash}
+            leftTickets={fromTickets}
+            rightPositions={[...requested]}
+            rightCash={toCash}
+            rightTickets={toTickets}
+          />
+          <FaceTag color={themColor} name={recipient?.id ?? '—'} active={!!recipient} />
         </div>
         {others.length > 1 && (
           <div className="flex items-center justify-center gap-1.5">
@@ -333,29 +505,34 @@ function Composer({ onClose }: { onClose: () => void }) {
           title="Você oferece"
           color={meColor}
           ownerCash={me.cash}
+          ownerTickets={me.busTickets}
           props={myProps}
           selected={offered}
           onToggle={(pos) => toggle(offered, setOffered, pos)}
           cash={fromCash}
           onCash={setFromCash}
+          tickets={fromTickets}
+          onTickets={setFromTickets}
         />
         <Side
           title={`${recipient?.id ?? '—'} oferece`}
-          color={recipient ? colorOf(game.players, recipient.id) : 'var(--color-starlight-muted)'}
+          color={themColor}
           ownerCash={recipient?.cash ?? 0}
+          ownerTickets={recipient?.busTickets ?? 0}
           props={theirProps}
           selected={requested}
           onToggle={(pos) => toggle(requested, setRequested, pos)}
           cash={toCash}
           onCash={setToCash}
+          tickets={toTickets}
+          onTickets={setToTickets}
         />
       </div>
 
-      <BalanceBar giveCount={offered.size} getCount={requested.size} netToYou={toCash - fromCash} />
-
+      {/* Convenção de rodapé: secundário à ESQUERDA, primário à DIREITA */}
       <div className="px-5 py-3 border-t-2 border-coffee-950 shrink-0 flex gap-2">
-        <Button className="flex-1 py-2.5" onClick={() => { proposeTrade(trade); onClose() }} disabled={!canPropose}>Propor</Button>
         <Button className="flex-1 py-2.5" variant="secondary" onClick={onClose}>Cancelar</Button>
+        <Button className="flex-1 py-2.5" onClick={() => { proposeTrade(trade); onClose() }} disabled={!canPropose}>Confirmar</Button>
       </div>
     </Card>
   )
@@ -364,8 +541,8 @@ function Composer({ onClose }: { onClose: () => void }) {
 // ---------------------------------------------------------------------
 // Recebido — resumo read-only da proposta + aceitar/recusar.
 // ---------------------------------------------------------------------
-function ReadSide({ title, color, props, cash }: { title: string; color: string; props: number[]; cash: number }) {
-  const empty = props.length === 0 && cash === 0
+function ReadSide({ title, color, props, cash, tickets = 0 }: { title: string; color: string; props: number[]; cash: number; tickets?: number }) {
+  const empty = props.length === 0 && cash === 0 && tickets === 0
   return (
     <div className="flex-1 min-w-0 flex flex-col">
       <div className="px-3 pt-3 pb-2 flex items-center gap-2 shrink-0 border-b border-coffee-700/40">
@@ -383,6 +560,12 @@ function ReadSide({ title, color, props, cash }: { title: string; color: string;
             {money(cash)}
           </span>
         )}
+        {tickets > 0 && (
+          <span className="bill self-start">
+            <Bus size={13} className="text-gold" />
+            {tickets} Bus Ticket{tickets > 1 ? 's' : ''}
+          </span>
+        )}
       </div>
     </div>
   )
@@ -391,6 +574,7 @@ function ReadSide({ title, color, props, cash }: { title: string; color: string;
 function Received({ trade }: { trade: Trade }) {
   const acceptTrade = useGameStore((s) => s.acceptTrade)
   const rejectTrade = useGameStore((s) => s.rejectTrade)
+  const dismiss = useTradeUI((s) => s.dismiss)
   const game = useGameStore((s) => s.game)
   const stillValid = validateTrade(game, trade)
 
@@ -399,22 +583,28 @@ function Received({ trade }: { trade: Trade }) {
 
   return (
     <Card>
-      <Header title="Proposta de negociação" subtitle={`${trade.toId} decide se aceita ou recusa`} />
+      {/* X fecha SEM responder — a proposta segue na mesa (reabre pelo painel lateral) */}
+      <Header title="Proposta de negociação" subtitle={`${trade.toId} decide se aceita ou recusa`} onClose={dismiss} />
 
-      {/* Quem propõe ⇄ quem responde */}
-      <div className="px-5 py-3 bg-coffee-900 border-b border-coffee-700 shrink-0 flex items-center justify-center gap-4">
-        <PlayerChip color={fromColor} name={trade.fromId} />
-        <SwapGlyph size={18} className="text-cream-muted shrink-0" />
-        <PlayerChip color={toColor} name={trade.toId} />
+      {/* Mesa read-only: a mesma balança, já carregada com a proposta */}
+      <div className="px-4 pt-3 pb-2 bg-coffee-950/25 border-b border-coffee-700/50 shrink-0 flex items-center justify-center gap-1">
+        <FaceTag color={fromColor} name={trade.fromId} />
+        <TradeScale
+          leftPositions={trade.fromProps}
+          leftCash={trade.fromCash}
+          leftTickets={trade.fromBusTickets ?? 0}
+          rightPositions={trade.toProps}
+          rightCash={trade.toCash}
+          rightTickets={trade.toBusTickets ?? 0}
+        />
+        <FaceTag color={toColor} name={trade.toId} />
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden flex divide-x divide-coffee-500/40">
         {/* Do ponto de vista do destinatário (toId): recebe o que `from` dá; dá o que `from` pede. */}
-        <ReadSide title={`${trade.toId} recebe`} color={fromColor} props={trade.fromProps} cash={trade.fromCash} />
-        <ReadSide title={`${trade.toId} dá`} color={toColor} props={trade.toProps} cash={trade.toCash} />
+        <ReadSide title={`${trade.toId} recebe`} color={fromColor} props={trade.fromProps} cash={trade.fromCash} tickets={trade.fromBusTickets ?? 0} />
+        <ReadSide title={`${trade.toId} dá`} color={toColor} props={trade.toProps} cash={trade.toCash} tickets={trade.toBusTickets ?? 0} />
       </div>
-
-      <BalanceBar giveCount={trade.toProps.length} getCount={trade.fromProps.length} netToYou={trade.fromCash - trade.toCash} />
 
       {!stillValid && (
         <p className="mx-5 mt-2 px-3 py-2 rounded-[var(--radius-sharp)] border border-logo/50 bg-logo/10 text-logo text-xs">
@@ -422,9 +612,10 @@ function Received({ trade }: { trade: Trade }) {
         </p>
       )}
 
+      {/* Convenção de rodapé: secundário à ESQUERDA, primário à DIREITA */}
       <div className="px-5 py-3 border-t-2 border-coffee-950 shrink-0 flex gap-2">
-        <Button className="flex-1 py-2.5" onClick={() => acceptTrade()} disabled={!stillValid}>Aceitar</Button>
         <Button className="flex-1 py-2.5" variant="secondary" onClick={() => rejectTrade()}>Recusar</Button>
+        <Button className="flex-1 py-2.5" onClick={() => acceptTrade()} disabled={!stillValid}>Aceitar</Button>
       </div>
     </Card>
   )
@@ -434,13 +625,20 @@ export function TradeLayer() {
   const pendingTrade = useGameStore((s) => s.game.pendingTrade)
   const open = useTradeUI((s) => s.open)
   const hide = useTradeUI((s) => s.hide)
+  const dismissed = useTradeUI((s) => s.dismissed)
 
-  // Proposta pendente tem prioridade (precisa de resposta).
+  // Proposta saiu da mesa (aceita/recusada) → o próximo recebimento abre de novo.
+  useEffect(() => {
+    if (!pendingTrade) useTradeUI.setState({ dismissed: false })
+  }, [pendingTrade])
+
+  // Proposta pendente tem prioridade (precisa de resposta) — a menos que o
+  // destinatário tenha fechado pra decidir depois (dismissed).
   const showComposer = open && !pendingTrade
 
   return (
     <AnimatePresence>
-      {pendingTrade ? (
+      {pendingTrade && !dismissed ? (
         <Backdrop key="received">
           <Received trade={pendingTrade} />
         </Backdrop>

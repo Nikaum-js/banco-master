@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { Crown } from 'lucide-react'
+import { Bus, Crown } from 'lucide-react'
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from 'motion/react'
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
@@ -11,6 +11,9 @@ import { cityLevel } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
 import { deedView } from '@/game/ui/deed/deedView'
 import { useTradeUI } from '@/game/ui/trade/TradeLayer'
+import { useBusTicketUI } from '@/game/ui/busTicketUI'
+// `sideOf` do motor (lado do tabuleiro p/ regra do Bus Ticket) ≠ `sideOf` local (layout).
+import { sideOf as busSideOf } from '@/game/turn/turnMachine'
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 import { HandPanel } from '@/game/ui/cards/HandPanel'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
@@ -1388,9 +1391,10 @@ function TradeItemChip({ pos }: { pos: number }) {
   )
 }
 
-// Perna da troca (Oferece / Pede) — chips das propriedades + cédula do dinheiro.
-function TradeLeg({ label, props, cash }: { label: string; props: number[]; cash: number }) {
-  const empty = props.length === 0 && cash <= 0
+// Perna da troca (Oferece / Pede) — chips das propriedades + cédula do dinheiro
+// + Bus Tickets (D-028).
+function TradeLeg({ label, props, cash, tickets = 0 }: { label: string; props: number[]; cash: number; tickets?: number }) {
+  const empty = props.length === 0 && cash <= 0 && tickets <= 0
   return (
     <div className="flex items-start gap-2">
       <span className="label text-cream-muted w-11 shrink-0 pt-1 text-micro">{label}</span>
@@ -1401,6 +1405,12 @@ function TradeLeg({ label, props, cash }: { label: string; props: number[]; cash
           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sharp)] bg-coffee-800 border border-coffee-500/70 border-l-2 border-l-gold">
             <CoinIcon size={12} className="text-gold" />
             <span className="currency text-gold-glow text-xs leading-none tabular-nums">R$ {cash.toLocaleString('pt-BR')}</span>
+          </span>
+        )}
+        {tickets > 0 && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sharp)] bg-coffee-800 border border-coffee-500/70 border-l-2 border-l-gold" title="Bus Tickets">
+            <Bus size={12} className="text-gold" />
+            <span className="currency text-gold-glow text-xs leading-none tabular-nums">×{tickets}</span>
           </span>
         )}
       </div>
@@ -1620,6 +1630,39 @@ function TurnActionBtn({
   )
 }
 
+// Canhoto de Bus Ticket — ação opcional pré-rolagem/fim de turno (034). Vive na
+// zona de ação da DiceArena (onde o jogador já decide o turno), não flutuando
+// sobre o tabuleiro. Visual de BILHETE de verdade: papel com tinta de latão,
+// picote tracejado com furos separando o corpo do "×N", levemente torto — e se
+// endireita com glow no hover, como quem destaca o canhoto.
+function BusTicketStub({ count, onClick }: { count: number; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group relative w-full flex items-stretch overflow-hidden rounded-[var(--radius-card)] border border-gold/45 text-left transition-all -rotate-1 hover:rotate-0 hover:border-gold hover:shadow-[var(--shadow-glow)] active:translate-y-px"
+      style={{
+        background:
+          'linear-gradient(115deg, color-mix(in srgb, var(--color-brass) 16%, var(--color-coffee-900)) 0%, var(--color-coffee-900) 55%, color-mix(in srgb, var(--color-brass) 8%, var(--color-coffee-900)) 100%)',
+      }}
+    >
+      <span className="flex items-center gap-2.5 flex-1 min-w-0 pl-3 pr-2 py-2">
+        <Bus size={16} className="text-gold-glow shrink-0 transition-transform group-hover:translate-x-0.5" />
+        <span className="min-w-0">
+          <span className="block display text-cream text-sm leading-none tracking-wide">Usar Bus Ticket</span>
+          <span className="block label text-cream-muted leading-none mt-1 text-nano">mover no mesmo lado</span>
+        </span>
+      </span>
+      {/* picote: linha tracejada + furos de punção nas pontas */}
+      <span className="relative shrink-0 border-l border-dashed border-gold/40" aria-hidden>
+        <span className="absolute -top-[5px] -left-[4.5px] w-2 h-2 rounded-full bg-coffee-950" />
+        <span className="absolute -bottom-[5px] -left-[4.5px] w-2 h-2 rounded-full bg-coffee-950" />
+      </span>
+      <span className="shrink-0 flex items-center px-3 currency text-gold-glow text-sm tabular-nums">×{count}</span>
+    </button>
+  )
+}
+
 // DiceArena — área central de arremesso (dados + botão). Vive no miolo do
 // tabuleiro (CenterArena). Ligado ao motor (022.1): jogador da vez, faces e
 // gating de turno vêm do store; o botão dispara rollDice.
@@ -1641,6 +1684,8 @@ export function DiceArena() {
   const activeCash = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.cash ?? 0)
   const activeDiscount = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.nextPurchaseDiscount ?? 0) // Investidor Anjo (006)
   const jailAttempts = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.jail.attempts ?? 0)
+  const activeBusTickets = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.busTickets ?? 0)
+  const activePos = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.pos ?? 0)
 
   const [rollKey, setRollKey] = useState(0)
   const [rolling, setRolling] = useState(false)
@@ -1664,6 +1709,11 @@ export function DiceArena() {
   const finalBuyPrice = Math.round(buyPrice * (1 - activeDiscount)) // espelha buyProperty (motor)
   const hasBuyDiscount = activeDiscount > 0 && finalBuyPrice < buyPrice
   const canFinalize = phase === 'playing' && !paused && turnState === 'aguardando-finalizacao'
+  // Bus Ticket guardado (§10.7): facultativo ANTES de rolar ou no FIM do turno (D-027).
+  // Mora aqui — junto da decisão de turno — e não numa pílula flutuante sobre o board.
+  const canBus =
+    phase === 'playing' && !paused && !rolling && activeBusTickets >= 1 && busSideOf(activePos) !== null &&
+    (turnState === 'aguardando-rolagem' || turnState === 'aguardando-finalizacao')
 
   function handleRoll() {
     if (!canRoll) return
@@ -1777,6 +1827,7 @@ export function DiceArena() {
             {rolling ? 'Rolando…' : 'Rolar dados'}
           </TurnActionBtn>
         )}
+        {canBus && <BusTicketStub count={activeBusTickets} onClick={() => useBusTicketUI.getState().arm()} />}
       </div>
     </div>
   )
@@ -1977,7 +2028,7 @@ export function ActionsPanel() {
         <Button
           variant="ghost"
           onClick={() => useTradeUI.getState().show()}
-          className="w-full mt-3 label text-gold"
+          className="w-full mt-3 label text-gold text-[0.625rem]"
         >
           <PlusGlyph size={11} /> Nova negociação
         </Button>
@@ -2019,9 +2070,16 @@ function TradeRow({ trade, done, colorById }: { trade: Trade; done: boolean; col
       </div>
 
       <div className="flex flex-col gap-1.5 px-1">
-        <TradeLeg label="Oferece" props={trade.fromProps} cash={trade.fromCash} />
-        <TradeLeg label="Pede" props={trade.toProps} cash={trade.toCash} />
+        <TradeLeg label="Oferece" props={trade.fromProps} cash={trade.fromCash} tickets={trade.fromBusTickets ?? 0} />
+        <TradeLeg label="Pede" props={trade.toProps} cash={trade.toCash} tickets={trade.toBusTickets ?? 0} />
       </div>
+
+      {/* Proposta fechada sem resposta ("decidir depois") reabre por aqui */}
+      {!done && (
+        <Button variant="ghost" onClick={() => useTradeUI.getState().respond()} className="w-full label text-gold text-[0.625rem]">
+          Responder proposta
+        </Button>
+      )}
     </div>
   )
 }
