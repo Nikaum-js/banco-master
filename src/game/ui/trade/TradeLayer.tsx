@@ -13,6 +13,7 @@ import type { Trade } from '@/game/economy/types'
 import { BOARD, type PropertySquare, type Square } from '@/lib/boardData'
 import { GROUP_COLOR, SquareIcon, PlayerFace, PLAYER_COLORS } from '@/boards/shared'
 import { CoinIcon } from '@/game/ui/icons'
+import { Button } from '@/game/ui/primitives'
 
 // Store de UI mínimo: abre/fecha o compositor (botão "Negociar" mora noutro arquivo).
 export const useTradeUI = create<{ open: boolean; show: () => void; hide: () => void }>((set) => ({
@@ -86,22 +87,6 @@ function Header({ title, subtitle }: { title: string; subtitle?: string }) {
         <p className="label text-coffee-950/80 mt-1" style={{ fontSize: '9px' }}>{subtitle}</p>
       )}
     </div>
-  )
-}
-
-function Btn({ onClick, disabled, variant = 'primary', children }: { onClick: () => void; disabled?: boolean; variant?: 'primary' | 'secondary'; children: ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        'flex-1 px-3 py-2.5 rounded-[var(--radius-sharp)] font-bold text-sm transition-all active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed',
-        variant === 'primary' ? 'bg-gold text-coffee-900 hover:brightness-110' : 'bg-coffee-700 text-cream border border-coffee-500 hover:bg-coffee-600',
-      )}
-    >
-      {children}
-    </button>
   )
 }
 
@@ -393,8 +378,8 @@ function Composer({ onClose }: { onClose: () => void }) {
       <BalanceBar giveCount={offered.size} getCount={requested.size} netToYou={toCash - fromCash} />
 
       <div className="px-5 py-3 border-t-2 border-coffee-950 shrink-0 flex gap-2">
-        <Btn onClick={() => { proposeTrade(trade); onClose() }} disabled={!canPropose}>Propor</Btn>
-        <Btn onClick={onClose} variant="secondary">Cancelar</Btn>
+        <Button className="flex-1 py-2.5" onClick={() => { proposeTrade(trade); onClose() }} disabled={!canPropose}>Propor</Button>
+        <Button className="flex-1 py-2.5" variant="secondary" onClick={onClose}>Cancelar</Button>
       </div>
     </Card>
   )
@@ -462,8 +447,8 @@ function Received({ trade }: { trade: Trade }) {
       )}
 
       <div className="px-5 py-3 border-t-2 border-coffee-950 shrink-0 flex gap-2">
-        <Btn onClick={() => acceptTrade()} disabled={!stillValid}>Aceitar</Btn>
-        <Btn onClick={() => rejectTrade()} variant="secondary">Recusar</Btn>
+        <Button className="flex-1 py-2.5" onClick={() => acceptTrade()} disabled={!stillValid}>Aceitar</Button>
+        <Button className="flex-1 py-2.5" variant="secondary" onClick={() => rejectTrade()}>Recusar</Button>
       </div>
     </Card>
   )

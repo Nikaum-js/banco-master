@@ -5,6 +5,7 @@ import { useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useGameStore } from '@/game/store'
 import { BOARD } from '@/lib/boardData'
+import { Button } from '@/game/ui/primitives'
 
 const propName = (pos: number) => BOARD[pos]?.name ?? `#${pos}`
 
@@ -127,13 +128,9 @@ export function NoticeLayer() {
             </div>
             <div className="p-4">
               <p className="text-cream text-sm leading-snug">{notice.victimId} perdeu {propName(notice.pos)} para {notice.attackerId}.</p>
-              <button
-                type="button"
-                onClick={() => dismissNotice()}
-                className="mt-4 w-full px-3 py-2 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 font-bold text-sm hover:brightness-110 active:translate-y-px transition-all"
-              >
+              <Button onClick={() => dismissNotice()} className="mt-4 w-full">
                 OK
-              </button>
+              </Button>
             </div>
           </motion.div>
         </motion.div>

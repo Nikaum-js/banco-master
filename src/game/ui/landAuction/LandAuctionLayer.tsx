@@ -13,6 +13,7 @@ import type { LandLot } from '@/game/economy/types'
 import { BOARD, type PropertySquare, type Square } from '@/lib/boardData'
 import { GROUP_COLOR, SquareIcon } from '@/boards/shared'
 import { CoinIcon, HouseIcon, HotelIcon, GavelIcon } from '@/game/ui/icons'
+import { Button } from '@/game/ui/primitives'
 import { THEME } from '@/game/theme'
 
 const INCREMENTS = [10, 50, 100] as const
@@ -140,17 +141,16 @@ function LotCard(props: { lot: LandLot; now: number; cashAvail: number; onBid: (
           const next = lot.currentBid + inc
           const pode = next <= cashAvail
           return (
-            <button
+            <Button
               key={inc}
-              type="button"
               disabled={!pode}
               onClick={() => onBid(lot.pos, next)}
               title={!pode ? 'Caixa insuficiente (comprometido em outros lotes)' : undefined}
-              className="flex-1 flex flex-col items-center px-1 py-2 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 hover:brightness-110 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="flex-1 flex-col px-1 py-2 gap-0"
             >
               <span className="currency text-xs leading-none text-coffee-950">{money(next)}</span>
               <span className="currency mt-1 leading-none text-coffee-950" style={{ fontSize: '10px' }}>+{inc}</span>
-            </button>
+            </Button>
           )
         })}
       </div>

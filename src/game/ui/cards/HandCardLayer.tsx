@@ -10,6 +10,7 @@ import { cardById } from '@/game/cards/catalog'
 import { ownerOf } from '@/game/economy/titles'
 import { cardLabel } from './cardMeta'
 import { cardTargets } from './handView'
+import { Button } from '@/game/ui/primitives'
 
 // Store de UI efêmero: qual carta está escolhendo alvo (null = fechado).
 export const useHandCardUI = create<{ cardId: string | null; open: (id: string) => void; close: () => void }>((set) => ({
@@ -95,13 +96,9 @@ export function HandCardLayer() {
             </div>
 
             <div className="px-4 py-3 border-t-2 border-coffee-950 shrink-0">
-              <button
-                type="button"
-                onClick={close}
-                className="w-full px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-700 text-cream border border-coffee-500 hover:bg-coffee-600 font-bold text-sm transition-colors"
-              >
+              <Button variant="secondary" onClick={close} className="w-full">
                 Cancelar
-              </button>
+              </Button>
             </div>
           </motion.div>
         </Backdrop>

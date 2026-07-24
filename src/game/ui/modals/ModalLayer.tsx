@@ -14,8 +14,9 @@ import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { GROUP_COLOR, SquareIcon, PlayerFace, computeRents, PLAYER_COLORS } from '@/boards/shared'
 import { buildCost } from '@/game/economy/construction'
 import { GavelIcon, CoinIcon, HouseIcon, HotelIcon } from '@/game/ui/icons'
+import { Button } from '@/game/ui/primitives'
 
-// Botão de ação do modal (dourado = primário; coffee = secundário).
+// Botão de ação do modal — casca fina sobre o primitivo Button (flex-1).
 function ActionBtn({
   onClick,
   children,
@@ -26,18 +27,9 @@ function ActionBtn({
   variant?: 'primary' | 'secondary'
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex-1 px-3 py-2 rounded-[var(--radius-sharp)] font-bold text-sm transition-all active:translate-y-px',
-        variant === 'primary'
-          ? 'bg-gold text-coffee-900 hover:brightness-110'
-          : 'bg-coffee-700 text-cream border border-coffee-500 hover:bg-coffee-600',
-      )}
-    >
+    <Button variant={variant} onClick={onClick} className="flex-1">
       {children}
-    </button>
+    </Button>
   )
 }
 
@@ -357,13 +349,9 @@ function BusPicker({
         <SideRow fromPos={fromPos} onPick={onPick} />
         <p className="label text-cream-muted text-center mt-3 leading-snug">Clique numa casa da fileira para ir.</p>
         {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="mt-3 w-full px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-700 text-cream border border-coffee-500 hover:bg-coffee-600 font-bold text-sm transition-colors"
-          >
+          <Button variant="secondary" onClick={onCancel} className="mt-3 w-full">
             Cancelar
-          </button>
+          </Button>
         )}
       </div>
     </motion.div>
@@ -509,16 +497,15 @@ function AuctionCard({
               {[2, 10, 100].map((inc) => {
                 const next = view.currentBid + inc
                 return (
-                  <button
+                  <Button
                     key={inc}
-                    type="button"
                     disabled={next > cash}
                     onClick={() => placeBid(activeId, next)}
-                    className="flex-1 flex flex-col items-center px-1 py-3 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 hover:brightness-110 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    className="flex-1 flex-col px-1 py-3 gap-0"
                   >
                     <span className="currency text-base leading-none text-coffee-950">R$ {next}</span>
                     <span className="currency mt-1.5 leading-none text-coffee-950" style={{ fontSize: '11px' }}>+R$ {inc}</span>
-                  </button>
+                  </Button>
                 )
               })}
             </div>

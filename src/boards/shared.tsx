@@ -15,7 +15,7 @@ import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 import { HandPanel } from '@/game/ui/cards/HandPanel'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
 import { ShopIcon, GavelIcon, DiceIcon, CoinIcon, HouseIcon } from '@/game/ui/icons'
-import { SectionHeader, Chip, EmptyState } from '@/game/ui/primitives'
+import { Button, SectionHeader, Chip, EmptyState } from '@/game/ui/primitives'
 import { tradesView } from '@/game/ui/trade/tradesView'
 import type { GameState } from '@/game/turn/types'
 import type { TempEffect, Trade } from '@/game/economy/types'
@@ -1581,9 +1581,9 @@ function toUiSpeedFace(speed: number | 'mr-banco' | 'onibus'): SpeedFace {
 
 const ROLL_DURATION_MS = 1050
 
-// Botão único das ações do turno (Rolar / Comprar / Leilão / Finalizar) — UM padrão:
-// mesmo formato, fonte e tamanho. `primary` = dourado (texto+ícone escuros);
-// `secondary` = coffee (texto+ícone creme). Ícone herda a cor do texto (coerente).
+// Botão único das ações do turno (Rolar / Comprar / Leilão / Finalizar) —
+// casca sobre o primitivo Button com a voz display (Bebas) e porte maior;
+// a primária ganha borda gold-soft + glow no hover (é O botão do jogo).
 function TurnActionBtn({
   variant = 'primary',
   icon,
@@ -1602,24 +1602,21 @@ function TurnActionBtn({
   children: ReactNode
 }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant={variant}
       onClick={onClick}
       disabled={disabled}
       title={title}
       className={cn(
-        'px-5 py-3 rounded-[var(--radius-sharp)] border display text-base leading-none tracking-wide',
-        'flex items-center justify-center gap-2 whitespace-nowrap transition-all active:translate-y-px',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
-        variant === 'primary'
-          ? 'bg-gold text-coffee-950 border-gold-soft hover:bg-gold-glow hover:shadow-[var(--shadow-glow)] disabled:hover:bg-gold disabled:hover:shadow-none'
-          : 'bg-coffee-700 text-cream border-coffee-500 hover:bg-coffee-600 disabled:hover:bg-coffee-700',
+        'px-5 py-3 display font-normal text-base tracking-wide gap-2',
+        variant === 'primary' &&
+          'border border-gold-soft hover:bg-gold-glow hover:brightness-100 hover:shadow-[var(--shadow-glow)] disabled:hover:bg-gold disabled:hover:shadow-none',
         className,
       )}
     >
       {icon}
       {children}
-    </button>
+    </Button>
   )
 }
 
@@ -1813,18 +1810,14 @@ function LoanPanel() {
         <span className="text-cream-muted">Juros ao passar pelo GO</span>
         <span className="currency text-logo tabular-nums">− R$ {interest.toLocaleString('pt-BR')}</span>
       </div>
-      <button
-        type="button"
+      <Button
         disabled={!canPay}
         onClick={payOffLoan}
         title={canPay ? 'Pagar o principal e encerrar o empréstimo' : 'Caixa insuficiente para o principal'}
-        className={cn(
-          'w-full mt-3 px-3 py-2 rounded-[var(--radius-sharp)] font-bold text-sm transition-all active:translate-y-px',
-          canPay ? 'bg-gold text-coffee-900 hover:brightness-110' : 'bg-coffee-800 text-cream-muted border border-coffee-500 cursor-not-allowed',
-        )}
+        className="w-full mt-3"
       >
         {canPay ? `Quitar · R$ ${loan.principal.toLocaleString('pt-BR')}` : `Falta R$ ${(loan.principal - active.cash).toLocaleString('pt-BR')} para quitar`}
-      </button>
+      </Button>
     </div>
   )
 }
@@ -1981,18 +1974,13 @@ export function ActionsPanel() {
             {trades.history.map((t, i) => <TradeRow key={`h${i}`} trade={t} done colorById={colorById} />)}
           </div>
         )}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           onClick={() => useTradeUI.getState().show()}
-          className="
-            w-full mt-3 px-3 py-2 rounded-[var(--radius-sharp)]
-            border border-gold/40 bg-gold/[0.06] text-gold label
-            hover:bg-gold/15 hover:border-gold/70 transition-colors
-            flex items-center justify-center gap-1.5
-          "
+          className="w-full mt-3 label text-gold"
         >
           <PlusGlyph size={11} /> Nova negociação
-        </button>
+        </Button>
       </div>
     </aside>
   )
@@ -3144,7 +3132,7 @@ export function PropertyPopover({
   )
 }
 
-// Botão de ação do deed (dourado; desabilita conforme as flags).
+// Botão de ação do deed — casca compacta (text-xs) sobre o primitivo Button.
 function DeedBtn({
   onClick,
   disabled,
@@ -3163,22 +3151,16 @@ function DeedBtn({
   children: React.ReactNode
 }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant={variant}
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={cn(
-        'flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-[var(--radius-sharp)] text-xs font-bold transition-all active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed disabled:active:translate-y-0',
-        variant === 'primary'
-          ? 'bg-gold text-coffee-900 hover:brightness-110 disabled:hover:brightness-100'
-          : 'bg-coffee-700 text-cream border border-coffee-500 hover:border-gold/60 hover:bg-coffee-600',
-        className,
-      )}
+      className={cn('px-2.5 text-xs', className)}
     >
       {icon}
       {children}
-    </button>
+    </Button>
   )
 }
 

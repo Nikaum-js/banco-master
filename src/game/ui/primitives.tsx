@@ -1,8 +1,45 @@
 // Primitivos de apresentação dos painéis laterais — vocabulário único de seção
 // (cabeçalho, chip de status, estado vazio) compartilhado por Pote, Cartas,
 // Negociações e Efeitos. Só JSX + classes; nenhum estado de jogo entra aqui.
-import { type ReactNode } from 'react'
+import { type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+
+// Botão canônico do jogo — quatro variantes com a MESMA régua de padding,
+// fonte, hover e estado desabilitado. Toda superfície (HUD, modais, trade,
+// leilões, deed) deriva daqui; divergência visual de botão é bug.
+//   primary   → latão sólido, texto tinta (ação principal)
+//   secondary → superfície de tinta com borda (ação neutra)
+//   ghost     → contorno dourado leve (ação de baixo peso, ex. "nova proposta")
+//   danger    → contorno signal que preenche no hover (destrutivo)
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
+
+export function Button({
+  variant = 'primary',
+  className,
+  type = 'button',
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant }) {
+  return (
+    <button
+      type={type}
+      className={cn(
+        'px-3 py-2 rounded-[var(--radius-sharp)] font-bold text-sm leading-none',
+        'inline-flex items-center justify-center gap-1.5 whitespace-nowrap',
+        'transition-all active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed disabled:active:translate-y-0',
+        variant === 'primary' &&
+          'bg-gold text-coffee-950 hover:brightness-110 disabled:hover:brightness-100',
+        variant === 'secondary' &&
+          'bg-coffee-700 text-cream border border-coffee-500 hover:border-gold/60 hover:bg-coffee-600 disabled:hover:bg-coffee-700 disabled:hover:border-coffee-500',
+        variant === 'ghost' &&
+          'bg-gold/[0.06] text-gold border border-gold/40 hover:bg-gold/15 hover:border-gold/70 disabled:hover:bg-gold/[0.06]',
+        variant === 'danger' &&
+          'bg-transparent text-signal-glow border border-signal hover:bg-signal hover:text-cream disabled:hover:bg-transparent disabled:hover:text-signal-glow',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
 
 // Cabeçalho padrão de seção: título em .label dourado + meta opcional à direita
 // (contador, chip, slots). Mesmo ritmo visual em todas as seções.

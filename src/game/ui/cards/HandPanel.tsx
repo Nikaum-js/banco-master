@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
 import { handCardsView } from './handView'
 import { useHandCardUI } from './HandCardLayer'
-import { SectionHeader, EmptyState } from '@/game/ui/primitives'
+import { Button, SectionHeader, EmptyState } from '@/game/ui/primitives'
 
 function LockGlyph({ size = 11 }: { size?: number }) {
   return (
@@ -111,10 +111,9 @@ export function HandPanel() {
                     <p className="text-cream-muted text-xs leading-snug mt-1.5">{c.desc}</p>
 
                     {c.playable ? (
-                      <button
-                        type="button"
+                      <Button
                         onClick={() => onUse(c.id, c.needsTarget)}
-                        className="w-full mt-2.5 px-3 py-2 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 font-bold text-xs hover:brightness-110 active:translate-y-px transition-all flex items-center justify-center gap-1.5"
+                        className="w-full mt-2.5 text-xs"
                       >
                         {c.needsTarget ? (
                           <>
@@ -123,7 +122,7 @@ export function HandPanel() {
                         ) : (
                           'Usar agora'
                         )}
-                      </button>
+                      </Button>
                     ) : (
                       <p
                         title={c.reason}

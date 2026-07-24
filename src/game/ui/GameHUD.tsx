@@ -20,6 +20,7 @@ import { sideOf } from '@/game/turn/turnMachine'
 import { isBankrupt } from '@/game/falencia/falencia'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { Confetti } from '@/game/ui/NoticeLayer'
+import { Button } from '@/game/ui/primitives'
 import type { LoanRequest } from '@/game/economy/types'
 
 const GOLD_TEXT: React.CSSProperties = {
@@ -50,40 +51,31 @@ function colorOfPlayer(players: { id: string }[], id: string | null): string | n
   return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : null
 }
 
-// Botões com hierarquia: primária (gold), neutra (contorno) e destrutiva (vermelho).
+// Cascas de largura total sobre o primitivo Button — hierarquia do card de
+// decisão: primária (latão + glow), neutra (secondary) e destrutiva (danger).
 function PrimaryBtn({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: ReactNode }) {
   return (
-    <button
-      type="button"
+    <Button
       onClick={onClick}
       disabled={disabled}
-      className="w-full px-3 py-2.5 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 font-bold text-sm hover:brightness-110 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-[0_2px_10px_-2px_color-mix(in_srgb,var(--color-brass)_50%,transparent)]"
+      className="w-full py-2.5 shadow-[0_2px_10px_-2px_color-mix(in_srgb,var(--color-brass)_50%,transparent)]"
     >
       {children}
-    </button>
+    </Button>
   )
 }
 function GhostBtn({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-700 border border-coffee-500 text-cream font-bold text-sm hover:border-gold hover:bg-coffee-600 active:translate-y-px transition-all"
-    >
+    <Button variant="secondary" onClick={onClick} className="w-full">
       {children}
-    </button>
+    </Button>
   )
 }
 function DangerBtn({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: ReactNode }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="w-full px-3 py-2 rounded-[var(--radius-sharp)] bg-transparent border border-signal text-signal-glow font-bold text-sm hover:bg-signal hover:text-cream active:translate-y-px disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-signal-glow transition-all"
-    >
+    <Button variant="danger" onClick={onClick} disabled={disabled} className="w-full">
       {children}
-    </button>
+    </Button>
   )
 }
 
@@ -193,16 +185,19 @@ export function GameHUD() {
             >
               {winner?.id ?? '—'}
             </motion.p>
-            <motion.button
-              type="button"
+            <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6, duration: 0.3 }}
-              onClick={() => resetGame()}
-              className="mt-8 px-6 py-2.5 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 font-bold text-base hover:brightness-110 active:translate-y-px transition-all shadow-[0_4px_16px_-4px_color-mix(in_srgb,var(--color-brass)_60%,transparent)]"
+              className="mt-8 inline-block"
             >
-              Novo jogo
-            </motion.button>
+              <Button
+                onClick={() => resetGame()}
+                className="px-6 py-2.5 text-base shadow-[0_4px_16px_-4px_color-mix(in_srgb,var(--color-brass)_60%,transparent)]"
+              >
+                Novo jogo
+              </Button>
+            </motion.div>
           </motion.div>
         </motion.div>
       </AnimatePresence>
@@ -382,16 +377,16 @@ export function GameHUD() {
                 {lenders.map((p) => {
                   const lc = colorOfPlayer(game.players, p.id)
                   return (
-                    <button
+                    <Button
                       key={p.id}
-                      type="button"
+                      variant="secondary"
                       onClick={() => proposeLoan(p.id)}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-700 border border-coffee-500 text-cream font-bold text-sm hover:border-gold hover:bg-coffee-600 active:translate-y-px transition-all"
+                      className="w-full justify-start gap-2"
                     >
                       {lc && <PlayerFace color={lc} size={22} />}
                       <span className="flex-1 text-left">Pedir {fmt(shortfall)} a {p.id}</span>
                       <HandCoins size={15} className="text-gold-glow shrink-0" />
-                    </button>
+                    </Button>
                   )
                 })}
                 <DangerBtn onClick={declareBankruptcy} disabled={!canFalir}>Declarar falência</DangerBtn>
