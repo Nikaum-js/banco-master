@@ -5,9 +5,10 @@ import { type ReactNode } from 'react'
 import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 
-// Overlay padrão: véu de tinta + blur leve, sempre o MESMO. Só o z-index
-// varia (empilhamento entre camadas: modal 60 · trade 65 · carta 66 ·
-// notice 67 · pregão 68).
+// Overlay padrão: véu de tinta com VINHETA (centro mais claro, bordas mais
+// fundas — foco no cartão) + blur leve, sempre o MESMO. Só o z-index varia
+// (empilhamento entre camadas: modal 60 · trade 65 · carta 66 · notice 67 ·
+// pregão 68).
 export function Overlay({
   z = 60,
   onClick,
@@ -26,19 +27,23 @@ export function Overlay({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
       onClick={onClick}
-      style={{ zIndex: z }}
-      className={cn(
-        'fixed inset-0 flex items-center justify-center bg-coffee-950/70 backdrop-blur-[2px] p-4',
-        className,
-      )}
+      style={{
+        zIndex: z,
+        background:
+          'radial-gradient(120% 120% at 50% 40%, color-mix(in srgb, var(--color-coffee-950) 60%, transparent) 0%, color-mix(in srgb, var(--color-coffee-950) 90%, transparent) 100%)',
+      }}
+      className={cn('fixed inset-0 flex items-center justify-center backdrop-blur-[3px] p-4', className)}
     >
       {children}
     </motion.div>
   )
 }
 
-// Cartão de modal — raio modal, borda coffee, sombra dropdown, entrada com
-// spring e clique interno protegido (não fecha pelo backdrop).
+// Cartão de modal — superfície com PROFUNDIDADE em vez de cor chapada: brilho
+// quente de latão descendo do header, vinheta escura no rodapé e bisel dourado
+// na borda superior (luz de castiçal). Raio modal, borda coffee, sombra
+// dropdown, entrada com spring e clique interno protegido (não fecha pelo
+// backdrop). Tema-aware: tudo via var(--color-*).
 export function ModalShell({ className, children }: { className?: string; children: ReactNode }) {
   return (
     <motion.div
@@ -47,10 +52,16 @@ export function ModalShell({ className, children }: { className?: string; childr
       exit={{ opacity: 0, scale: 0.93, y: 8 }}
       transition={{ type: 'spring', stiffness: 360, damping: 28 }}
       onClick={(e) => e.stopPropagation()}
-      className={cn(
-        'bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-modal)] shadow-[var(--shadow-dropdown)] overflow-hidden',
-        className,
-      )}
+      style={{
+        background: [
+          'radial-gradient(90% 55% at 50% 0%, color-mix(in srgb, var(--color-brass) 10%, transparent) 0%, transparent 60%)',
+          'radial-gradient(130% 55% at 50% 118%, color-mix(in srgb, var(--color-coffee-950) 80%, transparent) 0%, transparent 60%)',
+          'linear-gradient(180deg, var(--color-coffee-800) 0%, var(--color-coffee-900) 100%)',
+        ].join(', '),
+        boxShadow:
+          'inset 0 1px 0 0 color-mix(in srgb, var(--color-brass-glow) 22%, transparent), var(--shadow-dropdown)',
+      }}
+      className={cn('border-2 border-coffee-500 rounded-[var(--radius-modal)] overflow-hidden', className)}
     >
       {children}
     </motion.div>
@@ -67,6 +78,7 @@ export function ModalHeader({
   title,
   subtitle,
   center = false,
+  onClose,
   className,
 }: {
   tone?: 'brass' | 'signal'
@@ -75,14 +87,21 @@ export function ModalHeader({
   title: string
   subtitle?: string
   center?: boolean
+  onClose?: () => void // fecha SEM decidir (ex.: proposta recebida — responder depois)
   className?: string
 }) {
-  const background = bg ?? (tone === 'signal' ? 'var(--gradient-signal)' : 'var(--gradient-brass)')
+  // Shine (não chapado): topo quase branco descendo pro tom cheio — placa de
+  // latão polido. Bisel: luz na aresta de cima, sombra na de baixo.
+  const background = bg ?? (tone === 'signal' ? 'var(--gradient-signal-shine)' : 'var(--gradient-brass-shine)')
   const dark = tone !== 'signal' // texto tinta sobre latão/stripes; claro sobre signal
   return (
     <div
       className={cn('relative px-4 py-3 border-b-2 border-coffee-950 shrink-0', center && 'text-center', className)}
-      style={{ background }}
+      style={{
+        background,
+        boxShadow:
+          'inset 0 1px 0 0 color-mix(in srgb, white 32%, transparent), inset 0 -2px 0 0 color-mix(in srgb, var(--color-ink-950) 22%, transparent)',
+      }}
     >
       <div className={cn('flex items-center gap-2.5', center && 'justify-center')}>
         {icon && <div className="shrink-0 w-9 h-9 flex items-center justify-center">{icon}</div>}
@@ -97,6 +116,25 @@ export function ModalHeader({
           )}
         </div>
       </div>
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Fechar"
+          title="Fechar (a proposta continua na mesa)"
+          className={cn(
+            'absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full grid place-items-center transition-colors',
+            dark
+              ? 'text-coffee-950/70 hover:text-coffee-950 hover:bg-coffee-950/15'
+              : 'text-cream/70 hover:text-cream hover:bg-coffee-950/25',
+          )}
+        >
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden>
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      )}
     </div>
   )
 }
