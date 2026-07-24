@@ -72,7 +72,7 @@ export function HandCardLayer() {
             onClick={(e) => e.stopPropagation()}
             className="bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] w-[360px] max-w-[92vw] max-h-[90vh] flex flex-col overflow-hidden"
           >
-            <div className="px-4 py-3 border-b-2 border-coffee-950 bg-[linear-gradient(180deg,#d4af37_0%,#b8941f_100%)] shrink-0">
+            <div className="px-4 py-3 border-b-2 border-coffee-950 shrink-0" style={{ background: 'var(--gradient-brass)' }}>
               <h3 className="display text-coffee-950 text-lg leading-none">Usar {cardLabel(cardById(cardId).effect)}</h3>
               <p className="label text-coffee-950/80 mt-0.5" style={{ fontSize: '9px' }}>Escolha o alvo</p>
             </div>

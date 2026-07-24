@@ -106,7 +106,7 @@ export function SoundBoard() {
       <header className="mx-auto mb-8 max-w-5xl">
         <h1 className="text-2xl font-bold">Sons do jogo</h1>
         <p className="mt-1 text-sm text-slate-400">
-          Um botão por ação — clique para ouvir. Volte ao jogo removendo <code className="rounded bg-slate-800 px-1">?sons</code> da URL.
+          Um botão por ação, clique para ouvir. Volte ao jogo removendo <code className="rounded bg-slate-800 px-1">?sons</code> da URL.
         </p>
       </header>
       <main className="mx-auto flex max-w-5xl flex-col gap-8">
@@ -127,7 +127,7 @@ export function SoundBoard() {
                     <span className="block text-sm font-medium">{label}</span>
                     <span className="mt-0.5 block font-mono text-[10px] text-slate-500">
                       {cue}
-                      {missing && ' — sem arquivo'}
+                      {missing && ' (sem arquivo)'}
                     </span>
                   </button>
                 )

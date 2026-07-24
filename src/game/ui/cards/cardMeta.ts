@@ -5,9 +5,9 @@ import type { Rarity } from '@/game/cards/types'
 
 // Raridade → cor (SRS §10.2: laranja/azul/verde; lendária > rara > comum).
 export const RARITY_COLOR: Record<Rarity, string> = {
-  lendaria: '#fb923c', // laranja
-  rara: '#3b82f6', // azul
-  comum: '#22c55e', // verde
+  lendaria: 'var(--color-rarity-lendaria)', // laranja
+  rara: 'var(--color-rarity-rara)', // azul
+  comum: 'var(--color-rarity-comum)', // verde
 }
 
 export const RARITY_LABEL: Record<Rarity, string> = {

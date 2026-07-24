@@ -109,7 +109,7 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
           exit={{ opacity: 0 }}
           transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
         >
-          <div className="absolute inset-0.5 rounded-[3px] ring-2 ring-gold/80 shadow-[0_0_12px_rgba(212,175,55,0.6)]" />
+          <div className="absolute inset-0.5 rounded-[3px] ring-2 ring-gold/80 shadow-[0_0_12px_color-mix(in_srgb,var(--color-brass)_60%,transparent)]" />
         </motion.div>
       )}
 

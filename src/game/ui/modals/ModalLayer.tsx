@@ -132,7 +132,7 @@ export function ModalLayer() {
 
           {view.kind === 'card-discard' && (
             <Card>
-              <Header bg="linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" icon={null} title="Mão cheia" subtitle="Escolha 1 carta para descartar" />
+              <Header bg="var(--gradient-brass)" icon={null} title="Mão cheia" subtitle="Escolha 1 carta para descartar" />
               <div className="px-3.5 py-3 flex flex-col gap-2">
                 {view.cards.map((c) => (
                   <DiscardRow key={c.id} card={c} onPick={() => discardCard(c.id)} />
@@ -143,7 +143,7 @@ export function ModalLayer() {
 
           {view.kind === 'card-shortcut' && (
             <Card>
-              <Header bg="linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" icon={null} title="Atalho" subtitle="Mover 3 casas" />
+              <Header bg="var(--gradient-brass)" icon={null} title="Atalho" subtitle="Mover 3 casas" />
               <div className="px-3.5 py-3">
                 <p className="text-cream-muted text-sm mb-3">Para que direção você quer andar 3 casas?</p>
                 <div className="flex gap-2">
@@ -162,12 +162,12 @@ export function ModalLayer() {
               transition={{ type: 'spring', stiffness: 320, damping: 26 }}
               onClick={(e) => e.stopPropagation()}
               className="w-[300px] max-w-[90vw] bg-coffee-800 rounded-[var(--radius-card)] overflow-hidden border-2"
-              style={{ borderColor: RARITY_COLOR[view.rarity], boxShadow: `0 12px 40px rgba(0,0,0,0.55), 0 0 22px color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 45%, transparent)` }}
+              style={{ borderColor: RARITY_COLOR[view.rarity], boxShadow: `var(--shadow-dropdown), 0 0 22px color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 45%, transparent)` }}
             >
               {/* Faixa da raridade */}
               <div
                 className="px-4 py-2.5 flex items-center justify-between"
-                style={{ background: `linear-gradient(180deg, ${RARITY_COLOR[view.rarity]} 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 75%, #000) 100%)` }}
+                style={{ background: `linear-gradient(180deg, ${RARITY_COLOR[view.rarity]} 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 75%, var(--color-ink-950)) 100%)` }}
               >
                 <span className="display text-coffee-950 text-sm leading-none tracking-[0.2em] uppercase">{view.deckId === 'acaso' ? 'Acaso' : 'Tesouro'}</span>
                 <span className="label text-coffee-950/85" style={{ fontSize: '9px' }}>{RARITY_LABEL[view.rarity]}</span>
@@ -198,7 +198,7 @@ export function ModalLayer() {
 
           {view.kind === 'bus-move' && (
             <Card>
-              <Header bg="linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" icon={null} title="Ônibus do Speed Die" subtitle="Escolha por qual dado mover" />
+              <Header bg="var(--gradient-brass)" icon={null} title="Ônibus do Speed Die" subtitle="Escolha por qual dado mover" />
               <div className="px-3.5 py-3 flex flex-col gap-2">
                 {([
                   { opt: 'die0' as const, label: `Dado A (${view.white[0]})`, steps: view.white[0] },
@@ -218,7 +218,7 @@ export function ModalLayer() {
 
           {view.kind === 'triple-dest' && (
             <Card>
-              <Header bg="linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" icon={null} title="Speed Die triplo!" subtitle="Vá para qualquer casa" />
+              <Header bg="var(--gradient-brass)" icon={null} title="Speed Die triplo!" subtitle="Vá para qualquer casa" />
               <div className="px-3.5 py-3">
                 <p className="text-cream-muted text-sm mb-2">Escolha o destino:</p>
                 <div className="max-h-[46vh] overflow-auto flex flex-col gap-1 pr-1">
@@ -268,7 +268,7 @@ function SideRow({ fromPos, onPick }: { fromPos: number; onPick: (pos: number) =
         const isFrom = sq.pos === fromPos
         const isProp = sq.kind === 'property'
         const stripe = isProp ? GROUP_COLOR[(sq as PropertySquare).group]
-          : sq.kind === 'airport' || sq.kind === 'utility' ? '#d4af37' : 'transparent'
+          : sq.kind === 'airport' || sq.kind === 'utility' ? 'var(--color-brass)' : 'transparent'
         const price = 'price' in sq ? sq.price : null
         // Posse (igual ao tabuleiro): casa com dono "veste" a cor dele (tint + moldura)
         // e NÃO mostra preço — só casa livre exibe valor.
@@ -301,7 +301,7 @@ function SideRow({ fromPos, onPick }: { fromPos: number; onPick: (pos: number) =
               {isProp ? (
                 <span
                   className="rounded-full border border-coffee-950/70 overflow-hidden shrink-0"
-                  style={{ width: 20, height: 20, boxShadow: 'inset 0 0 0 1px rgba(212,175,55,0.5)' }}
+                  style={{ width: 20, height: 20, boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--color-brass) 50%, transparent)' }}
                 >
                   <img
                     src={`https://flagcdn.com/${(sq as PropertySquare).uf.toLowerCase()}.svg`}
@@ -352,7 +352,7 @@ function BusPicker({
       onClick={(e) => e.stopPropagation()}
       className="w-[760px] max-w-[96vw] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden"
     >
-      <Header bg="linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" icon={null} title={title} subtitle={subtitle} />
+      <Header bg="var(--gradient-brass)" icon={null} title={title} subtitle={subtitle} />
       <div className="px-5 py-5">
         <SideRow fromPos={fromPos} onPick={onPick} />
         <p className="label text-cream-muted text-center mt-3 leading-snug">Clique numa casa da fileira para ir.</p>
@@ -462,7 +462,7 @@ function AuctionCard({
   const price = 'price' in sq ? sq.price : 0
   const isProp = sq.kind === 'property'
   const houseCost = isProp ? buildCost(sq as PropertySquare) : 0
-  const accent = isProp ? GROUP_COLOR[(sq as PropertySquare).group] : '#d4af37'
+  const accent = isProp ? GROUP_COLOR[(sq as PropertySquare).group] : 'var(--color-brass)'
 
   return (
     <motion.div
@@ -474,7 +474,7 @@ function AuctionCard({
       className="w-[600px] max-w-[95vw] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden"
     >
       {/* Título */}
-      <div className="px-4 py-3 border-b-2 border-coffee-950 bg-[linear-gradient(180deg,#d4af37_0%,#b8941f_100%)] text-center">
+      <div className="px-4 py-3 border-b-2 border-coffee-950 text-center" style={{ background: 'var(--gradient-brass)' }}>
         <h3 className="display text-coffee-950 text-xl leading-none tracking-wide">Leilão</h3>
       </div>
       {/* Nome + ícone, centralizado */}

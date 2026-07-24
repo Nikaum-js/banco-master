@@ -477,7 +477,7 @@ function FlagAvatar({ iso2, side }: { iso2: string; side: Side }) {
         ...position,
         width: size,
         height: size,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.7), inset 0 0 0 1.5px rgba(217,166,80,0.6)',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.7), inset 0 0 0 1.5px color-mix(in srgb, var(--color-brass) 60%, transparent)',
       }}
       title={iso2}
     >
@@ -555,7 +555,7 @@ export function ClassicSquare({
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              boxShadow: `inset 0 0 0 2px ${ownerColor}, inset 0 0 0 3px rgba(6,11,23,0.55)`,
+              boxShadow: `inset 0 0 0 2px ${ownerColor}, inset 0 0 0 3px color-mix(in srgb, var(--color-ink-950) 55%, transparent)`,
             }}
           />
         </>
@@ -635,8 +635,8 @@ export function ClassicSquare({
                       fontSize: '11px',
                       fontWeight: 700,
                       color: 'var(--color-gold-glow)',
-                      background: 'rgba(6,11,23,0.85)',
-                      border: '1px solid rgba(217,166,80,0.45)',
+                      background: 'color-mix(in srgb, var(--color-ink-950) 85%, transparent)',
+                      border: '1px solid color-mix(in srgb, var(--color-brass) 45%, transparent)',
                       borderRadius: 9999,
                       padding: '1px 5px',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.55)',
@@ -1229,8 +1229,8 @@ export function MortgageMark({ pos }: { pos: number }) {
             fontFamily: 'var(--font-slab)',
             fontSize: 8,
             letterSpacing: '0.14em',
-            color: '#e06c4f',
-            border: '1.5px solid #e06c4f',
+            color: 'var(--color-signal-glow)',
+            border: '1.5px solid var(--color-signal-glow)',
             borderRadius: 2,
             padding: '1px 4px',
             opacity: 0.9,
@@ -1325,7 +1325,7 @@ function TradeItemAvatar({ sq, size = 16 }: { sq: Square; size?: number }) {
   if (sq.kind === 'property') {
     const uf = (sq as PropertySquare).uf
     return (
-      <span className="rounded-full bg-coffee-950 overflow-hidden shrink-0" style={{ width: size, height: size, boxShadow: 'inset 0 0 0 1px rgba(217,166,80,0.5)' }}>
+      <span className="rounded-full bg-coffee-950 overflow-hidden shrink-0" style={{ width: size, height: size, boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--color-brass) 50%, transparent)' }}>
         <img src={`https://flagcdn.com/${uf.toLowerCase()}.svg`} alt={uf} className="w-full h-full object-cover block" draggable={false} />
       </span>
     )
@@ -1469,7 +1469,7 @@ function PlayerRow({ player: p }: { player: Player }) {
         'relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-card)]',
         'border transition-colors',
         p.active
-          ? 'bg-coffee-700 border-gold shadow-[0_0_0_1px_rgba(217,166,80,0.3)]'
+          ? 'bg-coffee-700 border-gold shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-brass)_30%,transparent)]'
           : 'bg-coffee-800/60 border-coffee-500',
         p.bankrupt && 'opacity-50',
       )}
@@ -1484,7 +1484,7 @@ function PlayerRow({ player: p }: { player: Player }) {
             transition={{ duration: 0.45 }}
             className={cn(
               'absolute right-3 top-1.5 currency text-sm font-bold pointer-events-none z-10',
-              pulse.d > 0 ? 'text-green-400' : 'text-logo',
+              pulse.d > 0 ? 'text-group-green' : 'text-logo',
             )}
             style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
           >
@@ -1854,9 +1854,9 @@ function PotCard({ pot }: { pot: number }) {
     <section
       className="relative overflow-hidden rounded-[var(--radius-card)] border-2 px-5 py-4 text-center shrink-0"
       style={{
-        borderColor: 'rgba(217,166,80,0.45)',
-        background: 'radial-gradient(130% 105% at 50% 0%, rgba(217,166,80,0.20) 0%, var(--color-coffee-900) 62%)',
-        boxShadow: 'inset 0 0 30px rgba(217,166,80,0.08), var(--shadow-card)',
+        borderColor: 'color-mix(in srgb, var(--color-brass) 45%, transparent)',
+        background: 'radial-gradient(130% 105% at 50% 0%, color-mix(in srgb, var(--color-brass) 20%, transparent) 0%, var(--color-coffee-900) 62%)',
+        boxShadow: 'inset 0 0 30px color-mix(in srgb, var(--color-brass) 8%, transparent), var(--shadow-card)',
       }}
     >
       {/* marca-d'água: globo da loteria espiando pelo canto */}
@@ -1874,7 +1874,7 @@ function PotCard({ pot }: { pot: number }) {
         animate={{ scale: 1 }}
         transition={{ type: 'spring', stiffness: 340, damping: 18 }}
         className="currency text-gold-glow leading-none mt-2.5"
-        style={{ fontSize: 40, textShadow: '0 2px 16px rgba(217,166,80,0.55)' }}
+        style={{ fontSize: 40, textShadow: '0 2px 16px color-mix(in srgb, var(--color-brass) 55%, transparent)' }}
       >
         <span className="text-gold-soft text-lg align-top mr-0.5">R$</span>
         {pot.toLocaleString('pt-BR')}
@@ -1962,14 +1962,14 @@ function TradeRow({ trade, done, colorById }: { trade: Trade; done: boolean; col
     <div
       className={cn(
         'flex flex-col gap-2 px-3 py-2.5 rounded-[var(--radius-card)] border',
-        done ? 'bg-coffee-800/40 border-coffee-500 opacity-75' : 'bg-coffee-700 border-gold/70 shadow-[0_0_0_1px_rgba(217,166,80,0.25)]',
+        done ? 'bg-coffee-800/40 border-coffee-500 opacity-75' : 'bg-coffee-700 border-gold/70 shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-brass)_25%,transparent)]',
       )}
     >
       <div className="flex items-center gap-1.5 min-w-0">
-        <PlayerFace color={colorById[trade.fromId] ?? '#888'} size={22} />
+        <PlayerFace color={colorById[trade.fromId] ?? 'var(--color-ink-400)'} size={22} />
         <span className="display text-cream text-sm leading-none truncate">{trade.fromId}</span>
         <TradeArrowGlyph size={11} />
-        <PlayerFace color={colorById[trade.toId] ?? '#888'} size={22} />
+        <PlayerFace color={colorById[trade.toId] ?? 'var(--color-ink-400)'} size={22} />
         <span className="display text-cream text-sm leading-none truncate">{trade.toId}</span>
         {done ? (
           <Chip className="ml-auto" title="Negociação aceita">
@@ -2295,7 +2295,7 @@ export function CardDeck({
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: `radial-gradient(ellipse 70% 55% at 50% 42%, ${accentHex}22 0%, transparent 70%)`,
+            background: `radial-gradient(ellipse 70% 55% at 50% 42%, color-mix(in srgb, ${accentHex} 13%, transparent) 0%, transparent 70%)`,
           }}
         />
 
@@ -2303,7 +2303,7 @@ export function CardDeck({
         <div
           className="absolute inset-[6%] pointer-events-none rounded-[2px]"
           style={{
-            border: `1px dashed ${accentHex}66`,
+            border: `1px dashed color-mix(in srgb, ${accentHex} 40%, transparent)`,
           }}
         />
 
@@ -2314,7 +2314,7 @@ export function CardDeck({
         >
           <span
             className="block h-px"
-            style={{ width: 'clamp(8px, 12cqi, 22px)', backgroundColor: `${accentHex}99` }}
+            style={{ width: 'clamp(8px, 12cqi, 22px)', backgroundColor: `color-mix(in srgb, ${accentHex} 60%, transparent)` }}
           />
           <span
             className="block rotate-45"
@@ -2322,12 +2322,12 @@ export function CardDeck({
               width: 'clamp(3px, 1.6cqi, 5px)',
               height: 'clamp(3px, 1.6cqi, 5px)',
               backgroundColor: accentHex,
-              boxShadow: `0 0 4px ${accentHex}80`,
+              boxShadow: `0 0 4px color-mix(in srgb, ${accentHex} 50%, transparent)`,
             }}
           />
           <span
             className="block h-px"
-            style={{ width: 'clamp(8px, 12cqi, 22px)', backgroundColor: `${accentHex}99` }}
+            style={{ width: 'clamp(8px, 12cqi, 22px)', backgroundColor: `color-mix(in srgb, ${accentHex} 60%, transparent)` }}
           />
         </div>
 
@@ -2346,7 +2346,7 @@ export function CardDeck({
             className="absolute inset-0"
             style={{
               background:
-                'linear-gradient(to top, rgba(6,11,23,0.85) 0%, rgba(6,11,23,0.55) 55%, rgba(6,11,23,0) 100%)',
+                'linear-gradient(to top, color-mix(in srgb, var(--color-ink-950) 85%, transparent) 0%, color-mix(in srgb, var(--color-ink-950) 55%, transparent) 55%, color-mix(in srgb, var(--color-ink-950) 0%, transparent) 100%)',
             }}
           />
           <span
@@ -2354,7 +2354,7 @@ export function CardDeck({
             style={{
               height: '1px',
               width: '60%',
-              background: `linear-gradient(to right, transparent, ${accentHex}cc, transparent)`,
+              background: `linear-gradient(to right, transparent, color-mix(in srgb, ${accentHex} 80%, transparent), transparent)`,
               marginBottom: 'clamp(3px, 1.6cqi, 6px)',
             }}
           />
@@ -2365,7 +2365,7 @@ export function CardDeck({
               letterSpacing: '0.18em',
               paddingBottom: 'clamp(4px, 2.2cqi, 8px)',
               textShadow:
-                `0 1px 2px rgba(0,0,0,0.7), 0 0 12px ${accentHex}33`,
+                `0 1px 2px rgba(0,0,0,0.7), 0 0 12px color-mix(in srgb, ${accentHex} 20%, transparent)`,
             }}
           >
             {title}
@@ -2405,7 +2405,7 @@ function CardSlab({
         background:
           'linear-gradient(to bottom, var(--color-coffee-600) 0%, var(--color-coffee-700) 45%, var(--color-coffee-800) 100%)',
         boxShadow: [
-          'inset 0 1px 0 rgba(255,217,138,0.08)',
+          'inset 0 1px 0 color-mix(in srgb, var(--color-brass-glow) 8%, transparent)',
           'inset 0 0 0 1px var(--color-coffee-800)',
           '0 6px 14px -4px rgba(0,0,0,0.75)',
           '0 2px 4px -1px rgba(0,0,0,0.5)',
@@ -2426,7 +2426,7 @@ function CardSlab({
 const LOG_GAIN = /recebeu|ganhou|coletou|\+\$/i
 const LOG_LOSS = /\bpagou\b|perdeu/i
 function LogWhat({ what }: { what: string }) {
-  const color = LOG_GAIN.test(what) ? '#57dd94' : LOG_LOSS.test(what) ? '#ef6a58' : '#e7c069'
+  const color = LOG_GAIN.test(what) ? 'var(--color-group-green)' : LOG_LOSS.test(what) ? 'var(--color-signal-glow)' : 'var(--color-brass-glow)'
   return (
     <>
       {what.split(/(\+?\$\s?\d[\d.]*)/g).map((p, i) =>
@@ -2460,9 +2460,9 @@ function CenterLog() {
   const reduced = useReducedMotion()
   const history = [...log].reverse()
   const colorOf = (who: string): string => {
-    if (who === 'Banco') return '#cf4b3e'
+    if (who === 'Banco') return 'var(--color-signal)'
     const i = players.findIndex((p) => p.id === who)
-    return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : '#cf4b3e'
+    return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : 'var(--color-signal)'
   }
   return (
     <div className="flex-1 min-h-0 w-full max-w-[88%] flex flex-col rounded-[var(--radius-card)] border border-coffee-500/60 bg-coffee-900/55 backdrop-blur-[1px] overflow-hidden">
@@ -2480,7 +2480,7 @@ function CenterLog() {
           <span className="text-cream-muted/50"><DiceIcon size={20} /></span>
           <p className="label text-cream-muted text-center leading-snug">Nada registrado ainda</p>
           <p className="text-cream-muted/70 text-center leading-snug" style={{ fontSize: '10px' }}>
-            Role os dados — cada jogada entra aqui
+            Role os dados pra começar. Cada jogada aparece aqui.
           </p>
         </div>
       ) : (
@@ -2514,8 +2514,8 @@ function CenterLog() {
                       style={{
                         width: 20,
                         height: 20,
-                        background: 'color-mix(in srgb, #cf4b3e 25%, var(--color-ink-900))',
-                        borderColor: '#cf4b3e',
+                        background: 'color-mix(in srgb, var(--color-signal) 25%, var(--color-ink-900))',
+                        borderColor: 'var(--color-signal)',
                       }}
                     >
                       <CoinIcon size={11} className="text-cream" />
@@ -2553,7 +2553,7 @@ export function CenterArena() {
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(ellipse 62% 52% at center, rgba(217,166,80,0.09) 0%, rgba(217,166,80,0) 65%)',
+            'radial-gradient(ellipse 62% 52% at center, color-mix(in srgb, var(--color-brass) 9%, transparent) 0%, color-mix(in srgb, var(--color-brass) 0%, transparent) 65%)',
         }}
       />
 
@@ -2576,10 +2576,10 @@ export function CenterArena() {
                 bottom: c.includes('b') ? 9 : 'auto',
                 left: c.includes('l') ? 9 : 'auto',
                 right: c.includes('r') ? 9 : 'auto',
-                borderTop: c.includes('t') ? '1.5px solid rgba(217,166,80,0.55)' : 'none',
-                borderBottom: c.includes('b') ? '1.5px solid rgba(217,166,80,0.55)' : 'none',
-                borderLeft: c.includes('l') ? '1.5px solid rgba(217,166,80,0.55)' : 'none',
-                borderRight: c.includes('r') ? '1.5px solid rgba(217,166,80,0.55)' : 'none',
+                borderTop: c.includes('t') ? '1.5px solid color-mix(in srgb, var(--color-brass) 55%, transparent)' : 'none',
+                borderBottom: c.includes('b') ? '1.5px solid color-mix(in srgb, var(--color-brass) 55%, transparent)' : 'none',
+                borderLeft: c.includes('l') ? '1.5px solid color-mix(in srgb, var(--color-brass) 55%, transparent)' : 'none',
+                borderRight: c.includes('r') ? '1.5px solid color-mix(in srgb, var(--color-brass) 55%, transparent)' : 'none',
               }}
             />
           ))}
@@ -2805,7 +2805,7 @@ export function LotteryCard({ amount }: { amount: number }) {
                 Prêmio acumulado
               </p>
               <p
-                className="currency text-gold-glow leading-none mt-1 drop-shadow-[0_2px_3px_rgba(255,217,138,0.25)]"
+                className="currency text-gold-glow leading-none mt-1 drop-shadow-[0_2px_3px_color-mix(in srgb, var(--color-brass-glow) 25%, transparent)]"
                 style={{
                   fontSize: 'clamp(30px, 9cqi, 72px)',
                   letterSpacing: '-0.02em',
@@ -2870,7 +2870,7 @@ export function ParkingPotDisplay({ amount }: { amount: number }) {
       <div
         className="absolute inset-0 -m-6 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse at center, rgba(217,166,80,0.22) 0%, rgba(217,166,80,0) 70%)',
+          background: 'radial-gradient(ellipse at center, color-mix(in srgb, var(--color-brass) 22%, transparent) 0%, color-mix(in srgb, var(--color-brass) 0%, transparent) 70%)',
         }}
       />
 
@@ -2880,7 +2880,7 @@ export function ParkingPotDisplay({ amount }: { amount: number }) {
           bg-gradient-to-b from-coffee-700 via-coffee-800 to-coffee-900
           border-2 border-gold
           rounded-[var(--radius-card)]
-          shadow-[var(--shadow-lift),0_0_40px_-10px_rgba(217,166,80,0.55)]
+          shadow-[var(--shadow-lift),0_0_40px_-10px_color-mix(in srgb, var(--color-brass) 55%, transparent)]
         "
         style={{ padding: 'clamp(12px, 4cqi, 28px) clamp(18px, 6cqi, 40px)' }}
       >
@@ -2913,7 +2913,7 @@ export function ParkingPotDisplay({ amount }: { amount: number }) {
         </div>
 
         <p
-          className="currency text-gold-glow text-center leading-none drop-shadow-[0_2px_6px_rgba(255,217,138,0.4)]"
+          className="currency text-gold-glow text-center leading-none drop-shadow-[0_2px_6px_color-mix(in srgb, var(--color-brass-glow) 40%, transparent)]"
           style={{ fontSize: 'clamp(28px, 8cqi, 64px)' }}
         >
           <span className="text-gold-soft" style={{ fontSize: '0.55em', marginRight: '0.18em' }}>R$</span>
@@ -3383,7 +3383,7 @@ export function AirportPopover({
             {/* Hangar bonus */}
             <div className="mt-3 pt-2.5 border-t border-coffee-500/60">
               <p className="text-cream-muted" style={{ fontSize: '9px' }}>
-                <span className="text-gold font-semibold">Hangar</span> — dobra o aluguel deste aeroporto individualmente.
+                O <span className="text-gold font-semibold">Hangar</span> dobra o aluguel deste aeroporto individualmente.
               </p>
             </div>
             <div className="mt-2.5 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-0.5">

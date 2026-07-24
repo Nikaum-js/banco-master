@@ -35,6 +35,7 @@
   --color-brass-glow: #ffd98a;
   --color-signal: #e2574b;          /* vermelho de sinal (multa/perigo) */
   --color-signal-deep: #a3322a;
+  --color-signal-glow: #f0917f;     /* salmão de destaque sobre fundo escuro */
 
   /* ---------- Aliases legados (Café Coado → Atlas) ---------- */
   /* As classes coffee-*, cream, gold e logo seguem compilando em toda a UI */
@@ -70,6 +71,18 @@
   --color-group-navy:    #4d8bf5;
   --color-group-purple:  #a76bf5;
   --color-group-platinum: #232741; /* Alta Roda (super-luxo) — ônix azulado (033) */
+
+  /* ---------- Raridade de carta (SRS §10.2: laranja/azul/verde) ---------- */
+  --color-rarity-lendaria: var(--color-group-orange);
+  --color-rarity-rara: var(--color-group-navy);
+  --color-rarity-comum: var(--color-group-green);
+
+  /* ---------- Gradientes compartilhados ---------- */
+  /* Headers dourados/vermelhos de modal e números-prêmio (texto com clip). */
+  --gradient-brass: linear-gradient(180deg, var(--color-brass) 0%, var(--color-brass-soft) 100%);
+  --gradient-signal: linear-gradient(180deg, var(--color-signal) 0%, var(--color-signal-deep) 100%);
+  --gradient-brass-shine: linear-gradient(180deg, color-mix(in srgb, var(--color-brass-glow) 45%, white) 0%, var(--color-brass-glow) 42%, var(--color-brass) 70%, var(--color-brass-soft) 100%);
+  --gradient-signal-shine: linear-gradient(180deg, color-mix(in srgb, var(--color-signal-glow) 40%, white) 0%, var(--color-signal-glow) 38%, var(--color-signal) 68%, var(--color-signal-deep) 100%);
 
   /* ---------- Tipografia ---------- */
   /* Bebas Neue segue como display: letreiro de painel de partidas / */
@@ -181,6 +194,7 @@
   --color-brass-glow: #ffd97a;
   --color-signal: #dc2626;
   --color-signal-deep: #991b1b;
+  --color-signal-glow: #e8836f;
 
   /* grupos na cartela original */
   --color-group-brown:   #b07a4a;

@@ -51,7 +51,7 @@ export default function Board01Classic() {
           board-frame
           bg-coffee-950 border border-coffee-500
           rounded-[var(--radius-card)]
-          shadow-[var(--shadow-lift),0_0_0_1px_rgba(217,166,80,0.22)]
+          shadow-[var(--shadow-lift),0_0_0_1px_color-mix(in_srgb,var(--color-brass)_22%,transparent)]
           p-1
         "
       >

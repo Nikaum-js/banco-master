@@ -23,21 +23,21 @@ import { Confetti } from '@/game/ui/NoticeLayer'
 import type { LoanRequest } from '@/game/economy/types'
 
 const GOLD_TEXT: React.CSSProperties = {
-  backgroundImage: 'linear-gradient(180deg, #fff1c2 0%, #f4d160 42%, #d4af37 70%, #b8941f 100%)',
+  backgroundImage: 'var(--gradient-brass-shine)',
   WebkitBackgroundClip: 'text',
   backgroundClip: 'text',
   color: 'transparent',
-  filter: 'drop-shadow(0 3px 12px rgba(212,175,55,0.6))',
+  filter: 'drop-shadow(0 3px 12px color-mix(in srgb, var(--color-brass) 60%, transparent))',
 }
 
-// Gradiente "cobre quente" pro número da dívida — vermelho-cobre com brilho,
+// Gradiente "signal quente" pro número da dívida — vermelho com brilho,
 // clima de fatura vencida (não dourado de prêmio).
-const COPPER_TEXT: React.CSSProperties = {
-  backgroundImage: 'linear-gradient(180deg, #ffd6c2 0%, #f0a07a 38%, #d4663f 68%, #a83a22 100%)',
+const SIGNAL_TEXT: React.CSSProperties = {
+  backgroundImage: 'var(--gradient-signal-shine)',
   WebkitBackgroundClip: 'text',
   backgroundClip: 'text',
   color: 'transparent',
-  filter: 'drop-shadow(0 3px 14px rgba(192,57,43,0.55))',
+  filter: 'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 55%, transparent))',
 }
 
 const fmt = (n: number) => `R$ ${n.toLocaleString('pt-BR')}`
@@ -57,7 +57,7 @@ function PrimaryBtn({ onClick, disabled, children }: { onClick: () => void; disa
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="w-full px-3 py-2.5 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 font-bold text-sm hover:brightness-110 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-[0_2px_10px_-2px_rgba(212,175,55,0.5)]"
+      className="w-full px-3 py-2.5 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 font-bold text-sm hover:brightness-110 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-[0_2px_10px_-2px_color-mix(in_srgb,var(--color-brass)_50%,transparent)]"
     >
       {children}
     </button>
@@ -80,7 +80,7 @@ function DangerBtn({ onClick, disabled, children }: { onClick: () => void; disab
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="w-full px-3 py-2 rounded-[var(--radius-sharp)] bg-transparent border border-[#c0392b] text-[#e8836f] font-bold text-sm hover:bg-[#c0392b] hover:text-cream active:translate-y-px disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[#e8836f] transition-all"
+      className="w-full px-3 py-2 rounded-[var(--radius-sharp)] bg-transparent border border-signal text-signal-glow font-bold text-sm hover:bg-signal hover:text-cream active:translate-y-px disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-signal-glow transition-all"
     >
       {children}
     </button>
@@ -121,7 +121,7 @@ function CardFrame({
       style={{
         width,
         border: `1.5px solid ${accent}`,
-        boxShadow: `var(--shadow-dropdown), 0 0 0 1px rgba(15,12,9,0.6), 0 0 34px -10px ${glow}`,
+        boxShadow: `var(--shadow-dropdown), 0 0 0 1px color-mix(in srgb, var(--color-ink-950) 60%, transparent), 0 0 34px -10px ${glow}`,
       }}
     >
       {/* textura de papel + brilho de topo */}
@@ -129,7 +129,7 @@ function CardFrame({
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(120% 80% at 50% -10%, rgba(212,175,55,0.10) 0%, transparent 55%)',
+            'radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--color-brass) 10%, transparent) 0%, transparent 55%)',
         }}
         aria-hidden
       />
@@ -154,7 +154,7 @@ export function GameHUD() {
   const loanOfActive = game.loans.find((l) => l.debtorId === active.id)
   const canPayOff = loanOfActive && active.cash >= loanOfActive.principal
 
-  const activeColor = colorOfPlayer(game.players, active.id) ?? '#d4af37'
+  const activeColor = colorOfPlayer(game.players, active.id) ?? 'var(--color-brass)'
 
   // ---- Fim de jogo — celebração do vencedor (confete + coroa, estilo loteria) ----
   if (game.phase === 'ended') {
@@ -181,7 +181,7 @@ export function GameHUD() {
               transition={{ type: 'spring', stiffness: 260, damping: 12, delay: 0.12 }}
               className="flex justify-center mb-3"
             >
-              <Crown size={76} className="text-gold" style={{ filter: 'drop-shadow(0 4px 14px rgba(212,175,55,0.65))' }} />
+              <Crown size={76} className="text-gold" style={{ filter: 'drop-shadow(0 4px 14px color-mix(in srgb, var(--color-brass) 65%, transparent))' }} />
             </motion.div>
             <p className="label text-gold tracking-[0.4em]">VENCEDOR</p>
             <motion.p
@@ -199,7 +199,7 @@ export function GameHUD() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6, duration: 0.3 }}
               onClick={() => resetGame()}
-              className="mt-8 px-6 py-2.5 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 font-bold text-base hover:brightness-110 active:translate-y-px transition-all shadow-[0_4px_16px_-4px_rgba(212,175,55,0.6)]"
+              className="mt-8 px-6 py-2.5 rounded-[var(--radius-sharp)] bg-gold text-coffee-900 font-bold text-base hover:brightness-110 active:translate-y-px transition-all shadow-[0_4px_16px_-4px_color-mix(in_srgb,var(--color-brass)_60%,transparent)]"
             >
               Novo jogo
             </motion.button>
@@ -223,13 +223,13 @@ export function GameHUD() {
     return (
       <AnimatePresence>
         <DecisionShell dim>
-          <CardFrame accent="#d4af37" glow="rgba(212,175,55,0.45)" width={400}>
+          <CardFrame accent="var(--color-brass)" glow="color-mix(in srgb, var(--color-brass) 45%, transparent)" width={400}>
             <ReactionHead icon={<ShieldAlert size={20} className="text-gold-glow" />} title="Reação" subtitle="Carta ofensiva contra você" />
             <div className="p-5">
               <div className="flex items-center justify-center gap-2">
                 <span className="label text-cream-muted">Efeito</span>
                 <span
-                  className="display text-base px-2.5 py-1 rounded-[var(--radius-sharp)] bg-coffee-900 border border-[rgba(212,175,55,0.4)]"
+                  className="display text-base px-2.5 py-1 rounded-[var(--radius-sharp)] bg-coffee-900 border border-brass/40"
                   style={GOLD_TEXT}
                 >
                   {res.effect}
@@ -251,7 +251,7 @@ export function GameHUD() {
     return (
       <AnimatePresence>
         <DecisionShell dim>
-          <CardFrame accent="#d4af37" glow="rgba(212,175,55,0.45)" width={400}>
+          <CardFrame accent="var(--color-brass)" glow="color-mix(in srgb, var(--color-brass) 45%, transparent)" width={400}>
             <ReactionHead icon={<Landmark size={20} className="text-gold-glow" />} title="Reação" subtitle="Imposto sobre você" />
             <div className="p-5">
               <p className="text-center currency leading-none" style={{ fontSize: 40, ...GOLD_TEXT }}>{fmt(res.amount)}</p>
@@ -283,13 +283,13 @@ export function GameHUD() {
       <AnimatePresence>
         {/* SEM dim: tabuleiro precisa continuar clicável (hipotecar/vender). */}
         <DecisionShell>
-          <CardFrame accent="#c0392b" glow="rgba(192,57,43,0.5)" width={420}>
+          <CardFrame accent="var(--color-signal)" glow="color-mix(in srgb, var(--color-signal) 50%, transparent)" width={420}>
             {/* Cabeçalho de fatura — faixa cobre/vermelho */}
             <div
               className="px-5 py-3 border-b-2 border-coffee-950"
-              style={{ background: 'linear-gradient(180deg, #c0392b 0%, #7d241a 100%)' }}
+              style={{ background: 'var(--gradient-signal)' }}
             >
-              <p className="label text-[#fde7e2] tracking-[0.3em]">Conta vencida</p>
+              <p className="label tracking-[0.3em]" style={{ color: 'color-mix(in srgb, var(--color-signal-glow) 35%, white)' }}>Conta vencida</p>
               <h3 className="display text-2xl leading-none text-cream mt-0.5">Dívida</h3>
             </div>
 
@@ -308,13 +308,13 @@ export function GameHUD() {
                   <div className="absolute inset-0 top-1/2 -translate-y-1/2 h-[2px] bg-coffee-500" />
                   <motion.div
                     className="absolute top-1/2 -translate-y-1/2 h-[2px]"
-                    style={{ background: 'linear-gradient(90deg, transparent, #e8836f)' }}
+                    style={{ background: 'linear-gradient(90deg, transparent, var(--color-signal-glow))' }}
                     initial={{ width: '0%' }}
                     animate={{ width: '100%' }}
                     transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
                   />
                   <motion.span
-                    className="absolute top-1/2 -translate-y-1/2 text-[#e8836f] text-lg leading-none"
+                    className="absolute top-1/2 -translate-y-1/2 text-signal-glow text-lg leading-none"
                     initial={{ left: '0%', opacity: 0 }}
                     animate={{ left: '92%', opacity: [0, 1, 1, 0] }}
                     transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
@@ -328,7 +328,7 @@ export function GameHUD() {
                   {res.creditorId && creditorColor ? (
                     <PlayerFace color={creditorColor} size={40} />
                   ) : (
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-coffee-900 border border-[rgba(212,175,55,0.5)]">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-coffee-900 border border-brass/50">
                       <Landmark size={20} className="text-gold" />
                     </div>
                   )}
@@ -339,11 +339,11 @@ export function GameHUD() {
               {/* Valor devido — número enorme em cobre, com pulso de glow contínuo */}
               <motion.p
                 className="text-center currency leading-none mt-4"
-                style={{ fontSize: 46, ...COPPER_TEXT }}
+                style={{ fontSize: 46, ...SIGNAL_TEXT }}
                 animate={{ filter: [
-                  'drop-shadow(0 3px 14px rgba(192,57,43,0.40))',
-                  'drop-shadow(0 3px 20px rgba(192,57,43,0.70))',
-                  'drop-shadow(0 3px 14px rgba(192,57,43,0.40))',
+                  'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 40%, transparent))',
+                  'drop-shadow(0 3px 20px color-mix(in srgb, var(--color-signal) 70%, transparent))',
+                  'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 40%, transparent))',
                 ] }}
                 transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
               >
@@ -357,8 +357,8 @@ export function GameHUD() {
                     className="h-full rounded-full"
                     style={{
                       background: canPay
-                        ? 'linear-gradient(90deg, #b8941f, #ffd97a)'
-                        : 'linear-gradient(90deg, #7d241a, #e8836f)',
+                        ? 'linear-gradient(90deg, var(--color-brass-soft), var(--color-brass-glow))'
+                        : 'linear-gradient(90deg, var(--color-signal-deep), var(--color-signal-glow))',
                     }}
                     initial={{ width: 0 }}
                     animate={{ width: `${covered * 100}%` }}
@@ -370,7 +370,7 @@ export function GameHUD() {
                     Caixa <span className="text-cream currency">{fmt(active.cash)}</span>
                   </span>
                   {shortfall > 0 && (
-                    <span className="label text-[#e8836f]">
+                    <span className="label text-signal-glow">
                       Falta <span className="currency">{fmt(shortfall)}</span>
                     </span>
                   )}
@@ -473,14 +473,14 @@ function ReactionHead({ icon, title, subtitle }: { icon: ReactNode; title: strin
   return (
     <div
       className="relative flex items-center gap-3 px-5 py-3 border-b-2 border-coffee-950"
-      style={{ background: 'linear-gradient(180deg, #d4af37 0%, #9a7d28 100%)' }}
+      style={{ background: 'var(--gradient-brass)' }}
     >
       <motion.div
         initial={{ scale: 0, rotate: -20 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ type: 'spring', stiffness: 320, damping: 14, delay: 0.1 }}
         className="w-9 h-9 rounded-full flex items-center justify-center bg-coffee-900 shrink-0"
-        style={{ boxShadow: 'inset 0 0 0 1.5px rgba(255,217,122,0.6)' }}
+        style={{ boxShadow: 'inset 0 0 0 1.5px color-mix(in srgb, var(--color-brass-glow) 60%, transparent)' }}
       >
         {icon}
       </motion.div>
@@ -507,12 +507,12 @@ function LoanRequestCard({
   onRespond: (accept: boolean, ratePct: number) => void
 }) {
   const [rate, setRate] = useState<number>(20)
-  const debtorColor = colorOfPlayer(players, req.debtorId) ?? '#d4af37'
+  const debtorColor = colorOfPlayer(players, req.debtorId) ?? 'var(--color-brass)'
   const interest = Math.round((req.principal * rate) / 100)
 
   return (
     <DecisionShell dim>
-      <CardFrame accent="#d4af37" glow="rgba(212,175,55,0.45)" width={400}>
+      <CardFrame accent="var(--color-brass)" glow="color-mix(in srgb, var(--color-brass) 45%, transparent)" width={400}>
         <ReactionHead icon={<HandCoins size={20} className="text-gold-glow" />} title="Empréstimo" subtitle={`${req.debtorId} pede a você`} />
         <div className="p-5">
           {/* Quem pede + quanto */}
@@ -536,7 +536,7 @@ function LoanRequestCard({
                   onClick={() => setRate(r)}
                   className={`flex-1 py-2 rounded-[var(--radius-sharp)] font-bold text-sm transition-all ${
                     on
-                      ? 'bg-gold text-coffee-900 shadow-[0_2px_10px_-2px_rgba(212,175,55,0.6)]'
+                      ? 'bg-gold text-coffee-900 shadow-[var(--shadow-glow)]'
                       : 'bg-coffee-700 border border-coffee-500 text-cream-muted hover:border-gold'
                   }`}
                 >

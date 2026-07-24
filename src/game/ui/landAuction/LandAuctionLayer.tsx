@@ -74,7 +74,7 @@ function LotCard(props: { lot: LandLot; now: number; cashAvail: number; onBid: (
   const sq = BOARD[lot.pos]
   const isProp = sq.kind === 'property'
   const isAirport = sq.kind === 'airport'
-  const accent = isProp ? GROUP_COLOR[(sq as PropertySquare).group] : '#d4af37'
+  const accent = isProp ? GROUP_COLOR[(sq as PropertySquare).group] : 'var(--color-brass)'
   const price = 'price' in sq ? (sq as { price: number }).price : 0
   const houseCost = isProp ? buildCost(sq as PropertySquare) : 0
   const remainingMs = lot.deadline - now
@@ -126,11 +126,11 @@ function LotCard(props: { lot: LandLot; now: number; cashAvail: number; onBid: (
       {/* Cronômetro do lote (8s) */}
       <div className="px-3 mt-2">
         <div className="flex items-center gap-1 mb-1">
-          <GavelIcon size={11} className={baixo ? 'text-[#e74c3c]' : 'text-cream-muted'} />
-          <span className={`label leading-none ${baixo ? 'text-[#e74c3c]' : 'text-cream-muted'}`}>{secs}s</span>
+          <GavelIcon size={11} className={baixo ? 'text-signal' : 'text-cream-muted'} />
+          <span className={`label leading-none ${baixo ? 'text-signal' : 'text-cream-muted'}`}>{secs}s</span>
         </div>
         <div className="h-2 rounded-full bg-coffee-950/60 overflow-hidden">
-          <motion.div className={`h-full rounded-full ${baixo ? 'bg-[#e74c3c]' : 'bg-gold'}`} animate={{ width: `${frac * 100}%` }} transition={{ ease: 'linear', duration: 0.25 }} />
+          <motion.div className={`h-full rounded-full ${baixo ? 'bg-signal' : 'bg-gold'}`} animate={{ width: `${frac * 100}%` }} transition={{ ease: 'linear', duration: 0.25 }} />
         </div>
       </div>
 
@@ -209,7 +209,7 @@ export function LandAuctionLayer() {
           className="bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] w-[860px] max-w-[97vw] max-h-[92vh] overflow-auto"
         >
           {/* Título */}
-          <div className="px-5 py-3 border-b-2 border-coffee-950 sticky top-0 z-10 text-center bg-[linear-gradient(180deg,#d4af37_0%,#b8941f_100%)]">
+          <div className="px-5 py-3 border-b-2 border-coffee-950 sticky top-0 z-10 text-center" style={{ background: 'var(--gradient-brass)' }}>
             <h3 className="display text-coffee-950 text-xl leading-none tracking-wide">Leilão de Escassez</h3>
           </div>
 
@@ -232,10 +232,10 @@ export function LandAuctionLayer() {
               <CoinIcon size={15} className="text-gold" />
               <motion.span
                 key={available}
-                initial={{ scale: 1.18, color: '#fff1c2' }}
-                animate={{ scale: 1, color: '#d4af37' }}
+                initial={{ scale: 1.18 }}
+                animate={{ scale: 1 }}
                 transition={{ duration: 0.25 }}
-                className="currency text-sm tabular-nums leading-none"
+                className="currency text-sm tabular-nums leading-none text-gold"
               >
                 {money(available)}
               </motion.span>

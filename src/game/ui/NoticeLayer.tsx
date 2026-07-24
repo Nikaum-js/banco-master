@@ -8,7 +8,14 @@ import { BOARD } from '@/lib/boardData'
 
 const propName = (pos: number) => BOARD[pos]?.name ?? `#${pos}`
 
-const CONFETTI_COLORS = ['#fb923c', '#3b82f6', '#22c55e', '#d4af37', '#e74c3c', '#f4e8d0']
+const CONFETTI_COLORS = [
+  'var(--color-group-orange)',
+  'var(--color-group-navy)',
+  'var(--color-group-green)',
+  'var(--color-brass)',
+  'var(--color-signal)',
+  'var(--color-starlight)',
+]
 
 // Confete caindo do topo — peças coloridas com posição/rotação/tempo aleatórios.
 // Exportado: reusado na celebração do vencedor (GameHUD, fim de jogo).
@@ -83,11 +90,11 @@ export function NoticeLayer() {
               className="currency leading-none mt-3"
               style={{
                 fontSize: '68px',
-                backgroundImage: 'linear-gradient(180deg, #fff1c2 0%, #f4d160 42%, #d4af37 70%, #b8941f 100%)',
+                backgroundImage: 'var(--gradient-brass-shine)',
                 WebkitBackgroundClip: 'text',
                 backgroundClip: 'text',
                 color: 'transparent',
-                filter: 'drop-shadow(0 3px 12px rgba(212,175,55,0.6))',
+                filter: 'drop-shadow(0 3px 12px color-mix(in srgb, var(--color-brass) 60%, transparent))',
               }}
             >
               R$ {notice.amount.toLocaleString('pt-BR')}
@@ -115,7 +122,7 @@ export function NoticeLayer() {
             onClick={(e) => e.stopPropagation()}
             className="bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] w-[360px] max-w-[92vw] overflow-hidden"
           >
-            <div className="px-4 py-3 border-b-2 border-coffee-950" style={{ background: 'linear-gradient(180deg,#c0392b 0%,#922b21 100%)' }}>
+            <div className="px-4 py-3 border-b-2 border-coffee-950" style={{ background: 'var(--gradient-signal)' }}>
               <h3 className="display text-lg leading-none text-cream">Aquisição Hostil</h3>
             </div>
             <div className="p-4">

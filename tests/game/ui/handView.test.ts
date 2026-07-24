@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { handCardsView, cardTargets } from '@/game/ui/cards/handView'
 import { createSeedState } from '@/game/store'
 import type { GameState } from '@/game/turn/types'
+import { RARITY_COLOR } from '@/game/ui/cards/cardMeta'
 
 // p1 é o jogador ativo (activeSeat 0). pos 1 e 7 são cidades; pos 6 é aeroporto.
 function setup(): GameState {
@@ -48,7 +49,7 @@ describe('handCardsView — jogável por timing (US1)', () => {
     g.titles[7].ownerId = 'p2' // alvo válido p/ ficar jogável
     const v = find(g, 'p1', 'boicote-1')
     expect(v.label).toBe('Boicote')
-    expect(v.rarityColor).toBe('#3b82f6') // rara = azul
+    expect(v.rarityColor).toBe(RARITY_COLOR.rara) // rara = azul (token do tema)
     expect(v.desc.length).toBeGreaterThan(0)
     expect(v.playable).toBe(true)
   })

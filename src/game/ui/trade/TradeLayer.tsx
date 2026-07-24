@@ -25,7 +25,7 @@ const money = (v: number) => `R$ ${v.toLocaleString('pt-BR')}`
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n))
 const colorOf = (players: { id: string }[], id: string) => {
   const i = players.findIndex((p) => p.id === id)
-  return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : '#d4af37'
+  return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : 'var(--color-brass)'
 }
 
 // ---------------------------------------------------------------------
@@ -40,7 +40,7 @@ function SwapGlyph({ size = 16, className }: { size?: number; className?: string
 }
 function CheckGlyph() {
   return (
-    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="#1a1410" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="var(--color-ink-950)" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M20 6 9 17l-5-5" />
     </svg>
   )
@@ -80,7 +80,7 @@ function Card({ children }: { children: ReactNode }) {
 
 function Header({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div className="px-5 py-3 border-b-2 border-coffee-950 bg-[linear-gradient(180deg,#d4af37_0%,#b8941f_100%)] shrink-0 text-center">
+    <div className="px-5 py-3 border-b-2 border-coffee-950 shrink-0 text-center" style={{ background: 'var(--gradient-brass)' }}>
       <h3 className="display text-coffee-950 text-xl leading-none tracking-wide">{title}</h3>
       {subtitle && (
         <p className="label text-coffee-950/80 mt-1" style={{ fontSize: '9px' }}>{subtitle}</p>
@@ -126,7 +126,7 @@ function DeedAvatar({ sq, size = 22 }: { sq: Square; size?: number }) {
 
 const deedSub = (sq: Square) =>
   sq.kind === 'property' ? ((sq as PropertySquare).capital ?? '') : sq.kind === 'airport' ? 'Aeroporto' : sq.kind === 'utility' ? 'Utilidade' : ''
-const deedAccent = (sq: Square) => (sq.kind === 'property' ? GROUP_COLOR[(sq as PropertySquare).group] : '#d4af37')
+const deedAccent = (sq: Square) => (sq.kind === 'property' ? GROUP_COLOR[(sq as PropertySquare).group] : 'var(--color-brass)')
 
 // Chip de título — faixa de cor do grupo + avatar + nome. Clicável (toggle) ou
 // estático (read-only, no modal recebido).
@@ -345,7 +345,7 @@ function Composer({ onClose }: { onClose: () => void }) {
           </div>
           <SwapGlyph size={22} className="text-cream-muted shrink-0" />
           <div className="flex flex-col items-center gap-1">
-            <PlayerFace color={recipient ? colorOf(game.players, recipient.id) : '#a89683'} size={40} active={!!recipient} />
+            <PlayerFace color={recipient ? colorOf(game.players, recipient.id) : 'var(--color-starlight-muted)'} size={40} active={!!recipient} />
             <span className="label text-gold" style={{ fontSize: '10px' }}>{recipient?.id ?? '—'}</span>
           </div>
         </div>
@@ -380,7 +380,7 @@ function Composer({ onClose }: { onClose: () => void }) {
         />
         <Side
           title={`${recipient?.id ?? '—'} oferece`}
-          color={recipient ? colorOf(game.players, recipient.id) : '#a89683'}
+          color={recipient ? colorOf(game.players, recipient.id) : 'var(--color-starlight-muted)'}
           ownerCash={recipient?.cash ?? 0}
           props={theirProps}
           selected={requested}
@@ -457,7 +457,7 @@ function Received({ trade }: { trade: Trade }) {
 
       {!stillValid && (
         <p className="mx-5 mt-2 px-3 py-2 rounded-[var(--radius-sharp)] border border-logo/50 bg-logo/10 text-logo text-xs">
-          A proposta ficou inválida — o estado do jogo mudou. Recuse para continuar.
+          A proposta ficou inválida porque o estado do jogo mudou. Recuse para continuar.
         </p>
       )}
 

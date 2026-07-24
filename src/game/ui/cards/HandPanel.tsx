@@ -97,13 +97,13 @@ export function HandPanel() {
                   <div className="h-1" style={{ background: c.rarityColor }} aria-hidden />
                   <div
                     className="px-3 pt-2.5 pb-3"
-                    style={{ background: `linear-gradient(180deg, ${c.rarityColor}17 0%, transparent 55%)` }}
+                    style={{ background: `linear-gradient(180deg, color-mix(in srgb, ${c.rarityColor} 9%, transparent) 0%, transparent 55%)` }}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <span className="display text-cream text-[15px] leading-tight flex-1 min-w-0">{c.label}</span>
                       <span
                         className="label shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sharp)] border leading-none"
-                        style={{ fontSize: '8px', color: c.rarityColor, borderColor: `${c.rarityColor}66`, background: `${c.rarityColor}14` }}
+                        style={{ fontSize: '8px', color: c.rarityColor, borderColor: `color-mix(in srgb, ${c.rarityColor} 40%, transparent)`, background: `color-mix(in srgb, ${c.rarityColor} 8%, transparent)` }}
                       >
                         {c.rarityLabel}
                       </span>
