@@ -20,7 +20,7 @@
 
 ### O que NÃO consegui inferir (confirmar com o Nikolas)
 
-1. **GO Progressivo:** `docs/SRS.md:844` (§13.5) ainda especifica $100–$400 por ranking, mas o código paga **flat $200** (`src/game/balancing/balancing.ts:11` — "substitui o GO Progressivo por revisão de regra"). Não achei ADR dessa revisão em DECISIONS — o SRS está desatualizado ou o código diverge da verdade de negócio?
+1. **GO Progressivo:** ~~`docs/SRS.md:844` (§13.5) ainda especifica $100–$400 por ranking, mas o código paga **flat $200**~~ — **resolvido em 2026-07-24**: a revisão JÁ estava registrada em DECISIONS (D-007, 2026-05-24 — correção a esta auditoria, que não a havia localizado); o SRS §13.5 foi atualizado para a regra fixa (v1.3).
 2. **Speed Die suspenso** (`theme.ts:56`, D-003): é suspensão temporária a recalibrar ou remoção de fato? Afeta o ritmo (48 casas com 2 dados = voltas ~40% mais longas que o Monopoly clássico de 40 casas).
 3. Se os **31→36 erros de lint** pré-existentes devem ser zerados agora ou junto da spec 036.
 4. Prioridade do **lobby (M3/D-025)** vs. Supabase — vários gaps de UX abaixo dependem dessa ordem.
@@ -137,7 +137,7 @@ Tamanhos: **P** ≤ meio dia · **M** 1–3 dias · **G** ≥ 1 semana.
 | 11 | Lobby mínimo + `displayName` | `store.ts:184-189`, `GameHUD.tsx:194` | Contagem + nomes + cores antes do Supabase; nunca mais renderizar `p.id` | M |
 | 12 | Sim não mede vencedor/curvas | `report.ts` | Registrar vencedor, patrimônio por rodada e política do agente; só então afirmar algo sobre dominant strategy (D-026) | M |
 | 13 | Composição do jogo definida 2× | `store.ts:41-52` vs `driver.ts:47-61` | Extrair `src/game/setup.ts` puro consumido por ambos | P |
-| 14 | SRS §13.5 divergente do código (GO) | `SRS.md:844` vs `balancing.ts:11` | Atualizar SRS + ADR, ou restaurar o progressivo (decisão de design, não de código) | P |
+| 14 | ~~SRS §13.5 divergente do código (GO)~~ ✅ | `SRS.md:844` vs `balancing.ts:11` | **Feito (2026-07-24):** SRS v1.3 atualizado para a regra fixa; ADR já existia (D-007) | P |
 | 15 | Ciclo `shared.tsx ↔ game/ui` + god file | `shared.tsx:12-17` | Extrair kit de primitivos; fatiar `shared.tsx` por responsabilidade | G |
 | 16 | Acessibilidade base | `Board01Classic.tsx:94-107` | `role`/teclado nas casas, `role="dialog"`, `aria-live` no log, `prefers-reduced-motion`, mínimo 11px | M |
 | 17 | Autoridade de estado p/ multiplayer | `store.ts:262` | Decidir client vs server authority ANTES da spec Supabase | (decisão) |

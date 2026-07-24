@@ -1,7 +1,7 @@
 # Banco Master — Software Requirements Specification (SRS)
 
-**Versão:** 1.2
-**Data:** Maio de 2026
+**Versão:** 1.3
+**Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
 
@@ -71,7 +71,7 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Speed Die | Presente — ativado após primeira volta completa do jogador |
 | Construção com país parcial | Permitida com 1+ cidade do país; aluguel construído escala pela posse (50%→100%, §13.3); sem construção mantém 150%/200% |
 | Free Parking com prêmio acumulado | Presente — impostos/multas vão para o centro, prêmio inicial $500 |
-| GO Progressivo | Presente — escala de $100 (1º lugar) a $400 (último) por patrimônio |
+| Bônus de GO | Fixo — $200 ao passar; $400 ao parar exatamente no GO (revisão D-007, 2026-05-24) |
 | Segundo hotel por propriedade | Presente — sequencial, cobra **mais** aluguel que o 1º; 2 hotéis viram arranha-céu |
 | Empréstimos entre jogadores | Presentes — juros 10%–50%, cobrados a cada passagem pelo GO |
 | Imunidade de aluguel em negociações | Presente — pode ser negociada por N voltas ou até o fim |
@@ -197,7 +197,7 @@ Casa especial nova (1 no tabuleiro), inspirada no Mega Edition. Quem para nela *
 
 ### 3.3 Passar pelo GO
 
-Sempre que o token passar pela casa GO (ou parar nela), o jogador recebe o valor calculado pelo **GO Progressivo** (Seção 13.5).
+Sempre que o token passar pela casa GO, o jogador recebe o **bônus fixo de $200**; se parar **exatamente** no GO, recebe **em dobro ($400)** — ver Seção 13.5.
 
 > 📌 Cartas que enviam o jogador diretamente para uma casa **NÃO** pagam GO ao passar, a menos que a carta diga explicitamente.
 
@@ -244,7 +244,7 @@ O valor é debitado automaticamente. Vai para o **centro do tabuleiro** (Free Pa
 
 ### 4.7 GO (Início)
 
-Recebe o valor progressivo (Seção 13.5) ao passar ou parar. Nenhuma outra ação.
+Recebe o bônus de GO (Seção 13.5): $200 ao passar, $400 ao parar exatamente na casa. Nenhuma outra ação.
 
 ### 4.8 Apenas Visitando / Prisão
 
@@ -633,7 +633,7 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 > Vá imediatamente para a casa Prisão (índice 12). **NÃO** recebe bônus do GO se passar por ele. Não move mais no turno.
 
 **Volta para o GO** (Acaso)
-> Mova-se diretamente para a casa GO. Recebe o bônus progressivo (Seção 13.5).
+> Mova-se diretamente para a casa GO. Recebe o bônus em dobro ($400 — parou exatamente no GO, Seção 13.5).
 
 **Conserto de Imóveis** (Acaso)
 > Pague **$25 por casa** e **$100 por hotel** que possui. Valor vai para o **centro do tabuleiro** (Free Parking).
@@ -841,19 +841,20 @@ A casa Férias (índice 24) acumula prêmio em dinheiro ao longo da partida:
 
 > 📌 Catch-up discreto e natural. Quem está perdendo torce para cair no Free Parking.
 
-### 13.5 GO Progressivo
+### 13.5 Bônus de GO
 
-O valor recebido ao passar pelo GO escala **inversamente** com a posição do jogador no ranking de patrimônio líquido (dinheiro + valor das propriedades + valor das construções):
+Valor **fixo**, definido no tema (`THEME.GO_PASS`):
 
-| Posição no ranking | Valor recebido |
+| Situação | Valor recebido |
 |---|---|
-| 1º lugar (mais rico) | $100 |
-| 2º lugar | $150 |
-| Posições intermediárias | Escala linear entre $150 e $350 |
-| Penúltimo lugar | $350 |
-| Último lugar (mais pobre) | $400 |
+| Passar pelo GO | **$200** |
+| Parar **exatamente** no GO | **$400** (em dobro) |
 
-> 📌 Cálculo automático no momento da passagem. UI mostra apenas o valor recebido, **sem destacar** que é catch-up. Valores podem ser ajustados após playtesting.
+- Cartas que enviam o jogador **diretamente ao GO** ("Volta para o GO") creditam os $400 de parada exata.
+- Cartas/efeitos que movem **para trás** cruzando o GO **não** pagam bônus (Seção 3.3).
+- O Bus Ticket é pulo direto no mesmo lado — nunca cruza o GO (Seção 10.7).
+
+> 📌 **Histórico (D-007, revisão 2026-05-24):** o GO Progressivo original ($100–$400 inversamente ao ranking de patrimônio) foi substituído pela regra fixa após playtest — o valor variável confundia e parecia "pouco". O catch-up fica por conta do Free Parking (Seção 13.4), do Fiscal (Seção 13.8) e de tuning futuro.
 
 ### 13.6 Hangar (Melhoria de Aeroporto)
 
@@ -1007,7 +1008,7 @@ Jogadores podem conceder empréstimos entre si durante a partida, criando dinâm
 | Speed Die | Terceiro dado especial ativado após a 1ª volta. Faces: 1/2/3, Mr. Banco Master, Ônibus |
 | Mr. Banco Master | Face do Speed Die que envia o jogador à próxima propriedade disponível |
 | Free Parking / Férias | Casa índice 24 que acumula prêmio em dinheiro |
-| GO Progressivo | Valor recebido ao passar pelo GO escala por posição no ranking |
+| Bônus de GO | Valor fixo recebido no GO: $200 ao passar, $400 ao parar exatamente (D-007) |
 | Imunidade de Aluguel | Benefício negociável: passar por propriedade sem pagar aluguel por N voltas |
 | Empréstimo | Transferência de dinheiro entre jogadores, juros 10–50% por GO |
 | Credor | Jogador que concedeu o empréstimo |
@@ -1018,4 +1019,4 @@ Jogadores podem conceder empréstimos entre si durante a partida, criando dinâm
 
 ---
 
-**Banco Master — SRS v1.2 | Maio 2026 | Documento de fonte de verdade absoluta**
+**Banco Master — SRS v1.3 | Julho 2026 | Documento de fonte de verdade absoluta**
