@@ -54,7 +54,7 @@ export const resolutionRegistry: Record<Square['kind'], ResolutionHandler> = {
   'bus-ticket': ({ state, playerId }) => {
     const p = state.players.find((x) => x.id === playerId)
     if (p) p.busTickets += 1
-    logEvent(state, playerId, 'parou no espaço Bus Ticket — ganhou 1 Bus Ticket') // 021
+    logEvent(state, playerId, 'parou no espaço Bus Ticket e ganhou uma passagem') // 021
     return { done: true }
   },
   // Roteados pelo turno:

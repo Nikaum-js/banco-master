@@ -198,7 +198,7 @@ export function ModalLayer() {
 
           {view.kind === 'bus-move' && (
             <Card>
-              <Header bg="linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" icon={null} title="Speed Die — Ônibus" subtitle="Escolha por qual dado mover" />
+              <Header bg="linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" icon={null} title="Ônibus do Speed Die" subtitle="Escolha por qual dado mover" />
               <div className="px-3.5 py-3 flex flex-col gap-2">
                 {([
                   { opt: 'die0' as const, label: `Dado A (${view.white[0]})`, steps: view.white[0] },
@@ -218,7 +218,7 @@ export function ModalLayer() {
 
           {view.kind === 'triple-dest' && (
             <Card>
-              <Header bg="linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" icon={null} title="Speed Die — Triple!" subtitle="Vá para qualquer casa" />
+              <Header bg="linear-gradient(180deg, #d4af37 0%, #b8941f 100%)" icon={null} title="Speed Die triplo!" subtitle="Vá para qualquer casa" />
               <div className="px-3.5 py-3">
                 <p className="text-cream-muted text-sm mb-2">Escolha o destino:</p>
                 <div className="max-h-[46vh] overflow-auto flex flex-col gap-1 pr-1">

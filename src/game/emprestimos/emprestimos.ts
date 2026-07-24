@@ -123,6 +123,6 @@ export function chargeLoanInterest(state: GameState, debtorId: string): void {
     // reuso 008; origin marca que a casa onde o jogador pousar AINDA precisa resolver —
     // sem isso, economyResolve sobrescrevia esta dívida (juros residuais sumiam).
     state.resolution = { kind: 'debt', amount: resto, creditorId: loan.creditorId, origin: 'loan-interest' }
-    logEvent(state, debtorId, `não cobriu os juros de ${loan.creditorId} — dívida de R$ ${resto}`)
+    logEvent(state, debtorId, `não cobriu os juros de ${loan.creditorId} e ficou devendo R$ ${resto}`)
   }
 }

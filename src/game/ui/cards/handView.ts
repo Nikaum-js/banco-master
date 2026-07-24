@@ -72,7 +72,7 @@ export function handCardsView(game: GameState, playerId: string): HandCard[] {
     let reason: string | undefined
     if (card.timing === 'reacao') {
       playable = false
-      reason = 'Carta de reação — usada automaticamente quando aplicável'
+      reason = 'Carta de reação usada automaticamente quando aplicável'
     } else if (card.timing === 'proprio-turno' && !isActive) {
       playable = false
       reason = 'Só no seu turno'

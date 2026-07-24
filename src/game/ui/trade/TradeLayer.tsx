@@ -438,7 +438,7 @@ function Received({ trade }: { trade: Trade }) {
 
   return (
     <Card>
-      <Header title="Proposta de negociação" subtitle={`${trade.toId} decide — aceitar ou recusar`} />
+      <Header title="Proposta de negociação" subtitle={`${trade.toId} decide se aceita ou recusa`} />
 
       {/* Quem propõe ⇄ quem responde */}
       <div className="px-5 py-3 bg-coffee-900 border-b border-coffee-700 shrink-0 flex items-center justify-center gap-4">
