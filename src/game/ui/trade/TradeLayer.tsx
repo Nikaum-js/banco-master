@@ -78,10 +78,13 @@ function Card({ children }: { children: ReactNode }) {
   )
 }
 
-function Header({ title }: { title: string }) {
+function Header({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="px-5 py-3 border-b-2 border-coffee-950 bg-[linear-gradient(180deg,#d4af37_0%,#b8941f_100%)] shrink-0 text-center">
       <h3 className="display text-coffee-950 text-xl leading-none tracking-wide">{title}</h3>
+      {subtitle && (
+        <p className="label text-coffee-950/80 mt-1" style={{ fontSize: '9px' }}>{subtitle}</p>
+      )}
     </div>
   )
 }
@@ -227,11 +230,20 @@ function Side({
   cash: number
   onCash: (n: number) => void
 }) {
+  const summary = [
+    selected.size > 0 ? `${selected.size} ${selected.size === 1 ? 'título' : 'títulos'}` : '',
+    cash > 0 ? money(cash) : '',
+  ].filter(Boolean).join(' + ')
   return (
     <div className="flex-1 min-w-0 flex flex-col">
       <div className="px-3 pt-3 pb-2 flex items-center gap-2 sticky top-0 z-10 bg-coffee-800 shrink-0 border-b border-coffee-700/40">
         <PlayerFace color={color} size={18} />
         <p className="label text-gold truncate" style={{ fontSize: '10px' }}>{title}</p>
+        {summary && (
+          <p className="ml-auto label text-gold-glow tabular-nums shrink-0" style={{ fontSize: '9px' }} title="Resumo deste lado da troca">
+            {summary}
+          </p>
+        )}
       </div>
 
       <div className="flex-1 overflow-auto px-3 pt-2.5 pb-3 flex flex-col gap-2.5">
@@ -251,24 +263,26 @@ function Side({
 // Barra de saldo — dinheiro líquido a favor de "você" + contagem de propriedades (dá ⇄ recebe).
 function BalanceBar({ giveCount, getCount, netToYou }: { giveCount: number; getCount: number; netToYou: number }) {
   return (
-    <div className="px-5 py-2.5 bg-coffee-950/50 border-t border-coffee-700 shrink-0 flex items-center justify-between gap-3">
+    <div className="px-5 py-3 bg-coffee-950/50 border-t border-coffee-700 shrink-0 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 label text-cream-muted" style={{ fontSize: '9px' }} title="Títulos que você dá ⇄ recebe">
+        <span>dá <span className="currency text-cream text-sm">{giveCount}</span></span>
+        <SwapGlyph size={12} className="text-cream-muted" />
+        <span>recebe <span className="currency text-cream text-sm">{getCount}</span></span>
+      </div>
       <div className="flex items-baseline gap-2">
         <span className="label text-cream-muted">Saldo</span>
         {netToYou !== 0 ? (
           <>
-            <span className={cn('currency text-base tabular-nums', netToYou > 0 ? 'text-gold-glow' : 'text-logo')}>
+            <span className={cn('currency text-lg tabular-nums leading-none', netToYou > 0 ? 'text-gold-glow' : 'text-logo')}>
               {netToYou > 0 ? '+' : '−'}{money(Math.abs(netToYou))}
             </span>
-            <span className="label text-cream-muted" style={{ fontSize: '9px' }}>{netToYou > 0 ? 'a seu favor' : 'você paga'}</span>
+            <span className={cn('label', netToYou > 0 ? 'text-gold' : 'text-logo')} style={{ fontSize: '9px' }}>
+              {netToYou > 0 ? 'a seu favor' : 'você paga'}
+            </span>
           </>
         ) : (
           <span className="label text-cream-muted" style={{ fontSize: '9px' }}>equilibrado</span>
         )}
-      </div>
-      <div className="flex items-center gap-2 label text-cream-muted" style={{ fontSize: '9px' }} title="propriedades que você dá ⇄ recebe">
-        <span>dá <span className="currency text-cream text-sm">{giveCount}</span></span>
-        <SwapGlyph size={12} className="text-cream-muted" />
-        <span>recebe <span className="currency text-cream text-sm">{getCount}</span></span>
       </div>
     </div>
   )
@@ -320,7 +334,7 @@ function Composer({ onClose }: { onClose: () => void }) {
 
   return (
     <Card>
-      <Header title="Negociação" />
+      <Header title="Negociação" subtitle="Monte os dois lados e proponha" />
 
       {/* Mesa — duelo Você ⇄ destinatário + seletor "trocar com" */}
       <div className="px-5 py-3 bg-coffee-900 border-b border-coffee-700 shrink-0 flex flex-col gap-2.5">
@@ -424,7 +438,7 @@ function Received({ trade }: { trade: Trade }) {
 
   return (
     <Card>
-      <Header title="Proposta de negociação" />
+      <Header title="Proposta de negociação" subtitle={`${trade.toId} decide — aceitar ou recusar`} />
 
       {/* Quem propõe ⇄ quem responde */}
       <div className="px-5 py-3 bg-coffee-900 border-b border-coffee-700 shrink-0 flex items-center justify-center gap-4">
@@ -441,7 +455,11 @@ function Received({ trade }: { trade: Trade }) {
 
       <BalanceBar giveCount={trade.toProps.length} getCount={trade.fromProps.length} netToYou={trade.fromCash - trade.toCash} />
 
-      {!stillValid && <p className="px-5 pt-2 text-logo text-xs">Proposta inválida agora (estado mudou) — recuse.</p>}
+      {!stillValid && (
+        <p className="mx-5 mt-2 px-3 py-2 rounded-[var(--radius-sharp)] border border-logo/50 bg-logo/10 text-logo text-xs">
+          A proposta ficou inválida — o estado do jogo mudou. Recuse para continuar.
+        </p>
+      )}
 
       <div className="px-5 py-3 border-t-2 border-coffee-950 shrink-0 flex gap-2">
         <Btn onClick={() => acceptTrade()} disabled={!stillValid}>Aceitar</Btn>

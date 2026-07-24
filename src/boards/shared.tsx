@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import { Crown } from 'lucide-react'
-import { AnimatePresence, motion, useAnimate } from 'motion/react'
+import { AnimatePresence, motion, useAnimate, useReducedMotion } from 'motion/react'
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare, GroupKey } from '@/lib/boardData'
@@ -14,6 +14,7 @@ import { useTradeUI } from '@/game/ui/trade/TradeLayer'
 import { HandPanel } from '@/game/ui/cards/HandPanel'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
 import { ShopIcon, GavelIcon, DiceIcon, CoinIcon, HouseIcon } from '@/game/ui/icons'
+import { SectionHeader, Chip, EmptyState } from '@/game/ui/primitives'
 import { tradesView } from '@/game/ui/trade/tradesView'
 import type { GameState } from '@/game/turn/types'
 import type { TempEffect, Trade } from '@/game/economy/types'
@@ -1291,14 +1292,49 @@ export function EffectMark({ pos }: { pos: number }) {
 
 
 // Efeitos ativos no tabuleiro — SRS §12.3. Derivado do estado real (`tempEffects`).
-function effectRow(e: TempEffect, i: number): { key: string; label: string; desc: string; tone: 'logo' | 'gold' } {
+// `tag` espelha a letra do EffectMark na casa (A/G/B/I); `detail`/`laps` são a
+// versão estruturada do `desc` (mantido para tooltip/compat).
+function effectRow(e: TempEffect, i: number): {
+  key: string; label: string; desc: string; detail: string; tag: string; laps: number; tone: 'logo' | 'gold'
+} {
   const laps = `${e.lapsRemaining}v`
+  const place = BOARD[e.pos ?? 0]?.name ?? '—'
   switch (e.kind) {
-    case 'apagao': return { key: `a${i}`, label: 'Apagão', desc: `Hangares inativos · ${laps}`, tone: 'logo' }
-    case 'greve': return { key: `g${i}`, label: 'Greve', desc: `Utilidades sem aluguel · ${laps}`, tone: 'logo' }
-    case 'boicote': return { key: `b${i}`, label: 'Boicote', desc: `${BOARD[e.pos ?? 0]?.name ?? '—'} sem aluguel · ${laps}`, tone: 'logo' }
-    case 'imunidade-temp': return { key: `i${i}`, label: 'Imunidade temp.', desc: `${BOARD[e.pos ?? 0]?.name ?? '—'} · ${laps}`, tone: 'gold' }
+    case 'apagao': return { key: `a${i}`, label: 'Apagão', desc: `Hangares inativos · ${laps}`, detail: 'Hangares inativos', tag: 'A', laps: e.lapsRemaining, tone: 'logo' }
+    case 'greve': return { key: `g${i}`, label: 'Greve', desc: `Utilidades sem aluguel · ${laps}`, detail: 'Utilidades sem aluguel', tag: 'G', laps: e.lapsRemaining, tone: 'logo' }
+    case 'boicote': return { key: `b${i}`, label: 'Boicote', desc: `${place} sem aluguel · ${laps}`, detail: `${place} sem aluguel`, tag: 'B', laps: e.lapsRemaining, tone: 'logo' }
+    case 'imunidade-temp': return { key: `i${i}`, label: 'Imunidade temp.', desc: `${place} · ${laps}`, detail: `${place} protegida`, tag: 'I', laps: e.lapsRemaining, tone: 'gold' }
   }
+}
+
+// Badge circular do efeito — mesma letra e tom do EffectMark na casa, pra
+// leitura cruzada painel ⇄ tabuleiro. Pulsa junto (salvo reduced-motion).
+function EffectBadge({ tag, tone, size = 20 }: { tag: string; tone: 'logo' | 'gold'; size?: number }) {
+  const reduced = useReducedMotion()
+  return (
+    <motion.span
+      className={cn(
+        'shrink-0 rounded-full font-bold flex items-center justify-center leading-none',
+        tone === 'logo' ? 'bg-logo text-cream' : 'bg-gold text-coffee-950',
+      )}
+      style={{ width: size, height: size, fontSize: size * 0.55, boxShadow: '0 1px 2px rgba(0,0,0,0.7)' }}
+      animate={reduced ? undefined : { opacity: [0.75, 1, 0.75] }}
+      transition={{ duration: 1.6, repeat: Infinity }}
+      aria-hidden
+    >
+      {tag}
+    </motion.span>
+  )
+}
+
+// Círculo com visto — glifo do estado vazio "tabuleiro em paz".
+function CalmGlyph({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8.5 12.5 2.5 2.5 4.5-5" />
+    </svg>
+  )
 }
 
 // Trades em aberto + concluídas recentes — SRS §11. Dados reais via tradesView (027).
@@ -1381,10 +1417,10 @@ export function PlayersPanel() {
   return (
     <aside className="side-panel">
       <div className="side-panel-section">
-        <div className="flex items-baseline justify-between mb-3">
-          <p className="label text-gold">Jogadores</p>
-          <p className="label text-cream-muted">{players.filter((p) => !p.bankrupt).length} / 8</p>
-        </div>
+        <SectionHeader
+          title="Jogadores"
+          meta={<p className="label text-cream-muted">{players.filter((p) => !p.bankrupt).length} / 8</p>}
+        />
         <div className="flex flex-col gap-2">
           {players.map((p) => <PlayerRow key={p.name} player={p} />)}
         </div>
@@ -1393,25 +1429,33 @@ export function PlayersPanel() {
 
 
       <div className="side-panel-section">
-        <p className="label text-gold mb-3">Efeitos ativos</p>
+        <SectionHeader
+          title="Efeitos ativos"
+          meta={effects.length > 0 ? <Chip tone="neutral">{effects.length}</Chip> : undefined}
+        />
         {effects.length === 0 ? (
-          <div className="flex items-center justify-center px-3 py-4 rounded-[var(--radius-card)] border border-dashed border-coffee-500 bg-coffee-800/40">
-            <p className="label text-cream-muted text-center leading-snug">
-              Nenhum efeito ativo no momento
-            </p>
-          </div>
+          <EmptyState icon={<CalmGlyph />} title="Tabuleiro em paz" hint="Nenhum efeito ativo no momento" />
         ) : (
           <ul className="flex flex-col gap-1.5">
             {effects.map((e) => (
-              <li key={e.key} className="flex items-baseline gap-2">
-                <span className={cn(
-                  'inline-block w-1.5 h-1.5 rounded-full shrink-0 translate-y-[-2px]',
-                  e.tone === 'logo' ? 'bg-logo' : 'bg-gold',
-                )} />
-                <span className={cn('display text-sm leading-none', e.tone === 'logo' ? 'text-logo' : 'text-gold')}>
-                  {e.label}
-                </span>
-                <span className="text-cream-muted text-xs leading-snug">{e.desc}</span>
+              <li
+                key={e.key}
+                title={e.desc}
+                className={cn(
+                  'flex items-center gap-2.5 px-2.5 py-2 rounded-[var(--radius-card)] border bg-coffee-800/60',
+                  e.tone === 'logo' ? 'border-logo/30' : 'border-gold/30',
+                )}
+              >
+                <EffectBadge tag={e.tag} tone={e.tone} />
+                <div className="flex-1 min-w-0">
+                  <p className={cn('display text-sm leading-none', e.tone === 'logo' ? 'text-logo' : 'text-gold')}>
+                    {e.label}
+                  </p>
+                  <p className="text-cream-muted text-xs leading-snug mt-1 truncate">{e.detail}</p>
+                </div>
+                <Chip tone={e.tone === 'logo' ? 'alert' : 'gold'} title="Voltas restantes">
+                  {e.laps} {e.laps === 1 ? 'volta' : 'voltas'}
+                </Chip>
               </li>
             ))}
           </ul>
@@ -1731,10 +1775,7 @@ function LoanPanel() {
   const canPay = active.cash >= loan.principal
   return (
     <div className="side-panel-section">
-      <div className="flex items-baseline justify-between mb-3">
-        <p className="label text-gold">Empréstimo ativo</p>
-        <p className="label !text-logo">{loan.ratePct}% por volta</p>
-      </div>
+      <SectionHeader title="Empréstimo ativo" meta={<Chip tone="alert">{loan.ratePct}% por volta</Chip>} />
       <div className="flex items-center gap-2 mb-2.5">
         <span className="label text-cream-muted">Você deve a</span>
         <PlayerFace color={creditorColor} size={20} />
@@ -1764,6 +1805,125 @@ function LoanPanel() {
   )
 }
 
+// ---------------------------------------------------------------------
+// Glifos pequenos dos painéis (sem emoji) — herdam currentColor.
+// ---------------------------------------------------------------------
+function TradeArrowGlyph({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden>
+      <path d="M5 12h14" />
+      <path d="m13 6 6 6-6 6" />
+    </svg>
+  )
+}
+
+function PlusGlyph({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" className="shrink-0" aria-hidden>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  )
+}
+
+// Setas de mão dupla — glifo do estado vazio de Negociações.
+function SwapMiniGlyph({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M7 4 3 8l4 4" />
+      <path d="M3 8h14" />
+      <path d="m17 20 4-4-4-4" />
+      <path d="M21 16H7" />
+    </svg>
+  )
+}
+
+function CheckTinyGlyph({ size = 10 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
+
+// ---------------------------------------------------------------------
+// Pote da Loteria — herói do painel direito. É o pote de Férias (SRS §13.4):
+// cresce com impostos/multas e quem parar em Férias leva tudo. O globo da
+// loteria vira marca-d'água; mudanças de valor ganham pop + delta flutuante.
+// ---------------------------------------------------------------------
+function PotCard({ pot }: { pot: number }) {
+  const reduced = useReducedMotion()
+  const prev = useRef(pot)
+  const pulseId = useRef(0)
+  const [pulse, setPulse] = useState<{ id: number; d: number } | null>(null)
+
+  useEffect(() => {
+    if (pot !== prev.current) {
+      const d = pot - prev.current
+      prev.current = pot
+      pulseId.current += 1
+      setPulse({ id: pulseId.current, d })
+      const t = setTimeout(() => setPulse(null), 1400)
+      return () => clearTimeout(t)
+    }
+  }, [pot])
+
+  return (
+    <section
+      className="relative overflow-hidden rounded-[var(--radius-card)] border-2 px-5 py-4 text-center shrink-0"
+      style={{
+        borderColor: 'rgba(212,175,55,0.45)',
+        background: 'radial-gradient(130% 105% at 50% 0%, rgba(212,175,55,0.20) 0%, var(--color-coffee-900) 62%)',
+        boxShadow: 'inset 0 0 30px rgba(212,175,55,0.08), var(--shadow-card)',
+      }}
+    >
+      {/* marca-d'água: globo da loteria espiando pelo canto */}
+      <div className="absolute -right-3 -bottom-4 pointer-events-none opacity-[0.16]" aria-hidden>
+        <LotteryGlyph size={88} />
+      </div>
+
+      <p className="label text-gold tracking-[0.22em] flex items-center justify-center gap-1.5">
+        <CoinIcon size={13} className="text-gold" /> Pote da Loteria
+      </p>
+
+      <motion.p
+        key={pot}
+        initial={reduced ? false : { scale: 1.1 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', stiffness: 340, damping: 18 }}
+        className="currency text-gold-glow leading-none mt-2.5"
+        style={{ fontSize: 40, textShadow: '0 2px 16px rgba(212,175,55,0.55)' }}
+      >
+        <span className="text-gold-soft text-lg align-top mr-0.5">R$</span>
+        {pot.toLocaleString('pt-BR')}
+      </motion.p>
+
+      <p className="label text-cream-muted mt-2" style={{ fontSize: '9px' }}>
+        {pot > 0 ? 'Pare em Férias e leve tudo' : 'Impostos e multas acumulam aqui'}
+      </p>
+
+      <AnimatePresence>
+        {pulse && pulse.d !== 0 && (
+          <motion.span
+            key={pulse.id}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: -14 }}
+            exit={{ opacity: 0, y: -24 }}
+            transition={{ duration: 0.5 }}
+            className={cn(
+              'absolute right-4 top-3 currency text-sm font-bold pointer-events-none',
+              pulse.d > 0 ? 'text-gold-glow' : 'text-logo',
+            )}
+            style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
+          >
+            {pulse.d > 0 ? '+' : '−'}R$ {Math.abs(pulse.d).toLocaleString('pt-BR')}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </section>
+  )
+}
+
 export function ActionsPanel() {
   const game = useGameStore((s) => s.game)
   const pot = game.centerPot
@@ -1774,45 +1934,23 @@ export function ActionsPanel() {
 
   return (
     <aside className="side-panel">
-      {/* Pote da Loteria — destaque próprio (saiu do antigo card "Turno"). É o
-          pote de Férias; cresce com impostos/multas e quem parar em Férias leva. */}
-      <div className="side-panel-section">
-        <div
-          className="relative overflow-hidden rounded-[var(--radius-card)] border-2 px-5 py-4 text-center"
-          style={{
-            borderColor: 'rgba(212,175,55,0.45)',
-            background: 'radial-gradient(125% 100% at 50% 0%, rgba(212,175,55,0.20) 0%, var(--color-coffee-900) 62%)',
-            boxShadow: 'inset 0 0 30px rgba(212,175,55,0.08)',
-          }}
-        >
-          <p className="label text-gold tracking-[0.22em] flex items-center justify-center gap-1.5">
-            <CoinIcon size={13} className="text-gold" /> Pote da Loteria
-          </p>
-          <p
-            className="currency text-gold-glow leading-none mt-2.5"
-            style={{ fontSize: 40, textShadow: '0 2px 16px rgba(212,175,55,0.55)' }}
-          >
-            <span className="text-gold-soft text-lg align-top mr-0.5">R$</span>
-            {pot.toLocaleString('pt-BR')}
-          </p>
-        </div>
-      </div>
+      <PotCard pot={pot} />
 
       <HandPanel />
 
       <LoanPanel />
 
       <div className="side-panel-section">
-        <div className="flex items-baseline justify-between mb-3">
-          <p className="label text-gold">Negociações</p>
-          <p className="label text-cream-muted">{trades.pending ? '1 ativa' : 'nenhuma'}</p>
-        </div>
+        <SectionHeader
+          title="Negociações"
+          meta={trades.pending ? <Chip tone="gold">1 ativa</Chip> : <Chip>nenhuma</Chip>}
+        />
         {!trades.pending && trades.history.length === 0 ? (
-          <div className="flex items-center justify-center px-3 py-4 rounded-[var(--radius-card)] border border-dashed border-coffee-500 bg-coffee-800/40">
-            <p className="label text-cream-muted text-center leading-snug">
-              Nenhuma proposta no momento
-            </p>
-          </div>
+          <EmptyState
+            icon={<SwapMiniGlyph />}
+            title="Nenhuma proposta na mesa"
+            hint="Troque propriedades e dinheiro com outros jogadores"
+          />
         ) : (
           <div className="flex flex-col gap-2">
             {trades.pending && <TradeRow key="pending" trade={trades.pending} done={false} colorById={colorById} />}
@@ -1824,11 +1962,12 @@ export function ActionsPanel() {
           onClick={() => useTradeUI.getState().show()}
           className="
             w-full mt-3 px-3 py-2 rounded-[var(--radius-sharp)]
-            border border-coffee-500 bg-coffee-800/60 text-cream-muted
-            label hover:bg-coffee-700 hover:text-cream transition-colors
+            border border-gold/40 bg-gold/[0.06] text-gold label
+            hover:bg-gold/15 hover:border-gold/70 transition-colors
+            flex items-center justify-center gap-1.5
           "
         >
-          + Nova negociação
+          <PlusGlyph size={11} /> Nova negociação
         </button>
       </div>
     </aside>
@@ -1836,29 +1975,41 @@ export function ActionsPanel() {
 }
 
 function TradeRow({ trade, done, colorById }: { trade: Trade; done: boolean; colorById: Record<string, string> }) {
+  const reduced = useReducedMotion()
   return (
     <div
       className={cn(
         'flex flex-col gap-2 px-3 py-2.5 rounded-[var(--radius-card)] border',
-        done ? 'bg-coffee-800/40 border-coffee-500 opacity-70' : 'bg-coffee-700 border-gold shadow-[0_0_0_1px_rgba(212,175,55,0.3)]',
+        done ? 'bg-coffee-800/40 border-coffee-500 opacity-75' : 'bg-coffee-700 border-gold/70 shadow-[0_0_0_1px_rgba(212,175,55,0.25)]',
       )}
     >
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center gap-1.5 min-w-0">
         <PlayerFace color={colorById[trade.fromId] ?? '#888'} size={22} />
         <span className="display text-cream text-sm leading-none truncate">{trade.fromId}</span>
-        <span className="text-cream-muted text-xs shrink-0">→</span>
+        <TradeArrowGlyph size={11} />
         <PlayerFace color={colorById[trade.toId] ?? '#888'} size={22} />
         <span className="display text-cream text-sm leading-none truncate">{trade.toId}</span>
+        {done ? (
+          <Chip className="ml-auto" title="Negociação aceita">
+            <span className="text-gold"><CheckTinyGlyph size={9} /></span> Aceita
+          </Chip>
+        ) : (
+          <Chip tone="gold" className="ml-auto" title="Aguardando resposta">
+            <motion.span
+              className="w-1.5 h-1.5 rounded-full bg-gold inline-block shrink-0"
+              animate={reduced ? undefined : { opacity: [0.35, 1, 0.35] }}
+              transition={{ duration: 1.4, repeat: Infinity }}
+              aria-hidden
+            />
+            Aguardando
+          </Chip>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5 px-1">
         <TradeLeg label="Oferece" props={trade.fromProps} cash={trade.fromCash} />
         <TradeLeg label="Pede" props={trade.toProps} cash={trade.toCash} />
       </div>
-
-      <p className={cn('label text-center pt-1.5 border-t border-coffee-500/60', done ? 'text-gold' : 'text-cream-muted')}>
-        {done ? 'Aceita' : 'Aguardando resposta…'}
-      </p>
     </div>
   )
 }

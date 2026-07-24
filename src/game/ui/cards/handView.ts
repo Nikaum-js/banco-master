@@ -8,7 +8,7 @@ import { cardById } from '@/game/cards/catalog'
 import { reactorFor } from '@/game/cards/reacao'
 import { canAudit } from '@/game/cards/ofensivas'
 import { ownerOf } from '@/game/economy/titles'
-import { cardLabel, CARD_DESC, RARITY_COLOR } from './cardMeta'
+import { cardLabel, CARD_DESC, RARITY_COLOR, RARITY_LABEL } from './cardMeta'
 
 export interface CardTargets {
   positions?: number[] // propriedades-alvo válidas
@@ -21,6 +21,7 @@ export interface HandCard {
   label: string
   desc: string
   rarityColor: string
+  rarityLabel: string // apresentação: nome da raridade no selo do card (029)
   timing: Timing | null
   needsTarget: boolean
   playable: boolean
@@ -88,6 +89,7 @@ export function handCardsView(game: GameState, playerId: string): HandCard[] {
       label: cardLabel(card.effect),
       desc: CARD_DESC[card.effect] ?? 'Carta sorteada.',
       rarityColor: RARITY_COLOR[card.rarity],
+      rarityLabel: RARITY_LABEL[card.rarity],
       timing: card.timing,
       needsTarget,
       playable,
