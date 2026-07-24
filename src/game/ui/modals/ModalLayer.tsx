@@ -178,8 +178,13 @@ export function ModalLayer() {
                 <span className="label text-coffee-950/85 text-micro">{RARITY_LABEL[view.rarity]}</span>
               </div>
 
-              {/* Corpo */}
-              <div className="px-5 pt-7 pb-5 flex flex-col items-center gap-5">
+              {/* Corpo — véu radial na cor da raridade atrás do título */}
+              <div
+                className="px-5 pt-7 pb-5 flex flex-col items-center gap-5"
+                style={{
+                  background: `radial-gradient(90% 55% at 50% 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 10%, transparent) 0%, transparent 62%)`,
+                }}
+              >
                 <h2 className="display text-cream text-3xl leading-[0.95] text-center">{cardLabel(view.effect)}</h2>
                 <div className="w-full">
                   <div className="flex items-center gap-2 justify-center mb-2">
