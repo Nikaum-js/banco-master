@@ -13,7 +13,7 @@ import type { Trade } from '@/game/economy/types'
 import { BOARD, type PropertySquare, type Square } from '@/lib/boardData'
 import { GROUP_COLOR, SquareIcon, PlayerFace, PLAYER_COLORS } from '@/boards/shared'
 import { CoinIcon } from '@/game/ui/icons'
-import { Button } from '@/game/ui/primitives'
+import { Button, EmptyState } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 
 // Store de UI mínimo: abre/fecha o compositor (botão "Negociar" mora noutro arquivo).
@@ -210,7 +210,7 @@ function Side({
 
       <div className="flex-1 overflow-auto px-3 pt-2.5 pb-3 flex flex-col gap-2.5">
         <div className="flex flex-col gap-1">
-          {props.length === 0 && <p className="text-cream-muted text-xs italic py-1">Nada para negociar.</p>}
+          {props.length === 0 && <EmptyState title="Nada para negociar" className="py-3" />}
           {props.map((pos) => (
             <DeedChip key={pos} pos={pos} on={selected.has(pos)} onToggle={() => onToggle(pos)} />
           ))}
@@ -374,7 +374,7 @@ function ReadSide({ title, color, props, cash }: { title: string; color: string;
         <p className="label text-gold truncate" style={{ fontSize: '10px' }}>{title}</p>
       </div>
       <div className="flex-1 overflow-auto px-3 pt-2.5 pb-3 flex flex-col gap-1.5">
-        {empty && <p className="text-cream-muted text-xs italic py-1">Nada.</p>}
+        {empty && <EmptyState title="Nada por este lado" className="py-3" />}
         {props.map((pos) => (
           <DeedChip key={pos} pos={pos} readOnly />
         ))}

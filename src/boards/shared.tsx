@@ -2496,23 +2496,23 @@ function CenterLog() {
   }
   return (
     <div className="flex-1 min-h-0 w-full max-w-[88%] flex flex-col rounded-[var(--radius-card)] border border-coffee-500/60 bg-coffee-900/55 backdrop-blur-[1px] overflow-hidden">
-      {/* Cabeçalho: título + contador de lançamentos */}
-      <div className="flex items-baseline justify-between px-3 pt-2 pb-1.5 shrink-0 border-b border-coffee-500/40">
-        <p className="label text-gold">Histórico</p>
-        {history.length > 0 && (
-          <span className="label text-cream-muted tabular-nums" style={{ fontSize: '9px' }}>
+      {/* Cabeçalho: título + contador de lançamentos (primitivo padrão) */}
+      <SectionHeader
+        className="px-3 pt-2 pb-1.5 mb-0 shrink-0 border-b border-coffee-500/40"
+        title="Histórico"
+        meta={history.length > 0 ? (
+          <span className="label text-cream-muted tabular-nums text-micro">
             {history.length} {history.length === 1 ? 'lançamento' : 'lançamentos'}
           </span>
-        )}
-      </div>
+        ) : undefined}
+      />
       {history.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-1.5 px-3 py-4">
-          <span className="text-cream-muted/50"><DiceIcon size={20} /></span>
-          <p className="label text-cream-muted text-center leading-snug">Nada registrado ainda</p>
-          <p className="text-cream-muted/70 text-center leading-snug" style={{ fontSize: '10px' }}>
-            Role os dados pra começar. Cada jogada aparece aqui.
-          </p>
-        </div>
+        <EmptyState
+          className="flex-1 m-3"
+          icon={<DiceIcon size={20} />}
+          title="Nada registrado ainda"
+          hint="Role os dados pra começar. Cada jogada aparece aqui."
+        />
       ) : (
         <ol className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-2">
           {/* trilho da linha do tempo, atravessando os avatares */}
@@ -3319,13 +3319,7 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
               </div>
             )}
             {isMortgaged && (
-              <span className="
-                ml-auto inline-flex items-center px-2 py-0.5 rounded-full
-                bg-logo/20 border border-logo/60 text-logo
-                label
-              " style={{ fontSize: '8px' }}>
-                Hipotecada
-              </span>
+              <Chip tone="alert" className="ml-auto text-nano">Hipotecada</Chip>
             )}
           </div>
         )}

@@ -20,7 +20,7 @@ import { sideOf } from '@/game/turn/turnMachine'
 import { isBankrupt } from '@/game/falencia/falencia'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { Confetti } from '@/game/ui/NoticeLayer'
-import { Button } from '@/game/ui/primitives'
+import { Button, Chip } from '@/game/ui/primitives'
 import type { LoanRequest } from '@/game/economy/types'
 
 const GOLD_TEXT: React.CSSProperties = {
@@ -223,12 +223,7 @@ export function GameHUD() {
             <div className="p-5">
               <div className="flex items-center justify-center gap-2">
                 <span className="label text-cream-muted">Efeito</span>
-                <span
-                  className="display text-base px-2.5 py-1 rounded-[var(--radius-sharp)] bg-coffee-900 border border-brass/40"
-                  style={GOLD_TEXT}
-                >
-                  {res.effect}
-                </span>
+                <Chip tone="gold" className="text-sm normal-case">{res.effect}</Chip>
               </div>
               <div className="flex gap-2 mt-5">
                 <PrimaryBtn onClick={() => respondReaction(true)}>Usar Diplomacia</PrimaryBtn>
