@@ -8,6 +8,7 @@ import { HandCardLayer } from '@/game/ui/cards/HandCardLayer'
 import { NoticeLayer } from '@/game/ui/NoticeLayer'
 import { SoundLayer } from '@/game/ui/sound/SoundLayer'
 import { AudioControl } from '@/game/ui/sound/AudioControl'
+import { ThemeControl } from '@/game/ui/theme/ThemeControl'
 import { SoundBoard } from '@/game/ui/sound/SoundBoard'
 import { DebugLogger } from '@/game/ui/DebugLogger'
 
@@ -31,6 +32,7 @@ export default function App() {
       <SoundLayer />
       <GameHUD />
       <AudioControl />
+      <ThemeControl />
       <DebugLogger />
     </>
   )

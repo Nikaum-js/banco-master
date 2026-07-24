@@ -49,14 +49,14 @@ export default function Board01Classic() {
       <div
         className="
           board-frame
-          bg-coffee-800 border-2 border-coffee-500
+          bg-coffee-950 border border-coffee-500
           rounded-[var(--radius-card)]
-          shadow-[var(--shadow-lift)]
-          p-2
+          shadow-[var(--shadow-lift),0_0_0_1px_rgba(217,166,80,0.22)]
+          p-1
         "
       >
         <div
-          className="grid w-full h-full gap-[2px]"
+          className="grid w-full h-full gap-px"
           style={{
             // Grade 13×13: cantos (2fr) + 11 casas por lado (1fr).
             // `minmax(0, …)` é ESSENCIAL: sem ele, o conteúdo grande dos
@@ -74,7 +74,7 @@ export default function Board01Classic() {
           <div
             className="
               relative
-              bg-gradient-to-br from-coffee-800 via-coffee-700 to-coffee-900
+              bg-gradient-to-br from-coffee-900 via-coffee-800 to-coffee-950
               border border-coffee-500
             "
             style={{ gridRow: '2 / 13', gridColumn: '2 / 13' }}

@@ -11,6 +11,7 @@ import { cityLevel } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
 import { deedView } from '@/game/ui/deed/deedView'
 import { useTradeUI } from '@/game/ui/trade/TradeLayer'
+import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 import { HandPanel } from '@/game/ui/cards/HandPanel'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
 import { ShopIcon, GavelIcon, DiceIcon, CoinIcon, HouseIcon } from '@/game/ui/icons'
@@ -20,351 +21,276 @@ import type { GameState } from '@/game/turn/types'
 import type { TempEffect, Trade } from '@/game/economy/types'
 
 // ---------------------------------------------------------------------
-// Glifos SVG próprios para casas especiais — substituem ícones lucide
-// genéricos por ilustrações com personalidade.
+// Glifos SVG próprios para casas especiais — sistema "instrumentos de
+// bordo" do Atlas da Meia-Noite: todo selo senta num mostrador comum
+// (InstrumentDial) de latão sobre tinta profunda, com graduações de rumo.
+// Pictogramas em starlight/latão/signal — mesma família do canto ao miolo.
 // Cada glifo aceita size: number|string (suporta "1em" pra escala via cqi).
 // ---------------------------------------------------------------------
 type GlyphProps = { size?: number | string }
 
-// GO — moeda gigante "R$ 200" (o bônus de passar pelo GO, SRS §13.6).
-// O R$200 explícito comunica imediatamente "ganhei dinheiro aqui", sem
-// precisar de label textual fora do ícone.
+// Mostrador comum — disco de tinta, aro de latão, anel de graduações e
+// marcas cardeais. Os filhos são o pictograma específico de cada selo.
+function InstrumentDial({ children }: { children?: ReactNode }) {
+  return (
+    <>
+      <g stroke="var(--color-brass)" strokeWidth="1" strokeLinecap="round" opacity="0.8">
+        <line x1="20" y1="1.6" x2="20" y2="3.6" />
+        <line x1="20" y1="36.4" x2="20" y2="38.4" />
+        <line x1="1.6" y1="20" x2="3.6" y2="20" />
+        <line x1="36.4" y1="20" x2="38.4" y2="20" />
+      </g>
+      <circle cx="20" cy="20" r="15" fill="var(--color-ink-900)" stroke="var(--color-brass)" strokeWidth="1.6" />
+      <circle cx="20" cy="20" r="12.8" fill="none" stroke="var(--color-brass-soft)" strokeWidth="0.5" strokeDasharray="1 1.6" opacity="0.8" />
+      {children}
+    </>
+  )
+}
+
+// GO — moeda de latão "R$ 200" no mostrador (bônus de passar, SRS §13.6).
 function GoGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      {/* raios/sparkles ao redor */}
-      <g stroke="#ffd97a" strokeWidth="1.1" strokeLinecap="round" opacity="0.6">
-        <line x1="20" y1="1.5" x2="20" y2="3.5" />
-        <line x1="38.5" y1="20" x2="36.5" y2="20" />
-        <line x1="20" y1="38.5" x2="20" y2="36.5" />
-        <line x1="1.5" y1="20" x2="3.5" y2="20" />
-        <line x1="33"   y1="7"  x2="31.5" y2="8.5" />
-        <line x1="33"   y1="33" x2="31.5" y2="31.5" />
-        <line x1="7"    y1="33" x2="8.5"  y2="31.5" />
-        <line x1="7"    y1="7"  x2="8.5"  y2="8.5" />
-      </g>
-      <ellipse cx="20" cy="36.5" rx="13" ry="1.2" fill="#0f0c09" opacity="0.45" />
-      {/* moeda dourada grande */}
-      <circle cx="20" cy="20" r="15" fill="#d4af37" stroke="#0f0c09" strokeWidth="1.8" />
-      <circle cx="20" cy="20" r="12.6" fill="none" stroke="#b8941f" strokeWidth="0.7" strokeDasharray="1 1.4" />
-      {/* highlight 3D no topo */}
-      <ellipse cx="14" cy="12" rx="4" ry="2" fill="#ffd97a" opacity="0.55" />
-      {/* R$ */}
-      <text x="20" y="17.5" textAnchor="middle"
-        fontFamily="Roboto Slab, Roboto Slab Variable, serif"
-        fontSize="7.5" fontWeight="800" fill="#0f0c09">R$</text>
-      {/* 200 */}
-      <text x="20" y="28.5" textAnchor="middle"
-        fontFamily="Roboto Slab, Roboto Slab Variable, serif"
-        fontSize="10" fontWeight="800" fill="#0f0c09" letterSpacing="-0.06em">200</text>
+      <InstrumentDial>
+        <circle cx="20" cy="20" r="10.4" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="1.4" />
+        <circle cx="20" cy="20" r="8.6" fill="none" stroke="var(--color-brass-soft)" strokeWidth="0.5" strokeDasharray="0.9 1.3" />
+        <ellipse cx="16" cy="14.5" rx="3" ry="1.5" fill="var(--color-brass-glow)" opacity="0.6" />
+        <text x="20" y="18.6" textAnchor="middle"
+          fontFamily="Roboto Slab, Roboto Slab Variable, serif"
+          fontSize="5.4" fontWeight="800" fill="var(--color-ink-950)">R$</text>
+        <text x="20" y="26.4" textAnchor="middle"
+          fontFamily="Roboto Slab, Roboto Slab Variable, serif"
+          fontSize="7.2" fontWeight="800" fill="var(--color-ink-950)" letterSpacing="-0.06em">200</text>
+      </InstrumentDial>
     </svg>
   )
 }
 
-// Prisão (visita) — cela com paredes de pedra, barras de ferro, prisioneiro.
+// Prisão (visita) — cela no mostrador: prisioneiro espiando atrás das barras.
 function JailGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      {/* parede de pedra externa */}
-      <rect x="1" y="1" width="38" height="38" rx="1.5"
-        fill="#3d3528" stroke="#0f0c09" strokeWidth="1.2" />
-
-      {/* tijolos em padrão alternado */}
-      <g stroke="#1a1410" strokeWidth="0.6" opacity="0.6">
-        <line x1="1"  y1="7"  x2="39" y2="7"  />
-        <line x1="1"  y1="14" x2="39" y2="14" />
-        <line x1="1"  y1="26" x2="39" y2="26" />
-        <line x1="1"  y1="33" x2="39" y2="33" />
-        {/* linhas verticais alternadas por fileira */}
-        <line x1="8"  y1="1"  x2="8"  y2="7" />
-        <line x1="18" y1="1"  x2="18" y2="7" />
-        <line x1="28" y1="1"  x2="28" y2="7" />
-        <line x1="4"  y1="7"  x2="4"  y2="14" />
-        <line x1="14" y1="7"  x2="14" y2="14" />
-        <line x1="24" y1="7"  x2="24" y2="14" />
-        <line x1="34" y1="7"  x2="34" y2="14" />
-        <line x1="8"  y1="33" x2="8"  y2="39" />
-        <line x1="18" y1="33" x2="18" y2="39" />
-        <line x1="28" y1="33" x2="28" y2="39" />
-      </g>
-
-      {/* abertura da cela (vão escuro) */}
-      <rect x="6" y="9" width="28" height="22" rx="0.5"
-        fill="#0a0805" stroke="#0f0c09" strokeWidth="1" />
-
-      {/* fundo "fim do corredor" com gradiente */}
-      <defs>
-        <radialGradient id="cellDark" cx="50%" cy="60%" r="60%">
-          <stop offset="0%" stopColor="#1a1410" />
-          <stop offset="100%" stopColor="#0a0805" />
-        </radialGradient>
-      </defs>
-      <rect x="7" y="10" width="26" height="20" fill="url(#cellDark)" />
-
-      {/* PRISIONEIRO atrás das barras */}
-      {/* corpo (ombros sugeridos) */}
-      <path d="M 13 28 Q 13 22 20 22 Q 27 22 27 28 L 27 31 L 13 31 Z"
-        fill="#5c4a36" stroke="#0f0c09" strokeWidth="0.6" />
-      {/* listras de presidiário */}
-      <line x1="13" y1="25" x2="27" y2="25" stroke="#a89683" strokeWidth="0.8" />
-      <line x1="13" y1="27.5" x2="27" y2="27.5" stroke="#a89683" strokeWidth="0.8" />
-
-      {/* cabeça */}
-      <circle cx="20" cy="19" r="4.5" fill="#b07a4a" stroke="#0f0c09" strokeWidth="0.6" />
-      {/* highlight do rosto */}
-      <ellipse cx="18.5" cy="17" rx="1.5" ry="0.8" fill="#ffffff" opacity="0.18" />
-      {/* olhos */}
-      <circle cx="18.2" cy="18.7" r="0.9" fill="#f4e8d0" />
-      <circle cx="21.8" cy="18.7" r="0.9" fill="#f4e8d0" />
-      <circle cx="18.3" cy="18.8" r="0.5" fill="#0f0c09" />
-      <circle cx="21.9" cy="18.8" r="0.5" fill="#0f0c09" />
-      {/* sobrancelhas */}
-      <line x1="16.5" y1="16.6" x2="19" y2="17.4" stroke="#0f0c09" strokeWidth="0.7" strokeLinecap="round" />
-      <line x1="23.5" y1="16.6" x2="21" y2="17.4" stroke="#0f0c09" strokeWidth="0.7" strokeLinecap="round" />
-      {/* boca triste */}
-      <path d="M 17.5 21.6 Q 20 20.5 22.5 21.6" stroke="#0f0c09" strokeWidth="0.7" fill="none" strokeLinecap="round" />
-
-      {/* mãos agarradas nas barras (visíveis ao lado das mãos do prisioneiro) */}
-      <g fill="#b07a4a" stroke="#0f0c09" strokeWidth="0.4">
-        <ellipse cx="14" cy="23" rx="1.4" ry="1.1" />
-        <ellipse cx="26" cy="23" rx="1.4" ry="1.1" />
-      </g>
-
-      {/* travessa horizontal de ferro (atrás das barras verticais) */}
-      <rect x="6" y="15" width="28" height="2" fill="#a89683" stroke="#5c4a36" strokeWidth="0.5" />
-      <line x1="6" y1="15.4" x2="34" y2="15.4" stroke="#f4e8d0" strokeWidth="0.3" opacity="0.5" />
-
-      {/* BARRAS VERTICAIS DE FERRO — grossas, com brilho lateral */}
-      <g>
-        <rect x="10" y="9" width="2.4" height="22" fill="#a89683" stroke="#5c4a36" strokeWidth="0.5" />
-        <line x1="10.4" y1="9" x2="10.4" y2="31" stroke="#f4e8d0" strokeWidth="0.3" opacity="0.5" />
-
-        <rect x="18.8" y="9" width="2.4" height="22" fill="#a89683" stroke="#5c4a36" strokeWidth="0.5" />
-        <line x1="19.2" y1="9" x2="19.2" y2="31" stroke="#f4e8d0" strokeWidth="0.3" opacity="0.5" />
-
-        <rect x="27.6" y="9" width="2.4" height="22" fill="#a89683" stroke="#5c4a36" strokeWidth="0.5" />
-        <line x1="28" y1="9" x2="28" y2="31" stroke="#f4e8d0" strokeWidth="0.3" opacity="0.5" />
-      </g>
-
-      {/* CADEADO pendurado numa das barras inferiores */}
-      <g transform="translate(4 32)">
-        <path d="M 1.5 1.8 Q 1.5 0 3 0 Q 4.5 0 4.5 1.8" fill="none" stroke="#5c4a36" strokeWidth="0.8" strokeLinecap="round" />
-        <rect x="0.5" y="1.8" width="5" height="4" rx="0.4" fill="#3d3528" stroke="#0f0c09" strokeWidth="0.5" />
-        <circle cx="3" cy="3.6" r="0.5" fill="#a89683" />
-        <line x1="3" y1="3.6" x2="3" y2="5" stroke="#a89683" strokeWidth="0.4" />
-      </g>
+      <InstrumentDial>
+        {/* vão da cela */}
+        <rect x="10.5" y="10.5" width="19" height="19" rx="1" fill="var(--color-ink-abyss)" stroke="var(--color-ink-950)" strokeWidth="1" />
+        {/* prisioneiro — cabeça + olhos atrás das barras */}
+        <circle cx="20" cy="19.5" r="4.6" fill="var(--color-group-brown)" stroke="var(--color-ink-950)" strokeWidth="0.7" />
+        <circle cx="18.3" cy="19" r="0.9" fill="var(--color-starlight)" />
+        <circle cx="21.7" cy="19" r="0.9" fill="var(--color-starlight)" />
+        <circle cx="18.4" cy="19.1" r="0.45" fill="var(--color-ink-950)" />
+        <circle cx="21.8" cy="19.1" r="0.45" fill="var(--color-ink-950)" />
+        <path d="M 18 22.4 Q 20 21.6 22 22.4" stroke="var(--color-ink-950)" strokeWidth="0.7" fill="none" strokeLinecap="round" />
+        {/* travessa + barras de ferro */}
+        <rect x="10.5" y="16" width="19" height="1.6" fill="var(--color-starlight-muted)" stroke="var(--color-ink-400)" strokeWidth="0.4" />
+        <rect x="13" y="10.5" width="1.9" height="19" fill="var(--color-starlight-muted)" stroke="var(--color-ink-400)" strokeWidth="0.4" />
+        <rect x="19" y="10.5" width="1.9" height="19" fill="var(--color-starlight-muted)" stroke="var(--color-ink-400)" strokeWidth="0.4" />
+        <rect x="25" y="10.5" width="1.9" height="19" fill="var(--color-starlight-muted)" stroke="var(--color-ink-400)" strokeWidth="0.4" />
+        {/* cadeado de latão */}
+        <g transform="translate(23.6 26)">
+          <path d="M 1.4 1.6 Q 1.4 0 2.7 0 Q 4 0 4 1.6" fill="none" stroke="var(--color-brass-soft)" strokeWidth="0.8" strokeLinecap="round" />
+          <rect x="0.6" y="1.6" width="4.2" height="3.4" rx="0.5" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="0.5" />
+          <circle cx="2.7" cy="3.2" r="0.45" fill="var(--color-ink-950)" />
+        </g>
+      </InstrumentDial>
     </svg>
   )
 }
 
-// Vá pra Prisão — quepe de polícia (cap azul com viseira preta e estrela
-// dourada no centro). Substitui as algemas — quepe lê mais rápido como
-// "polícia" e tem leitura clara em tamanho pequeno.
+// Vá pra Prisão — quepe de polícia no mostrador: coroa azul-noite, cinta
+// escura com frisos de latão, viseira e estrela.
 function GoToJailGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      <ellipse cx="20" cy="36" rx="14" ry="1.3" fill="#0f0c09" opacity="0.45" />
-      {/* coroa/topo do quepe */}
-      <path d="M 8 22 Q 8 8 20 8 Q 32 8 32 22 L 32 23 L 8 23 Z"
-        fill="#1e3a8a" stroke="#0f0c09" strokeWidth="1.6" strokeLinejoin="round" />
-      {/* highlight 3D no topo */}
-      <ellipse cx="14" cy="11.5" rx="3.5" ry="1.4" fill="#ffffff" opacity="0.18" />
-      {/* faixa preta com borda dourada (cinta do quepe) */}
-      <rect x="7" y="22.5" width="26" height="4" fill="#0f0c09" stroke="#0f0c09" strokeWidth="0.5" />
-      <line x1="7" y1="22.5" x2="33" y2="22.5" stroke="#ffd97a" strokeWidth="0.5" opacity="0.7" />
-      <line x1="7" y1="26.5" x2="33" y2="26.5" stroke="#ffd97a" strokeWidth="0.5" opacity="0.7" />
-      {/* viseira (visor) */}
-      <path d="M 4 29 Q 12 32.5 20 32.5 Q 28 32.5 36 29 L 36 27.5 L 4 27.5 Z"
-        fill="#1a1410" stroke="#0f0c09" strokeWidth="1.2" strokeLinejoin="round" />
-      <path d="M 6 29 Q 13 31 20 31 Q 27 31 34 29" stroke="#5c4a36" strokeWidth="0.6" fill="none" />
-      {/* estrela dourada no centro do quepe */}
-      <polygon points="20,12 21.6,16 25.8,16 22.4,18.7 23.7,22.6 20,20.1 16.3,22.6 17.6,18.7 14.2,16 18.4,16"
-        fill="#ffd97a" stroke="#0f0c09" strokeWidth="0.7" strokeLinejoin="round" />
-      {/* miolinho da estrela */}
-      <circle cx="20" cy="17.5" r="0.9" fill="#0f0c09" />
+      <InstrumentDial>
+        <path d="M 11 21.5 Q 11 11.5 20 11.5 Q 29 11.5 29 21.5 Z"
+          fill="#34549c" stroke="var(--color-ink-950)" strokeWidth="1.2" strokeLinejoin="round" />
+        <ellipse cx="16" cy="14.5" rx="2.6" ry="1.1" fill="#ffffff" opacity="0.16" />
+        <rect x="10.4" y="21.2" width="19.2" height="2.8" fill="var(--color-ink-950)" />
+        <line x1="10.4" y1="21.2" x2="29.6" y2="21.2" stroke="var(--color-brass-glow)" strokeWidth="0.45" opacity="0.7" />
+        <line x1="10.4" y1="24" x2="29.6" y2="24" stroke="var(--color-brass-glow)" strokeWidth="0.45" opacity="0.7" />
+        <path d="M 8.5 26.5 Q 14.5 28.8 20 28.8 Q 25.5 28.8 31.5 26.5 L 31.5 25 L 8.5 25 Z"
+          fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="0.9" strokeLinejoin="round" />
+        <polygon points="20,13.4 21.1,16.1 24,16.1 21.7,17.9 22.6,20.6 20,18.9 17.4,20.6 18.3,17.9 16,16.1 18.9,16.1"
+          fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.6" strokeLinejoin="round" />
+      </InstrumentDial>
     </svg>
   )
 }
 
-// Loteria — globo/drum da Mega-Sena com 3 bolas coloridas dentro.
-// Versão anterior tinha só 3 bolas flutuantes — sem contexto, parecia
-// "esferas aleatórias" e não "máquina de loteria".
+// Loteria — globo de sorteio no mostrador, com 3 bolas numeradas.
 function LotteryGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      <ellipse cx="20" cy="36" rx="14" ry="1.3" fill="#0f0c09" opacity="0.45" />
-      {/* base/pedestal */}
-      <rect x="13" y="33.5" width="14" height="2.5" rx="0.5" fill="#0f0c09" />
-      <rect x="17" y="30" width="6" height="4" fill="#3d3528" stroke="#0f0c09" strokeWidth="0.8" />
-      {/* esfera do globo (vidro escuro com aro dourado) */}
-      <circle cx="20" cy="17" r="13" fill="#1a1410" stroke="#d4af37" strokeWidth="1.8" />
-      {/* highlight de vidro */}
-      <ellipse cx="13.5" cy="10" rx="3.5" ry="2" fill="#ffffff" opacity="0.3" />
-      {/* aro inferior do drum */}
-      <ellipse cx="20" cy="28" rx="13" ry="3" fill="#3d3528" stroke="#0f0c09" strokeWidth="1" />
-      <ellipse cx="20" cy="27.5" rx="11.5" ry="2" fill="#1a1410" />
-      {/* 3 bolas dentro do globo, com cores fortes */}
-      <circle cx="14" cy="21" r="3.4" fill="#dc2626" stroke="#0f0c09" strokeWidth="0.7" />
-      <text x="14" y="22.2" textAnchor="middle"
-        fontFamily="Roboto Slab, Roboto Slab Variable, serif"
-        fontSize="3.2" fontWeight="800" fill="#f4e8d0">07</text>
-      <circle cx="22" cy="14.5" r="3.8" fill="#ffd97a" stroke="#0f0c09" strokeWidth="0.8" />
-      <text x="22" y="15.8" textAnchor="middle"
-        fontFamily="Roboto Slab, Roboto Slab Variable, serif"
-        fontSize="3.6" fontWeight="800" fill="#0f0c09">22</text>
-      <circle cx="26" cy="22" r="3.2" fill="#22c55e" stroke="#0f0c09" strokeWidth="0.7" />
-      <text x="26" y="23.2" textAnchor="middle"
-        fontFamily="Roboto Slab, Roboto Slab Variable, serif"
-        fontSize="3" fontWeight="800" fill="#f4e8d0">58</text>
+      <InstrumentDial>
+        <circle cx="20" cy="18" r="9.6" fill="var(--color-ink-abyss)" stroke="var(--color-brass)" strokeWidth="1.2" />
+        <ellipse cx="15.5" cy="12.5" rx="2.6" ry="1.4" fill="#ffffff" opacity="0.28" />
+        <circle cx="15.8" cy="20.6" r="2.9" fill="var(--color-signal)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
+        <text x="15.8" y="21.8" textAnchor="middle"
+          fontFamily="Roboto Slab, Roboto Slab Variable, serif"
+          fontSize="2.8" fontWeight="800" fill="var(--color-starlight)">07</text>
+        <circle cx="21.6" cy="15.2" r="3.2" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.7" />
+        <text x="21.6" y="16.4" textAnchor="middle"
+          fontFamily="Roboto Slab, Roboto Slab Variable, serif"
+          fontSize="3" fontWeight="800" fill="var(--color-ink-950)">22</text>
+        <circle cx="23.6" cy="21.4" r="2.7" fill="var(--color-group-green)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
+        <text x="23.6" y="22.5" textAnchor="middle"
+          fontFamily="Roboto Slab, Roboto Slab Variable, serif"
+          fontSize="2.6" fontWeight="800" fill="var(--color-ink-abyss)">58</text>
+        <rect x="16.5" y="27.6" width="7" height="2.6" rx="0.6" fill="var(--color-ink-500)" stroke="var(--color-ink-950)" strokeWidth="0.7" />
+        <rect x="14" y="30" width="12" height="1.8" rx="0.5" fill="var(--color-ink-950)" />
+      </InstrumentDial>
     </svg>
   )
 }
 
-// Aeroporto — avião top-down com rastro de viagem.
+// Aeroporto — avião top-down em metal do tema, rastro de rota tracejado
+// e luzes de navegação nas pontas das asas (vermelha/verde, como na aviação).
 function AirportGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      {/* rastro pontilhado */}
+      {/* rastro de rota com ponto de partida */}
       <path d="M 4 35 Q 13 30 20 24 T 34 8"
-        stroke="#d4af37" strokeWidth="1" strokeDasharray="2 2.5"
-        fill="none" opacity="0.5" />
+        stroke="var(--color-brass)" strokeWidth="1" strokeDasharray="2 2.5" fill="none" opacity="0.5" />
+      <circle cx="4.5" cy="34.5" r="1.2" fill="none" stroke="var(--color-brass)" strokeWidth="0.7" opacity="0.55" />
       {/* avião */}
-      <g stroke="#0f0c09" strokeWidth="1.2" strokeLinejoin="round">
-        <path d="M 20 6 Q 22.5 7 22.5 15 L 22.5 24 L 20 28 L 17.5 24 L 17.5 15 Q 17.5 7 20 6 Z"
-          fill="#d4af37" />
-        <path d="M 4 18 L 17.5 15.5 L 17.5 21 L 4 22.5 Z" fill="#d4af37" />
-        <path d="M 36 18 L 22.5 15.5 L 22.5 21 L 36 22.5 Z" fill="#d4af37" />
-        <path d="M 13 28 L 20 27 L 27 28 L 25 32 L 15 32 Z" fill="#d4af37" />
+      <g stroke="var(--color-ink-950)" strokeWidth="1.2" strokeLinejoin="round">
+        <path d="M 20 6 Q 22.5 7 22.5 15 L 22.5 24 L 20 28 L 17.5 24 L 17.5 15 Q 17.5 7 20 6 Z" fill="var(--color-brass)" />
+        <path d="M 4 18 L 17.5 15.5 L 17.5 21 L 4 22.5 Z" fill="var(--color-brass)" />
+        <path d="M 36 18 L 22.5 15.5 L 22.5 21 L 36 22.5 Z" fill="var(--color-brass)" />
+        <path d="M 13 28 L 20 27 L 27 28 L 25 32 L 15 32 Z" fill="var(--color-brass)" />
       </g>
-      <ellipse cx="20" cy="10" rx="1.5" ry="2.4" fill="#1a1410" />
-      <ellipse cx="20" cy="9.5" rx="0.9" ry="1.1" fill="#67c3e0" opacity="0.65" />
+      {/* luzes de ponta de asa */}
+      <circle cx="4.6" cy="20.2" r="0.9" fill="var(--color-signal)" />
+      <circle cx="35.4" cy="20.2" r="0.9" fill="var(--color-group-green)" />
+      {/* cockpit */}
+      <ellipse cx="20" cy="10" rx="1.5" ry="2.4" fill="var(--color-ink-900)" />
+      <ellipse cx="20" cy="9.5" rx="0.9" ry="1.1" fill="var(--color-group-skyblue)" opacity="0.65" />
     </svg>
   )
 }
 
-// Petrobras — bomba de combustível com display + label PETRO.
-// Composição centralizada em x=20: corpo + base + mangueira em arco simétrico
-// sobre o topo. Versão anterior tinha mangueira lateral puxando peso visual
-// pra direita-baixo, fazendo o ícone parecer "deslocado" na célula.
+// Petrobras — bomba de combustível: display, label PETRO, mangueira em
+// arco simétrico e gota dourada pingando do bico.
 function FuelGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      {/* sombra do chão */}
-      <ellipse cx="20" cy="36" rx="14" ry="1.2" fill="#0f0c09" opacity="0.4" />
-      {/* base */}
-      <rect x="9" y="33" width="22" height="2.5" rx="0.5" fill="#0f0c09" />
-      {/* corpo da bomba */}
-      <rect x="10" y="11" width="20" height="22" rx="1.5"
-        fill="#5c4a36" stroke="#0f0c09" strokeWidth="1.4" />
-      <rect x="10" y="11" width="20" height="3" rx="1.5" fill="#3d3528" stroke="#0f0c09" strokeWidth="1" />
-      {/* display */}
-      <rect x="12" y="15.5" width="16" height="6" rx="0.5"
-        fill="#1a1410" stroke="#0f0c09" strokeWidth="0.6" />
+      <ellipse cx="20" cy="36" rx="14" ry="1.2" fill="var(--color-ink-950)" opacity="0.4" />
+      <rect x="9" y="33" width="22" height="2.5" rx="0.5" fill="var(--color-ink-950)" />
+      <rect x="10" y="11" width="20" height="22" rx="1.5" fill="var(--color-ink-400)" stroke="var(--color-ink-950)" strokeWidth="1.4" />
+      <rect x="10" y="11" width="20" height="3" rx="1.5" fill="var(--color-ink-500)" stroke="var(--color-ink-950)" strokeWidth="1" />
+      <rect x="12" y="15.5" width="16" height="6" rx="0.5" fill="var(--color-ink-abyss)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
       <text x="20" y="20" textAnchor="middle"
         fontFamily="Roboto Slab, Roboto Slab Variable, serif"
-        fontSize="4" fontWeight="700" fill="#d4af37" letterSpacing="0.3">88.88</text>
-      {/* label PETRO */}
-      <rect x="12" y="23" width="16" height="7" rx="0.5"
-        fill="#22c55e" stroke="#0f0c09" strokeWidth="0.5" />
+        fontSize="4" fontWeight="700" fill="var(--color-brass)" letterSpacing="0.3">88.88</text>
+      <rect x="12" y="23" width="16" height="7" rx="0.5" fill="var(--color-group-green)" stroke="var(--color-ink-950)" strokeWidth="0.5" />
       <text x="20" y="27.9" textAnchor="middle"
         fontFamily="Inter Variable, sans-serif"
-        fontSize="3.8" fontWeight="800" fill="#0f0c09" letterSpacing="0.2">PETRO</text>
-      {/* mangueira em arco simétrico sobre o topo + bico central */}
+        fontSize="3.8" fontWeight="800" fill="var(--color-ink-950)" letterSpacing="0.2">PETRO</text>
       <path d="M 13 11 Q 13 5 17 5 L 23 5 Q 27 5 27 11"
-        fill="none" stroke="#3d3528" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-      <rect x="18.5" y="3.5" width="3" height="2.5" rx="0.5" fill="#3d3528" stroke="#0f0c09" strokeWidth="0.4" />
+        fill="none" stroke="var(--color-ink-500)" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      <rect x="18.5" y="3.5" width="3" height="2.5" rx="0.5" fill="var(--color-ink-500)" stroke="var(--color-ink-950)" strokeWidth="0.4" />
+      {/* gota pingando do bico */}
+      <path d="M 20 7.2 Q 21.2 8.9 20 10 Q 18.8 8.9 20 7.2 Z" fill="var(--color-brass-glow)" opacity="0.9" />
     </svg>
   )
 }
 
-// Eletrobras — raio dentro de círculo com pequenos arcos elétricos.
+// Eletrobras — raio grande com arcos elétricos e faíscas, sem aro.
 function BoltGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      <g stroke="#ffd97a" strokeWidth="0.8" strokeLinecap="round" opacity="0.55" fill="none">
-        <path d="M 4 12 Q 8 14 6 17" />
-        <path d="M 36 12 Q 32 14 34 17" />
-        <path d="M 4 28 Q 8 26 6 23" />
-        <path d="M 36 28 Q 32 26 34 23" />
+      <ellipse cx="20" cy="36" rx="12" ry="1.2" fill="var(--color-ink-950)" opacity="0.4" />
+      {/* arcos elétricos */}
+      <g stroke="var(--color-brass-glow)" strokeWidth="1" strokeLinecap="round" opacity="0.55" fill="none">
+        <path d="M 7 10 Q 11 12 9 15" />
+        <path d="M 33 10 Q 29 12 31 15" />
+        <path d="M 6 26 Q 10 24 8 21" />
+        <path d="M 34 26 Q 30 24 32 21" />
       </g>
-      <circle cx="20" cy="20" r="14" fill="#1a1410" stroke="#d4af37" strokeWidth="1.6" />
-      <circle cx="20" cy="20" r="12" fill="none" stroke="#b8941f" strokeWidth="0.5" strokeDasharray="1 1.5" />
-      <path d="M 21 8 L 12 22 L 18 22 L 15 32 L 26 17 L 20 17 L 22 8 Z"
-        fill="#ffd97a" stroke="#0f0c09" strokeWidth="1.2" strokeLinejoin="round" />
+      {/* faíscas */}
+      <g fill="var(--color-brass-glow)" opacity="0.8">
+        <circle cx="12" cy="6" r="0.8" />
+        <circle cx="29" cy="30" r="0.8" />
+      </g>
+      {/* raio */}
+      <path d="M 22 3 L 10 21 L 17.5 21 L 14 36 L 30 15.5 L 22.5 15.5 L 25.5 3 Z"
+        fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="1.3" strokeLinejoin="round" />
+      {/* brilho interno */}
+      <path d="M 21.5 6 L 13.5 19 L 16.5 19 Z" fill="#ffffff" opacity="0.35" />
     </svg>
   )
 }
 
-// Imposto — boleto/fatura: papel cream, cabeçalho vermelho com selo,
-// linhas de campos e caixa de "TOTAL R$" destacada em vermelho.
+// Imposto — boleto/fatura: papel claro, cabeçalho signal com selo,
+// linhas de campos e caixa de "TOTAL R$" destacada.
 function TaxGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
       {/* sombra do chão */}
-      <ellipse cx="20" cy="36.5" rx="13" ry="1.3" fill="#0f0c09" opacity="0.4" />
+      <ellipse cx="20" cy="36.5" rx="13" ry="1.3" fill="var(--color-ink-950)" opacity="0.4" />
 
-      {/* papel — cream com borda escura */}
+      {/* papel — claro com borda escura */}
       <rect x="7" y="5" width="26" height="29" rx="1.5"
-        fill="#f4e8d0" stroke="#0f0c09" strokeWidth="1.4" />
+        fill="var(--color-starlight)" stroke="var(--color-ink-950)" strokeWidth="1.4" />
 
-      {/* cabeçalho vermelho da fatura */}
+      {/* cabeçalho signal da fatura */}
       <path d="M 7 6.5 Q 7 5 8.5 5 L 31.5 5 Q 33 5 33 6.5 L 33 12 L 7 12 Z"
-        fill="#dc2626" stroke="#0f0c09" strokeWidth="1.1" strokeLinejoin="round" />
+        fill="var(--color-signal)" stroke="var(--color-ink-950)" strokeWidth="1.1" strokeLinejoin="round" />
 
       {/* selo redondo no header */}
-      <circle cx="11.5" cy="8.5" r="1.7" fill="#f4e8d0" stroke="#991b1b" strokeWidth="0.5" />
-      <circle cx="11.5" cy="8.5" r="0.7" fill="#dc2626" />
+      <circle cx="11.5" cy="8.5" r="1.7" fill="var(--color-starlight)" stroke="var(--color-signal-deep)" strokeWidth="0.5" />
+      <circle cx="11.5" cy="8.5" r="0.7" fill="var(--color-signal)" />
 
       {/* linhas sugerindo "REPÚBLICA / RECEITA" no header */}
-      <line x1="15" y1="7.5" x2="29" y2="7.5" stroke="#f4e8d0" strokeWidth="0.7" opacity="0.85" />
-      <line x1="15" y1="10" x2="26" y2="10" stroke="#f4e8d0" strokeWidth="0.6" opacity="0.65" />
+      <line x1="15" y1="7.5" x2="29" y2="7.5" stroke="var(--color-starlight)" strokeWidth="0.7" opacity="0.85" />
+      <line x1="15" y1="10" x2="26" y2="10" stroke="var(--color-starlight)" strokeWidth="0.6" opacity="0.65" />
 
       {/* linhas dos campos da fatura */}
-      <line x1="10" y1="16" x2="30" y2="16" stroke="#5c4a36" strokeWidth="0.55" opacity="0.55" />
-      <line x1="10" y1="18.5" x2="24" y2="18.5" stroke="#5c4a36" strokeWidth="0.55" opacity="0.55" />
+      <line x1="10" y1="16" x2="30" y2="16" stroke="var(--color-ink-400)" strokeWidth="0.55" opacity="0.55" />
+      <line x1="10" y1="18.5" x2="24" y2="18.5" stroke="var(--color-ink-400)" strokeWidth="0.55" opacity="0.55" />
 
       {/* caixa de "TOTAL" destacada */}
       <rect x="10" y="21" width="20" height="10" rx="0.8"
-        fill="none" stroke="#dc2626" strokeWidth="1.2" />
+        fill="none" stroke="var(--color-signal)" strokeWidth="1.2" />
 
       {/* R$ grande dentro da caixa */}
       <text x="20" y="29" textAnchor="middle"
         fontFamily="Roboto Slab, Roboto Slab Variable, serif"
-        fontSize="8.5" fontWeight="800" fill="#dc2626">R$</text>
+        fontSize="8.5" fontWeight="800" fill="var(--color-signal)">R$</text>
     </svg>
   )
 }
 
-// Acaso (na casa) — losango vermelho com "!" branco.
+// Acaso (na casa) — losango signal com "!" claro.
 function AcasoCellGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      <polygon points="20,4 36,20 20,36 4,20" fill="#dc2626" stroke="#0f0c09" strokeWidth="1.6" strokeLinejoin="round" />
-      <polygon points="20,9 31,20 20,31 9,20" fill="none" stroke="#ffd97a" strokeWidth="0.7" strokeDasharray="1.5 1.5" />
-      <path d="M 18 13 L 22 13 L 21 25 L 19 25 Z" fill="#f4e8d0" stroke="#0f0c09" strokeWidth="0.6" />
-      <circle cx="20" cy="29" r="2" fill="#f4e8d0" stroke="#0f0c09" strokeWidth="0.6" />
+      <polygon points="20,4 36,20 20,36 4,20" fill="var(--color-signal)" stroke="var(--color-ink-950)" strokeWidth="1.6" strokeLinejoin="round" />
+      <polygon points="20,9 31,20 20,31 9,20" fill="none" stroke="var(--color-brass-glow)" strokeWidth="0.7" strokeDasharray="1.5 1.5" />
+      <path d="M 18 13 L 22 13 L 21 25 L 19 25 Z" fill="var(--color-starlight)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
+      <circle cx="20" cy="29" r="2" fill="var(--color-starlight)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
     </svg>
   )
 }
 
-// Tesouro (na casa) — mini-baú dourado.
+// Tesouro (na casa) — mini-baú de metal do tema.
 function TesouroCellGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      <ellipse cx="20" cy="35" rx="14" ry="1.3" fill="#0f0c09" opacity="0.45" />
+      <ellipse cx="20" cy="35" rx="14" ry="1.3" fill="var(--color-ink-950)" opacity="0.45" />
       {/* corpo */}
-      <rect x="6" y="20" width="28" height="14" rx="1" fill="#5c4a36" stroke="#0f0c09" strokeWidth="1.2" />
+      <rect x="6" y="20" width="28" height="14" rx="1" fill="var(--color-ink-400)" stroke="var(--color-ink-950)" strokeWidth="1.2" />
       {/* tampa */}
-      <path d="M 6 20 Q 6 10 20 10 Q 34 10 34 20 Z" fill="#3d3528" stroke="#0f0c09" strokeWidth="1.2" />
+      <path d="M 6 20 Q 6 10 20 10 Q 34 10 34 20 Z" fill="var(--color-ink-500)" stroke="var(--color-ink-950)" strokeWidth="1.2" />
       {/* fita vertical */}
-      <rect x="18" y="10" width="4" height="24" fill="#d4af37" stroke="#0f0c09" strokeWidth="0.6" />
+      <rect x="18" y="10" width="4" height="24" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
       {/* fechadura */}
-      <rect x="16" y="21" width="8" height="7" rx="0.8" fill="#ffd97a" stroke="#0f0c09" strokeWidth="0.8" />
-      <circle cx="20" cy="24" r="1" fill="#0f0c09" />
-      <line x1="20" y1="24" x2="20" y2="26.5" stroke="#0f0c09" strokeWidth="0.8" />
+      <rect x="16" y="21" width="8" height="7" rx="0.8" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.8" />
+      <circle cx="20" cy="24" r="1" fill="var(--color-ink-950)" />
+      <line x1="20" y1="24" x2="20" y2="26.5" stroke="var(--color-ink-950)" strokeWidth="0.8" />
       {/* moedas em cima */}
-      <circle cx="10" cy="11" r="2.2" fill="#ffd97a" stroke="#0f0c09" strokeWidth="0.6" />
-      <circle cx="30" cy="9" r="1.8" fill="#d4af37" stroke="#0f0c09" strokeWidth="0.6" />
+      <circle cx="10" cy="11" r="2.2" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
+      <circle cx="30" cy="9" r="1.8" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
     </svg>
   )
 }
@@ -405,19 +331,20 @@ export const GROUP_BG: Record<string, string> = {
   purple:  'bg-group-purple',
 }
 
-// Cores hex pros grupos (match com --color-group-* no index.css).
-// Usadas onde Tailwind class não dá (style inline, JS dinâmico, modal etc).
+// Cores dos grupos como var() de --color-group-* — seguem o TEMA ativo do
+// tabuleiro (Atlas/Café) em runtime. Usadas onde Tailwind class não dá
+// (style inline, gradientes, color-mix, modal etc).
 export const GROUP_COLOR: Record<string, string> = {
-  brown:   '#b07a4a',
-  skyblue: '#67c3e0',
-  pink:    '#ec4899',
-  orange:  '#fb923c',
-  red:     '#ef4444',
-  yellow:  '#facc15',
-  green:   '#22c55e',
-  navy:    '#3b82f6',
-  purple:  '#a855f7',
-  platinum: '#26233a', // Emirados (super-luxo) — ônix (033)
+  brown:   'var(--color-group-brown)',
+  skyblue: 'var(--color-group-skyblue)',
+  pink:    'var(--color-group-pink)',
+  orange:  'var(--color-group-orange)',
+  red:     'var(--color-group-red)',
+  yellow:  'var(--color-group-yellow)',
+  green:   'var(--color-group-green)',
+  navy:    'var(--color-group-navy)',
+  purple:  'var(--color-group-purple)',
+  platinum: 'var(--color-group-platinum)', // Emirados (super-luxo) — ônix (033)
 }
 
 // Custo de casa por grupo (mock, SRS §13.7) — grupos mais caros = casas
@@ -430,49 +357,48 @@ export const HOUSE_COST: Record<string, number> = {
   purple:  200,
 }
 
-// Gás (3ª utilidade, SRS §2.5) — botijão com chama. Mesmo estilo de aro
-// dourado das outras utilidades (Petro/Eletro).
+// Gás (3ª utilidade, SRS §2.5) — chama grande com núcleo dourado e
+// coração claro, faíscas subindo, sem aro.
 function GasGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      <g stroke="#ffd97a" strokeWidth="0.8" strokeLinecap="round" opacity="0.5" fill="none">
-        <path d="M 5 13 Q 9 15 7 18" />
-        <path d="M 35 13 Q 31 15 33 18" />
+      <ellipse cx="20" cy="36" rx="11" ry="1.2" fill="var(--color-ink-950)" opacity="0.4" />
+      {/* faíscas subindo */}
+      <g fill="var(--color-group-orange)" opacity="0.7">
+        <circle cx="10" cy="10" r="0.9" />
+        <circle cx="30.5" cy="8" r="0.7" />
+        <circle cx="29" cy="14" r="0.5" />
       </g>
-      <circle cx="20" cy="20" r="14" fill="#1a1410" stroke="#d4af37" strokeWidth="1.6" />
-      <circle cx="20" cy="20" r="12" fill="none" stroke="#b8941f" strokeWidth="0.5" strokeDasharray="1 1.5" />
-      {/* chama central */}
-      <path d="M 20 9 Q 26 16 23 23 Q 28 22 26 28 Q 24 33 20 33 Q 14 33 13 27 Q 12 22 16 19 Q 16 24 19 24 Q 16 16 20 9 Z"
-        fill="#fb923c" stroke="#0f0c09" strokeWidth="1.1" strokeLinejoin="round" />
-      <path d="M 20 20 Q 23 24 20 29 Q 17 25 20 20 Z" fill="#ffd97a" />
+      {/* chama externa */}
+      <path d="M 20 3.5 Q 28 12 24.5 20 Q 31 18.5 29 26 Q 27.5 33.5 20 34.5 Q 12.5 33.5 11 26 Q 9.5 20 14.5 16 Q 14 22 17.5 23 Q 13.5 12 20 3.5 Z"
+        fill="var(--color-group-orange)" stroke="var(--color-ink-950)" strokeWidth="1.3" strokeLinejoin="round" />
+      {/* núcleo dourado */}
+      <path d="M 20 16 Q 24.5 21.5 22.5 27 Q 21.5 30.5 20 31 Q 18.5 30.5 17.5 27 Q 15.5 21.5 20 16 Z" fill="var(--color-brass-glow)" />
+      {/* coração claro */}
+      <path d="M 20 22 Q 22 25 20 28.5 Q 18 25 20 22 Z" fill="var(--color-starlight)" opacity="0.85" />
     </svg>
   )
 }
 
-// Bus Ticket (espaço novo, SRS §2.7) — ônibus de frente, com letreiro,
-// para-brisa e faróis. Lê rápido como "ônibus".
+// Bus Ticket (espaço novo, SRS §2.7) — ônibus de frente com letreiro,
+// para-brisa com reflexo e faróis acesos.
 function BusGlyph({ size = 24 }: GlyphProps) {
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
-      <ellipse cx="20" cy="36" rx="13" ry="1.3" fill="#0f0c09" opacity="0.45" />
-      {/* carroceria */}
-      <rect x="7" y="6" width="26" height="29" rx="3.5"
-        fill="#d4af37" stroke="#0f0c09" strokeWidth="1.6" />
-      {/* letreiro */}
-      <rect x="10" y="8.5" width="20" height="4.5" rx="1" fill="#1a1410" />
+      <ellipse cx="20" cy="36" rx="13" ry="1.3" fill="var(--color-ink-950)" opacity="0.45" />
+      <rect x="7" y="6" width="26" height="29" rx="3.5" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="1.6" />
+      <rect x="10" y="8.5" width="20" height="4.5" rx="1" fill="var(--color-ink-900)" />
       <text x="20" y="12.2" textAnchor="middle"
-        fontFamily="Inter Variable, sans-serif" fontSize="3.2" fontWeight="800" fill="#ffd97a">BUS</text>
-      {/* para-brisa */}
-      <rect x="10" y="15" width="20" height="8" rx="1.2" fill="#67c3e0" stroke="#0f0c09" strokeWidth="0.9" />
-      <line x1="20" y1="15" x2="20" y2="23" stroke="#0f0c09" strokeWidth="0.8" />
-      {/* faróis */}
-      <circle cx="12" cy="27" r="1.8" fill="#ffd97a" stroke="#0f0c09" strokeWidth="0.6" />
-      <circle cx="28" cy="27" r="1.8" fill="#ffd97a" stroke="#0f0c09" strokeWidth="0.6" />
-      {/* para-choque + faixa */}
-      <rect x="9" y="30.5" width="22" height="3" rx="1" fill="#3d3528" stroke="#0f0c09" strokeWidth="0.6" />
-      {/* rodas */}
-      <circle cx="13" cy="35" r="2.4" fill="#1a1410" stroke="#0f0c09" strokeWidth="0.8" />
-      <circle cx="27" cy="35" r="2.4" fill="#1a1410" stroke="#0f0c09" strokeWidth="0.8" />
+        fontFamily="Inter Variable, sans-serif" fontSize="3.2" fontWeight="800" fill="var(--color-brass-glow)">BUS</text>
+      <rect x="10" y="15" width="20" height="8" rx="1.2" fill="var(--color-group-skyblue)" stroke="var(--color-ink-950)" strokeWidth="0.9" />
+      <line x1="20" y1="15" x2="20" y2="23" stroke="var(--color-ink-950)" strokeWidth="0.8" />
+      {/* reflexo no para-brisa */}
+      <path d="M 11 22.6 L 17 15.4 L 19.5 15.4 L 12.8 22.6 Z" fill="#ffffff" opacity="0.18" />
+      <circle cx="12" cy="27" r="1.8" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
+      <circle cx="28" cy="27" r="1.8" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
+      <rect x="9" y="30.5" width="22" height="3" rx="1" fill="var(--color-ink-500)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
+      <circle cx="13" cy="35" r="2.4" fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="0.8" />
+      <circle cx="27" cy="35" r="2.4" fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="0.8" />
     </svg>
   )
 }
@@ -551,7 +477,7 @@ function FlagAvatar({ iso2, side }: { iso2: string; side: Side }) {
         ...position,
         width: size,
         height: size,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.7), inset 0 0 0 1.5px rgba(212,175,55,0.6)',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.7), inset 0 0 0 1.5px rgba(217,166,80,0.6)',
       }}
       title={iso2}
     >
@@ -591,6 +517,8 @@ export function ClassicSquare({
     const i = s.game.players.findIndex((p) => p.id === t.ownerId)
     return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : undefined
   })
+  // Tema ativo — decide o TRATAMENTO da casa (não só cor): posse, chip etc.
+  const boardTheme = useBoardTheme((t) => t.theme)
   // Propriedade COMPRADA não exibe valor — a posse é comunicada pela stripe
   // colorida do jogador. Só propriedade À VENDA (sem dono) mostra o preço.
 
@@ -599,29 +527,39 @@ export function ClassicSquare({
   // `overflow-hidden` pra metade externa do círculo não ser cortada.
   return (
     <div className="board-square relative w-full h-full">
-      {/* POSSE — o card inteiro "veste" a cor do dono:
-            1) tint suave da cor cobrindo o corpo inteiro;
-            2) moldura fina na cor do dono cercando a célula;
-            3) pílula arredondada da cor do dono, centralizada na borda
-               externa — substitui a faixa chapada antiga (que lia como
-               adesivo solto). Vertical nas laterais, horizontal em cima/baixo. */}
-      {ownerColor && (
+      {/* POSSE por TEMA:
+            Atlas — a cidade ACENDE: luz interna na cor do dono + fio de néon
+            na borda, como cidade iluminada vista do alto à noite.
+            Café — tratamento clássico de papel: tint + moldura na cor do dono. */}
+      {ownerColor && (boardTheme === 'atlas' ? (
         <>
-          {/* 1) Tint do corpo */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: `radial-gradient(ellipse 95% 75% at 50% 50%, color-mix(in srgb, ${ownerColor} 30%, transparent) 0%, transparent 78%)`,
+            }}
+          />
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              boxShadow: `inset 0 0 0 1.5px ${ownerColor}, inset 0 0 12px color-mix(in srgb, ${ownerColor} 45%, transparent)`,
+            }}
+          />
+        </>
+      ) : (
+        <>
           <div
             className="absolute inset-0 pointer-events-none"
             style={{ background: ownerColor, opacity: 0.14 }}
           />
-          {/* 2) Moldura na cor do dono */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              boxShadow: `inset 0 0 0 2px ${ownerColor}, inset 0 0 0 3px rgba(15,12,9,0.55)`,
+              boxShadow: `inset 0 0 0 2px ${ownerColor}, inset 0 0 0 3px rgba(6,11,23,0.55)`,
             }}
           />
-          {/* 3) Pílula removida — stripe exclusiva de aeroportos/utilidades */}
         </>
-      )}
+      ))}
       {/* Bandeira-avatar do país — fincada na borda INTERNA (voltada
           pro centro do tabuleiro); metade dentro da célula, metade
           transbordando sobre o centro. */}
@@ -686,8 +624,9 @@ export function ClassicSquare({
             return (
               <>
                 {/* Preço como CHIP (pílula) — só em propriedade À VENDA (sem
-                    dono). Comprada não mostra valor: a stripe colorida do
-                    jogador já comunica a posse. */}
+                    dono). Comprada não mostra valor: a cor do dono na célula
+                    já comunica a posse. Mesmo tratamento nos dois temas; o
+                    dourado resolve pelo tema via var(). */}
                 {!ownerColor && (
                   <div
                     className="absolute currency leading-none whitespace-nowrap"
@@ -696,8 +635,8 @@ export function ClassicSquare({
                       fontSize: '11px',
                       fontWeight: 700,
                       color: 'var(--color-gold-glow)',
-                      background: 'rgba(15,12,9,0.85)',
-                      border: '1px solid rgba(212,175,55,0.45)',
+                      background: 'rgba(6,11,23,0.85)',
+                      border: '1px solid rgba(217,166,80,0.45)',
                       borderRadius: 9999,
                       padding: '1px 5px',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.55)',
@@ -732,10 +671,10 @@ export function ClassicSquare({
           utilidades (cor do ícone). Identidade visual sem dono. */}
       {(isAirport || isUtility) && (() => {
         const color = isAirport
-          ? '#d4af37'
-          : (square as UtilitySquare).icon === 'fuel' ? '#22c55e'
-          : (square as UtilitySquare).icon === 'bolt' ? '#ffd97a'
-          : '#fb923c'
+          ? 'var(--color-brass)'
+          : (square as UtilitySquare).icon === 'fuel' ? 'var(--color-group-green)'
+          : (square as UtilitySquare).icon === 'bolt' ? 'var(--color-brass-glow)'
+          : 'var(--color-group-orange)'
         const style: React.CSSProperties = (() => {
           const base = { position: 'absolute' as const, borderRadius: 9999, pointerEvents: 'none' as const, background: color, boxShadow: '0 1px 3px rgba(0,0,0,0.5)' }
           switch (side) {
@@ -747,6 +686,28 @@ export function ClassicSquare({
           }
         })()
         return <div style={style} />
+      })()}
+
+      {/* Brilho de acento por TIPO atrás do ícone — identidade da casa
+          especial sem tocar nas propriedades (aeroporto=latão, petro=verde,
+          eletro=dourado, gás=laranja, acaso/taxa=signal, tesouro/bus=latão). */}
+      {!isProperty && (() => {
+        const glow =
+          isAirport ? 'var(--color-brass)'
+          : isUtility ? ((square as UtilitySquare).icon === 'fuel' ? 'var(--color-group-green)'
+            : (square as UtilitySquare).icon === 'bolt' ? 'var(--color-brass-glow)'
+            : 'var(--color-group-orange)')
+          : isAcaso || isTax ? 'var(--color-signal)'
+          : isTesouro || isBus ? 'var(--color-brass)'
+          : null
+        return glow ? (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: `radial-gradient(ellipse 72% 58% at 50% 50%, color-mix(in srgb, ${glow} 13%, transparent) 0%, transparent 72%)`,
+            }}
+          />
+        ) : null
       })()}
 
       {/* Conteúdo das casas NÃO-propriedade — aeroporto, utility, tax,
@@ -879,7 +840,7 @@ export function PlayerFace({
   className?: string
 }) {
   // Fallback de cor: nunca pinta a cabeça de preto se a cor vier vazia/indefinida.
-  const head = color || '#5c4a36'
+  const head = color || 'var(--color-ink-400)'
   // Delays únicos por player pra blink/bob não rodarem em sincronia.
   const h = hashStr(head)
   const bobDelay = `${(h % 2400) / 1000}s`
@@ -906,7 +867,7 @@ export function PlayerFace({
       <ellipse cx="16" cy="30" rx="11" ry="1.6" fill="rgba(0,0,0,0.45)" />
 
       {/* Cabeça */}
-      <circle cx="16" cy="15" r="13" fill={head} stroke="#0f0c09" strokeWidth="1.5" />
+      <circle cx="16" cy="15" r="13" fill={head} stroke="var(--color-ink-950)" strokeWidth="1.5" />
 
       {/* Highlight 3D no topo */}
       <ellipse
@@ -920,21 +881,21 @@ export function PlayerFace({
       {/* Olhos — abertos ou fechados se "asleep" (jogador falido) */}
       {asleep ? (
         <>
-          <path d="M9 15 Q11 16.5 13 15" stroke="#0f0c09" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-          <path d="M19 15 Q21 16.5 23 15" stroke="#0f0c09" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+          <path d="M9 15 Q11 16.5 13 15" stroke="var(--color-ink-950)" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+          <path d="M19 15 Q21 16.5 23 15" stroke="var(--color-ink-950)" strokeWidth="1.4" fill="none" strokeLinecap="round" />
         </>
       ) : (
         <>
           {/* Olho esquerdo (cada um piscando com delay próprio) */}
           <g className="face-eye" style={{ animationDelay: blinkDelayL }}>
             <circle cx="11" cy="14.5" r="2.2" fill="#fff" />
-            <circle cx="11.4" cy="14.8" r="1.2" fill="#0f0c09" />
+            <circle cx="11.4" cy="14.8" r="1.2" fill="var(--color-ink-950)" />
             <circle cx="11.0" cy="14.4" r="0.4" fill="#fff" />
           </g>
           {/* Olho direito */}
           <g className="face-eye" style={{ animationDelay: blinkDelayR }}>
             <circle cx="21" cy="14.5" r="2.2" fill="#fff" />
-            <circle cx="21.4" cy="14.8" r="1.2" fill="#0f0c09" />
+            <circle cx="21.4" cy="14.8" r="1.2" fill="var(--color-ink-950)" />
             <circle cx="21.0" cy="14.4" r="0.4" fill="#fff" />
           </g>
         </>
@@ -942,11 +903,11 @@ export function PlayerFace({
 
       {/* Boca */}
       {asleep ? (
-        <line x1="13" y1="22" x2="19" y2="22" stroke="#0f0c09" strokeWidth="1.3" strokeLinecap="round" />
+        <line x1="13" y1="22" x2="19" y2="22" stroke="var(--color-ink-950)" strokeWidth="1.3" strokeLinecap="round" />
       ) : (
         <path
           d="M11.5 20.5 Q16 24 20.5 20.5"
-          stroke="#0f0c09"
+          stroke="var(--color-ink-950)"
           strokeWidth="1.4"
           fill="none"
           strokeLinecap="round"
@@ -1079,12 +1040,12 @@ export const LOCAL_PLAYER_NAME = 'Nikolas'
 // onde está parado, senão some na faixa colorida.
 // Posições em índices 0–47 (tabuleiro de 48). Léo (falido) parado na Prisão (12).
 export const MOCK_PLAYERS: Player[] = [
-  { name: 'Nikolas', color: '#d4af37', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true, active: true },
-  { name: 'Júlia',   color: '#a855f7', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true },
+  { name: 'Nikolas', color: '#d9a650', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true, active: true },
+  { name: 'Júlia',   color: '#a76bf5', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true },
   { name: 'Caio',    color: '#06b6d4', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true },
   { name: 'Beatriz', color: '#14b8a6', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true },
   { name: 'Rafa',    color: '#d946ef', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true },
-  { name: 'Léo',     color: '#f4e8d0', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true },
+  { name: 'Léo',     color: '#eef2fb', money: 2000, pos: 0, cardsInHand: 0, busTickets: 0, speedDieReady: true },
 ]
 
 // Pote da Loteria (ex Free Parking) — SRS §13.5. Inicia com $500.
@@ -1159,9 +1120,9 @@ export function BuildingMark({ pos }: { pos: number }) {
 function HouseBadgeIcon() {
   return (
     <svg viewBox="0 0 14 13" width="11" height="10" aria-hidden="true">
-      <rect x="2.3" y="6" width="9.4" height="6.2" fill="#f4e8d0" stroke="#0f0c09" strokeWidth="1" strokeLinejoin="round" />
-      <path d="M1 6.5 L7 1.4 L13 6.5 Z" fill="#d4af37" stroke="#0f0c09" strokeWidth="1" strokeLinejoin="round" />
-      <rect x="5.7" y="8.4" width="2.6" height="3.8" fill="#5c4a36" stroke="#0f0c09" strokeWidth="0.6" />
+      <rect x="2.3" y="6" width="9.4" height="6.2" fill="var(--color-starlight)" stroke="var(--color-ink-950)" strokeWidth="1" strokeLinejoin="round" />
+      <path d="M1 6.5 L7 1.4 L13 6.5 Z" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="1" strokeLinejoin="round" />
+      <rect x="5.7" y="8.4" width="2.6" height="3.8" fill="var(--color-ink-400)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
     </svg>
   )
 }
@@ -1172,11 +1133,11 @@ function HotelBadgeIcon() {
   return (
     <svg viewBox="0 0 20 16" width="22" height="18" aria-hidden="true">
       {/* marquise cream no topo */}
-      <rect x="0.8" y="1.4" width="18.4" height="2.4" fill="#f4e8d0" stroke="#0f0c09" strokeWidth="1" strokeLinejoin="round" />
+      <rect x="0.8" y="1.4" width="18.4" height="2.4" fill="var(--color-starlight)" stroke="var(--color-ink-950)" strokeWidth="1" strokeLinejoin="round" />
       {/* corpo dourado */}
-      <rect x="2.2" y="3.8" width="15.6" height="11.4" fill="#d4af37" stroke="#0f0c09" strokeWidth="1" strokeLinejoin="round" />
+      <rect x="2.2" y="3.8" width="15.6" height="11.4" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="1" strokeLinejoin="round" />
       {/* janelas escuras */}
-      <g fill="#1a1410">
+      <g fill="var(--color-ink-900)">
         <rect x="4" y="5.6" width="2.4" height="2.4" />
         <rect x="8.8" y="5.6" width="2.4" height="2.4" />
         <rect x="13.6" y="5.6" width="2.4" height="2.4" />
@@ -1184,7 +1145,7 @@ function HotelBadgeIcon() {
         <rect x="13.6" y="9.2" width="2.4" height="2.4" />
       </g>
       {/* porta em arco */}
-      <path d="M8 15.2 V12.4 Q10 10.8 12 12.4 V15.2 Z" fill="#1a1410" stroke="#0f0c09" strokeWidth="0.6" />
+      <path d="M8 15.2 V12.4 Q10 10.8 12 12.4 V15.2 Z" fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
     </svg>
   )
 }
@@ -1195,18 +1156,18 @@ function SkyscraperBadgeIcon() {
   return (
     <svg viewBox="0 0 10 18" width="15" height="27" aria-hidden="true">
       {/* antena + luz */}
-      <line x1="5" y1="0.3" x2="5" y2="2.3" stroke="#0f0c09" strokeWidth="0.7" />
-      <circle cx="5" cy="0.6" r="0.75" fill="#ffd97a" stroke="#0f0c09" strokeWidth="0.3">
+      <line x1="5" y1="0.3" x2="5" y2="2.3" stroke="var(--color-ink-950)" strokeWidth="0.7" />
+      <circle cx="5" cy="0.6" r="0.75" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.3">
         <animate attributeName="opacity" values="0.45;1;0.45" dur="1.8s" repeatCount="indefinite" />
       </circle>
       {/* coroa */}
-      <rect x="3.4" y="2.2" width="3.2" height="1.3" fill="#d4af37" stroke="#0f0c09" strokeWidth="0.6" strokeLinejoin="round" />
+      <rect x="3.4" y="2.2" width="3.2" height="1.3" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="0.6" strokeLinejoin="round" />
       {/* corpo */}
-      <rect x="1.6" y="3.5" width="6.8" height="13.3" fill="#d4af37" stroke="#0f0c09" strokeWidth="0.8" strokeLinejoin="round" />
+      <rect x="1.6" y="3.5" width="6.8" height="13.3" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="0.8" strokeLinejoin="round" />
       {/* brilho lateral */}
-      <rect x="1.6" y="3.5" width="1.5" height="13.3" fill="#ffd97a" opacity="0.45" />
+      <rect x="1.6" y="3.5" width="1.5" height="13.3" fill="var(--color-brass-glow)" opacity="0.45" />
       {/* janelas escuras (2×5) */}
-      <g fill="#1a1410">
+      <g fill="var(--color-ink-900)">
         <rect x="2.9" y="4.7" width="1.4" height="1.5" /><rect x="5.5" y="4.7" width="1.4" height="1.5" />
         <rect x="2.9" y="7" width="1.4" height="1.5" /><rect x="5.5" y="7" width="1.4" height="1.5" />
         <rect x="2.9" y="9.3" width="1.4" height="1.5" /><rect x="5.5" y="9.3" width="1.4" height="1.5" />
@@ -1222,9 +1183,9 @@ function SkyscraperBadgeIcon() {
 function HangarBadgeIcon() {
   return (
     <svg viewBox="0 0 20 14" width="22" height="15" aria-hidden="true">
-      <path d="M1 13 V8 Q1 2.5 10 2.5 Q19 2.5 19 8 V13 Z" fill="#f4e8d0" stroke="#0f0c09" strokeWidth="1" strokeLinejoin="round" />
-      <path d="M1.6 8 Q1.6 3.5 10 3.5 Q18.4 3.5 18.4 8" fill="none" stroke="#d4af37" strokeWidth="0.9" />
-      <path d="M6 13 V9.6 Q10 6.4 14 9.6 V13 Z" fill="#1a1410" stroke="#0f0c09" strokeWidth="0.6" />
+      <path d="M1 13 V8 Q1 2.5 10 2.5 Q19 2.5 19 8 V13 Z" fill="var(--color-starlight)" stroke="var(--color-ink-950)" strokeWidth="1" strokeLinejoin="round" />
+      <path d="M1.6 8 Q1.6 3.5 10 3.5 Q18.4 3.5 18.4 8" fill="none" stroke="var(--color-brass)" strokeWidth="0.9" />
+      <path d="M6 13 V9.6 Q10 6.4 14 9.6 V13 Z" fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
     </svg>
   )
 }
@@ -1248,6 +1209,7 @@ export function HangarMark({ pos }: { pos: number }) {
 // sombra interna, parecendo "bloqueada / fora de jogo". Sem selo nem texto.
 export function MortgageMark({ pos }: { pos: number }) {
   const mortgaged = useGameStore((s) => s.game.titles[pos]?.mortgaged)
+  const boardTheme = useBoardTheme((t) => t.theme)
   if (!mortgaged) return null
   return (
     <div
@@ -1257,7 +1219,27 @@ export function MortgageMark({ pos }: { pos: number }) {
         background: 'rgba(8,6,4,0.6)',
         boxShadow: 'inset 0 0 14px 3px rgba(0,0,0,0.6)',
       }}
-    />
+    >
+      {/* Café: carimbo de cartório torto · Atlas: só o apagão da cidade */}
+      {boardTheme === 'cafe' && (
+        <span
+          className="absolute left-1/2 top-1/2 font-bold uppercase whitespace-nowrap"
+          style={{
+            transform: 'translate(-50%, -50%) rotate(-12deg)',
+            fontFamily: 'var(--font-slab)',
+            fontSize: 8,
+            letterSpacing: '0.14em',
+            color: '#e06c4f',
+            border: '1.5px solid #e06c4f',
+            borderRadius: 2,
+            padding: '1px 4px',
+            opacity: 0.9,
+          }}
+        >
+          Hipoteca
+        </span>
+      )}
+    </div>
   )
 }
 
@@ -1268,9 +1250,9 @@ export function EffectMark({ pos }: { pos: number }) {
   const sq = BOARD[pos]
   let badge: { tag: string; tone: 'logo' | 'gold'; title: string } | null = null
   for (const e of effects) {
-    if (e.kind === 'apagao' && sq.kind === 'airport') badge = { tag: 'A', tone: 'logo', title: 'Apagão — hangar inativo' }
-    else if (e.kind === 'greve' && sq.kind === 'utility') badge = { tag: 'G', tone: 'logo', title: 'Greve — utilidade sem aluguel' }
-    else if (e.kind === 'boicote' && e.pos === pos) badge = { tag: 'B', tone: 'logo', title: 'Boicote — sem aluguel' }
+    if (e.kind === 'apagao' && sq.kind === 'airport') badge = { tag: 'A', tone: 'logo', title: 'Hangar inativo por apagão' }
+    else if (e.kind === 'greve' && sq.kind === 'utility') badge = { tag: 'G', tone: 'logo', title: 'Utilidade sem aluguel por greve' }
+    else if (e.kind === 'boicote' && e.pos === pos) badge = { tag: 'B', tone: 'logo', title: 'Propriedade sob boicote, sem aluguel' }
     else if (e.kind === 'imunidade-temp' && e.pos === pos) badge = { tag: 'I', tone: 'gold', title: 'Imunidade temporária' }
   }
   if (!badge) return null
@@ -1343,7 +1325,7 @@ function TradeItemAvatar({ sq, size = 16 }: { sq: Square; size?: number }) {
   if (sq.kind === 'property') {
     const uf = (sq as PropertySquare).uf
     return (
-      <span className="rounded-full bg-coffee-950 overflow-hidden shrink-0" style={{ width: size, height: size, boxShadow: 'inset 0 0 0 1px rgba(212,175,55,0.5)' }}>
+      <span className="rounded-full bg-coffee-950 overflow-hidden shrink-0" style={{ width: size, height: size, boxShadow: 'inset 0 0 0 1px rgba(217,166,80,0.5)' }}>
         <img src={`https://flagcdn.com/${uf.toLowerCase()}.svg`} alt={uf} className="w-full h-full object-cover block" draggable={false} />
       </span>
     )
@@ -1354,7 +1336,7 @@ function TradeItemAvatar({ sq, size = 16 }: { sq: Square; size?: number }) {
 // Chip de um item da troca — faixa da cor do grupo + bandeira-avatar + nome.
 function TradeItemChip({ pos }: { pos: number }) {
   const sq = BOARD[pos]
-  const accent = sq.kind === 'property' ? GROUP_COLOR[(sq as PropertySquare).group] : '#d4af37'
+  const accent = sq.kind === 'property' ? GROUP_COLOR[(sq as PropertySquare).group] : 'var(--color-brass)'
   return (
     <span className="inline-flex items-center gap-1 pl-0.5 pr-1.5 py-0.5 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500/70 overflow-hidden" title={sq.name}>
       <span className="self-stretch w-1 rounded-[1px] shrink-0" style={{ background: accent }} aria-hidden />
@@ -1387,7 +1369,7 @@ function TradeLeg({ label, props, cash }: { label: string; props: number[]; cash
 // --- Ponte com o motor (020): estado reativo dos painéis ---------------------
 // Paleta de token por assento (disjunta das cores de grupo). Nome/token reais
 // virão do Lobby (M3); por ora nome = id e cor = assento.
-export const PLAYER_COLORS = ['#d4af37', '#a855f7', '#06b6d4', '#14b8a6', '#d946ef', '#f97316', '#22c55e', '#3b82f6']
+export const PLAYER_COLORS = ['#d9a650', '#a76bf5', '#06b6d4', '#14b8a6', '#d946ef', '#f97316', '#35d97b', '#4d8bf5']
 
 // Mapeia o GameState real → view-model `Player` dos painéis. PURO (testável).
 export function playersView(game: GameState): Player[] {
@@ -1487,7 +1469,7 @@ function PlayerRow({ player: p }: { player: Player }) {
         'relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-card)]',
         'border transition-colors',
         p.active
-          ? 'bg-coffee-700 border-gold shadow-[0_0_0_1px_rgba(212,175,55,0.3)]'
+          ? 'bg-coffee-700 border-gold shadow-[0_0_0_1px_rgba(217,166,80,0.3)]'
           : 'bg-coffee-800/60 border-coffee-500',
         p.bankrupt && 'opacity-50',
       )}
@@ -1770,7 +1752,7 @@ function LoanPanel() {
   const loan = game.loans.find((l) => l.debtorId === active.id)
   if (!loan) return null
   const ci = game.players.findIndex((p) => p.id === loan.creditorId)
-  const creditorColor = ci >= 0 ? PLAYER_COLORS[ci % PLAYER_COLORS.length] : '#d4af37'
+  const creditorColor = ci >= 0 ? PLAYER_COLORS[ci % PLAYER_COLORS.length] : 'var(--color-brass)'
   const interest = Math.round((loan.principal * loan.ratePct) / 100)
   const canPay = active.cash >= loan.principal
   return (
@@ -1872,9 +1854,9 @@ function PotCard({ pot }: { pot: number }) {
     <section
       className="relative overflow-hidden rounded-[var(--radius-card)] border-2 px-5 py-4 text-center shrink-0"
       style={{
-        borderColor: 'rgba(212,175,55,0.45)',
-        background: 'radial-gradient(130% 105% at 50% 0%, rgba(212,175,55,0.20) 0%, var(--color-coffee-900) 62%)',
-        boxShadow: 'inset 0 0 30px rgba(212,175,55,0.08), var(--shadow-card)',
+        borderColor: 'rgba(217,166,80,0.45)',
+        background: 'radial-gradient(130% 105% at 50% 0%, rgba(217,166,80,0.20) 0%, var(--color-coffee-900) 62%)',
+        boxShadow: 'inset 0 0 30px rgba(217,166,80,0.08), var(--shadow-card)',
       }}
     >
       {/* marca-d'água: globo da loteria espiando pelo canto */}
@@ -1892,7 +1874,7 @@ function PotCard({ pot }: { pot: number }) {
         animate={{ scale: 1 }}
         transition={{ type: 'spring', stiffness: 340, damping: 18 }}
         className="currency text-gold-glow leading-none mt-2.5"
-        style={{ fontSize: 40, textShadow: '0 2px 16px rgba(212,175,55,0.55)' }}
+        style={{ fontSize: 40, textShadow: '0 2px 16px rgba(217,166,80,0.55)' }}
       >
         <span className="text-gold-soft text-lg align-top mr-0.5">R$</span>
         {pot.toLocaleString('pt-BR')}
@@ -1980,7 +1962,7 @@ function TradeRow({ trade, done, colorById }: { trade: Trade; done: boolean; col
     <div
       className={cn(
         'flex flex-col gap-2 px-3 py-2.5 rounded-[var(--radius-card)] border',
-        done ? 'bg-coffee-800/40 border-coffee-500 opacity-75' : 'bg-coffee-700 border-gold/70 shadow-[0_0_0_1px_rgba(212,175,55,0.25)]',
+        done ? 'bg-coffee-800/40 border-coffee-500 opacity-75' : 'bg-coffee-700 border-gold/70 shadow-[0_0_0_1px_rgba(217,166,80,0.25)]',
       )}
     >
       <div className="flex items-center gap-1.5 min-w-0">
@@ -2198,15 +2180,15 @@ function AcasoGlyph() {
       {/* sombra do losango */}
       <polygon
         points="40,11 70,40 40,69 10,40"
-        fill="#0f0c09"
+        fill="var(--color-ink-950)"
         opacity="0.45"
         transform="translate(2,3)"
       />
       {/* losango vermelho */}
       <polygon
         points="40,8 71,40 40,72 9,40"
-        fill="#dc2626"
-        stroke="#0f0c09"
+        fill="var(--color-signal)"
+        stroke="var(--color-ink-950)"
         strokeWidth="2"
         strokeLinejoin="round"
       />
@@ -2214,20 +2196,20 @@ function AcasoGlyph() {
       <polygon
         points="40,14 65,40 40,66 15,40"
         fill="none"
-        stroke="#ffd97a"
+        stroke="var(--color-brass-glow)"
         strokeWidth="0.8"
         strokeDasharray="2 2"
       />
       {/* "!" — haste */}
       <path
         d="M 37 24 L 43 24 L 41.5 46 L 38.5 46 Z"
-        fill="#f4e8d0"
-        stroke="#0f0c09"
+        fill="var(--color-starlight)"
+        stroke="var(--color-ink-950)"
         strokeWidth="0.8"
         strokeLinejoin="round"
       />
       {/* "!" — ponto */}
-      <circle cx="40" cy="54" r="3.4" fill="#f4e8d0" stroke="#0f0c09" strokeWidth="0.8" />
+      <circle cx="40" cy="54" r="3.4" fill="var(--color-starlight)" stroke="var(--color-ink-950)" strokeWidth="0.8" />
     </svg>
   )
 }
@@ -2237,37 +2219,37 @@ function TesouroGlyph() {
   return (
     <svg viewBox="0 0 90 70" className="w-full h-full" aria-hidden="true">
       {/* moedas no topo */}
-      <circle cx="18" cy="14" r="5" fill="#ffd97a" stroke="#0f0c09" strokeWidth="1.2" />
-      <text x="18" y="17" textAnchor="middle" fontSize="6" fill="#0f0c09" fontFamily="Roboto Slab, serif" fontWeight="700">$</text>
-      <circle cx="70" cy="11" r="4" fill="#d4af37" stroke="#0f0c09" strokeWidth="1" />
-      <circle cx="74" cy="18" r="3" fill="#ffd97a" stroke="#0f0c09" strokeWidth="0.9" />
+      <circle cx="18" cy="14" r="5" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="1.2" />
+      <text x="18" y="17" textAnchor="middle" fontSize="6" fill="var(--color-ink-950)" fontFamily="Roboto Slab, serif" fontWeight="700">$</text>
+      <circle cx="70" cy="11" r="4" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="1" />
+      <circle cx="74" cy="18" r="3" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.9" />
 
       {/* sombra do baú */}
-      <ellipse cx="45" cy="65" rx="34" ry="2.5" fill="#0f0c09" opacity="0.5" />
+      <ellipse cx="45" cy="65" rx="34" ry="2.5" fill="var(--color-ink-950)" opacity="0.5" />
 
       {/* corpo do baú */}
       <rect x="10" y="32" width="70" height="30" rx="2"
-        fill="#5c4a36" stroke="#0f0c09" strokeWidth="1.5" />
+        fill="var(--color-ink-400)" stroke="var(--color-ink-950)" strokeWidth="1.5" />
       {/* tábuas */}
-      <line x1="10" y1="46" x2="80" y2="46" stroke="#3d3528" strokeWidth="1" />
-      <line x1="34" y1="32" x2="34" y2="62" stroke="#3d3528" strokeWidth="0.8" />
-      <line x1="56" y1="32" x2="56" y2="62" stroke="#3d3528" strokeWidth="0.8" />
+      <line x1="10" y1="46" x2="80" y2="46" stroke="var(--color-ink-500)" strokeWidth="1" />
+      <line x1="34" y1="32" x2="34" y2="62" stroke="var(--color-ink-500)" strokeWidth="0.8" />
+      <line x1="56" y1="32" x2="56" y2="62" stroke="var(--color-ink-500)" strokeWidth="0.8" />
 
       {/* tampa arqueada */}
       <path d="M 10 32 Q 10 16 45 16 Q 80 16 80 32 Z"
-        fill="#3d3528" stroke="#0f0c09" strokeWidth="1.5" />
+        fill="var(--color-ink-500)" stroke="var(--color-ink-950)" strokeWidth="1.5" />
       {/* brilho da tampa */}
       <path d="M 14 30 Q 14 20 45 20 Q 76 20 76 30"
-        fill="none" stroke="#b8941f" strokeWidth="0.8" />
+        fill="none" stroke="var(--color-brass-soft)" strokeWidth="0.8" />
 
       {/* fitas douradas verticais */}
-      <rect x="42" y="16" width="6" height="46" fill="#d4af37" stroke="#0f0c09" strokeWidth="0.8" />
+      <rect x="42" y="16" width="6" height="46" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="0.8" />
 
       {/* fechadura */}
       <rect x="38" y="34" width="14" height="14" rx="1.5"
-        fill="#ffd97a" stroke="#0f0c09" strokeWidth="1.2" />
-      <circle cx="45" cy="40" r="1.8" fill="#0f0c09" />
-      <rect x="44" y="40" width="2" height="5" fill="#0f0c09" />
+        fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="1.2" />
+      <circle cx="45" cy="40" r="1.8" fill="var(--color-ink-950)" />
+      <rect x="44" y="40" width="2" height="5" fill="var(--color-ink-950)" />
     </svg>
   )
 }
@@ -2285,7 +2267,7 @@ export function CardDeck({
   const title = isAcaso ? 'Acaso' : 'Tesouro'
   // Cor accent em hex pra usar diretamente em gradientes/sombras (var()
   // dentro de gradiente CSS funciona, mas inline com hex é mais simples).
-  const accentHex = isAcaso ? '#dc2626' /* logo */ : '#ffd97a' /* gold-glow */
+  const accentHex = isAcaso ? 'var(--color-signal)' /* logo */ : 'var(--color-brass-glow)' /* gold-glow */
   const accentClass = isAcaso ? 'text-logo' : 'text-gold-glow'
 
   return (
@@ -2364,7 +2346,7 @@ export function CardDeck({
             className="absolute inset-0"
             style={{
               background:
-                'linear-gradient(to top, rgba(15,12,9,0.85) 0%, rgba(15,12,9,0.55) 55%, rgba(15,12,9,0) 100%)',
+                'linear-gradient(to top, rgba(6,11,23,0.85) 0%, rgba(6,11,23,0.55) 55%, rgba(6,11,23,0) 100%)',
             }}
           />
           <span
@@ -2423,7 +2405,7 @@ function CardSlab({
         background:
           'linear-gradient(to bottom, var(--color-coffee-600) 0%, var(--color-coffee-700) 45%, var(--color-coffee-800) 100%)',
         boxShadow: [
-          'inset 0 1px 0 rgba(255,217,122,0.08)',
+          'inset 0 1px 0 rgba(255,217,138,0.08)',
           'inset 0 0 0 1px var(--color-coffee-800)',
           '0 6px 14px -4px rgba(0,0,0,0.75)',
           '0 2px 4px -1px rgba(0,0,0,0.5)',
@@ -2444,7 +2426,7 @@ function CardSlab({
 const LOG_GAIN = /recebeu|ganhou|coletou|\+\$/i
 const LOG_LOSS = /\bpagou\b|perdeu/i
 function LogWhat({ what }: { what: string }) {
-  const color = LOG_GAIN.test(what) ? '#5fd68a' : LOG_LOSS.test(what) ? '#e8674f' : '#e8c66a'
+  const color = LOG_GAIN.test(what) ? '#57dd94' : LOG_LOSS.test(what) ? '#ef6a58' : '#e7c069'
   return (
     <>
       {what.split(/(\+?\$\s?\d[\d.]*)/g).map((p, i) =>
@@ -2456,36 +2438,101 @@ function LogWhat({ what }: { what: string }) {
   )
 }
 
-// Histórico ao vivo no CENTRO do tabuleiro (substitui a seção no painel lateral).
+// Glifo do tipo de evento — classificado pelo texto do lançamento. Dá
+// leitura de relance (o que aconteceu) sem depender só da cor do dinheiro.
+function logEventIcon(what: string): ReactNode {
+  if (/rolou|dupla/i.test(what)) return <DiceIcon size={11} />
+  if (/leil/i.test(what)) return <GavelIcon size={11} />
+  if (/comprou/i.test(what)) return <ShopIcon size={11} />
+  if (/constru|hangar|hotel|arranha|vendeu/i.test(what)) return <HouseIcon size={11} />
+  if (/carta|acaso|tesouro/i.test(what)) return <CardGlyph size={11} />
+  if (/pagou|recebeu|coletou|juros|imposto|taxa|pote|hipotec|fian/i.test(what)) return <CoinIcon size={11} />
+  return null
+}
+
+// Diário de bordo ao vivo no CENTRO do tabuleiro — linha do tempo com
+// trilho, avatar do autor (PlayerFace piscando, sem bob), glifo do tipo de
+// evento e o lançamento mais RECENTE destacado na cor de quem jogou.
 // Seletor estável (`s.game.log`) + reverse no corpo — recência ao topo (021).
 function CenterLog() {
   const log = useGameStore((s) => s.game.log)
   const players = useGameStore((s) => s.game.players)
+  const reduced = useReducedMotion()
   const history = [...log].reverse()
   const colorOf = (who: string): string => {
-    if (who === 'Banco') return '#c0392b'
+    if (who === 'Banco') return '#cf4b3e'
     const i = players.findIndex((p) => p.id === who)
-    return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : '#c0392b'
+    return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : '#cf4b3e'
   }
   return (
     <div className="flex-1 min-h-0 w-full max-w-[88%] flex flex-col rounded-[var(--radius-card)] border border-coffee-500/60 bg-coffee-900/55 backdrop-blur-[1px] overflow-hidden">
-      <p className="label text-gold px-3 pt-2 pb-1.5 shrink-0 border-b border-coffee-500/40">Histórico</p>
+      {/* Cabeçalho: título + contador de lançamentos */}
+      <div className="flex items-baseline justify-between px-3 pt-2 pb-1.5 shrink-0 border-b border-coffee-500/40">
+        <p className="label text-gold">Histórico</p>
+        {history.length > 0 && (
+          <span className="label text-cream-muted tabular-nums" style={{ fontSize: '9px' }}>
+            {history.length} {history.length === 1 ? 'lançamento' : 'lançamentos'}
+          </span>
+        )}
+      </div>
       {history.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center px-3 py-4">
-          <p className="label text-cream-muted text-center leading-snug">Nenhum evento ainda</p>
+        <div className="flex-1 flex flex-col items-center justify-center gap-1.5 px-3 py-4">
+          <span className="text-cream-muted/50"><DiceIcon size={20} /></span>
+          <p className="label text-cream-muted text-center leading-snug">Nada registrado ainda</p>
+          <p className="text-cream-muted/70 text-center leading-snug" style={{ fontSize: '10px' }}>
+            Role os dados — cada jogada entra aqui
+          </p>
         </div>
       ) : (
-        <ol className="flex-1 min-h-0 overflow-auto px-3 py-1">
+        <ol className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-2">
+          {/* trilho da linha do tempo, atravessando os avatares */}
+          <span aria-hidden className="absolute top-2 bottom-2 w-px bg-coffee-500/45" style={{ left: 23 }} />
           {history.map((l, i) => {
             const c = colorOf(l.who)
+            const idx = log.length - 1 - i // índice original — key estável em log append-only
+            const latest = i === 0
             return (
-              <li key={i} className="flex items-baseline gap-2 py-1.5 border-b border-coffee-500/20 last:border-0">
-                <span className="flex items-center gap-1.5 shrink-0">
-                  <span className="w-2 h-2 rounded-full" style={{ background: c }} />
-                  <span className="display text-[13px] leading-none" style={{ color: c }}>{l.who}</span>
+              <motion.li
+                key={idx}
+                initial={reduced ? false : { opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                className={cn(
+                  'relative flex items-start gap-2 py-1.5 pl-0.5 pr-1 rounded-[var(--radius-sharp)]',
+                  latest && 'my-0.5',
+                )}
+                style={latest ? {
+                  background: `linear-gradient(90deg, color-mix(in srgb, ${c} 13%, transparent) 0%, transparent 85%)`,
+                  boxShadow: `inset 2px 0 0 0 ${c}`,
+                } : undefined}
+              >
+                {/* avatar do autor sobre o trilho — Banco tem selo próprio */}
+                <span className="relative z-10 shrink-0 mt-px" style={{ marginLeft: 1 }}>
+                  {l.who === 'Banco' ? (
+                    <span
+                      className="grid place-items-center rounded-full border"
+                      style={{
+                        width: 20,
+                        height: 20,
+                        background: 'color-mix(in srgb, #cf4b3e 25%, var(--color-ink-900))',
+                        borderColor: '#cf4b3e',
+                      }}
+                    >
+                      <CoinIcon size={11} className="text-cream" />
+                    </span>
+                  ) : (
+                    <PlayerFace color={c} size={20} className="!animate-none" />
+                  )}
                 </span>
-                <span className="text-cream-muted text-[13px] leading-snug flex-1"><LogWhat what={l.what} /></span>
-              </li>
+                <span className="flex-1 min-w-0 leading-snug" style={{ fontSize: latest ? '13.5px' : '13px' }}>
+                  <span className="display mr-1.5" style={{ color: c }}>{l.who}</span>
+                  <span className="text-cream-muted"><LogWhat what={l.what} /></span>
+                </span>
+                {/* glifo do tipo de evento — dourado no lançamento fresco */}
+                <span className={cn('shrink-0 mt-0.5', latest ? 'text-gold' : 'text-cream-muted/50')}>
+                  {logEventIcon(l.what)}
+                </span>
+              </motion.li>
             )
           })}
         </ol>
@@ -2495,26 +2542,71 @@ function CenterLog() {
 }
 
 export function CenterArena() {
+  const boardTheme = useBoardTheme((t) => t.theme)
   return (
     <div
       className="absolute inset-0 overflow-hidden"
       style={{ containerType: 'inline-size' }}
     >
-      {/* Fundo: gradiente radial dourado sutil sob o centro */}
+      {/* Luz de mesa: brilho do metal do tema sob o centro */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(ellipse 60% 50% at center, rgba(212,175,55,0.10) 0%, rgba(212,175,55,0) 65%)',
+            'radial-gradient(ellipse 62% 52% at center, rgba(217,166,80,0.09) 0%, rgba(217,166,80,0) 65%)',
         }}
       />
 
-      {/* Padrão de estrelas (referência à bandeira) — SVG repetido */}
-      <StarsPattern />
+      {/* Fundo por tema: carta náutica (Atlas) · rosácea de cédula (Café) */}
+      {boardTheme === 'atlas' ? <ChartPattern /> : <GuillochePattern />}
 
-      {/* Molduras decorativas externas */}
-      <div className="absolute inset-3 border border-coffee-500/50 rounded-[2px] pointer-events-none" />
-      <div className="absolute inset-6 border border-coffee-500/25 rounded-[2px] pointer-events-none" />
+      {boardTheme === 'atlas' ? (
+        <>
+          {/* Molduras da prancheta + cantoneiras de latão */}
+          <div className="absolute inset-3 border border-coffee-500/55 rounded-[2px] pointer-events-none" />
+          <div className="absolute inset-[19px] border border-coffee-500/25 rounded-[2px] pointer-events-none" />
+          {(['tl', 'tr', 'bl', 'br'] as const).map((c) => (
+            <span
+              key={c}
+              className="absolute pointer-events-none"
+              style={{
+                width: 16,
+                height: 16,
+                top: c.includes('t') ? 9 : 'auto',
+                bottom: c.includes('b') ? 9 : 'auto',
+                left: c.includes('l') ? 9 : 'auto',
+                right: c.includes('r') ? 9 : 'auto',
+                borderTop: c.includes('t') ? '1.5px solid rgba(217,166,80,0.55)' : 'none',
+                borderBottom: c.includes('b') ? '1.5px solid rgba(217,166,80,0.55)' : 'none',
+                borderLeft: c.includes('l') ? '1.5px solid rgba(217,166,80,0.55)' : 'none',
+                borderRight: c.includes('r') ? '1.5px solid rgba(217,166,80,0.55)' : 'none',
+              }}
+            />
+          ))}
+        </>
+      ) : (
+        <>
+          {/* Moldura de cédula: dupla com tracejado + losangos nos meios */}
+          <div className="absolute inset-3 border-2 border-gold/25 rounded-[2px] pointer-events-none" />
+          <div className="absolute inset-[19px] border border-dashed border-gold/20 rounded-[2px] pointer-events-none" />
+          {(['t', 'b', 'l', 'r'] as const).map((e) => (
+            <span
+              key={e}
+              className="absolute pointer-events-none rotate-45 bg-gold/40"
+              style={{
+                width: 7,
+                height: 7,
+                top: e === 't' ? 9 : e === 'b' ? 'auto' : '50%',
+                bottom: e === 'b' ? 9 : 'auto',
+                left: e === 'l' ? 9 : e === 'r' ? 'auto' : '50%',
+                right: e === 'r' ? 9 : 'auto',
+                marginLeft: e === 't' || e === 'b' ? -3.5 : 0,
+                marginTop: e === 'l' || e === 'r' ? -3.5 : 0,
+              }}
+            />
+          ))}
+        </>
+      )}
 
       {/* CENTRO — split: dados/boneco em cima, histórico embaixo */}
       <div className="absolute inset-0 flex flex-col items-center justify-start pt-[6%] pb-[5%] px-[6%] gap-3">
@@ -2528,54 +2620,102 @@ export function CenterArena() {
   )
 }
 
-// Padrão de estrelas no fundo do centro (referência sutil à bandeira BR).
-function StarsPattern() {
-  // Posições dispersas — não-uniforme, p/ parecer constelação.
-  const stars = [
-    { x: 14, y: 18, s: 2.6, op: 0.18 },
-    { x: 25, y: 32, s: 1.6, op: 0.12 },
-    { x: 38, y: 12, s: 2.2, op: 0.16 },
-    { x: 52, y: 25, s: 1.8, op: 0.14 },
-    { x: 66, y: 16, s: 2.6, op: 0.18 },
-    { x: 80, y: 28, s: 1.8, op: 0.13 },
-    { x: 88, y: 16, s: 2.2, op: 0.15 },
-    { x: 12, y: 48, s: 1.5, op: 0.10 },
-    { x: 90, y: 50, s: 1.5, op: 0.10 },
-    { x: 18, y: 72, s: 2.0, op: 0.14 },
-    { x: 32, y: 84, s: 1.6, op: 0.12 },
-    { x: 50, y: 78, s: 2.4, op: 0.18 },
-    { x: 68, y: 86, s: 1.8, op: 0.14 },
-    { x: 82, y: 72, s: 2.0, op: 0.14 },
-  ]
+// Fixos de navegação — cruzetas discretas espalhadas pela carta.
+const CHART_FIXES: [number, number][] = [
+  [12, 16], [30, 9], [68, 12], [88, 20], [9, 55], [92, 58], [16, 84], [45, 92], [80, 86],
+]
+
+// Carta náutica noturna no fundo do centro: malha de graticule levemente
+// curva, rosa-dos-ventos de latão girando bem devagar e fixos de navegação.
+function ChartPattern() {
+  const grid = [8, 24, 40, 56, 72, 88]
   return (
     <svg
       className="absolute inset-0 w-full h-full pointer-events-none"
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
     >
-      {stars.map((s, i) => (
-        <polygon
-          key={i}
-          points={fivePointStar(s.x, s.y, s.s)}
-          fill="#ffd97a"
-          opacity={s.op}
-        />
-      ))}
+      {/* graticule — meridianos e paralelos com curvatura sutil */}
+      <g stroke="var(--color-starlight)" strokeWidth="0.16" fill="none" opacity="0.12">
+        {grid.map((x) => <path key={`m${x}`} d={`M ${x} 0 Q ${x + 3.5} 50 ${x} 100`} />)}
+        {grid.map((y) => <path key={`p${y}`} d={`M 0 ${y} Q 50 ${y + 3.5} 100 ${y}`} />)}
+      </g>
+
+      {/* rosa-dos-ventos — 8 pontas, rotação de 4 min por volta */}
+      <g opacity="0.075">
+        <circle cx="50" cy="50" r="31" fill="none" stroke="var(--color-brass)" strokeWidth="0.35" />
+        <circle cx="50" cy="50" r="25.5" fill="none" stroke="var(--color-brass)" strokeWidth="0.2" strokeDasharray="0.8 1.6" />
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => (
+          <polygon
+            key={a}
+            points="50,21.5 52.4,46 50,50 47.6,46"
+            fill="var(--color-brass)"
+            transform={`rotate(${a} 50 50)`}
+          />
+        ))}
+        <circle cx="50" cy="50" r="2.4" fill="none" stroke="var(--color-brass)" strokeWidth="0.45" />
+        <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="240s" repeatCount="indefinite" />
+      </g>
+
+      {/* fixos de navegação — cruzetas de posição */}
+      <g stroke="var(--color-brass-glow)" strokeWidth="0.28" opacity="0.35" strokeLinecap="round">
+        {CHART_FIXES.map(([x, y], i) => (
+          <g key={i}>
+            <line x1={x - 1.1} y1={y} x2={x + 1.1} y2={y} />
+            <line x1={x} y1={y - 1.1} x2={x} y2={y + 1.1} />
+          </g>
+        ))}
+      </g>
+
+      {/* rotas traçadas entre portos — arcos tracejados com pontos de escala */}
+      <g stroke="var(--color-brass)" strokeWidth="0.22" strokeDasharray="1 1.6" fill="none" opacity="0.2">
+        <path d="M 12 16 Q 40 26 68 12" />
+        <path d="M 9 55 Q 48 62 88 20" />
+        <path d="M 16 84 Q 56 68 92 58" />
+      </g>
+      <g fill="var(--color-brass)" opacity="0.28">
+        {([[12, 16], [68, 12], [9, 55], [88, 20], [16, 84], [92, 58]] as const).map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r="0.7" />
+        ))}
+      </g>
     </svg>
   )
 }
 
-// Gera os pontos de uma estrela de 5 pontas centrada em (cx, cy) com raio r.
-function fivePointStar(cx: number, cy: number, r: number) {
-  const outer = r
-  const inner = r * 0.4
-  const pts: string[] = []
-  for (let i = 0; i < 10; i++) {
-    const angle = (Math.PI / 5) * i - Math.PI / 2
-    const rad = i % 2 === 0 ? outer : inner
-    pts.push(`${cx + Math.cos(angle) * rad},${cy + Math.sin(angle) * rad}`)
-  }
-  return pts.join(' ')
+// Padrão do Café Coado: rosácea guilloché de cédula antiga no centro,
+// florões nos cantos e anéis de xícara manchando o papel da mesa.
+function GuillochePattern() {
+  const petals = Array.from({ length: 24 }, (_, i) => i * 15)
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+    >
+      {/* rosácea gravada — elipses entrelaçadas em duas ordens */}
+      <g fill="none" stroke="var(--color-brass)" strokeWidth="0.18" opacity="0.09">
+        {petals.map((a) => <ellipse key={a} cx="50" cy="50" rx="30" ry="10" transform={`rotate(${a} 50 50)`} />)}
+        {petals.map((a) => <ellipse key={`i${a}`} cx="50" cy="50" rx="18" ry="5.5" transform={`rotate(${a + 7.5} 50 50)`} />)}
+      </g>
+      <g fill="none" stroke="var(--color-brass)" opacity="0.11">
+        <circle cx="50" cy="50" r="32" strokeWidth="0.35" />
+        <circle cx="50" cy="50" r="34" strokeWidth="0.16" strokeDasharray="0.5 1" />
+      </g>
+      {/* manchas de café — anéis de fundo de xícara */}
+      <g fill="none" stroke="#8c5a2b" opacity="0.12">
+        <circle cx="19" cy="22" r="7.5" strokeWidth="1.2" />
+        <circle cx="19" cy="22" r="6.3" strokeWidth="0.4" />
+        <circle cx="84" cy="79" r="5.5" strokeWidth="1" />
+        <circle cx="84" cy="79" r="4.6" strokeWidth="0.35" />
+      </g>
+      {/* florões de canto */}
+      <g fill="var(--color-brass)" opacity="0.13">
+        {([[9, 9], [91, 9], [9, 91], [91, 91]] as const).map(([x, y], i) => (
+          <path key={i} d={`M ${x} ${y - 2.6} Q ${x + 2.6} ${y} ${x} ${y + 2.6} Q ${x - 2.6} ${y} ${x} ${y - 2.6} Z`} />
+        ))}
+      </g>
+    </svg>
+  )
 }
 
 // Bilhete da Loteria — formato de stub real (canhoto à esquerda + corpo + perfuração).
@@ -2665,7 +2805,7 @@ export function LotteryCard({ amount }: { amount: number }) {
                 Prêmio acumulado
               </p>
               <p
-                className="currency text-gold-glow leading-none mt-1 drop-shadow-[0_2px_3px_rgba(255,217,122,0.25)]"
+                className="currency text-gold-glow leading-none mt-1 drop-shadow-[0_2px_3px_rgba(255,217,138,0.25)]"
                 style={{
                   fontSize: 'clamp(30px, 9cqi, 72px)',
                   letterSpacing: '-0.02em',
@@ -2730,7 +2870,7 @@ export function ParkingPotDisplay({ amount }: { amount: number }) {
       <div
         className="absolute inset-0 -m-6 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse at center, rgba(212,175,55,0.22) 0%, rgba(212,175,55,0) 70%)',
+          background: 'radial-gradient(ellipse at center, rgba(217,166,80,0.22) 0%, rgba(217,166,80,0) 70%)',
         }}
       />
 
@@ -2740,7 +2880,7 @@ export function ParkingPotDisplay({ amount }: { amount: number }) {
           bg-gradient-to-b from-coffee-700 via-coffee-800 to-coffee-900
           border-2 border-gold
           rounded-[var(--radius-card)]
-          shadow-[var(--shadow-lift),0_0_40px_-10px_rgba(212,175,55,0.55)]
+          shadow-[var(--shadow-lift),0_0_40px_-10px_rgba(217,166,80,0.55)]
         "
         style={{ padding: 'clamp(12px, 4cqi, 28px) clamp(18px, 6cqi, 40px)' }}
       >
@@ -2773,7 +2913,7 @@ export function ParkingPotDisplay({ amount }: { amount: number }) {
         </div>
 
         <p
-          className="currency text-gold-glow text-center leading-none drop-shadow-[0_2px_6px_rgba(255,217,122,0.4)]"
+          className="currency text-gold-glow text-center leading-none drop-shadow-[0_2px_6px_rgba(255,217,138,0.4)]"
           style={{ fontSize: 'clamp(28px, 8cqi, 64px)' }}
         >
           <span className="text-gold-soft" style={{ fontSize: '0.55em', marginRight: '0.18em' }}>R$</span>
@@ -3219,7 +3359,7 @@ export function AirportPopover({
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ position: 'relative' }}>
         <div className="w-[270px] bg-coffee-800 border-2 border-coffee-500 rounded-[var(--radius-card)] shadow-[var(--shadow-dropdown)] overflow-hidden">
           {/* Header dourado */}
-          <div className="relative px-3.5 py-3 border-b-2 border-coffee-950" style={{ background: 'linear-gradient(180deg, #d4af37 0%, #b8941f 100%)' }}>
+          <div className="relative px-3.5 py-3 border-b-2 border-coffee-950" style={{ background: 'linear-gradient(180deg, var(--color-brass) 0%, var(--color-brass-soft) 100%)' }}>
             <button onClick={onClose} aria-label="Fechar" className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-coffee-950/45 text-cream hover:bg-coffee-950/75 flex items-center justify-center text-xs transition-colors">✕</button>
             <div className="flex items-center gap-2.5 pr-6">
               <div className="shrink-0 w-9 h-9 flex items-center justify-center">
@@ -3301,7 +3441,7 @@ export function UtilityPopover({
     }
   })()
 
-  const accentColor = square.icon === 'fuel' ? '#22c55e' : square.icon === 'bolt' ? '#ffd97a' : '#fb923c'
+  const accentColor = square.icon === 'fuel' ? 'var(--color-group-green)' : square.icon === 'bolt' ? 'var(--color-brass-glow)' : 'var(--color-group-orange)'
 
   return (
     <div ref={clampRef} style={{ position: 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>

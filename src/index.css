@@ -8,45 +8,72 @@
 @custom-variant dark (&:is(.dark *));
 
 /* =====================================================================
-   Design tokens — "Café Coado"
-   Identidade Banco Master · tema dark warm, papel envelhecido
+   Design tokens — "Atlas da Meia-Noite"
+   Identidade Banco Master · carta náutica noturna: tinta azul-profunda,
+   latão de instrumento, luzes de cidade. (Substitui o "Café Coado".)
    ===================================================================== */
 @theme {
-  /* ---------- Escala café (background → texto) ---------- */
-  --color-coffee-50:  #f4e8d0;
-  --color-coffee-100: #d9c9a5;
-  --color-coffee-200: #b89e7a;
-  --color-coffee-300: #8c7556;
-  --color-coffee-400: #5c4a36;
-  --color-coffee-500: #3d3528;
-  --color-coffee-600: #2d271f;
-  --color-coffee-700: #252018;
-  --color-coffee-800: #1f1a13;
-  --color-coffee-900: #1a1410;
-  --color-coffee-950: #0f0c09;
+  /* ---------- Escala tinta (background → texto) ---------- */
+  --color-ink-50:  #eef2fb;
+  --color-ink-100: #cfd9ec;
+  --color-ink-200: #a3b2cf;
+  --color-ink-300: #71809f;
+  --color-ink-400: #48546f;
+  --color-ink-500: #2c3750;
+  --color-ink-600: #202942;
+  --color-ink-700: #182136;
+  --color-ink-800: #121a2c;
+  --color-ink-900: #0d1424;
+  --color-ink-950: #060b17;
+  --color-ink-abyss: #04070f; /* vão mais fundo que o 950 — cela, displays */
 
   /* ---------- Acentos ---------- */
-  --color-cream: #f4e8d0;
-  --color-cream-muted: #a89683;
-  --color-gold: #d4af37;
-  --color-gold-soft: #b8941f;
-  --color-gold-glow: #ffd97a;
-  --color-logo: #dc2626;
-  --color-logo-deep: #991b1b;
+  --color-starlight: #eef2fb;       /* papel de carta / texto */
+  --color-starlight-muted: #93a1bd;
+  --color-brass: #d9a650;           /* latão de instrumento náutico */
+  --color-brass-soft: #b58430;
+  --color-brass-glow: #ffd98a;
+  --color-signal: #e2574b;          /* vermelho de sinal (multa/perigo) */
+  --color-signal-deep: #a3322a;
 
-  /* ---------- 10 cores de grupo (faixas de propriedade) ---------- */
-  --color-group-brown:   #b07a4a;
-  --color-group-skyblue: #67c3e0;
-  --color-group-pink:    #ec4899;
-  --color-group-orange:  #fb923c;
-  --color-group-red:     #ef4444;
-  --color-group-yellow:  #facc15;
-  --color-group-green:   #22c55e;
-  --color-group-navy:    #3b82f6;
-  --color-group-purple:  #9333ea;
-  --color-group-platinum: #26233a; /* Alta Roda (super-luxo) — ônix/dourado (033) */
+  /* ---------- Aliases legados (Café Coado → Atlas) ---------- */
+  /* As classes coffee-*, cream, gold e logo seguem compilando em toda a UI */
+  /* (painéis, modais, HUD, layers) e resolvem pra nova identidade. */
+  /* Código novo deve preferir ink/starlight/brass/signal. */
+  --color-coffee-50:  var(--color-ink-50);
+  --color-coffee-100: var(--color-ink-100);
+  --color-coffee-200: var(--color-ink-200);
+  --color-coffee-300: var(--color-ink-300);
+  --color-coffee-400: var(--color-ink-400);
+  --color-coffee-500: var(--color-ink-500);
+  --color-coffee-600: var(--color-ink-600);
+  --color-coffee-700: var(--color-ink-700);
+  --color-coffee-800: var(--color-ink-800);
+  --color-coffee-900: var(--color-ink-900);
+  --color-coffee-950: var(--color-ink-950);
+  --color-cream: var(--color-starlight);
+  --color-cream-muted: var(--color-starlight-muted);
+  --color-gold: var(--color-brass);
+  --color-gold-soft: var(--color-brass-soft);
+  --color-gold-glow: var(--color-brass-glow);
+  --color-logo: var(--color-signal);
+  --color-logo-deep: var(--color-signal-deep);
+
+  /* ---------- 10 cores de grupo — "luzes de cidade" sobre a tinta ---------- */
+  --color-group-brown:   #c2854f;
+  --color-group-skyblue: #56cdec;
+  --color-group-pink:    #f2589c;
+  --color-group-orange:  #ff9b45;
+  --color-group-red:     #f25048;
+  --color-group-yellow:  #ffd23f;
+  --color-group-green:   #35d97b;
+  --color-group-navy:    #4d8bf5;
+  --color-group-purple:  #a76bf5;
+  --color-group-platinum: #232741; /* Alta Roda (super-luxo) — ônix azulado (033) */
 
   /* ---------- Tipografia ---------- */
+  /* Bebas Neue segue como display: letreiro de painel de partidas / */
+  /* cartaz de viagem — casa com o atlas. Inter corpo, Slab numérico. */
   --font-display: "Bebas Neue", "Oswald", system-ui, sans-serif;
   --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
   --font-slab: "Roboto Slab Variable", "Roboto Slab", Georgia, serif;
@@ -58,12 +85,12 @@
   --radius-modal: 12px;
   --radius-pill:  9999px;
 
-  /* ---------- Sombras com cor (sépia, não cinza) ---------- */
-  --shadow-card:    0 1px 0 0 #0f0c09, 0 2px 8px -2px rgb(0 0 0 / 0.6);
-  --shadow-lift:    0 8px 24px -8px rgb(0 0 0 / 0.7), 0 2px 6px -2px rgb(0 0 0 / 0.4);
-  --shadow-dropdown:0 16px 40px -12px rgb(0 0 0 / 0.85);
-  --shadow-glow:    0 0 0 1px rgb(212 175 55 / 0.4), 0 0 28px -4px rgb(212 175 55 / 0.35);
-  --shadow-press:   inset 0 2px 4px 0 rgb(0 0 0 / 0.5);
+  /* ---------- Sombras com cor (tinta azul, não cinza) ---------- */
+  --shadow-card:    0 1px 0 0 #060b17, 0 2px 8px -2px rgb(2 6 16 / 0.65);
+  --shadow-lift:    0 8px 24px -8px rgb(2 6 16 / 0.75), 0 2px 6px -2px rgb(2 6 16 / 0.45);
+  --shadow-dropdown:0 16px 40px -12px rgb(2 6 16 / 0.9);
+  --shadow-glow:    0 0 0 1px rgb(217 166 80 / 0.4), 0 0 28px -4px rgb(217 166 80 / 0.35);
+  --shadow-press:   inset 0 2px 4px 0 rgb(2 6 16 / 0.55);
 
   /* ---------- Easings nomeados ---------- */
   --ease-paper: cubic-bezier(0.32, 0.72, 0, 1);
@@ -77,28 +104,28 @@
 }
 
 /* =====================================================================
-   Variáveis do shadcn re-pintadas pro Café Coado
+   Variáveis do shadcn re-pintadas pro Atlas da Meia-Noite
    ===================================================================== */
 :root {
-  --background: #1a1410;
-  --foreground: #f4e8d0;
-  --card: #252018;
-  --card-foreground: #f4e8d0;
-  --popover: #252018;
-  --popover-foreground: #f4e8d0;
-  --primary: #d4af37;
-  --primary-foreground: #1a1410;
-  --secondary: #3d3528;
-  --secondary-foreground: #f4e8d0;
-  --muted: #2d271f;
-  --muted-foreground: #a89683;
-  --accent: #3d3528;
-  --accent-foreground: #f4e8d0;
-  --destructive: #dc2626;
-  --destructive-foreground: #f4e8d0;
-  --border: #3d3528;
-  --input: #3d3528;
-  --ring: #d4af37;
+  --background: #0d1424;
+  --foreground: #eef2fb;
+  --card: #182136;
+  --card-foreground: #eef2fb;
+  --popover: #182136;
+  --popover-foreground: #eef2fb;
+  --primary: #d9a650;
+  --primary-foreground: #0d1424;
+  --secondary: #2c3750;
+  --secondary-foreground: #eef2fb;
+  --muted: #202942;
+  --muted-foreground: #93a1bd;
+  --accent: #2c3750;
+  --accent-foreground: #eef2fb;
+  --destructive: #e2574b;
+  --destructive-foreground: #eef2fb;
+  --border: #2c3750;
+  --input: #2c3750;
+  --ring: #d9a650;
   --radius: 4px;
 }
 
@@ -125,6 +152,161 @@
 }
 
 /* =====================================================================
+   Tema de tabuleiro — "Café Coado" (legado, selecionável em runtime)
+   Ativado via data-board-theme="cafe" no <html> (store useBoardTheme).
+   O default (sem atributo) é o Atlas da Meia-Noite definido no @theme.
+   Como TODA a UI resolve cor via var(--color-*), trocar o atributo troca
+   a pele inteira — casas, glifos, popovers, painéis — sem re-render.
+   ===================================================================== */
+:root[data-board-theme="cafe"] {
+  /* escala tinta → escala café (papel envelhecido) */
+  --color-ink-50:  #f4e8d0;
+  --color-ink-100: #d9c9a5;
+  --color-ink-200: #b89e7a;
+  --color-ink-300: #8c7556;
+  --color-ink-400: #5c4a36;
+  --color-ink-500: #3d3528;
+  --color-ink-600: #2d271f;
+  --color-ink-700: #252018;
+  --color-ink-800: #1f1a13;
+  --color-ink-900: #1a1410;
+  --color-ink-950: #0f0c09;
+  --color-ink-abyss: #0a0805;
+
+  /* acentos: starlight→cream, latão→ouro, signal→vermelho logo */
+  --color-starlight: #f4e8d0;
+  --color-starlight-muted: #a89683;
+  --color-brass: #d4af37;
+  --color-brass-soft: #b8941f;
+  --color-brass-glow: #ffd97a;
+  --color-signal: #dc2626;
+  --color-signal-deep: #991b1b;
+
+  /* grupos na cartela original */
+  --color-group-brown:   #b07a4a;
+  --color-group-skyblue: #67c3e0;
+  --color-group-pink:    #ec4899;
+  --color-group-orange:  #fb923c;
+  --color-group-red:     #ef4444;
+  --color-group-yellow:  #facc15;
+  --color-group-green:   #22c55e;
+  --color-group-navy:    #3b82f6;
+  --color-group-purple:  #a855f7;
+  --color-group-platinum: #26233a;
+
+  /* sombras sépia (pretas), glow de ouro */
+  --shadow-card:    0 1px 0 0 #0f0c09, 0 2px 8px -2px rgb(0 0 0 / 0.6);
+  --shadow-lift:    0 8px 24px -8px rgb(0 0 0 / 0.7), 0 2px 6px -2px rgb(0 0 0 / 0.4);
+  --shadow-dropdown:0 16px 40px -12px rgb(0 0 0 / 0.85);
+  --shadow-glow:    0 0 0 1px rgb(212 175 55 / 0.4), 0 0 28px -4px rgb(212 175 55 / 0.35);
+  --shadow-press:   inset 0 2px 4px 0 rgb(0 0 0 / 0.5);
+
+  /* shadcn re-pintado */
+  --background: #1a1410;
+  --foreground: #f4e8d0;
+  --card: #252018;
+  --card-foreground: #f4e8d0;
+  --popover: #252018;
+  --popover-foreground: #f4e8d0;
+  --primary: #d4af37;
+  --primary-foreground: #1a1410;
+  --secondary: #3d3528;
+  --secondary-foreground: #f4e8d0;
+  --muted: #2d271f;
+  --muted-foreground: #a89683;
+  --accent: #3d3528;
+  --accent-foreground: #f4e8d0;
+  --destructive: #dc2626;
+  --destructive-foreground: #f4e8d0;
+  --border: #3d3528;
+  --input: #3d3528;
+  --ring: #d4af37;
+}
+
+/* Fundo do Café Coado: papel envelhecido (turbulência SVG em overlay) no
+   lugar do graticule, e vinheta sépia sem aurora. */
+:root[data-board-theme="cafe"] body::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1, 0 0 0 0 0.91, 0 0 0 0 0.82, 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 240px 240px;
+  mix-blend-mode: overlay;
+  opacity: 0.05;
+}
+:root[data-board-theme="cafe"] body::after {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    rgb(0 0 0 / 0.4) 100%
+  );
+}
+
+/* =====================================================================
+   Cromo por tema — a ESTRUTURA muda, não só a cor.
+   Atlas: placas de carta náutica (marcas de registro nos cantos das casas,
+   régua de graduação na moldura). Café: casas de PAPEL CLARO com perfuração
+   de selo postal, tinta escura e tipografia slab de impressão antiga.
+   Pseudo-elementos usam ::before pra pintar ABAIXO do conteúdo da casa.
+   ===================================================================== */
+
+/* ---- Atlas (default): marcas de registro nos cantos das casas ---- */
+:root:not([data-board-theme="cafe"]) .board-square::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  pointer-events: none;
+  --tick: color-mix(in srgb, var(--color-brass) 38%, transparent);
+  background:
+    linear-gradient(var(--tick), var(--tick)) left top    / 6px 1px,
+    linear-gradient(var(--tick), var(--tick)) left top    / 1px 6px,
+    linear-gradient(var(--tick), var(--tick)) right top   / 6px 1px,
+    linear-gradient(var(--tick), var(--tick)) right top   / 1px 6px,
+    linear-gradient(var(--tick), var(--tick)) left bottom / 6px 1px,
+    linear-gradient(var(--tick), var(--tick)) left bottom / 1px 6px,
+    linear-gradient(var(--tick), var(--tick)) right bottom/ 6px 1px,
+    linear-gradient(var(--tick), var(--tick)) right bottom/ 1px 6px;
+  background-repeat: no-repeat;
+}
+
+/* ---- Atlas: régua de graduação na moldura do tabuleiro ---- */
+:root:not([data-board-theme="cafe"]) .board-frame::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  z-index: 1;
+  pointer-events: none;
+  --tick: color-mix(in srgb, var(--color-brass) 28%, transparent);
+  background:
+    repeating-linear-gradient(to right,  transparent 0 13px, var(--tick) 13px 14px) top    / 100% 3px,
+    repeating-linear-gradient(to right,  transparent 0 13px, var(--tick) 13px 14px) bottom / 100% 3px,
+    repeating-linear-gradient(to bottom, transparent 0 13px, var(--tick) 13px 14px) left   / 3px 100%,
+    repeating-linear-gradient(to bottom, transparent 0 13px, var(--tick) 13px 14px) right  / 3px 100%;
+  background-repeat: no-repeat;
+}
+
+/* ---- Café: perfuração de selo postal em ouro velho, sobre o papel
+   escuro original (as casas mantêm a superfície sépia do Café Coado —
+   papel claro quebrava a largura dos nomes e o contraste do conjunto) ---- */
+:root[data-board-theme="cafe"] .board-square::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  pointer-events: none;
+  border: 1px dashed rgb(212 175 55 / 0.26); /* perfuração do selo */
+  border-radius: 1px;
+}
+
+/* ---- Café: moldura de Historico (dupla, ouro velho) ---- */
+:root[data-board-theme="cafe"] .board-frame::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  z-index: 1;
+  pointer-events: none;
+  border: 1px solid rgb(212 175 55 / 0.4);
+  outline: 1px dashed rgb(212 175 55 / 0.22);
+  outline-offset: -5px;
+}
+
+/* =====================================================================
    Base layer — defaults com personalidade
    ===================================================================== */
 @layer base {
@@ -139,8 +321,8 @@
   }
 
   body {
-    background-color: var(--color-coffee-900);
-    color: var(--color-cream);
+    background-color: var(--color-ink-900);
+    color: var(--color-starlight);
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
     text-rendering: optimizeLegibility;
@@ -151,30 +333,32 @@
     overflow-x: hidden;
   }
 
-  /* Textura de papel envelhecido — turbulência SVG, blend overlay */
+  /* Graticule — malha de carta náutica cobrindo o fundo: grade fina
+     (paralelos/meridianos) com uma grade maior mais marcada por cima. */
   body::before {
     content: "";
     position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    opacity: 0.05;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1, 0 0 0 0 0.91, 0 0 0 0 0.82, 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
-    mix-blend-mode: overlay;
+    background-image:
+      linear-gradient(to right,  rgb(238 242 251 / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(238 242 251 / 0.05) 1px, transparent 1px),
+      linear-gradient(to right,  rgb(238 242 251 / 0.022) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(238 242 251 / 0.022) 1px, transparent 1px);
+    background-size: 168px 168px, 168px 168px, 42px 42px, 42px 42px;
   }
 
-  /* Vinheta sutil — escurece bordas, foca o tabuleiro */
+  /* Vinheta de profundidade + "aurora" de latão no horizonte superior */
   body::after {
     content: "";
     position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background: radial-gradient(
-      ellipse at center,
-      transparent 40%,
-      rgb(0 0 0 / 0.4) 100%
-    );
+    background:
+      radial-gradient(ellipse 90% 50% at 50% -10%, rgb(217 166 80 / 0.05) 0%, transparent 60%),
+      radial-gradient(ellipse at center, transparent 40%, rgb(2 6 16 / 0.5) 100%);
   }
 
   #root {
@@ -188,32 +372,32 @@
     font-family: var(--font-display);
     font-weight: 400;
     letter-spacing: var(--tracking-display);
-    color: var(--color-cream);
+    color: var(--color-starlight);
   }
 
   h1 { font-size: clamp(2.75rem, 5vw, 4.5rem); line-height: 0.92; }
   h2 { font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.0; }
   h3 { font-size: clamp(1.25rem, 2vw, 1.625rem); line-height: 1.1; }
 
-  /* Seleção em ouro */
+  /* Seleção em latão */
   ::selection {
-    background-color: var(--color-gold);
-    color: var(--color-coffee-950);
+    background-color: var(--color-brass);
+    color: var(--color-ink-950);
   }
 
   /* Scrollbar tematizado */
   ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: var(--color-coffee-950); }
+  ::-webkit-scrollbar-track { background: var(--color-ink-950); }
   ::-webkit-scrollbar-thumb {
-    background: var(--color-coffee-500);
-    border: 2px solid var(--color-coffee-950);
+    background: var(--color-ink-500);
+    border: 2px solid var(--color-ink-950);
     border-radius: var(--radius-pill);
   }
-  ::-webkit-scrollbar-thumb:hover { background: var(--color-coffee-400); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-ink-400); }
 
-  /* Focus ring ouro */
+  /* Focus ring latão */
   :focus-visible {
-    outline: 2px solid var(--color-gold);
+    outline: 2px solid var(--color-brass);
     outline-offset: 2px;
     border-radius: var(--radius-sharp);
   }
@@ -228,7 +412,7 @@
     font-family: var(--font-display);
     letter-spacing: var(--tracking-display);
     text-transform: uppercase;
-    color: var(--color-cream);
+    color: var(--color-starlight);
   }
 
   /* Valor monetário — Roboto Slab tabular */
@@ -246,16 +430,17 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: var(--tracking-mono);
-    color: var(--color-cream-muted);
+    color: var(--color-starlight-muted);
   }
 
-  /* Carta de propriedade — borda dupla, mimic carta impressa */
+  /* Carta de propriedade — tinta profunda com filete de luz no topo,
+     mimic de prancha de instrumento gravada */
   .property-card {
-    background-color: var(--color-coffee-700);
-    border: 1px solid var(--color-coffee-500);
+    background-color: var(--color-ink-700);
+    border: 1px solid var(--color-ink-500);
     box-shadow:
-      inset 0 0 0 1px var(--color-coffee-800),
-      inset 0 0 0 2px var(--color-coffee-600),
+      inset 0 0 0 1px var(--color-ink-800),
+      inset 0 1px 0 0 rgb(238 242 251 / 0.05),
       var(--shadow-card);
     border-radius: var(--radius-card);
     transition: transform 220ms var(--ease-paper),
@@ -265,14 +450,14 @@
   .property-card:hover {
     transform: translateY(-2px);
     box-shadow:
-      inset 0 0 0 1px var(--color-coffee-800),
-      inset 0 0 0 2px var(--color-coffee-600),
+      inset 0 0 0 1px var(--color-ink-800),
+      inset 0 1px 0 0 rgb(238 242 251 / 0.05),
       var(--shadow-lift);
   }
 
   /* Faixa colorida no topo da carta (cor do grupo) */
   .property-stripe {
-    border-bottom: 1px solid var(--color-coffee-950);
+    border-bottom: 1px solid var(--color-ink-950);
     box-shadow:
       inset 0 -1px 0 0 rgb(0 0 0 / 0.4),
       inset 0 1px 0 0 rgb(255 255 255 / 0.12);
@@ -292,11 +477,14 @@
       inset 1px 0 0 0 rgb(255 255 255 / 0.12);
   }
 
-  /* Square de tabuleiro — versão mini da property-card */
+  /* Square de tabuleiro — placa de tinta com filete de luz, sobre as
+     juntas escuras (ink-950) da moldura */
   .board-square {
-    background-color: var(--color-coffee-700);
-    border: 1px solid var(--color-coffee-500);
-    box-shadow: inset 0 0 0 1px var(--color-coffee-800);
+    background-color: var(--color-ink-700);
+    border: 1px solid var(--color-ink-500);
+    box-shadow:
+      inset 0 0 0 1px var(--color-ink-800),
+      inset 0 1px 0 0 rgb(238 242 251 / 0.04);
     transition: background-color 180ms var(--ease-paper);
     /* `size` (não só inline-size) pra liberar `cqmin` — fonte das casas
        escala pela MENOR dimensão da célula, então o mesmo tamanho cabe tanto
@@ -304,7 +492,7 @@
     container-type: size;
   }
   .board-square:hover {
-    background-color: var(--color-coffee-600);
+    background-color: var(--color-ink-600);
   }
 
   /* Animação dos dados: agora feita via lib motion (springs), não CSS keyframe. */
@@ -348,13 +536,13 @@
     align-items: center;
     gap: 0.375rem;
     padding: 0.375rem 0.625rem;
-    background-color: var(--color-coffee-800);
-    border: 1px solid var(--color-coffee-500);
-    border-left: 3px solid var(--color-gold);
+    background-color: var(--color-ink-800);
+    border: 1px solid var(--color-ink-500);
+    border-left: 3px solid var(--color-brass);
     border-radius: var(--radius-sharp);
     font-family: var(--font-slab);
     font-variant-numeric: tabular-nums;
-    color: var(--color-gold-glow);
+    color: var(--color-brass-glow);
     box-shadow: var(--shadow-press);
   }
 
@@ -363,8 +551,10 @@
      Tabuleiro permanece quadrado e centralizado independente da largura.
      ================================================================= */
   .board-stage {
-    --stage-pad: 10px;
-    --side-min: 210px;
+    /* Margens mínimas: o tabuleiro é limitado pela ALTURA da viewport,
+       então cada pixel de moldura recuperado vira tabuleiro. */
+    --stage-pad: 4px;
+    --side-min: 200px;
     --side-max: 300px;
     position: relative;
     width: 100%;
@@ -375,15 +565,15 @@
       auto
       minmax(var(--side-min), 1fr);
     align-items: center;
-    gap: 16px;
+    gap: 10px;
     padding: var(--stage-pad);
   }
 
   .board-frame {
     position: relative;
     /* Quadrado: do tamanho da altura disponível, limitado por um teto. */
-    width: min(calc(100svh - var(--stage-pad) * 2), 1280px);
-    height: min(calc(100svh - var(--stage-pad) * 2), 1280px);
+    width: min(calc(100svh - var(--stage-pad) * 2), 1600px);
+    height: min(calc(100svh - var(--stage-pad) * 2), 1600px);
     aspect-ratio: 1 / 1;
     justify-self: center;
   }
@@ -404,11 +594,13 @@
   .side-panel:last-of-type  { justify-self: start; }
 
   .side-panel-section {
-    background-color: var(--color-coffee-900);
-    border: 1px solid var(--color-coffee-500);
+    background-color: var(--color-ink-900);
+    border: 1px solid var(--color-ink-500);
     border-radius: var(--radius-card);
     padding: 16px 18px;
-    box-shadow: var(--shadow-card);
+    box-shadow:
+      inset 0 1px 0 0 rgb(238 242 251 / 0.04),
+      var(--shadow-card);
   }
 
   @media (max-width: 1100px) {
@@ -429,7 +621,7 @@
   }
 
   @media (max-width: 720px) {
-    .board-stage { --stage-pad: 8px; }
+    .board-stage { --stage-pad: 4px; }
   }
 
   /* =================================================================
