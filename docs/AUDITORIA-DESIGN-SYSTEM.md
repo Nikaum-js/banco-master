@@ -4,6 +4,32 @@
 > e os primitivos de `src/game/ui/primitives.tsx`. **Presentation only** — nenhum achado
 > toca lógica de jogo. Serve de backlog de padronização e de briefing pro auditor seguinte.
 
+## Status da execução (2026-07-24, mesma data — padrões 1–9 APLICADOS)
+
+- **1/2/6 — Cor tokenizada:** todo brass/vermelho vira `var(--color-brass*)`/`var(--color-signal*)`
+  + `color-mix` para alphas. Tokens novos: `--color-signal-glow`, `--color-rarity-*`,
+  `--gradient-brass|signal(±shine)`. Confetes, GOLD/SIGNAL_TEXT, headers, timers e RARITY_COLOR
+  seguem o tema. Re-varredura B: zero hex de tema fora das exceções abaixo.
+- **4 — `<Button variant>`** em `primitives.tsx` (primary/secondary/ghost/danger); todos os
+  call sites migrados (Trade, Modal, HUD, HandPanel/Card, leilões, Notice, shared). Wrappers
+  locais (`TurnActionBtn`, `DeedBtn`, `ActionBtn`, `PrimaryBtn`…) viraram cascas finas.
+- **5/6 — Shell único** em `src/game/ui/shell.tsx`: `Overlay` (véu /70 + blur-2, só z varia),
+  `ModalShell` (`--radius-modal`) e `ModalHeader` (tones brass/signal, bg custom p/ stripes).
+  Dim do HUD unificado ao véu padrão.
+- **7/9 — Sombras pretas → `--shadow-*`;** tracking cerimonial (0.2–0.4em) → `--tracking-caps`.
+- **8 — Primitivos adotados:** chip Efeito (HUD), chip Hipotecada (deed), header/vazio do
+  CenterLog, vazios do Trade.
+- **3 — Micro-tipografia:** `--text-micro` (9px) / `--text-nano` (8px) geram `text-micro`/
+  `text-nano`; ~35 `fontSize` inline varridos. Restam tamanhos 11/13px pontuais (fora do
+  escopo micro) e `fontSize` fluidos com `clamp()` (legítimos, container-query).
+
+### Exceções legítimas (não são bug)
+- `PLAYER_COLORS`/`MOCK_PLAYERS` — paleta de assento, identidade do jogador (testada).
+- Arte interna de SVG: pele do prisioneiro `#c2854f`, quepe `#34549c`, highlights `#ffffff`,
+  mancha de café `#8c5a2b`, `LOG_GAIN` cores de status (já tokenizadas).
+- `DebugLogger` — cores de `console.log` (sem DOM, `var()` não resolve).
+- Confetti usa `var(--color-group-*)` (posição/rotação animadas; cor estática).
+
 ## Padrão canônico (a régua)
 
 - **Tokens** (`src/index.css` `@theme` + tema claro/escuro por `data-board-theme`):

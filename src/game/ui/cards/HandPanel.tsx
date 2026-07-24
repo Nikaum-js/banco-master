@@ -45,7 +45,7 @@ function HandSlots({ count }: { count: number }) {
         <span
           key={i}
           className={cn(
-            'w-2.5 h-3.5 rounded-[2px] border transition-colors',
+            'w-2.5 h-3.5 rounded-[var(--radius-sharp)] border transition-colors',
             i < count ? 'bg-gold/80 border-gold' : 'bg-coffee-900 border-coffee-500',
           )}
         />

@@ -1258,7 +1258,7 @@ export function MortgageMark({ pos }: { pos: number }) {
       className="absolute inset-0 pointer-events-none z-[25]"
       title="Hipotecada"
       style={{
-        background: 'rgba(8,6,4,0.6)',
+        background: 'color-mix(in srgb, var(--color-ink-abyss) 60%, transparent)',
         boxShadow: 'inset 0 0 14px 3px rgba(0,0,0,0.6)',
       }}
     >
@@ -1381,7 +1381,7 @@ function TradeItemChip({ pos }: { pos: number }) {
   const accent = sq.kind === 'property' ? GROUP_COLOR[(sq as PropertySquare).group] : 'var(--color-brass)'
   return (
     <span className="inline-flex items-center gap-1 pl-0.5 pr-1.5 py-0.5 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500/70 overflow-hidden" title={sq.name}>
-      <span className="self-stretch w-1 rounded-[1px] shrink-0" style={{ background: accent }} aria-hidden />
+      <span className="self-stretch w-1 rounded-[var(--radius-sharp)] shrink-0" style={{ background: accent }} aria-hidden />
       <TradeItemAvatar sq={sq} size={16} />
       <span className="text-cream text-xs leading-none truncate max-w-[96px]">{sq.name}</span>
     </span>
@@ -2331,7 +2331,7 @@ export function CardDeck({
 
         {/* Moldura ornamental tracejada interna (cor do accent) */}
         <div
-          className="absolute inset-[6%] pointer-events-none rounded-[2px]"
+          className="absolute inset-[6%] pointer-events-none rounded-[var(--radius-sharp)]"
           style={{
             border: `1px dashed color-mix(in srgb, ${accentHex} 40%, transparent)`,
           }}
@@ -2593,8 +2593,8 @@ export function CenterArena() {
       {boardTheme === 'atlas' ? (
         <>
           {/* Molduras da prancheta + cantoneiras de latão */}
-          <div className="absolute inset-3 border border-coffee-500/55 rounded-[2px] pointer-events-none" />
-          <div className="absolute inset-[19px] border border-coffee-500/25 rounded-[2px] pointer-events-none" />
+          <div className="absolute inset-3 border border-coffee-500/55 rounded-[var(--radius-sharp)] pointer-events-none" />
+          <div className="absolute inset-[19px] border border-coffee-500/25 rounded-[var(--radius-sharp)] pointer-events-none" />
           {(['tl', 'tr', 'bl', 'br'] as const).map((c) => (
             <span
               key={c}
@@ -2617,8 +2617,8 @@ export function CenterArena() {
       ) : (
         <>
           {/* Moldura de cédula: dupla com tracejado + losangos nos meios */}
-          <div className="absolute inset-3 border-2 border-gold/25 rounded-[2px] pointer-events-none" />
-          <div className="absolute inset-[19px] border border-dashed border-gold/20 rounded-[2px] pointer-events-none" />
+          <div className="absolute inset-3 border-2 border-gold/25 rounded-[var(--radius-sharp)] pointer-events-none" />
+          <div className="absolute inset-[19px] border border-dashed border-gold/20 rounded-[var(--radius-sharp)] pointer-events-none" />
           {(['t', 'b', 'l', 'r'] as const).map((e) => (
             <span
               key={e}
@@ -3268,7 +3268,7 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
               shrink-0 w-9 h-9 rounded-full
               bg-coffee-900 border-2 border-coffee-950
               overflow-hidden
-              shadow-[0_2px_4px_rgba(0,0,0,0.55)]
+              shadow-[var(--shadow-card)]
             "
           >
             <img
