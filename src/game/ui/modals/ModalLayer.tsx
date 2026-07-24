@@ -444,6 +444,7 @@ function AuctionCard({
   placeBid: (playerId: string, amount: number) => void
 }) {
   const cash = useGameStore((s) => s.game.players.find((p) => p.id === activeId)?.cash ?? 0)
+  const players = useGameStore((s) => s.game.players)
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 200)
@@ -460,7 +461,13 @@ function AuctionCard({
 
   return (
     <ModalShell className="w-[600px] max-w-[95vw]">
-      <ModalHeader center title="Leilão" className="[&_h3]:text-xl" />
+      <ModalHeader
+        center
+        title="Leilão"
+        subtitle="quem der mais, leva"
+        icon={<GavelIcon size={22} className="text-coffee-950" />}
+        className="[&_h3]:text-xl"
+      />
       {/* Nome + ícone, centralizado */}
       <div className="flex items-center justify-center gap-2.5 px-4 pt-4 pb-3">
         <DeedIcon sq={sq} />
@@ -472,18 +479,51 @@ function AuctionCard({
         <div className="flex-1 p-5 flex flex-col gap-6">
           <div>
             <p className="label text-cream-muted">Lance atual</p>
-            <p className="currency text-gold-glow text-5xl leading-none mt-2">R$ {view.currentBid.toLocaleString('pt-BR')}</p>
-            <p className="text-cream-muted text-xs mt-2">Maior: <span className="text-cream">{view.highBidder ?? '—'}</span></p>
+            <motion.p
+              key={view.currentBid}
+              initial={{ scale: 1.14 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 16 }}
+              className="currency text-5xl leading-none mt-2 origin-left"
+              style={{
+                backgroundImage: 'var(--gradient-brass-shine)',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                color: 'transparent',
+                filter: 'drop-shadow(0 2px 10px color-mix(in srgb, var(--color-brass) 45%, transparent))',
+              }}
+            >
+              R$ {view.currentBid.toLocaleString('pt-BR')}
+            </motion.p>
+            <div className="flex items-center gap-1.5 mt-2 text-xs text-cream-muted">
+              <span>Maior:</span>
+              {view.highBidder ? (
+                <>
+                  {(() => {
+                    const i = players.findIndex((pl) => pl.id === view.highBidder)
+                    return i >= 0 ? <PlayerFace color={PLAYER_COLORS[i % PLAYER_COLORS.length]} size={18} /> : null
+                  })()}
+                  <span className="text-cream">{view.highBidder}</span>
+                </>
+              ) : (
+                <span className="text-cream">— ninguém ainda</span>
+              )}
+            </div>
           </div>
 
           {/* Timer: enche até 100% → encerra; reseta a cada lance */}
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
-              <GavelIcon size={13} className="text-cream-muted" />
-              <span className="label leading-none text-cream-muted">Termina em {secLeft}s…</span>
+              <GavelIcon size={13} className={secLeft <= 3 ? 'text-signal' : 'text-cream-muted'} />
+              <span className={cn('label leading-none', secLeft <= 3 ? 'text-signal' : 'text-cream-muted')}>
+                Termina em {secLeft}s…
+              </span>
             </div>
             <div className="h-2.5 rounded-full bg-coffee-950/60 overflow-hidden">
-              <div className="h-full rounded-full bg-gold" style={{ width: `${fillPct}%`, transition: 'width 0.2s linear' }} />
+              <div
+                className={cn('h-full rounded-full', secLeft <= 3 ? 'bg-signal' : 'bg-gold')}
+                style={{ width: `${fillPct}%`, transition: 'width 0.2s linear' }}
+              />
             </div>
           </div>
 
