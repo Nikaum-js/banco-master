@@ -9,16 +9,14 @@
 // NÃO usa backdrop bloqueante na dívida: o container é pointer-events-none e só o
 // card recebe cliques (pointer-events-auto), então o tabuleiro segue clicável pra
 // hipotecar/vender e juntar caixa antes de "Pagar". Demais climas podem ter leve dim.
-// Ações OPCIONAIS pré-rolagem (Bus Ticket / quitar empréstimo) ficam numa pílula
-// leve embaixo — não têm peso de decisão. Sem nada pendente → não renderiza.
+// Ações OPCIONAIS não moram aqui: Bus Ticket é canhoto na DiceArena; quitar
+// empréstimo vive no LoanPanel lateral. Sem nada pendente → não renderiza.
 import { type ReactNode, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Bus, Crown, HandCoins, Landmark, ShieldAlert } from 'lucide-react'
+import { Crown, HandCoins, Landmark, ShieldAlert } from 'lucide-react'
 import { PLAYER_COLORS, PlayerFace } from '@/boards/shared'
 import { useGameStore } from '@/game/store'
-import { sideOf } from '@/game/turn/turnMachine'
 import { isBankrupt } from '@/game/falencia/falencia'
-import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { Confetti } from '@/game/ui/NoticeLayer'
 import { Button, Chip } from '@/game/ui/primitives'
 import type { LoanRequest } from '@/game/economy/types'
@@ -136,15 +134,12 @@ export function GameHUD() {
   const declareBankruptcy = useGameStore((s) => s.declareBankruptcy)
   const proposeLoan = useGameStore((s) => s.proposeLoan)
   const respondLoan = useGameStore((s) => s.respondLoan)
-  const payOffLoan = useGameStore((s) => s.payOffLoan)
   const respondReaction = useGameStore((s) => s.respondReaction)
   const resetGame = useGameStore((s) => s.resetGame)
 
   const active = game.players[game.turnOrder[game.activeSeat]]
-  const turn = game.turn
   const res = game.resolution
   const loanOfActive = game.loans.find((l) => l.debtorId === active.id)
-  const canPayOff = loanOfActive && active.cash >= loanOfActive.principal
 
   const activeColor = colorOfPlayer(game.players, active.id) ?? 'var(--color-brass)'
 
@@ -401,59 +396,8 @@ export function GameHUD() {
     )
   }
 
-  // ---- Ações OPCIONAIS (não bloqueiam) — pílula leve. Bus Ticket usável ANTES de rolar
-  // OU no fim do turno (034); Quitar empréstimo segue só antes de rolar. ----
-  if (turn.state === 'aguardando-rolagem' || turn.state === 'aguardando-finalizacao') {
-    const canBus = active.busTickets >= 1 && sideOf(active.pos) !== null
-    const showPayoff = canPayOff && turn.state === 'aguardando-rolagem'
-    if (canBus || showPayoff) {
-      return (
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 bg-coffee-900/95 border border-coffee-500 rounded-full p-1.5 shadow-[var(--shadow-dropdown)] backdrop-blur-sm"
-        >
-          {canBus && (
-            <button
-              type="button"
-              onClick={() => useBusTicketUI.getState().arm()}
-              className="group flex items-center gap-2.5 pl-2 pr-3.5 py-1.5 rounded-full text-cream hover:bg-coffee-700 transition-colors"
-            >
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-coffee-800 border border-coffee-500 text-gold-glow shrink-0 transition-colors group-hover:border-gold/60">
-                <Bus size={16} />
-              </span>
-              <span className="flex flex-col items-start leading-none gap-0.5">
-                <span className="text-sm font-bold leading-none">Usar Bus Ticket</span>
-                <span className="label text-cream-muted leading-none text-micro">mover no mesmo lado</span>
-              </span>
-              <span className="ml-1 currency text-gold-glow text-sm tabular-nums leading-none">×{active.busTickets}</span>
-            </button>
-          )}
-
-          {canBus && showPayoff && <span className="w-px h-8 bg-coffee-500/60 shrink-0" aria-hidden />}
-
-          {showPayoff && (
-            <button
-              type="button"
-              onClick={payOffLoan}
-              className="group flex items-center gap-2.5 pl-2 pr-3.5 py-1.5 rounded-full text-cream hover:bg-coffee-700 transition-colors"
-            >
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-coffee-800 border border-coffee-500 text-gold-glow shrink-0 transition-colors group-hover:border-gold/60">
-                <HandCoins size={15} />
-              </span>
-              <span className="flex flex-col items-start leading-none gap-0.5">
-                <span className="text-sm font-bold leading-none">Quitar empréstimo</span>
-                <span className="label text-cream-muted leading-none text-micro">devolver a {loanOfActive!.creditorId}</span>
-              </span>
-              <span className="ml-1 currency text-gold-glow text-sm tabular-nums leading-none">{fmt(loanOfActive!.principal)}</span>
-            </button>
-          )}
-        </motion.div>
-      )
-    }
-  }
-
+  // Ações opcionais NÃO moram mais aqui: Bus Ticket virou canhoto na zona de
+  // ação da DiceArena; quitar empréstimo sempre existiu no LoanPanel lateral.
   return null // sem decisão pendente
 }
 

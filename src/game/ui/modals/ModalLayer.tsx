@@ -3,6 +3,7 @@
 // vocabulário visual dos popovers de propriedade (cartão coffee + header com stripe).
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import { Bus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
 import { activeModal, type ModalView, type HandCardView } from './activeModal'
@@ -114,7 +115,7 @@ export function ModalLayer() {
 
           {view.kind === 'card-shortcut' && (
             <Card>
-              <ModalHeader title="Atalho" subtitle="Mover 3 casas — escolha a direção" />
+              <ModalHeader title="Atalho" subtitle="Escolha a direção pra mover 3 casas" />
               {/* Cada direção é um CARTÃO DE DESTINO: seta no sentido real do
                   tabuleiro + onde o jogador vai cair (nome + bandeira/glifo).
                   Decisão informada, sem precisar decorar o tabuleiro. */}
@@ -137,7 +138,7 @@ export function ModalLayer() {
                       <span className="flex-1 min-w-0">
                         <span className="block display text-cream text-base leading-none">{label}</span>
                         <span className="block text-cream-muted text-xs leading-snug mt-1 truncate">
-                          {hint} — cai em <span className="text-cream">{dest.name}</span>
+                          {hint}, cai em <span className="text-cream">{dest.name}</span>
                         </span>
                       </span>
                       {dest.kind === 'property' ? (
@@ -255,14 +256,18 @@ export function ModalLayer() {
   )
 }
 
-// Fileira do MESMO LADO (a única para onde o Bus Ticket pode ir) — uma faixa de
-// casas como um trecho do tabuleiro: faixa de cor do grupo, peões e nº da casa.
-// A casa atual fica marcada; as demais são clicáveis. Tooltip mostra o nome.
-function SideRow({ fromPos, onPick }: { fromPos: number; onPick: (pos: number) => void }) {
+// Bus Ticket — "linha de ônibus" (SRS §2.7): as casas do MESMO LADO viram
+// paradas de uma linha; o ônibus fica estacionado na sua parada e DESLIZA até a
+// parada sob o cursor. Clicar EMBARCA: o ônibus viaja até lá e só então o
+// movimento acontece. Layout fluido (células flex, posição em %): nunca estoura
+// a largura do modal — sem scroll horizontal.
+function BusLine({ fromPos, onPick, onBoard }: { fromPos: number; onPick: (pos: number) => void; onBoard?: () => void }) {
   const players = useGameStore((s) => s.game.players)
   const turnOrder = useGameStore((s) => s.game.turnOrder)
   const activeSeat = useGameStore((s) => s.game.activeSeat)
   const titles = useGameStore((s) => s.game.titles)
+  const [hover, setHover] = useState<number | null>(null)
+  const [departing, setDeparting] = useState<number | null>(null)
   const activeIdx = turnOrder[activeSeat] // índice em players do jogador da vez
   const side = sideOf(fromPos)
   const cells = BOARD.filter((sq) => sideOf(sq.pos) === side).reverse() // casas do lado, na ordem do tabuleiro (de trás pra frente)
@@ -272,74 +277,145 @@ function SideRow({ fromPos, onPick }: { fromPos: number; onPick: (pos: number) =
     if (p.eliminated) return
     ;(facesAt[p.pos] ??= []).push({ color: PLAYER_COLORS[i % PLAYER_COLORS.length], active: i === activeIdx })
   })
+  // Parada onde o ônibus está: embarcando > cursor > a sua. Posição em % do
+  // centro da célula — as células são flex-1 iguais, então (i + 0.5) / n.
+  const n = cells.length
+  const fromIdx = cells.findIndex((sq) => sq.pos === fromPos)
+  const targetPos = departing ?? hover
+  const busIdx = targetPos != null ? cells.findIndex((sq) => sq.pos === targetPos) : fromIdx
+  const busPct = ((busIdx + 0.5) / n) * 100
+  const steps = hover != null && departing == null ? hover - fromPos : 0 // lado é contíguo no BOARD → distância = diferença de pos
+
+  // Embarque: o ônibus viaja até a parada e SÓ ENTÃO o movimento dispara —
+  // a viagem vira parte da resposta, em vez de um teleporte seco.
+  const embark = (pos: number) => {
+    if (departing != null) return
+    setDeparting(pos)
+    setHover(null)
+    onBoard?.()
+    window.setTimeout(() => onPick(pos), 560)
+  }
+
   return (
-    <div className="flex gap-1 justify-center overflow-x-auto pb-1 bg-coffee-950/40 rounded-[var(--radius-sharp)] p-1.5">
-      {cells.map((sq) => {
-        const isFrom = sq.pos === fromPos
-        const isProp = sq.kind === 'property'
-        const stripe = isProp ? GROUP_COLOR[(sq as PropertySquare).group]
-          : sq.kind === 'airport' || sq.kind === 'utility' ? 'var(--color-brass)' : 'transparent'
-        const price = 'price' in sq ? sq.price : null
-        // Posse (igual ao tabuleiro): casa com dono "veste" a cor dele (tint + moldura)
-        // e NÃO mostra preço — só casa livre exibe valor.
-        const ownerId = titles[sq.pos]?.ownerId
-        const oi = ownerId ? players.findIndex((p) => p.id === ownerId) : -1
-        const ownerColor = oi >= 0 ? PLAYER_COLORS[oi % PLAYER_COLORS.length] : undefined
-        const faces = facesAt[sq.pos] ?? []
-        return (
-          <button
-            key={sq.pos}
-            type="button"
-            disabled={isFrom}
-            onClick={() => onPick(sq.pos)}
-            title={sq.name}
-            className={cn(
-              'relative shrink-0 w-[60px] h-[112px] rounded-[4px] border flex flex-col overflow-hidden transition-colors',
-              isFrom ? 'border-cream bg-coffee-600 cursor-default' : 'border-gold/70 bg-coffee-900/60 hover:bg-gold/25 hover:border-gold cursor-pointer',
+    <div className="flex flex-col" onMouseLeave={() => departing == null && setHover(null)}>
+      {/* Estrada tracejada + ônibus; a placa de distância fica FIXA no centro
+          (nunca estoura a borda do modal) */}
+      <div className="relative h-12">
+        <span className="absolute left-1/2 -translate-x-1/2 top-0 z-20">
+          <AnimatePresence>
+            {(departing != null || (hover != null && hover !== fromPos)) && (
+              <motion.span
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 4 }}
+                className="block label text-nano text-coffee-950 bg-gold-glow rounded-full px-2 py-0.5 whitespace-nowrap shadow-[var(--shadow-card)]"
+              >
+                {departing != null
+                  ? 'Embarcando…'
+                  : `${Math.abs(steps)} ${Math.abs(steps) === 1 ? 'casa' : 'casas'} ${steps > 0 ? 'à frente' : 'atrás'}`}
+              </motion.span>
             )}
-          >
-            <span className="h-2 w-full shrink-0" style={{ background: stripe }} />
-            {/* Posse — veste a cor do dono (tint + moldura), como na célula do tabuleiro */}
-            {ownerColor && !isFrom && (
-              <>
-                <span className="absolute inset-0 pointer-events-none" style={{ background: ownerColor, opacity: 0.16 }} aria-hidden />
-                <span className="absolute inset-0 pointer-events-none" style={{ boxShadow: `inset 0 0 0 2px ${ownerColor}` }} aria-hidden />
-              </>
-            )}
-            <span className="flex-1 flex flex-col items-center justify-center gap-0.5 px-1 text-center min-h-0">
-              {/* Propriedade = bandeira do país; demais tipos = glifo da casa (acaso/Tesouro/aeroporto/utilidade/taxa/cantos) */}
-              {isProp ? (
-                <span
-                  className="rounded-full border border-coffee-950/70 overflow-hidden shrink-0"
-                  style={{ width: 20, height: 20, boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--color-brass) 50%, transparent)' }}
-                >
-                  <img
-                    src={`https://flagcdn.com/${(sq as PropertySquare).uf.toLowerCase()}.svg`}
-                    alt={(sq as PropertySquare).uf}
-                    className="w-full h-full object-cover block"
-                    draggable={false}
-                  />
+          </AnimatePresence>
+        </span>
+        <span className="absolute left-2 right-2 bottom-[15px] border-t-2 border-dashed border-brass/35" aria-hidden />
+        <motion.div
+          initial={false}
+          animate={{ left: `${busPct}%`, scale: departing != null ? 1.1 : 1 }}
+          transition={{ type: 'spring', stiffness: 130, damping: 19, mass: 1 }}
+          className="absolute bottom-0 -ml-[18px] w-[36px] flex justify-center z-10 pointer-events-none"
+        >
+          <span className="w-8 h-8 rounded-full bg-gold text-coffee-950 grid place-items-center border-2 border-coffee-950 shadow-[var(--shadow-card)]">
+            <Bus size={17} />
+          </span>
+        </motion.div>
+      </div>
+
+      {/* Pontos de parada ancorando cada casa na estrada */}
+      <div className="flex mb-1">
+        {cells.map((sq) => (
+          <span key={sq.pos} className="flex-1 min-w-0 flex justify-center">
+            <span className={cn('w-2 h-2 rounded-full border -mt-0.5', sq.pos === fromPos ? 'bg-gold border-gold' : 'bg-coffee-900 border-brass/50')} aria-hidden />
+          </span>
+        ))}
+      </div>
+
+      {/* Paradas — células flex (encolhem juntas, sem scroll), mesma linguagem
+          informativa do tabuleiro (stripe, posse, bandeira, peões) */}
+      <div className="flex">
+        {cells.map((sq) => {
+          const isFrom = sq.pos === fromPos
+          const isProp = sq.kind === 'property'
+          const stripe = isProp ? GROUP_COLOR[(sq as PropertySquare).group]
+            : sq.kind === 'airport' || sq.kind === 'utility' ? 'var(--color-brass)' : 'transparent'
+          const price = 'price' in sq ? sq.price : null
+          // Posse (igual ao tabuleiro): casa com dono "veste" a cor dele (tint + moldura)
+          // e NÃO mostra preço — só casa livre exibe valor.
+          const ownerId = titles[sq.pos]?.ownerId
+          const oi = ownerId ? players.findIndex((p) => p.id === ownerId) : -1
+          const ownerColor = oi >= 0 ? PLAYER_COLORS[oi % PLAYER_COLORS.length] : undefined
+          const faces = facesAt[sq.pos] ?? []
+          return (
+            <span key={sq.pos} className="flex-1 min-w-0 px-0.5">
+              <button
+                type="button"
+                disabled={isFrom || departing != null}
+                onClick={() => embark(sq.pos)}
+                onMouseEnter={() => departing == null && setHover(sq.pos)}
+                onFocus={() => departing == null && setHover(sq.pos)}
+                className={cn(
+                  'relative w-full h-[112px] rounded-[4px] border flex flex-col overflow-hidden transition-all',
+                  isFrom
+                    ? 'border-cream bg-coffee-600 cursor-default'
+                    : departing === sq.pos
+                      ? 'border-gold bg-gold/25 -translate-y-0.5 shadow-[var(--shadow-glow)]'
+                      : 'border-gold/70 bg-coffee-900/60 hover:bg-gold/25 hover:border-gold hover:-translate-y-0.5 cursor-pointer disabled:cursor-default',
+                )}
+              >
+                <span className="h-2 w-full shrink-0" style={{ background: stripe }} />
+                {/* Posse — veste a cor do dono (tint + moldura), como na célula do tabuleiro */}
+                {ownerColor && !isFrom && (
+                  <>
+                    <span className="absolute inset-0 pointer-events-none" style={{ background: ownerColor, opacity: 0.16 }} aria-hidden />
+                    <span className="absolute inset-0 pointer-events-none" style={{ boxShadow: `inset 0 0 0 2px ${ownerColor}` }} aria-hidden />
+                  </>
+                )}
+                <span className="flex-1 flex flex-col items-center justify-center gap-0.5 px-0.5 text-center min-h-0 w-full">
+                  {/* Propriedade = bandeira do país; demais tipos = glifo da casa (acaso/Tesouro/aeroporto/utilidade/taxa/cantos) */}
+                  {isProp ? (
+                    <span
+                      className="block rounded-full border border-coffee-950/70 overflow-hidden shrink-0"
+                      style={{ width: 20, height: 20, boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--color-brass) 50%, transparent)' }}
+                    >
+                      <img
+                        src={`https://flagcdn.com/${(sq as PropertySquare).uf.toLowerCase()}.svg`}
+                        alt={(sq as PropertySquare).uf}
+                        className="w-full h-full object-cover block"
+                        draggable={false}
+                      />
+                    </span>
+                  ) : (
+                    <span className="text-gold leading-none"><SquareIcon square={sq} size={20} /></span>
+                  )}
+                  <span className="w-full text-cream leading-tight text-micro break-words line-clamp-2">{isFrom ? 'SUA PARADA' : sq.name}</span>
+                  {!ownerColor && price != null && <span className="currency text-gold-glow leading-none" style={{ fontSize: '10px' }}>R$ {price}</span>}
                 </span>
-              ) : (
-                <span className="text-gold leading-none"><SquareIcon square={sq} size={20} /></span>
-              )}
-              <span className="text-cream leading-tight text-micro">{isFrom ? 'VOCÊ AQUI' : sq.name}</span>
-              {!ownerColor && price != null && <span className="currency text-gold-glow leading-none" style={{ fontSize: '11px' }}>R$ {price}</span>}
+                <span className="flex items-center justify-center gap-px flex-wrap shrink-0 pb-1 min-h-[16px]">
+                  {faces.slice(0, 4).map((f, j) => (
+                    <PlayerFace key={j} color={f.color} active={f.active} size={16} />
+                  ))}
+                </span>
+              </button>
             </span>
-            <span className="flex items-center justify-center gap-px flex-wrap shrink-0 pb-1 min-h-[16px]">
-              {faces.slice(0, 4).map((f, j) => (
-                <PlayerFace key={j} color={f.color} active={f.active} size={16} />
-              ))}
-            </span>
-          </button>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
 
-// Seletor de destino do Bus Ticket — a FILEIRA (lado) como uma faixa de casas com
-// nome vertical. Usado pelo Bus Ticket guardado (carta ou espaço §2.7) via useBusTicket.
+// Seletor de destino do Bus Ticket — a linha de ônibus acima + canhoto de
+// bilhete picotado no rodapé. Usado pelo Bus Ticket guardado (carta ou espaço
+// §2.7) via useBusTicket.
 function BusPicker({
   fromPos,
   title,
@@ -353,17 +429,40 @@ function BusPicker({
   onPick: (pos: number) => void
   onCancel?: () => void
 }) {
+  const tickets = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]].busTickets)
+  const [boarding, setBoarding] = useState(false)
   return (
     <ModalShell className="w-[760px] max-w-[96vw]">
-      <ModalHeader title={title} subtitle={subtitle} />
-      <div className="px-5 py-5">
-        <SideRow fromPos={fromPos} onPick={onPick} />
-        <p className="label text-cream-muted text-center mt-3 leading-snug">Clique numa casa da fileira para ir.</p>
-        {onCancel && (
-          <Button variant="secondary" onClick={onCancel} className="mt-3 w-full">
-            Cancelar
-          </Button>
-        )}
+      <ModalHeader
+        title={title}
+        subtitle={subtitle}
+        icon={
+          <span className="w-9 h-9 rounded-full bg-coffee-950/15 border border-coffee-950/25 grid place-items-center text-coffee-950">
+            <Bus size={19} />
+          </span>
+        }
+      />
+      <div className="px-5 pt-4 pb-3">
+        <BusLine fromPos={fromPos} onPick={onPick} onBoard={() => setBoarding(true)} />
+        <p className="label text-cream-muted text-center mt-2.5 leading-snug">Passe o cursor pela linha e clique na parada para embarcar.</p>
+      </div>
+      {/* Canhoto do bilhete — picote com furos nas bordas + contador + cancelar */}
+      <div className="relative border-t-2 border-dashed border-coffee-500/60">
+        <span className="absolute -left-[10px] -top-[10px] w-5 h-5 rounded-full bg-coffee-950 border-2 border-coffee-500" aria-hidden />
+        <span className="absolute -right-[10px] -top-[10px] w-5 h-5 rounded-full bg-coffee-950 border-2 border-coffee-500" aria-hidden />
+        <div className="pl-6 pr-4 py-2.5 flex items-center gap-3 bg-coffee-900/60">
+          <span className="flex items-center gap-2">
+            <Bus size={15} className="text-gold" />
+            <span className="label text-cream-muted">Bilhete de ônibus</span>
+            <span className="currency text-gold-glow text-sm tabular-nums leading-none">×{tickets}</span>
+          </span>
+          <span className="label text-cream-muted/70 text-nano">1 bilhete será usado na viagem</span>
+          {onCancel && (
+            <Button variant="secondary" onClick={onCancel} disabled={boarding} className="ml-auto">
+              Cancelar
+            </Button>
+          )}
+        </div>
       </div>
     </ModalShell>
   )
@@ -511,7 +610,7 @@ function AuctionCard({
                   <span className="text-cream">{view.highBidder}</span>
                 </>
               ) : (
-                <span className="text-cream">— ninguém ainda</span>
+                <span className="text-cream">ninguém ainda</span>
               )}
             </div>
           </div>
