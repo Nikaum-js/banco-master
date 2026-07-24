@@ -83,6 +83,8 @@ export interface Trade {
   fromCash: number // ≥ 0
   toProps: number[] // posições que `to` oferece
   toCash: number // ≥ 0
+  fromBusTickets?: number // Bus Tickets que `from` oferece (≥ 0; D-028 — negociáveis, §8.2)
+  toBusTickets?: number // Bus Tickets que `to` oferece
   fromImmunities?: ImmunityGrant[] // concedidas por `from` → beneficiário `to` (014)
   toImmunities?: ImmunityGrant[] // concedidas por `to` → beneficiário `from`
   fromImmunityTransfers?: number[] // posições de imunidades de que `from` é beneficiário, transferidas a `to` (028, §8.4)

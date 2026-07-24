@@ -1,6 +1,7 @@
-// Negociação — troca de propriedades + caixa entre dois jogadores (013, SRS §8). Puro/atômico.
-// Representa um acordo JÁ ACEITO (UX propor/aceitar/recusar é UI/multiplayer). Não gated por turno.
-// Cartas/Bus Tickets/empréstimos NÃO são negociáveis (D-011/D-012) — não existem no payload.
+// Negociação — troca de propriedades + caixa + Bus Tickets entre dois jogadores
+// (013, SRS §8). Puro/atômico. Representa um acordo JÁ ACEITO (UX propor/aceitar/
+// recusar é UI/multiplayer). Não gated por turno.
+// Cartas/empréstimos NÃO são negociáveis (D-011); Bus Tickets SÃO (D-028, §8.2).
 import { BOARD } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
 import type { Trade, ImmunityGrant } from './types'
@@ -82,14 +83,18 @@ function finalCash(state: GameState, trade: Trade): { from: number; to: number }
 // executeTrade. Não considera `paused` (concern do comando).
 export function validateTrade(state: GameState, trade: Trade): boolean {
   const { fromId, toId, fromProps, fromCash, toProps, toCash } = trade
+  const fromBus = trade.fromBusTickets ?? 0
+  const toBus = trade.toBusTickets ?? 0
   if (fromId === toId) return false
   if (!Number.isInteger(fromCash) || fromCash < 0 || !Number.isInteger(toCash) || toCash < 0) return false
+  if (!Number.isInteger(fromBus) || fromBus < 0 || !Number.isInteger(toBus) || toBus < 0) return false // D-028
   const from = state.players.find((p) => p.id === fromId)
   const to = state.players.find((p) => p.id === toId)
   if (!from || !to || from.eliminated || to.eliminated) return false
   if (!ownsAllSemConstrucao(state, fromProps, fromId)) return false
   if (!ownsAllSemConstrucao(state, toProps, toId)) return false
   if (from.cash < fromCash || to.cash < toCash) return false // não oferecer mais do que tem
+  if (from.busTickets < fromBus || to.busTickets < toBus) return false // idem para tickets (D-028)
   if (!validImmunityGrants(state, trade.fromImmunities, fromId, fromProps)) return false // §8.4
   if (!validImmunityGrants(state, trade.toImmunities, toId, toProps)) return false
   if (!validImmunityTransfers(state, trade.fromImmunityTransfers, fromId)) return false // §8.4 transferência
@@ -128,8 +133,14 @@ function applyTrade(state: GameState, trade: Trade): GameState {
   const s = clone(state)
   for (const p of fromProps) s.titles[p].ownerId = toId // mortgaged/hangar acompanham
   for (const p of toProps) s.titles[p].ownerId = fromId
-  s.players.find((p) => p.id === fromId)!.cash = fin.from
-  s.players.find((p) => p.id === toId)!.cash = fin.to // taxas removidas (banco)
+  const fromP = s.players.find((p) => p.id === fromId)!
+  const toP = s.players.find((p) => p.id === toId)!
+  fromP.cash = fin.from
+  toP.cash = fin.to // taxas removidas (banco)
+  // Bus Tickets trocam de mão como contadores (D-028) — sem taxa, sem limite (§10.7).
+  const busDelta = (trade.toBusTickets ?? 0) - (trade.fromBusTickets ?? 0)
+  fromP.busTickets += busDelta
+  toP.busTickets -= busDelta
   // Transferência de imunidades existentes (028, §8.4): re-atribui só o beneficiário,
   // preservando lapsRemaining + granterId. ANTES das concessões novas (não casar recém-criada).
   for (const pos of trade.fromImmunityTransfers ?? []) {
