@@ -293,6 +293,7 @@ export function jailDecision(state: GameState, decision: 'pay' | 'card' | 'try',
   const player = activePlayer(s)
 
   if (decision === 'pay') {
+    if (player.cash < JAIL_FINE) return state // guarda de ENGINE: não paga fiado (a UI desabilita, mas o motor não pode confiar nela)
     player.cash -= JAIL_FINE // débito real (007 — antes era no-op)
     ctx.ports.onPayToCenter(s, JAIL_FINE) // $50 → pote
     player.jail = { inJail: false, attempts: 0 }

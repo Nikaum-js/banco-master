@@ -43,6 +43,15 @@ describe('Turno de Prisão (US2)', () => {
     expect(g.turn.state).toBe('casa-a-resolver')
   })
 
+  it('pagar sem caixa é no-op no ENGINE (não fia — a UI desabilita, o motor não confia nela)', () => {
+    const g = jailedSinglePlayer()
+    g.players[0].cash = 40 // < $50
+    const ports = mockPorts()
+    const after = jailDecision(g, 'pay', { rng: rngFromDice([1, 1]), ports })
+    expect(after).toBe(g) // comando inválido → estado intacto (caixa nunca fica negativa)
+    expect(ports.onPayToCenter).not.toHaveBeenCalled()
+  })
+
   it('FR-016: pagar $50 sai da prisão e habilita rolagem', () => {
     let g = jailedSinglePlayer()
     const ports = mockPorts()
