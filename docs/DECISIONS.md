@@ -37,6 +37,7 @@
 - [D-025](#d-025--distrito-super-luxo-alta-roda) — Distrito super-luxo dos Emirados (Abu Dhabi/Dubai; 10º grupo, armadilha de prestígio)
 - [D-026](#d-026--construção-com-país-parcial--aluguel-escalonado-por-posse) — Construção com país parcial: constrói com 1+ cidade, aluguel escala por posse (revisa D-004)
 - [D-027](#d-027--bus-ticket-usável-também-no-fim-do-turno) — Bus Ticket usável também no fim do turno (não só antes de rolar)
+- [D-028](#d-028--bus-tickets-negociáveis) — Bus Tickets negociáveis em propostas de troca (revisa §8.2/§10.7 do SRS)
 
 ### Rejeitadas
 - [D-R01](#d-r01--sistema-de-draft-rejeitada) — Sistema de draft de propriedades no início
@@ -207,6 +208,12 @@
 **Decisão:** O Bus Ticket guardado, que só podia ser usado **antes de rolar**, passa a poder ser usado **também no fim do turno** (depois de resolver a casa onde caiu): rolar → comprar → usar o ticket → cair noutra casa do mesmo lado → comprar. Mantém o uso pré-rolagem. Regras do salto inalteradas (mesmo lado, **não** cruza o GO, gasta 1 ticket, sem nova rolagem).
 **Por quê:** dá agência tática — o jogador aproveita a jogada normal **e** o salto no mesmo turno, em vez de escolher um ou outro antes de rolar.
 **Como aplicar:** `turnMachine.ts` (`useBusTicket` aceita `'aguardando-finalizacao'`), UI (pílula do HUD + `showBusArmed` no `ModalLayer` nesse estado). SRS §10.7 atualizado. Spec 034.
+
+### D-028 — Bus Tickets negociáveis
+**Data:** 2026-07-24 · **Status:** aceita
+**Decisão:** Bus Tickets podem entrar em propostas de negociação, como contador de cada lado (0..N do que o dono possui). Cartas em mão seguem não-negociáveis ([D-011](#d-011--cartas-em-mo-privadas-e-no-negociveis), inalterada).
+**Por quê:** Ticket é item de MOVIMENTO com valor tático claro — moeda de barganha natural que amplia a superfície de negociação (mesmo espírito da imunidade, [D-010]). A razão de D-011 (carta como alavanca estratégica secreta) não se aplica: o contador de tickets já é público. SRS §8.2 e §10.7 atualizados (v1.4).
+**Como aplicar:** `Trade` ganha `fromBusTickets`/`toBusTickets` (opcionais, ≥ 0); `validateTrade` exige posse suficiente; `applyTrade` transfere os contadores (sem taxa). UI: stepper por lado no compositor, carga no prato da balança (sem peso — tickets não têm preço de tabela), chips no modal recebido e no painel lateral.
 
 ## Decisões rejeitadas
 

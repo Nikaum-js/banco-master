@@ -376,11 +376,12 @@ De cada lado (proponente e destinatário), qualquer combinação de:
 
 - Uma ou mais propriedades (incluindo hipotecadas).
 - Dinheiro em qualquer valor.
+- **Bus Tickets** em qualquer quantidade que o lado possua (ver Seção 10.7; D-028, v1.4).
 - **Imunidade de aluguel** (ver Seção 8.4).
 
 > 📌 Construções (casas/hotéis) **NÃO** podem ser negociadas diretamente. Devem ser vendidas ao banco antes.
 >
-> 📌 **Cartas em mão NÃO podem ser negociadas** (Acaso/Tesouro de qualquer raridade, incluindo "Saia da Prisão" e "Aquisição Hostil"). Bus Tickets também **não** são negociáveis. Ver Seção 10 para detalhes do sistema de cartas.
+> 📌 **Cartas em mão NÃO podem ser negociadas** (Acaso/Tesouro de qualquer raridade, incluindo "Saia da Prisão" e "Aquisição Hostil"). **Bus Tickets SÃO negociáveis** — trocam de mão como contadores, sem taxa (D-028, v1.4). Ver Seção 10 para detalhes do sistema de cartas.
 
 ### 8.3 Fluxo de Negociação
 
@@ -666,7 +667,7 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 - Bus Tickets têm **contador próprio** — não consomem o limite de 3 cartas na mão.
 - **Sem limite** de Bus Tickets acumuláveis.
 - São **privados** (outros jogadores veem apenas a quantidade).
-- **NÃO** podem ser negociados.
+- **PODEM ser negociados** — entram na proposta como contador de cada lado (Seção 8.2; D-028, v1.4).
 
 **Como usar:**
 - Durante o próprio turno, em duas janelas (034): **antes de rolar os dados** OU **no fim do turno**, depois de já ter rolado e resolvido a casa onde caiu. Pode encadear: rolar → comprar → usar o ticket → cair noutra casa do mesmo lado → comprar também → finalizar.
@@ -1019,4 +1020,4 @@ Jogadores podem conceder empréstimos entre si durante a partida, criando dinâm
 
 ---
 
-**Banco Master — SRS v1.3 | Julho 2026 | Documento de fonte de verdade absoluta**
+**Banco Master — SRS v1.4 | Julho 2026 | Documento de fonte de verdade absoluta**
