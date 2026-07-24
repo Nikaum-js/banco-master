@@ -119,7 +119,7 @@ export function ModalLayer() {
                 className="px-4 py-2.5 flex items-center justify-between"
                 style={{ background: `linear-gradient(180deg, ${RARITY_COLOR[view.rarity]} 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 75%, var(--color-ink-950)) 100%)` }}
               >
-                <span className="display text-coffee-950 text-sm leading-none tracking-[0.2em] uppercase">{view.deckId === 'acaso' ? 'Acaso' : 'Tesouro'}</span>
+                <span className="display text-coffee-950 text-sm leading-none tracking-[var(--tracking-caps)] uppercase">{view.deckId === 'acaso' ? 'Acaso' : 'Tesouro'}</span>
                 <span className="label text-coffee-950/85" style={{ fontSize: '9px' }}>{RARITY_LABEL[view.rarity]}</span>
               </div>
 
@@ -370,7 +370,7 @@ function DeedIcon({ sq }: { sq: AuctionSquare }) {
   if (sq.kind === 'property') {
     const uf = (sq as PropertySquare).uf
     return (
-      <div className="w-10 h-10 rounded-full bg-coffee-900 border-2 border-coffee-950 overflow-hidden shrink-0 shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+      <div className="w-10 h-10 rounded-full bg-coffee-900 border-2 border-coffee-950 overflow-hidden shrink-0 shadow-[var(--shadow-card)]">
         <img src={`https://flagcdn.com/${uf.toLowerCase()}.svg`} alt={uf} className="w-full h-full object-cover" draggable={false} />
       </div>
     )

@@ -27,7 +27,7 @@ function LandDeedIcon({ sq, size = 40 }: { sq: Square; size?: number }) {
     const uf = (sq as PropertySquare).uf
     return (
       <div
-        className="rounded-full bg-coffee-900 border-2 border-coffee-950 overflow-hidden shrink-0 shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        className="rounded-full bg-coffee-900 border-2 border-coffee-950 overflow-hidden shrink-0 shadow-[var(--shadow-card)]"
         style={{ width: size, height: size }}
       >
         <img src={`https://flagcdn.com/${uf.toLowerCase()}.svg`} alt={uf} className="w-full h-full object-cover" draggable={false} />
@@ -214,7 +214,7 @@ export function LandAuctionLayer() {
                 {id}
               </button>
             ))}
-            <div className="ml-auto flex items-center gap-1.5 pl-3 pr-3.5 py-1.5 rounded-full bg-coffee-950/55 border border-coffee-500/40 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)]">
+            <div className="ml-auto flex items-center gap-1.5 pl-3 pr-3.5 py-1.5 rounded-full bg-coffee-950/55 border border-coffee-500/40 shadow-[var(--shadow-press)]">
               <CoinIcon size={15} className="text-gold" />
               <motion.span
                 key={available}

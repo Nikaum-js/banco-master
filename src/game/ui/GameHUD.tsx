@@ -175,7 +175,7 @@ export function GameHUD() {
             >
               <Crown size={76} className="text-gold" style={{ filter: 'drop-shadow(0 4px 14px color-mix(in srgb, var(--color-brass) 65%, transparent))' }} />
             </motion.div>
-            <p className="label text-gold tracking-[0.4em]">VENCEDOR</p>
+            <p className="label text-gold tracking-[var(--tracking-caps)]">VENCEDOR</p>
             <motion.p
               initial={{ scale: 0.4, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -284,7 +284,7 @@ export function GameHUD() {
               className="px-5 py-3 border-b-2 border-coffee-950"
               style={{ background: 'var(--gradient-signal)' }}
             >
-              <p className="label tracking-[0.3em]" style={{ color: 'color-mix(in srgb, var(--color-signal-glow) 35%, white)' }}>Conta vencida</p>
+              <p className="label tracking-[var(--tracking-caps)]" style={{ color: 'color-mix(in srgb, var(--color-signal-glow) 35%, white)' }}>Conta vencida</p>
               <h3 className="display text-2xl leading-none text-cream mt-0.5">Dívida</h3>
             </div>
 

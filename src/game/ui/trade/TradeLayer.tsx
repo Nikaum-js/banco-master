@@ -74,7 +74,7 @@ function DeedAvatar({ sq, size = 22 }: { sq: Square; size?: number }) {
   if (sq.kind === 'property') {
     const uf = (sq as PropertySquare).uf
     return (
-      <span className="rounded-full bg-coffee-900 border border-coffee-950 overflow-hidden shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.5)]" style={{ width: size, height: size }}>
+      <span className="rounded-full bg-coffee-900 border border-coffee-950 overflow-hidden shrink-0 shadow-[var(--shadow-card)]" style={{ width: size, height: size }}>
         <img src={`https://flagcdn.com/${uf.toLowerCase()}.svg`} alt={uf} className="w-full h-full object-cover block" draggable={false} />
       </span>
     )
@@ -97,7 +97,7 @@ function DeedChip({ pos, on, onToggle, readOnly }: { pos: number; on?: boolean; 
   const sub = deedSub(sq)
   const inner = (
     <>
-      <span className="self-stretch w-1.5 shrink-0 rounded-l-[1px]" style={{ background: deedAccent(sq) }} aria-hidden />
+      <span className="self-stretch w-1.5 shrink-0 rounded-l-[var(--radius-sharp)]" style={{ background: deedAccent(sq) }} aria-hidden />
       <DeedAvatar sq={sq} size={22} />
       <span className="flex-1 min-w-0 py-1">
         <span className="block text-cream text-xs leading-tight truncate">{sq.name}</span>

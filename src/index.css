@@ -114,6 +114,11 @@
   --tracking-display: 0.04em;
   --tracking-mono: 0.06em;
   --tracking-tight: -0.02em;
+  --tracking-caps: 0.28em; /* caption cerimonial ("VENCEDOR", "POTE DA LOTERIA") */
+
+  /* ---------- Micro-tipografia (gera text-micro / text-nano) ---------- */
+  --text-micro: 0.5625rem; /* 9px — sublabels de card/chip */
+  --text-nano: 0.5rem;     /* 8px — legendas mínimas (stat de deed) */
 }
 
 /* =====================================================================

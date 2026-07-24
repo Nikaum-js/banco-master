@@ -41,7 +41,7 @@ export function Confetti() {
       {pieces.map((p) => (
         <motion.div
           key={p.id}
-          className="absolute rounded-[1px]"
+          className="absolute rounded-[var(--radius-sharp)]"
           style={{ left: `${p.left}%`, top: -24, width: p.w, height: p.w * 0.6, background: p.color }}
           initial={{ y: 0, x: 0, opacity: 0, rotate: p.rot }}
           animate={{ y: '106vh', x: p.drift, opacity: [0, 1, 1, 0.7], rotate: p.rot + 540 }}

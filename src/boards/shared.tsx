@@ -519,7 +519,7 @@ function FlagAvatar({ iso2, side }: { iso2: string; side: Side }) {
         ...position,
         width: size,
         height: size,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.7), inset 0 0 0 1.5px color-mix(in srgb, var(--color-brass) 60%, transparent)',
+        boxShadow: 'var(--shadow-card), inset 0 0 0 1.5px color-mix(in srgb, var(--color-brass) 60%, transparent)',
       }}
       title={iso2}
     >
@@ -681,7 +681,7 @@ export function ClassicSquare({
                       border: '1px solid color-mix(in srgb, var(--color-brass) 45%, transparent)',
                       borderRadius: 9999,
                       padding: '1px 5px',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.55)',
+                      boxShadow: 'var(--shadow-card)',
                     }}
                   >
                     <span style={{ fontSize: '0.8em', opacity: 0.75, marginRight: 2 }}>R$</span>
@@ -718,7 +718,7 @@ export function ClassicSquare({
           : (square as UtilitySquare).icon === 'bolt' ? 'var(--color-brass-glow)'
           : 'var(--color-group-orange)'
         const style: React.CSSProperties = (() => {
-          const base = { position: 'absolute' as const, borderRadius: 9999, pointerEvents: 'none' as const, background: color, boxShadow: '0 1px 3px rgba(0,0,0,0.5)' }
+          const base = { position: 'absolute' as const, borderRadius: 9999, pointerEvents: 'none' as const, background: color, boxShadow: 'var(--shadow-card)' }
           switch (side) {
             case 'bottom': return { ...base, left: '20%', right: '20%', bottom: 4, height: 5 }
             case 'top':    return { ...base, left: '20%', right: '20%', top: 4,    height: 5 }
@@ -1304,7 +1304,7 @@ export function EffectMark({ pos }: { pos: number }) {
         'absolute top-0.5 right-0.5 z-[26] pointer-events-none leading-none flex items-center justify-center rounded-full font-bold',
         badge.tone === 'logo' ? 'bg-logo text-cream' : 'bg-gold text-coffee-950',
       )}
-      style={{ width: 13, height: 13, fontSize: '9px', boxShadow: '0 1px 2px rgba(0,0,0,0.7)' }}
+      style={{ width: 13, height: 13, fontSize: '9px', boxShadow: 'var(--shadow-card)' }}
       title={badge.title}
       animate={{ opacity: [0.6, 1, 0.6] }}
       transition={{ duration: 1.6, repeat: Infinity }}
@@ -1341,7 +1341,7 @@ function EffectBadge({ tag, tone, size = 20 }: { tag: string; tone: 'logo' | 'go
         'shrink-0 rounded-full font-bold flex items-center justify-center leading-none',
         tone === 'logo' ? 'bg-logo text-cream' : 'bg-gold text-coffee-950',
       )}
-      style={{ width: size, height: size, fontSize: size * 0.55, boxShadow: '0 1px 2px rgba(0,0,0,0.7)' }}
+      style={{ width: size, height: size, fontSize: size * 0.55, boxShadow: 'var(--shadow-card)' }}
       animate={reduced ? undefined : { opacity: [0.75, 1, 0.75] }}
       transition={{ duration: 1.6, repeat: Infinity }}
       aria-hidden
@@ -1899,7 +1899,7 @@ function PotCard({ pot }: { pot: number }) {
         <LotteryGlyph size={88} />
       </div>
 
-      <p className="label text-gold tracking-[0.22em] flex items-center justify-center gap-1.5">
+      <p className="label text-gold tracking-[var(--tracking-caps)] flex items-center justify-center gap-1.5">
         <CoinIcon size={13} className="text-gold" /> Pote da Loteria
       </p>
 
@@ -2780,7 +2780,7 @@ export function LotteryCard({ amount }: { amount: number }) {
           style={{ width: '14%', minWidth: '52px' }}
         >
           <p
-            className="display text-gold tracking-[0.4em] whitespace-nowrap"
+            className="display text-gold tracking-[var(--tracking-caps)] whitespace-nowrap"
             style={{
               fontSize: 'clamp(9px, 1.5cqi, 13px)',
               writingMode: 'vertical-rl',
@@ -2809,7 +2809,7 @@ export function LotteryCard({ amount }: { amount: number }) {
           {/* topo: brand + data */}
           <div className="flex items-baseline justify-between mb-1">
             <p
-              className="label text-gold tracking-[0.35em]"
+              className="label text-gold tracking-[var(--tracking-caps)]"
               style={{ fontSize: 'clamp(7px, 1.1cqi, 10px)' }}
             >
               Banco Master · Loteria Federal
@@ -2829,7 +2829,7 @@ export function LotteryCard({ amount }: { amount: number }) {
           <div className="flex items-baseline justify-between gap-3 flex-wrap">
             <div className="flex flex-col">
               <p
-                className="label text-cream-muted tracking-[0.3em]"
+                className="label text-cream-muted tracking-[var(--tracking-caps)]"
                 style={{ fontSize: 'clamp(7px, 1.1cqi, 10px)' }}
               >
                 Prêmio acumulado
@@ -2877,7 +2877,7 @@ export function LotteryCard({ amount }: { amount: number }) {
               SR · 0428 · 1742
             </p>
             <p
-              className="label text-cream-muted tracking-[0.25em]"
+              className="label text-cream-muted tracking-[var(--tracking-caps)]"
               style={{ fontSize: 'clamp(7px, 1.05cqi, 10px)' }}
             >
               Quem cair em Loteria, leva o pote
@@ -2936,7 +2936,7 @@ export function ParkingPotDisplay({ amount }: { amount: number }) {
 
         <div className="flex items-center justify-center gap-3 mb-2">
           <span className="block h-px bg-gold/60" style={{ width: 'clamp(16px, 4cqi, 40px)' }} />
-          <p className="label text-gold tracking-[0.35em]" style={{ fontSize: 'clamp(9px, 1.7cqi, 13px)' }}>
+          <p className="label text-gold tracking-[var(--tracking-caps)]" style={{ fontSize: 'clamp(9px, 1.7cqi, 13px)' }}>
             Pote de Férias
           </p>
           <span className="block h-px bg-gold/60" style={{ width: 'clamp(16px, 4cqi, 40px)' }} />
@@ -2986,7 +2986,7 @@ export function CenterPlate({
           </span>
         ))}
       </h2>
-      <p className="label text-cream-muted mt-3 tracking-[0.3em]">{subtitle}</p>
+      <p className="label text-cream-muted mt-3 tracking-[var(--tracking-caps)]">{subtitle}</p>
     </div>
   )
 }
