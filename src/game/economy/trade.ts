@@ -8,6 +8,8 @@ import { ownerOf } from './titles'
 import { cityLevel } from './construction'
 import { transferKeepFee } from './mortgage'
 import { hasImmunity } from './imunidade'
+import { activePlayer } from '../turn/turnMachine'
+import { liquidationValue } from '../falencia/falencia'
 import { logEvent } from '../log'
 
 // `Trade`/`ImmunityGrant` agora vivem em ./types (024, p/ o GameState referenciar
@@ -94,6 +96,14 @@ export function validateTrade(state: GameState, trade: Trade): boolean {
   if (!validImmunityTransfers(state, trade.toImmunityTransfers, toId)) return false
   const fin = finalCash(state, trade)
   if (!fin || fin.from < 0 || fin.to < 0) return false // taxas deixariam alguém negativo
+  // Proteção do credor (§9.1): com dívida pendente, troca envolvendo o DEVEDOR (jogador
+  // ativo) só vale se ele CONTINUAR capaz de cobrir a dívida após a troca — bloqueia doar
+  // ativos antes de declarar falência; trocas que levantam caixa seguem válidas.
+  if (state.resolution?.kind === 'debt') {
+    const debtorId = activePlayer(state).id
+    if ((fromId === debtorId || toId === debtorId) && liquidationValue(applyTrade(state, trade), debtorId) < state.resolution.amount)
+      return false
+  }
   return true
 }
 
@@ -109,9 +119,9 @@ export function tradableProps(state: GameState, ownerId: string): number[] {
   return out
 }
 
-export function executeTrade(state: GameState, trade: Trade): GameState {
-  if (state.paused) return state
-  if (!validateTrade(state, trade)) return state
+// Aplica a troca SEM validar — núcleo compartilhado por executeTrade e pela projeção
+// de solvência do devedor em validateTrade. Pré-condição: finalCash não-nulo (validado antes).
+function applyTrade(state: GameState, trade: Trade): GameState {
   const { fromId, toId, fromProps, toProps } = trade
   const fin = finalCash(state, trade)!
 
@@ -133,6 +143,12 @@ export function executeTrade(state: GameState, trade: Trade): GameState {
   for (const g of trade.fromImmunities ?? []) s.immunities.push({ beneficiaryId: toId, pos: g.pos, lapsRemaining: g.laps, granterId: fromId })
   for (const g of trade.toImmunities ?? []) s.immunities.push({ beneficiaryId: fromId, pos: g.pos, lapsRemaining: g.laps, granterId: toId })
   return s
+}
+
+export function executeTrade(state: GameState, trade: Trade): GameState {
+  if (state.paused) return state
+  if (!validateTrade(state, trade)) return state
+  return applyTrade(state, trade)
 }
 
 // Proposta pendente (024) — uma por vez. proposeTrade grava se válida; acceptTrade

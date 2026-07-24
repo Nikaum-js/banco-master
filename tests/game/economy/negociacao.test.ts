@@ -94,3 +94,39 @@ describe('Negociação — hipoteca e Hangar (US2)', () => {
     expect(out.titles[AIRPORT].hangar).toBe(true)
   })
 })
+
+describe('Negociação durante dívida pendente (§9.1 — proteção do credor)', () => {
+  // p1 (ativo) deve 150; caixa 200 + Roma (hipoteca $30) → liquidationValue 230: solvente.
+  function debtorState(): GameState {
+    const g = createSeedState(['p1', 'p2'])
+    g.titles[1].ownerId = 'p1'
+    g.players[0].cash = 200
+    g.turn.state = 'casa-a-resolver'
+    g.turn.pendingResolve = true
+    g.resolution = { kind: 'debt', amount: 150, creditorId: 'p2' }
+    return g
+  }
+
+  it('bloqueia doação de ativos que tornaria o devedor incapaz de pagar (asset dumping)', () => {
+    const g = debtorState()
+    // p1 doa Roma + $100: sobraria caixa 100 < dívida 150 → o credor da dívida seria lesado.
+    const dump = { fromId: 'p1', toId: 'p2', fromProps: [1], fromCash: 100, toProps: [], toCash: 0 }
+    expect(executeTrade(g, dump)).toBe(g) // inválida → no-op
+  })
+
+  it('permite troca que LEVANTA caixa (venda legítima para quitar a dívida)', () => {
+    const g = debtorState()
+    const rescue = { fromId: 'p1', toId: 'p2', fromProps: [1], fromCash: 0, toProps: [], toCash: 100 }
+    const out = executeTrade(g, rescue)
+    expect(out.titles[1].ownerId).toBe('p2')
+    expect(out.players[0].cash).toBe(300) // 200 + 100 — agora cobre a dívida com folga
+  })
+
+  it('troca entre TERCEIROS segue livre durante a dívida do jogador ativo', () => {
+    const g = createSeedState(['p1', 'p2', 'p3']) // ativo = p1 (devedor)
+    g.resolution = { kind: 'debt', amount: 500, creditorId: null }
+    g.titles[3].ownerId = 'p2'
+    const out = executeTrade(g, { fromId: 'p2', toId: 'p3', fromProps: [3], fromCash: 0, toProps: [], toCash: 50 })
+    expect(out.titles[3].ownerId).toBe('p3') // não envolve o devedor → não bloqueia
+  })
+})
