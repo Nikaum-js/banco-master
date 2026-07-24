@@ -91,10 +91,7 @@ export function ModalHeader({
             {title}
           </h3>
           {subtitle && (
-            <p
-              className={cn('label mt-0.5', dark ? 'text-coffee-950/80' : 'text-cream/85')}
-              style={{ fontSize: '9px' }}
-            >
+            <p className={cn('label mt-0.5 text-micro', dark ? 'text-coffee-950/80' : 'text-cream/85')}>
               {subtitle}
             </p>
           )}

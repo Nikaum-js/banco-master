@@ -101,7 +101,7 @@ function DeedChip({ pos, on, onToggle, readOnly }: { pos: number; on?: boolean; 
       <DeedAvatar sq={sq} size={22} />
       <span className="flex-1 min-w-0 py-1">
         <span className="block text-cream text-xs leading-tight truncate">{sq.name}</span>
-        {sub && <span className="block text-cream-muted leading-none truncate" style={{ fontSize: '8px' }}>{sub}</span>}
+        {sub && <span className="block text-cream-muted leading-none truncate text-nano">{sub}</span>}
       </span>
       {!readOnly && (
         <span className={cn('shrink-0 mr-2 w-[18px] h-[18px] rounded-full flex items-center justify-center transition-colors', on ? 'bg-gold' : 'border border-coffee-500/70')}>
@@ -159,13 +159,12 @@ function CashField({ value, max, onChange }: { value: number; max: number; onCha
           type="button"
           onClick={() => onChange(max)}
           disabled={max <= 0}
-          className="shrink-0 label px-2 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-700 border border-coffee-500 text-cream-muted hover:text-gold hover:border-gold/60 disabled:opacity-40 transition-colors"
-          style={{ fontSize: '9px' }}
+          className="shrink-0 label text-micro px-2 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-700 border border-coffee-500 text-cream-muted hover:text-gold hover:border-gold/60 disabled:opacity-40 transition-colors"
         >
           TUDO
         </button>
       </div>
-      <p className="label text-cream-muted leading-none" style={{ fontSize: '8px' }}>de {money(max)} em caixa</p>
+      <p className="label text-cream-muted leading-none text-nano">de {money(max)} em caixa</p>
     </div>
   )
 }
@@ -200,9 +199,9 @@ function Side({
     <div className="flex-1 min-w-0 flex flex-col">
       <div className="px-3 pt-3 pb-2 flex items-center gap-2 sticky top-0 z-10 bg-coffee-800 shrink-0 border-b border-coffee-700/40">
         <PlayerFace color={color} size={18} />
-        <p className="label text-gold truncate" style={{ fontSize: '10px' }}>{title}</p>
+        <p className="label text-gold truncate">{title}</p>
         {summary && (
-          <p className="ml-auto label text-gold-glow tabular-nums shrink-0" style={{ fontSize: '9px' }} title="Resumo deste lado da troca">
+          <p className="ml-auto label text-gold-glow tabular-nums shrink-0 text-micro" title="Resumo deste lado da troca">
             {summary}
           </p>
         )}
@@ -226,7 +225,7 @@ function Side({
 function BalanceBar({ giveCount, getCount, netToYou }: { giveCount: number; getCount: number; netToYou: number }) {
   return (
     <div className="px-5 py-3 bg-coffee-950/50 border-t border-coffee-700 shrink-0 flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2 label text-cream-muted" style={{ fontSize: '9px' }} title="Títulos que você dá ⇄ recebe">
+      <div className="flex items-center gap-2 label text-cream-muted text-micro" title="Títulos que você dá ⇄ recebe">
         <span>dá <span className="currency text-cream text-sm">{giveCount}</span></span>
         <SwapGlyph size={12} className="text-cream-muted" />
         <span>recebe <span className="currency text-cream text-sm">{getCount}</span></span>
@@ -238,12 +237,12 @@ function BalanceBar({ giveCount, getCount, netToYou }: { giveCount: number; getC
             <span className={cn('currency text-lg tabular-nums leading-none', netToYou > 0 ? 'text-gold-glow' : 'text-logo')}>
               {netToYou > 0 ? '+' : '−'}{money(Math.abs(netToYou))}
             </span>
-            <span className={cn('label', netToYou > 0 ? 'text-gold' : 'text-logo')} style={{ fontSize: '9px' }}>
+            <span className={cn('label text-micro', netToYou > 0 ? 'text-gold' : 'text-logo')}>
               {netToYou > 0 ? 'a seu favor' : 'você paga'}
             </span>
           </>
         ) : (
-          <span className="label text-cream-muted" style={{ fontSize: '9px' }}>equilibrado</span>
+          <span className="label text-cream-muted text-micro">equilibrado</span>
         )}
       </div>
     </div>
@@ -303,17 +302,17 @@ function Composer({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-center gap-5">
           <div className="flex flex-col items-center gap-1">
             <PlayerFace color={meColor} size={40} active />
-            <span className="label text-gold" style={{ fontSize: '10px' }}>Você</span>
+            <span className="label text-gold">Você</span>
           </div>
           <SwapGlyph size={22} className="text-cream-muted shrink-0" />
           <div className="flex flex-col items-center gap-1">
             <PlayerFace color={recipient ? colorOf(game.players, recipient.id) : 'var(--color-starlight-muted)'} size={40} active={!!recipient} />
-            <span className="label text-gold" style={{ fontSize: '10px' }}>{recipient?.id ?? '—'}</span>
+            <span className="label text-gold">{recipient?.id ?? '—'}</span>
           </div>
         </div>
         {others.length > 1 && (
           <div className="flex items-center justify-center gap-1.5">
-            <span className="label text-cream-muted" style={{ fontSize: '9px' }}>Trocar com</span>
+            <span className="label text-cream-muted text-micro">Trocar com</span>
             {others.map((p) => (
               <button
                 key={p.id}
@@ -371,7 +370,7 @@ function ReadSide({ title, color, props, cash }: { title: string; color: string;
     <div className="flex-1 min-w-0 flex flex-col">
       <div className="px-3 pt-3 pb-2 flex items-center gap-2 shrink-0 border-b border-coffee-700/40">
         <PlayerFace color={color} size={18} />
-        <p className="label text-gold truncate" style={{ fontSize: '10px' }}>{title}</p>
+        <p className="label text-gold truncate">{title}</p>
       </div>
       <div className="flex-1 overflow-auto px-3 pt-2.5 pb-3 flex flex-col gap-1.5">
         {empty && <EmptyState title="Nada por este lado" className="py-3" />}

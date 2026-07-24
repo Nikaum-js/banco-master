@@ -102,8 +102,8 @@ export function HandPanel() {
                     <div className="flex items-start justify-between gap-2">
                       <span className="display text-cream text-[15px] leading-tight flex-1 min-w-0">{c.label}</span>
                       <span
-                        className="label shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sharp)] border leading-none"
-                        style={{ fontSize: '8px', color: c.rarityColor, borderColor: `color-mix(in srgb, ${c.rarityColor} 40%, transparent)`, background: `color-mix(in srgb, ${c.rarityColor} 8%, transparent)` }}
+                        className="label text-nano shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sharp)] border leading-none"
+                        style={{ color: c.rarityColor, borderColor: `color-mix(in srgb, ${c.rarityColor} 40%, transparent)`, background: `color-mix(in srgb, ${c.rarityColor} 8%, transparent)` }}
                       >
                         {c.rarityLabel}
                       </span>

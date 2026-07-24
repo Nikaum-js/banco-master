@@ -425,7 +425,7 @@ export function GameHUD() {
               </span>
               <span className="flex flex-col items-start leading-none gap-0.5">
                 <span className="text-sm font-bold leading-none">Usar Bus Ticket</span>
-                <span className="label text-cream-muted leading-none" style={{ fontSize: '9px' }}>mover no mesmo lado</span>
+                <span className="label text-cream-muted leading-none text-micro">mover no mesmo lado</span>
               </span>
               <span className="ml-1 currency text-gold-glow text-sm tabular-nums leading-none">×{active.busTickets}</span>
             </button>
@@ -444,7 +444,7 @@ export function GameHUD() {
               </span>
               <span className="flex flex-col items-start leading-none gap-0.5">
                 <span className="text-sm font-bold leading-none">Quitar empréstimo</span>
-                <span className="label text-cream-muted leading-none" style={{ fontSize: '9px' }}>devolver a {loanOfActive!.creditorId}</span>
+                <span className="label text-cream-muted leading-none text-micro">devolver a {loanOfActive!.creditorId}</span>
               </span>
               <span className="ml-1 currency text-gold-glow text-sm tabular-nums leading-none">{fmt(loanOfActive!.principal)}</span>
             </button>

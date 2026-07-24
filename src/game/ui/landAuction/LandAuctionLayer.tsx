@@ -66,7 +66,7 @@ function DeedStat({ icon, label, value }: { icon: React.ReactNode; label: string
     <div className="flex flex-col items-center gap-0.5 flex-1">
       <span className="text-gold">{icon}</span>
       <span className="currency text-cream text-xs leading-none">{value}</span>
-      <span className="label text-cream-muted" style={{ fontSize: '8px' }}>{label}</span>
+      <span className="label text-cream-muted text-nano">{label}</span>
     </div>
   )
 }

@@ -120,7 +120,7 @@ export function ModalLayer() {
                 style={{ background: `linear-gradient(180deg, ${RARITY_COLOR[view.rarity]} 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 75%, var(--color-ink-950)) 100%)` }}
               >
                 <span className="display text-coffee-950 text-sm leading-none tracking-[var(--tracking-caps)] uppercase">{view.deckId === 'acaso' ? 'Acaso' : 'Tesouro'}</span>
-                <span className="label text-coffee-950/85" style={{ fontSize: '9px' }}>{RARITY_LABEL[view.rarity]}</span>
+                <span className="label text-coffee-950/85 text-micro">{RARITY_LABEL[view.rarity]}</span>
               </div>
 
               {/* Corpo */}
@@ -129,7 +129,7 @@ export function ModalLayer() {
                 <div className="w-full">
                   <div className="flex items-center gap-2 justify-center mb-2">
                     <span className="h-px flex-1 bg-coffee-500/50" />
-                    <span className="label text-gold" style={{ fontSize: '9px' }}>O que faz</span>
+                    <span className="label text-gold text-micro">O que faz</span>
                     <span className="h-px flex-1 bg-coffee-500/50" />
                   </div>
                   <p className="text-cream text-sm leading-snug text-center">{CARD_DESC[view.effect] ?? 'Carta sorteada.'}</p>
@@ -138,7 +138,7 @@ export function ModalLayer() {
 
               {/* Rodapé */}
               <div className="px-4 py-3 border-t-2 border-coffee-950 bg-coffee-900/60">
-                <p className="label text-cream-muted text-center mb-2" style={{ fontSize: '9px' }}>vai para a sua mão</p>
+                <p className="label text-cream-muted text-center mb-2 text-micro">vai para a sua mão</p>
                 <div className="flex">
                   <ActionBtn onClick={() => confirmCardReveal()}>Guardar na mão</ActionBtn>
                 </div>
@@ -180,9 +180,9 @@ export function ModalLayer() {
                       disabled={sq.pos === view.pos}
                       className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 hover:border-gold hover:bg-coffee-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-left"
                     >
-                      <span className="label text-cream-muted shrink-0 w-6 text-right" style={{ fontSize: '9px' }}>{sq.pos}</span>
+                      <span className="label text-cream-muted shrink-0 w-6 text-right text-micro">{sq.pos}</span>
                       <span className="flex-1 min-w-0 text-cream text-sm truncate">{sq.name}</span>
-                      {sq.pos === view.pos && <span className="label text-cream-muted shrink-0" style={{ fontSize: '8px' }}>aqui</span>}
+                      {sq.pos === view.pos && <span className="label text-cream-muted shrink-0 text-nano">aqui</span>}
                     </button>
                   ))}
                 </div>
@@ -263,7 +263,7 @@ function SideRow({ fromPos, onPick }: { fromPos: number; onPick: (pos: number) =
               ) : (
                 <span className="text-gold leading-none"><SquareIcon square={sq} size={20} /></span>
               )}
-              <span className="text-cream leading-tight" style={{ fontSize: '9px' }}>{isFrom ? 'VOCÊ AQUI' : sq.name}</span>
+              <span className="text-cream leading-tight text-micro">{isFrom ? 'VOCÊ AQUI' : sq.name}</span>
               {!ownerColor && price != null && <span className="currency text-gold-glow leading-none" style={{ fontSize: '11px' }}>R$ {price}</span>}
             </span>
             <span className="flex items-center justify-center gap-px flex-wrap shrink-0 pb-1 min-h-[16px]">
@@ -320,7 +320,7 @@ function DiscardRow({ card, onPick }: { card: HandCardView; onPick: () => void }
     >
       <span className="shrink-0 w-2.5 h-2.5 rounded-full" style={{ background: color }} aria-hidden />
       <span className="flex-1 min-w-0 text-cream text-sm truncate">{cardLabel(card.effect)}</span>
-      <span className="label text-cream-muted shrink-0" style={{ fontSize: '8px' }}>descartar</span>
+      <span className="label text-cream-muted shrink-0 text-nano">descartar</span>
     </button>
   )
 }
@@ -361,7 +361,7 @@ function DeedStat({ icon, label, value }: { icon: React.ReactNode; label: string
     <div className="flex flex-col items-center gap-0.5 flex-1">
       <span className="text-gold">{icon}</span>
       <span className="currency text-cream text-sm leading-none">{value}</span>
-      <span className="label text-cream-muted" style={{ fontSize: '8px' }}>{label}</span>
+      <span className="label text-cream-muted text-nano">{label}</span>
     </div>
   )
 }

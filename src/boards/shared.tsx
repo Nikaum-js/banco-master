@@ -1304,7 +1304,7 @@ export function EffectMark({ pos }: { pos: number }) {
         'absolute top-0.5 right-0.5 z-[26] pointer-events-none leading-none flex items-center justify-center rounded-full font-bold',
         badge.tone === 'logo' ? 'bg-logo text-cream' : 'bg-gold text-coffee-950',
       )}
-      style={{ width: 13, height: 13, fontSize: '9px', boxShadow: 'var(--shadow-card)' }}
+      style={{ width: 13, height: 13, fontSize: 'var(--text-micro)', boxShadow: 'var(--shadow-card)' }}
       title={badge.title}
       animate={{ opacity: [0.6, 1, 0.6] }}
       transition={{ duration: 1.6, repeat: Infinity }}
@@ -1393,7 +1393,7 @@ function TradeLeg({ label, props, cash }: { label: string; props: number[]; cash
   const empty = props.length === 0 && cash <= 0
   return (
     <div className="flex items-start gap-2">
-      <span className="label text-cream-muted w-11 shrink-0 pt-1" style={{ fontSize: '9px' }}>{label}</span>
+      <span className="label text-cream-muted w-11 shrink-0 pt-1 text-micro">{label}</span>
       <div className="flex-1 min-w-0 flex flex-wrap gap-1">
         {empty && <span className="text-cream-muted text-xs italic">nada</span>}
         {props.map((pos) => <TradeItemChip key={pos} pos={pos} />)}
@@ -1915,7 +1915,7 @@ function PotCard({ pot }: { pot: number }) {
         {pot.toLocaleString('pt-BR')}
       </motion.p>
 
-      <p className="label text-cream-muted mt-2" style={{ fontSize: '9px' }}>
+      <p className="label text-cream-muted mt-2 text-micro">
         {pot > 0 ? 'Pare em Férias e leve tudo' : 'Impostos e multas acumulam aqui'}
       </p>
 
@@ -3187,7 +3187,7 @@ function DeedActions({ pos }: { pos: number }) {
 
   return (
     <div className="mt-3 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-1.5">
-      <p className="label text-gold" style={{ fontSize: '9px' }}>Gerenciar</p>
+      <p className="label text-gold text-micro">Gerenciar</p>
       <div className="grid grid-cols-2 gap-1.5">
         {dv.kind === 'property' && (
           <>
@@ -3214,7 +3214,7 @@ function DeedActions({ pos }: { pos: number }) {
         )}
       </div>
       {dv.kind === 'property' && !flags.podeConstruir && blockMsg && (
-        <p className="text-cream-muted" style={{ fontSize: '9px' }}>{blockMsg}</p>
+        <p className="text-cream-muted text-micro">{blockMsg}</p>
       )}
     </div>
   )
@@ -3282,7 +3282,7 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
             <h3 className="display text-coffee-950 text-xl leading-none truncate">
               {square.name}
             </h3>
-            <p className="label text-coffee-950/80 mt-0.5" style={{ fontSize: '9px' }}>
+            <p className="label text-coffee-950/80 mt-0.5 text-micro">
               {square.capital}
             </p>
           </div>
@@ -3291,7 +3291,7 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
 
       {/* Tabela de aluguéis */}
       <div className="px-3.5 py-3">
-        <p className="label text-gold mb-2" style={{ fontSize: '9px' }}>Aluguel</p>
+        <p className="label text-gold mb-2 text-micro">Aluguel</p>
         <div className="flex flex-col gap-0.5">
           <CompactRent label="Base"        value={rents.base}       active={activeRow === 'base'} />
           <CompactRent label="1 casa"      value={rents.house1}     active={activeRow === 'house1'} />
@@ -3314,7 +3314,7 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
           <div className="mt-3 pt-2.5 border-t border-coffee-500/60 flex items-center gap-2">
             {owner && (
               <div className="flex-1 min-w-0">
-                <p className="label text-cream-muted" style={{ fontSize: '8px' }}>Dono</p>
+                <p className="label text-cream-muted text-nano">Dono</p>
                 <p className="display text-cream text-xs leading-none mt-0.5 truncate">{owner}</p>
               </div>
             )}
@@ -3391,7 +3391,7 @@ export function AirportPopover({
           </div>
           {/* Corpo */}
           <div className="px-3.5 py-3">
-            <p className="label text-gold mb-2" style={{ fontSize: '9px' }}>Aluguel por aeroportos possuídos</p>
+            <p className="label text-gold mb-2 text-micro">Aluguel por aeroportos possuídos</p>
             <div className="flex flex-col gap-0.5">
               <CompactRent label="1 aeroporto" value={25}  />
               <CompactRent label="2 aeroportos" value={50}  />
@@ -3400,7 +3400,7 @@ export function AirportPopover({
             </div>
             {/* Hangar bonus */}
             <div className="mt-3 pt-2.5 border-t border-coffee-500/60">
-              <p className="text-cream-muted" style={{ fontSize: '9px' }}>
+              <p className="text-cream-muted text-micro">
                 O <span className="text-gold font-semibold">Hangar</span> dobra o aluguel deste aeroporto individualmente.
               </p>
             </div>
@@ -3474,20 +3474,20 @@ export function UtilityPopover({
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="display text-coffee-950 text-lg leading-none truncate">{square.name}</h3>
-                <p className="label text-coffee-950/80 mt-0.5" style={{ fontSize: '9px' }}>Utilidade</p>
+                <p className="label text-coffee-950/80 mt-0.5 text-micro">Utilidade</p>
               </div>
             </div>
           </div>
           {/* Corpo */}
           <div className="px-3.5 py-3">
-            <p className="label text-gold mb-2" style={{ fontSize: '9px' }}>Aluguel baseado nos dados</p>
+            <p className="label text-gold mb-2 text-micro">Aluguel baseado nos dados</p>
             <div className="flex flex-col gap-0.5">
               <CompactRentText label="1 utilidade"  value="4× os dados" />
               <CompactRentText label="2 utilidades" value="10× os dados" />
               <CompactRentText label="3 utilidades" value="20× os dados" accent />
             </div>
             <div className="mt-3 pt-2.5 border-t border-coffee-500/60">
-              <p className="text-cream-muted" style={{ fontSize: '9px' }}>
+              <p className="text-cream-muted text-micro">
                 O aluguel é o total dos dados × o multiplicador. Não recebe construções.
               </p>
             </div>
