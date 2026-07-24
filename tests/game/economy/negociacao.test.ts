@@ -130,3 +130,43 @@ describe('Negociação durante dívida pendente (§9.1 — proteção do credor)
     expect(out.titles[3].ownerId).toBe('p3') // não envolve o devedor → não bloqueia
   })
 })
+
+// Bus Tickets negociáveis (D-028, SRS §8.2/§10.7 v1.4) — contadores trocam de
+// mão sem taxa; validade exige posse suficiente de cada lado.
+describe('Negociação — Bus Tickets (D-028)', () => {
+  it('transfere tickets junto com propriedades/caixa', () => {
+    const g = twoOwners()
+    g.players[0].busTickets = 3
+    g.players[1].busTickets = 1
+    const out = executeTrade(g, { fromId: 'p1', toId: 'p2', fromProps: [1], fromCash: 0, toProps: [], toCash: 0, fromBusTickets: 2, toBusTickets: 1 })
+    expect(out.titles[1].ownerId).toBe('p2')
+    expect(out.players[0].busTickets).toBe(2) // 3 − 2 + 1
+    expect(out.players[1].busTickets).toBe(2) // 1 − 1 + 2
+  })
+
+  it('troca só de tickets por caixa é válida (proposta não-vazia)', () => {
+    const g = twoOwners()
+    g.players[0].busTickets = 1
+    const out = executeTrade(g, { fromId: 'p1', toId: 'p2', fromProps: [], fromCash: 0, toProps: [], toCash: 50, fromBusTickets: 1 })
+    expect(out.players[0].busTickets).toBe(0)
+    expect(out.players[1].busTickets).toBe(1)
+    expect(out.players[0].cash).toBe(2050) // recebeu os 50 de p2
+  })
+
+  it('rejeita tickets além da posse ou valores inválidos (atômico)', () => {
+    const g = twoOwners()
+    g.players[0].busTickets = 1
+    expect(executeTrade(g, { fromId: 'p1', toId: 'p2', fromProps: [], fromCash: 0, toProps: [], toCash: 0, fromBusTickets: 2 })).toBe(g) // só tem 1
+    expect(executeTrade(g, { fromId: 'p1', toId: 'p2', fromProps: [], fromCash: 0, toProps: [], toCash: 0, fromBusTickets: -1 })).toBe(g)
+    expect(executeTrade(g, { fromId: 'p1', toId: 'p2', fromProps: [], fromCash: 0, toProps: [], toCash: 0, fromBusTickets: 1.5 })).toBe(g)
+    expect(executeTrade(g, { fromId: 'p1', toId: 'p2', fromProps: [1], fromCash: 0, toProps: [], toCash: 0, toBusTickets: 1 })).toBe(g) // p2 não tem ticket
+  })
+
+  it('payload sem os campos (trades antigas) segue funcionando — tickets intactos', () => {
+    const g = twoOwners()
+    g.players[0].busTickets = 2
+    const out = executeTrade(g, { fromId: 'p1', toId: 'p2', fromProps: [1], fromCash: 0, toProps: [], toCash: 0 })
+    expect(out.players[0].busTickets).toBe(2)
+    expect(out.players[1].busTickets).toBe(0)
+  })
+})
