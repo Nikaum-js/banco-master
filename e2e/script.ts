@@ -40,7 +40,11 @@ async function clickOneStep(page: Page): Promise<{ clicked: string | null; rolle
       () => find((t) => t === 'Recusar', true), // reação (Diplomacia/Bunker) — sempre recusar
       () => (hasFullHand ? find(() => true, true) : undefined), // descarte forçado: qualquer carta
       () => find((t) => t === 'Guardar na mão', true), // revelação de carta
-      () => find((t) => t.startsWith('← Frente'), true), // atalho: sempre pra frente
+      // Atalho: sempre pra frente. O rótulo era `← Frente` até o picker virar cartão de
+      // destino (03cb1ef) — a seta passou a ser SVG e saiu do textContent, deixando este
+      // matcher órfão. Enquanto isso, toda execução que sacava a carta Atalho travava aqui
+      // até o timeout, e como os dados do browser são Math.random() a falha era intermitente.
+      () => find((t) => t.startsWith('Frente'), true),
       () => find((t) => t.startsWith('Comprar'), true),
       () => find((t) => t === 'Leilão', true), // sem caixa pra comprar
       () => find((t) => t.startsWith('Pagar $50'), true),
