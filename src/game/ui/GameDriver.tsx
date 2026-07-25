@@ -1,12 +1,16 @@
-// GameDriver (022.1) — auto-avanço do turno. Faz o jogo "ir sozinho": resolve a
-// casa (aluguel/imposto/carta) e finaliza o turno automaticamente; só PAUSA em
-// decisão real — modal central (compra/leilão/descarte/atalho) ou prompt do HUD
-// (dívida/prisão/reação). Componente headless (sem render). Não toca em regra:
-// apenas dispara, no tempo certo, os comandos já existentes do store.
+// GameDriver (022.1) — casca React do auto-avanço. Componente headless (sem render).
+//
+// A POLÍTICA ("o que o jogo faz sozinho, e quando") vive em `@/game/turn/advancePolicy`,
+// pura e testável em node. Aqui ficam só as duas coisas que dependem do browser: os
+// portões (animação do peão, perspectiva do assento local) e QUANDO reavaliar.
+//
+// As assinaturas seguem granulares de propósito: o motor faz `structuredClone` a cada
+// comando, então assinar `s.game` inteiro re-rodaria o efeito a cada mutação do jogo.
 import { useEffect } from 'react'
 import { useGameStore } from '@/game/store'
 import { useLocalView } from '@/net/roomStore'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
+import { advancePolicy } from '@/game/turn/advancePolicy'
 
 export function GameDriver() {
   const state = useGameStore((s) => s.game.turn.state)
@@ -14,33 +18,23 @@ export function GameDriver() {
   const hasResolution = useGameStore((s) => s.game.resolution !== null)
   const paused = useGameStore((s) => s.game.paused)
   const phase = useGameStore((s) => s.game.phase)
-  const animating = useTokenAnim((s) => s.animating) // re-roda quando o peão chega
   const mayRollAgain = useGameStore((s) => s.game.turn.mayRollAgain)
+  const animating = useTokenAnim((s) => s.animating) // re-roda quando o peão chega
   const dispatch = useGameStore((s) => s.dispatch)
-  // Online, o auto-avanço é do cliente do ATOR (spec 038, research D5): sem este gate,
+  // Online, o auto-avanço é do cliente do ATOR (spec 038, research D5): sem este portão,
   // N clientes emitiriam o mesmo comando para o host descartar N-1 — não corrompe nada
   // (FR-007 protege), mas é tráfego e log inútil. Sem sala, `mayAct` é sempre true.
-  const mayResolve = useLocalView().mayAct('resolve-pending')
+  const mayAct = useLocalView().mayAct('resolve-pending')
 
   useEffect(() => {
-    if (paused || phase !== 'playing') return
-    if (!mayResolve) return // a vez é de outro dispositivo — ele conduz o próprio turno
-
-    // Resolve a casa sozinho — a menos que haja escolha de Speed Die pendente
-    // (triple/ônibus) ou um modal/decisão aberto (leilão/descarte/atalho/dívida)
-    // ou a compra inline pendente. Lê o sinal de animação AO VIVO (getState) p/
-    // não resolver antes do peão chegar.
-    if (state === 'casa-a-resolver' && awaitingChoice === null && !hasResolution) {
-      if (useTokenAnim.getState().animating) return // espera o peão terminar de andar
-      dispatch({ kind: 'resolve-pending' })
-      return
-    }
-    // DUPLA: re-rola sozinho (finalizeTurn só devolve a rolagem ao MESMO jogador) —
-    // sem clique redundante. Passar a vez (não-dupla) segue MANUAL via "Finalizar turno".
-    if (state === 'aguardando-finalizacao' && mayRollAgain) {
-      dispatch({ kind: 'finalize' })
-    }
-  }, [state, awaitingChoice, hasResolution, paused, phase, animating, mayRollAgain, mayResolve, dispatch])
+    // Estado e animação lidos AO VIVO (`getState`): dentro do efeito, o valor capturado
+    // pelo render pode estar defasado — é o que segurava a resolução antes do peão chegar.
+    const next = advancePolicy(useGameStore.getState().game, {
+      animating: useTokenAnim.getState().animating,
+      mayAct,
+    })
+    if (next) dispatch(next)
+  }, [state, awaitingChoice, hasResolution, paused, phase, mayRollAgain, animating, mayAct, dispatch])
 
   return null
 }
