@@ -31,3 +31,8 @@ dist-ssr
 
 # Relatórios de simulação (036 — extensão de conservação/cobertura), artefato gerado
 /reports/
+
+# Variáveis de ambiente (Vite) — não commitar (spec 037)
+.env
+.env.local
+.env.*.local
