@@ -1967,7 +1967,7 @@ function PotCard({ pot }: { pot: number }) {
       </motion.p>
 
       <p className="label text-cream-muted mt-2 text-micro">
-        {pot > 0 ? 'Pare em Férias e leve tudo' : 'Impostos e multas acumulam aqui'}
+        {pot > 0 ? 'Pare em Loteria e leve tudo' : 'Impostos e multas acumulam aqui'}
       </p>
 
       <AnimatePresence>
