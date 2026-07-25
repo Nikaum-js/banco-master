@@ -7,6 +7,18 @@
 // `onSubmit`, valida/aplica e `broadcast`a o comando aceito; TODO participante aplica via
 // `onBroadcast`. O remetente (mesmo o host) só reflete o efeito quando o aceito volta —
 // UI pessimista (Clarifications) sai por construção.
+//
+// O CONTRATO É EXECUTÁVEL: `tests/net/conformance.test.ts` roda a mesma suíte contra os
+// dois adapters. Semântica de porta que vive só em comentário é semântica que diverge —
+// foi assim que `takeover` acabou implementado no adapter local e fixo em `false` no de
+// produção. Regra: nada aqui vale sem um caso correspondente naquela suíte.
+//
+// Garantias que a porta NÃO dá (não construa em cima):
+//   • `onRoom` NÃO faz replay do último `room` ao assinar — para o estado atual, `loadRoom()`.
+//     (O adapter local entrega por conveniência; o Supabase não tem como.)
+//   • `submit`/`broadcast`/`publishRoom`/`requestJoin`/`rejectJoin` são fire-and-forget:
+//     falha de envio é silenciosa. Já `saveRoom`/`saveSnapshot` REJEITAM a promise.
+//   • Antes de `connect()` resolver, envio nenhum trafega.
 import type { GameAction, PlayerAction } from '@/game/commands'
 import type { GameState } from '@/game/turn/types'
 import type { Resolved } from './recorder'

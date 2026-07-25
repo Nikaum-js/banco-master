@@ -61,6 +61,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
   const presenceCbs: ((change: PresenceChange) => void)[] = []
   const joinReqCbs: ((who: JoinRequest, fromToken: string) => void)[] = []
   const joinRejCbs: ((target: string, reason: JoinError) => void)[] = []
+  const live = new Map<string, number>() // presenças vivas por token — base do takeover
   let subscribed = false
 
   channel
@@ -82,10 +83,26 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
     .on('broadcast', { event: EVENT.room }, ({ payload }) => {
       for (const cb of roomCbs) cb(payload as Room)
     })
-    .on('presence', { event: 'join' }, ({ key }) => {
-      for (const cb of presenceCbs) cb({ token: key, connected: true, takeover: false })
+    // TAKEOVER (FR-006a) por CONTAGEM de presenças vivas por token. Antes este adapter
+    // emitia `takeover: false` fixo, então o `if (change.takeover) return` do host
+    // (`host.ts:110`) nunca disparava em produção: um F5 do convidado gera um `join` e um
+    // `leave` com a MESMA chave, e o `leave` derrubava o assento → pausa espúria. O
+    // `localTransport` acertava, e nenhum teste via a diferença porque a suíte headless só
+    // exercita o adapter local. É o que a suíte de conformidade agora cobre nos dois.
+    .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+      const before = live.get(key) ?? 0
+      live.set(key, before + (newPresences?.length ?? 1))
+      for (const cb of presenceCbs) cb({ token: key, connected: true, takeover: before > 0 })
     })
-    .on('presence', { event: 'leave' }, ({ key }) => {
+    .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+      const after = (live.get(key) ?? 0) - (leftPresences?.length ?? 1)
+      if (after > 0) {
+        live.set(key, after)
+        // Sobrou conexão viva com este token: é a ponta antiga de um takeover, não uma queda.
+        for (const cb of presenceCbs) cb({ token: key, connected: false, takeover: true })
+        return
+      }
+      live.delete(key)
       for (const cb of presenceCbs) cb({ token: key, connected: false, takeover: false })
     })
 

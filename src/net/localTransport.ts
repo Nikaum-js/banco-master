@@ -13,12 +13,23 @@ type PresenceCb = (change: PresenceChange) => void
 type JoinReqCb = (who: JoinRequest, fromToken: string) => void
 type JoinRejCb = (token: string, reason: JoinError) => void
 
+// LISTAS, não slots. Antes cada callback era um campo único (`conn.onBroadcast = cb`),
+// então um segundo assinante silenciosamente derrubava o primeiro — enquanto o adapter
+// Supabase mantinha arrays. Divergência de porta que nenhum teste via, porque host e
+// cliente hoje assinam conjuntos disjuntos. A suíte de conformidade cobre os dois.
 interface Connection {
   id: number
   token: string
-  onBroadcast?: BroadcastCb
-  onRoom?: RoomCb
-  onJoinRejected?: JoinRejCb
+  onBroadcast: BroadcastCb[]
+  onRoom: RoomCb[]
+  onJoinRejected: JoinRejCb[]
+}
+
+function detach<T>(arr: T[], cb: T): Unsubscribe {
+  return () => {
+    const i = arr.indexOf(cb)
+    if (i >= 0) arr.splice(i, 1)
+  }
 }
 
 // Backend compartilhado de UMA sala. Guarda o snapshot persistido, o último `room` publicado
@@ -41,12 +52,12 @@ export class LocalHub {
     const prior = [...this.conns.values()].find((c) => c.token === token)
     const takeover = prior !== undefined
     if (prior) this.conns.delete(prior.id)
-    const conn: Connection = { id: this.nextId++, token }
+    const conn: Connection = { id: this.nextId++, token, onBroadcast: [], onRoom: [], onJoinRejected: [] }
     this.conns.set(conn.id, conn)
     // Presença: conexão nova. `takeover` NÃO é desconexão (não pausa) — mas ainda sinaliza que
     // o token está conectado (reconexão após queda também entra por aqui, com takeover=false).
     this.emitPresence({ token, connected: true, takeover })
-    if (this.lastRoom) conn.onRoom?.(this.lastRoom)
+    if (this.lastRoom) for (const cb of conn.onRoom) cb(this.lastRoom)
     return conn
   }
 
@@ -82,13 +93,13 @@ export class LocalHub {
   // Rejeição é dirigida ao token pedinte, mas trafega no mesmo canal (todos podem ver; nada
   // sensível). Cada conexão filtra o que é seu.
   rejectJoin(token: string, reason: JoinError): void {
-    for (const conn of this.conns.values()) conn.onJoinRejected?.(token, reason)
+    for (const conn of this.conns.values()) for (const cb of conn.onJoinRejected) cb(token, reason)
   }
 
   broadcast(cmd: AcceptedCommand): void {
     for (const conn of this.conns.values()) {
       if (this.dropped.has(conn.token)) continue // simula lacuna na sequência (FR-012)
-      conn.onBroadcast?.(cmd)
+      for (const cb of conn.onBroadcast) cb(cmd)
     }
   }
 
@@ -101,7 +112,7 @@ export class LocalHub {
 
   publishRoom(room: Room): void {
     this.lastRoom = room
-    for (const conn of this.conns.values()) conn.onRoom?.(room)
+    for (const conn of this.conns.values()) for (const cb of conn.onRoom) cb(room)
   }
 
   saveSnapshot(snap: PersistedSnapshot): void {
@@ -162,8 +173,9 @@ export function localTransport(hub: LocalHub, token: string): Transport {
     },
 
     onBroadcast(cb): Unsubscribe {
-      if (conn) conn.onBroadcast = cb
-      return () => { if (conn) conn.onBroadcast = undefined }
+      if (!conn) return () => {}
+      conn.onBroadcast.push(cb)
+      return detach(conn.onBroadcast, cb)
     },
 
     requestJoin(who): void {
@@ -179,8 +191,9 @@ export function localTransport(hub: LocalHub, token: string): Transport {
     },
 
     onJoinRejected(cb): Unsubscribe {
-      if (conn) conn.onJoinRejected = cb
-      return () => { if (conn) conn.onJoinRejected = undefined }
+      if (!conn) return () => {}
+      conn.onJoinRejected.push(cb)
+      return detach(conn.onJoinRejected, cb)
     },
 
     publishRoom(room: Room): void {
@@ -197,10 +210,11 @@ export function localTransport(hub: LocalHub, token: string): Transport {
     },
 
     onRoom(cb): Unsubscribe {
-      if (conn) conn.onRoom = cb
+      if (!conn) return () => {}
+      conn.onRoom.push(cb)
       const current = hub.currentRoom()
-      if (current) cb(current) // entrega o estado atual da sala ao assinar (register emite antes do cb existir)
-      return () => { if (conn) conn.onRoom = undefined }
+      if (current) cb(current) // conveniência local; a PORTA não garante replay (ver transport.ts)
+      return detach(conn.onRoom, cb)
     },
 
     onPresence(cb): Unsubscribe {
