@@ -38,6 +38,8 @@
 - [D-026](#d-026--construção-com-país-parcial--aluguel-escalonado-por-posse) — Construção com país parcial: constrói com 1+ cidade, aluguel escala por posse (revisa D-004)
 - [D-027](#d-027--bus-ticket-usável-também-no-fim-do-turno) — Bus Ticket usável também no fim do turno (não só antes de rolar)
 - [D-028](#d-028--bus-tickets-negociáveis) — Bus Tickets negociáveis em propostas de troca (revisa §8.2/§10.7 do SRS)
+- [D-029](#d-029--desconexão-de-jogador-eliminado-não-pausa-a-partida) — Desconexão de jogador eliminado NÃO pausa a partida (refina §11.3)
+- [D-030](#d-030--privacidade-de-cartas-é-garantia-de-apresentação-no-v1) — Privacidade de cartas é garantia de apresentação no v1 (não de dados)
 
 ### Rejeitadas
 - [D-R01](#d-r01--sistema-de-draft-rejeitada) — Sistema de draft de propriedades no início
@@ -216,6 +218,19 @@
 **Decisão:** Bus Tickets podem entrar em propostas de negociação, como contador de cada lado (0..N do que o dono possui). Cartas em mão seguem não-negociáveis ([D-011](#d-011--cartas-em-mo-privadas-e-no-negociveis), inalterada).
 **Por quê:** Ticket é item de MOVIMENTO com valor tático claro — moeda de barganha natural que amplia a superfície de negociação (mesmo espírito da imunidade, [D-010]). A razão de D-011 (carta como alavanca estratégica secreta) não se aplica: o contador de tickets já é público. SRS §8.2 e §10.7 atualizados (v1.4).
 **Como aplicar:** `Trade` ganha `fromBusTickets`/`toBusTickets` (opcionais, ≥ 0); `validateTrade` exige posse suficiente; `applyTrade` transfere os contadores (sem taxa). UI: stepper por lado no compositor, carga no prato da balança (sem peso — tickets não têm preço de tabela), chips no modal recebido e no painel lateral.
+
+### D-029 — Desconexão de jogador eliminado não pausa a partida
+**Data:** 2026-07-24 · **Status:** aceita
+**Decisão:** A pausa global por desconexão (§11.3, [D-016](#d-016--desconexo-pausa-partida)) passa a considerar **apenas jogadores ainda em jogo**. Quem já foi **eliminado por falência** (§9.4) sai do gatilho: a saída dele não pausa a mesa, e a partida dos sobreviventes segue normalmente. O assento eliminado continua existindo na sala (pode reabrir o link e acompanhar), mas nunca mais dispara pausa.
+**Por quê:** eliminado não tem mais nada a proteger — a razão inteira da D-016 (propriedades, caixa e posição intactos durante a ausência) não se aplica a quem já não tem patrimônio nem turno. Como **não há timeout de desconexão** por princípio ([D-015](#d-015--sem-timer-de-turno) / §11.3), a regra literal deixava a partida refém de quem já perdeu e provavelmente fechou a aba: bastava um eliminado sair para travar a mesa indefinidamente. O refinamento preserva o espírito do princípio VII (ninguém é punido por cair) exatamente onde ele importa — nos jogadores vivos.
+**Como aplicar:** SRS §11.3 atualizado (v1.5) com a exceção explícita. Na casca de rede, o gatilho de pausa passa a ignorar assentos cujo jogador esteja eliminado no estado da partida; o mesmo vale para a retomada (a volta de um eliminado não é condição para despausar). A UI de pausa (spec 038) nomeia só ausentes que ainda jogam.
+
+### D-030 — Privacidade de cartas é garantia de apresentação no v1
+**Data:** 2026-07-24 · **Status:** aceita (revisável)
+**Decisão:** No v1, a privacidade da mão (princípio VI, §10.3, [D-011](#d-011--cartas-em-mo-privadas-e-no-negociveis)) é garantida **na apresentação**: nenhuma interface exibe as cartas de outro jogador — só os contadores públicos (§12.3). O estado da partida, porém, continua chegando **completo** a todos os clientes, como exige o modelo de sincronização da [D-020](#d-020--modelo-de-autoridade--sincronização-host-autoritativo--realtime--snapshot) (difusão por comando + reducer determinístico): quem inspecionar o próprio cliente consegue ver a mão alheia.
+**Por quê:** filtrar o estado por destinatário quebraria a premissa que faz a sincronização funcionar — todos aplicam o **mesmo** comando sobre o **mesmo** estado e convergem sem transmitir o `GameState`. Visões divergentes por jogador exigiriam autoridade de servidor real (Edge Function rodando o motor) e um transporte diferente: custo desproporcional para um jogo social entre conhecidos por link (D-019), onde trapacear exige devtools e o adversário é alguém que você convidou.
+**Como aplicar:** a spec 038 implementa a garantia de apresentação e **registra a limitação** de forma visível na documentação. O endurecimento entra na mesma frente do anti-spoof de transporte (identidade amarrada à conexão via Edge Function) — se e quando houver tração, junto da migração para server-autoritativo que a D-020 já prevê como troca de transporte, não reescrita.
+**Revisar se:** o jogo sair do círculo de convidados por link (salas públicas/ranqueadas), ou houver relato real de trapaça por inspeção de cliente.
 
 ## Decisões rejeitadas
 

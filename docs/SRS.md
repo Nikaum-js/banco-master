@@ -1,6 +1,6 @@
 # Banco Master — Software Requirements Specification (SRS)
 
-**Versão:** 1.3
+**Versão:** 1.5
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -475,6 +475,7 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 **Privacidade:**
 - Cartas em mão são **privadas** — outros jogadores NÃO veem quais cartas você tem.
 - Outros jogadores VEEM apenas a **quantidade** total de cartas na sua mão ("Pedro tem 2 cartas").
+- **Alcance da garantia no v1** (D-030, v1.5): a privacidade é assegurada **na apresentação** — nenhuma interface exibe a mão alheia. O estado da partida, porém, trafega completo para todos os clientes (exigência do modelo de sincronização, D-020), então inspecionar o próprio cliente permite ver a mão dos outros. Endurecer isso exige autoridade de servidor real e entra junto do endurecimento de identidade de transporte.
 
 **Negociação:**
 - Cartas em mão **NÃO podem ser negociadas**, em nenhuma raridade, incluindo "Saia da Prisão" e "Aquisição Hostil".
@@ -697,12 +698,13 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 
 ### 11.3 Desconexão e Reconexão
 
-- Se qualquer jogador desconectar, a partida **pausa automaticamente**.
+- Se qualquer jogador **ainda em jogo** desconectar, a partida **pausa automaticamente**.
 - Mensagem é exibida a todos sobre o jogador desconectado.
 - A partida retoma automaticamente quando ele reconectar.
 - Propriedades do jogador desconectado **NÃO** vão ao banco durante a pausa.
 - Reconexão é pelo mesmo link da sala; estado é carregado do servidor.
 - Se o desconectado for o **host**: a partida pausa e aguarda o host reconectar. Não há transferência de host.
+- **Exceção — jogador eliminado** (D-029, v1.5): a desconexão de quem já foi **eliminado por falência** (§9.4) **NÃO** pausa a partida. Ele mantém o assento e pode reabrir o link para acompanhar, mas sua ausência nunca trava a mesa — não há patrimônio nem turno a proteger, e como não existe timeout de desconexão, a regra literal deixaria a partida refém de quem já perdeu.
 
 > 📌 **Não há timeout de desconexão** — a partida pode ficar pausada indefinidamente.
 
