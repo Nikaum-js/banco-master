@@ -3,7 +3,7 @@
 > **O que este doc é:** a visão de **produto** amarrando objetivo → épicos → specs → status, e o
 > **mapa do que falta para o v1.0**. Não substitui o [`SRS.md`](./SRS.md) (verdade de regras) nem o
 > [`MILESTONES.md`](./MILESTONES.md) (roadmap macro) — é a camada de rastreabilidade entre eles.
-> Última atualização: 2026-07-24 · 359 testes verdes · engine e UI single-player fechados; multiplayer não começou.
+> Última atualização: 2026-07-24 · 397 testes verdes · engine e UI single-player fechados; **fundação multiplayer entregue (spec 037)** — falta a experiência online (perspectiva local, identidade real, roteamento).
 
 ---
 
@@ -99,13 +99,18 @@ Legenda: ✅ entregue · ❌ descontinuada · ⏳ pendente (sem spec ainda).
 ### E14 — QA / Simulação
 | 036 | Fuzzing seedado + invariantes + conservação de dinheiro + smoke E2E | ✅ |
 
-### E15 — Multiplayer, Sala & Sessão (Supabase) — **NÃO COMEÇOU**
-| 037 (planejada) | Infra Supabase (schema rooms/games/players, RLS, Realtime) | ⏳ |
-| 038 (planejada) | Transporte de comandos + sync de estado (host-autoritativo D-020) | ⏳ |
-| 039 (planejada) | Lobby & Sala (criar/entrar, nomes+token, presence, iniciar) | ⏳ |
-| 040 (planejada) | Sessão & Resiliência (pausa global, reconexão, reload sem perda — §11.3/§11.4) | ⏳ |
-| 041 (planejada) | Roteamento (home → sala → partida → fim) | ⏳ |
-| 042 (planejada) | Leilão dos bens do falido-ao-banco (§9.2) — precisa de vários jogadores | ⏳ |
+### E15 — Multiplayer, Sala & Sessão (Supabase) — **fundação entregue**
+
+> O plano original fatiava em 037 infra / 038 transporte / 039 lobby / 040 sessão. A **spec 037
+> absorveu as quatro**: transporte de comandos, sync host-autoritativo, resiliência de sessão e
+> lobby mínimo no browser saíram juntos porque compartilham a mesma porta `Transport`. O que
+> sobra do E15 é a **experiência** online (038) e a regra que só existe com N jogadores (039).
+
+| Spec | O que entrega | Status |
+|---|---|---|
+| 037 | Fundação host-autoritativa: `applyCommand` puro, difusão por comando com não-determinismo gravado/replicado, snapshot upsert, pausa por presença, reconexão/reload, anti-spoof, lobby mínimo (nome+cor+link+iniciar), migration + adapter Supabase | ✅ (infra viva pendente: aplicar a migration) |
+| 038 (próxima) | Partida online de verdade: perspectiva de jogador local, identidade real (nomes/cores/tokens no lugar de `p1..pN`), status de conexão/pausa visível, roteamento home → sala → partida → fim, kick no lobby, ordem inicial | ⏳ |
+| 039 (planejada) | Leilão dos bens do falido-ao-banco (§9.2) — precisa de vários jogadores | ⏳ |
 
 ### E16 — Polimento & Lançamento (M4) — **NÃO COMEÇOU**
 | ⏳ | Tela de fim de jogo com resumo; acessibilidade/responsivo; telemetria mínima; deploy + CI | ⏳ |
@@ -119,20 +124,24 @@ auditoria) blinda o que já existe e várias partes são pré-requisito direto d
 
 ### 5.1 Caminho crítico de produto — o bloqueador é o M3
 
-O engine e a UI single-player estão fechados; **o que separa "protótipo jogável local" de "v1.0" é
-inteiramente o multiplayer** (E15) e o polimento de lançamento (E16). Ordem sugerida das specs 037+:
+O engine e a UI single-player estão fechados, e a **fundação multiplayer saiu** (037). O que separa
+"dois browsers conectados" de "v1.0" é a **experiência** online (038) e o polimento de lançamento
+(E16). Ordem vigente:
 
-1. **037 Infra Supabase** — fundação (schema, RLS, Realtime).
-2. **038 Transporte + sync** — o núcleo: comando do cliente → host aplica reducer → difunde snapshot → persiste.
-3. **039 Lobby & Sala** — mata o gap D1 (nomes reais no lugar de `p1..pN`).
-4. **040 Sessão & Resiliência** — pausa/reconexão/reload sem perda (princípio VII).
-5. **041 Roteamento** e **042 Leilão do falido-ao-banco** (§9.2, regra que só existe com N jogadores).
-6. **M4:** tela de fim de jogo, acessibilidade, telemetria, deploy + CI.
+1. **037 Fundação multiplayer** — ✅ entregue (falta aplicar a migration no projeto Supabase e
+   medir SC-002/SC-006 numa partida real).
+2. **038 Partida online de verdade** — perspectiva de jogador local (cada cliente só decide pelo
+   próprio assento), identidade real (mata o gap D1: nomes no lugar de `p1..pN`), status de
+   conexão/pausa visível, roteamento home → sala → partida → fim.
+3. **039 Leilão do falido-ao-banco** (§9.2) — regra que só existe com N jogadores, destravada pelo M3.
+4. **M4:** tela de fim de jogo, acessibilidade, telemetria, deploy + CI.
 
-> **Decisão travada antes de specificar 037:** autoridade de estado. Hoje os comandos aceitam o
-> `playerId` de quem chamar (`store.ts:262`) — qualquer cliente poderia agir pelos outros. D-020
-> (host-autoritativo) resolve, mas o formato dos comandos precisa refletir "quem sou eu" no desenho
-> do transporte. É o item 17 da auditoria (uma decisão, não código).
+> **Decisão travada antes de specificar 037 — resolvida:** a autoridade de estado (item 17 da
+> auditoria / `store.ts:262`) foi fechada pela 037: todo comando carrega o `playerId` do remetente e
+> o host o confere contra o assento da conexão, descartando spoof (provado em `tests/net/antispoof.test.ts`).
+> Ressalva vigente: no transporte Supabase o token ainda é auto-declarado no broadcast — a **lógica**
+> do host rejeita spoof, mas a identidade de transporte pede endurecimento (Edge Function/segredo de
+> sessão) para paridade plena.
 
 ### 5.1.1 Arquitetura frontend-first (D-020, refinada em 2026-07-24)
 
@@ -159,7 +168,7 @@ Já resolvidos: 1, 2, 7, 14 (3 bugs de engine + SRS v1.3). Restantes, por alavan
 | Alta | **Log tipado** `LogEntry {kind,who,amount,what}` | M | Maior alavanca estrutural: destrava explicação de aluguel (D2), som robusto, cor, i18n |
 | Média | **Persistência do `GameState` em localStorage + ErrorBoundary** | M | F5/exceção = partida perdida hoje; estado já é serializável |
 | Média | **Leilão comum multi-licitante + botão "passar"** (`passBid` órfão) | M | Mecânica central inoperante no hotseat; padrão já existe no pregão |
-| Média | **Lobby mínimo com nomes** (antecipa 039) | M | Vitória hoje celebra "p1" |
+| — | ~~Lobby mínimo com nomes~~ | — | Coberto: lobby entregue na 037; nomes reais na UI da partida são escopo da **038** |
 | Média | **Deletar dead code de `boards/shared.tsx`** (`HOUSE_COST` diverge do tema!, mocks, componentes órfãos) | P | Armadilha de importar constante errada |
 | Média | **Sim: registrar vencedor/curva de patrimônio** | M | Pré-requisito p/ validar ROI da construção parcial (D-026) |
 | Baixa | Extrair `src/game/setup.ts` puro (composição definida 2×); fatiar god file `shared.tsx` (3.261 linhas) + quebrar ciclo `shared.tsx ↔ game/ui`; acessibilidade base | P–G | Dívida de arquitetura da casca |

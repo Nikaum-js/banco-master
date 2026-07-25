@@ -1,15 +1,35 @@
 # HANDOVER — Banco Master
 
-> Última atualização: 2026-07-24 · branch `main` · `22a460d` (+ docs desta sessão)
+> Última atualização: 2026-07-24 · branch `037-sala-online-estado-sincronizado`
 > Leitura de partida: este arquivo → `CLAUDE.md` → `docs/AUDITORIA-2026-07-23.md` → a spec ativa.
 
 ## Estado atual
 
-- **Motor (M1): completo e sem gaps de regra conhecidos** — os 3 bugs achados pela auditoria de 2026-07-23 foram corrigidos nesta sessão (ver abaixo). **UI jogável (M2): fechada** (painéis ao vivo, modais, cartas de mão, trade, pregão, som). **Simulação (spec 036): entregue** (fuzzing seedado + invariantes + smoke E2E).
-- **Gates:** `bun run test` → **359 testes / 46 arquivos verdes** (~1–2min); `bunx tsc -b` limpo; `bun run build` ok. **Lint: 36 erros pré-existentes** (12 em `boards/shared.tsx` por react-refresh; resto em `tests/sim`, incl. o falso positivo `useBusTicket` em `driver.ts:110`). **Sem CI** (`.github/` não existe).
-- **Multiplayer (M3): não começou.** ADRs travados: D-019 (auth anônima por link) + D-020 (host-autoritativo + Realtime + snapshot). Nenhum código Supabase.
+- **Motor (M1): completo e sem gaps de regra conhecidos** — os 3 bugs achados pela auditoria de 2026-07-23 foram corrigidos (ver abaixo). **UI jogável (M2): fechada**. **Simulação (spec 036): entregue**.
+- **Multiplayer (M3): fundação + LOBBY JOGÁVEL no browser (spec 037)** — casca host-autoritativa em `src/net/` + `src/game/commands.ts`/`ctx.ts`, provada headless via `LocalTransport`, agora ligada ao app por `src/net/ui/OnlineGate.tsx` sobre o `supabaseTransport`. Motor intacto (princípio I / SC-007). **Falta só aplicar a migration no projeto Supabase** — ver seção "Spec 037" abaixo.
+- **Gates:** `bunx vitest run` → **397 testes / 56 arquivos verdes** (363 motor + 34 rede em `tests/net/`); `bunx tsc --noEmit -p tsconfig.app.json` limpo; `bun run build` ok; lint do delta (`src/net`, `src/App.tsx`, `tests/net`) limpo. **Lint global: 36 erros pré-existentes** inalterados. **Sem CI**.
 - **Push agora é rotina:** remote `origin` = `github.com:Nikaum-js/banco-master` — commits desta e da sessão anterior foram pushados. Backdate de commits segue a regra do `~/.claude/rules/git-conventions.md` (hook injeta).
 - **Auditoria completa em `docs/AUDITORIA-2026-07-23.md`** — 17 itens priorizados por impacto×esforço; é o backlog técnico vigente (itens 1, 2, 7 e 14 já resolvidos).
+
+## Spec 037 — fundação multiplayer host-autoritativo (2026-07-24)
+
+**Entregue e verde** (plan + tasks + implementação em `specs/037-sala-online-estado-sincronizado/`). Desenho: `applyCommand` (`src/game/commands.ts`) é o **dispatcher puro** único que host e cliente compartilham sobre os reducers existentes — zero regra nova. O não-determinismo (`ctx.rng`/`ctx.now`) é **gravado pelo host e reproduzido pelo cliente** (`src/net/recorder.ts`, FR-011) → convergência exata. `LocalTransport` (`src/net/localTransport.ts`) é um hub in-memory síncrono que dirige host + N clientes num processo → toda a fundação é testável sem infra.
+
+**Arquivos** (`src/net/`): `recorder`, `room` (assentos/cor única/lifecycle), `transport` (porta), `localTransport` (hub de teste), `host` (autoridade: identidade→pausa→aplica→no-op→seq→persist→broadcast), `client` (envio + replay + gap→snapshot), `session` (token/link), `connectStore` (`connectMultiplayer` — liga o `useGameStore` ADITIVAMENTE, sem tocar `store.ts`), `supabaseTransport` (adapter connect-ready). + `src/game/ctx.ts` (fábrica do `TurnCtx` de produção) + `supabase/migrations/0001_rooms_snapshots.sql`.
+
+**Provado headless** (`tests/net/`, 24 testes / 9 arquivos): SC-001 convergência 2/3/8p (400 ações/seed, `JSON` idêntico), SC-003 reconexão sem perda (convidado e host), SC-004 pausa global + rejeição + retomada + host-caído, SC-005 anti-spoof (fecha `store.ts:262`/item 17), FR-012 gap→snapshot, FR-017 congelamento de deadline, FR-001..006a sala.
+
+**Sessão 2026-07-24 (parte 2) — o lobby saiu do papel (T018 + T023..T027):**
+
+- **Porta `Transport` ganhou o canal de lobby**: `requestJoin`/`onJoinRequest` (a identidade do assento é o **token da conexão**, não algo declarado pelo pedinte), `rejectJoin`/`onJoinRejected` (motivo: cheia / cor tomada / já iniciada) e `saveRoom`/`loadRoom` (a sala existe antes de haver `GameState` — o snapshot não serve no lobby). Implementado nos DOIS transportes.
+- **`host.open()`** abre a sala e, se já houver partida persistida, **reassume a autoridade pelo snapshot** (FR-015 — F5 do host não mata a partida). **`host.startMatch()`** fecha o lobby e inicia (FR-006).
+- **`OnlineGate`** (`src/net/ui/OnlineGate.tsx` + `LobbyScreen.tsx`): sem `?host=1`/`?room=`, o app é o single-player de sempre. Com eles, monta transporte+client (+host se você criou a sala), tela de nome/cor, lista de assentos, link copiável, "Iniciar partida", `connectMultiplayer` quando o estado chega e `host.tick()` a cada 250ms (prazos de leilão). Ao criar a sala a URL vira `?room=<id>` via `replaceState` — assim o F5 do host cai no caminho de reentrada e reassume a autoridade.
+- **`broadcast.self: true`** no canal Supabase — sem o eco do próprio envio o host não veria os próprios comandos (o modelo da spec é uniforme: todos submetem, todos aplicam só o que volta difundido). Era um bug latente do adapter connect-ready.
+- **`tests/net/lobby.test.ts`** (10 testes novos): assento concedido pela rede, identidade pelo token da conexão, cor tomada, sala cheia, recusa dirigida só ao pedinte, início com 2+ e convergência do estado inicial, recusa pós-início, reanexo por token, host reassumindo autoridade após F5.
+
+**Pendente (infra viva):** aplicar `supabase/migrations/0001_rooms_snapshots.sql` no projeto `edppdqrkqljhjkbyjvsz` (a tabela `rooms` ainda não existe — `REST /rooms` responde 404). `.env` já tem `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` e `@supabase/supabase-js` já está instalado; a migration é idempotente (pode rodar pelo SQL Editor do dashboard ou pelo MCP). Depois: validar 2 abas de verdade (SC-002 propagação, SC-006 custo) — é o único gate da 037 que a suíte headless não cobre.
+
+**Limitações conhecidas (038+):** a UI ainda não tem **perspectiva de jogador local** — ela mostra os controles do jogador da vez para todos; cliques de quem não é o ator são simplesmente descartados pelo host (FR-007), então não há risco de estado, só de confusão visual. Nomes/cores da sala vivem fora do `GameState` (D-019) e ainda não aparecem no tabuleiro. **Anti-spoof no transporte Supabase** (token auto-declarado no broadcast) precisa de endurecimento (Edge Function/segredo de sessão) para paridade plena com o `LocalTransport` — a LÓGICA do host já rejeita spoof.
 
 ## Sessão de 2026-07-23/24 — auditoria ponta a ponta + 3 fixes de engine + SRS v1.3
 
@@ -29,6 +49,17 @@
 - 3 subagentes de auditoria morreram por limite de sessão — regras/design/qualidade foram auditadas inline (mais lento, mesmo resultado).
 - 1 flake na suíte completa sob carga (timeout de teste de sim na 1ª execução; 2 execuções seguintes 100% verdes) — se repetir, suspeitar de carga da máquina antes de culpar código.
 - Colisão residual conhecida do slot único: dívida de juros durante fluxo de CARTA de movimento (avance3/voltaGo) ainda pode disputar o slot — teórico (exige empréstimo + carta + GO + insolvência); resolver de vez = fila de resolutions (não vale agora).
+
+## Spec 038 — partida online jogável (aberta em 2026-07-24)
+
+`specs/038-partida-online-jogavel/spec.md` — perspectiva de jogador local (cada cliente só decide pelo próprio assento, mão privada de verdade), identidade real da sala na partida (nomes/cores/peças no lugar de `p1..pN`), sessão visível (quem caiu, pausa, retomada), roteamento home → sala → partida → fim, kick no lobby e ordem inicial sorteada. **Sem clarificações pendentes — pronta para `/speckit-plan`.**
+
+Duas decisões viraram ADR antes de entrar na spec (regra nunca nasce numa spec — princípio I):
+
+- **D-029** — desconexão de jogador **eliminado** NÃO pausa a partida (refina SRS §11.3). Sem isso, como não há timeout, um eliminado que fecha a aba trava a mesa dos sobreviventes para sempre. **Impacto na 037:** o gatilho de pausa em `src/net/host.ts` hoje considera qualquer assento desconectado — precisa passar a ignorar eliminados (implementação é da 038).
+- **D-030** — privacidade de cartas é garantia **de apresentação** no v1 (não de dados): o estado completo chega a todos os clientes por exigência do modelo de sincronização (D-020), então inspecionar o próprio cliente revela a mão alheia. A limitação é registrada, não escondida; endurecer exige autoridade de servidor real e entra junto do anti-spoof de transporte.
+
+**SRS bumpado para v1.5** (§10.3 e §11.3). O `docs/PRD.md` foi realinhado: o mapa E15 antigo (037 infra / 038 transporte / 039 lobby / 040 sessão) não valia mais — a 037 absorveu as quatro; sobrou 038 (experiência) e 039 (leilão do falido §9.2).
 
 ## Próximos passos (do backlog da auditoria, em ordem)
 
