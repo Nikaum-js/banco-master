@@ -28,3 +28,14 @@ export function getSupabase(): SupabaseClient {
 export function createSupabaseTransport(roomId: string, token: string): Transport {
   return supabaseTransport(getSupabase() as unknown as SupabaseLike, roomId, token)
 }
+
+// Falha de infra vira mensagem acionável em vez de rejeição silenciosa. É código Postgres
+// e nome de migration — pertence AQUI, junto do adapter, não dentro de um componente React
+// (era `OnlineGate.tsx:26`). `createRoomSession` a recebe como opção.
+export function describeInfraError(e: unknown): string {
+  const raw = e instanceof Error ? e.message : typeof e === 'object' && e ? JSON.stringify(e) : String(e)
+  if (/does not exist|42P01|schema cache/i.test(raw)) {
+    return 'A tabela `rooms` não existe no projeto Supabase. Aplique supabase/migrations/0001_rooms_snapshots.sql e recarregue.'
+  }
+  return `Falha ao conectar na sala: ${raw}`
+}
