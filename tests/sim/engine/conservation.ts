@@ -672,11 +672,23 @@ function checkDirectAction(prev: GameState, next: GameState, action: SimAction, 
 // do `dispatch` normal — checagem própria, chamada pelo runGame no mesmo ponto.
 export function checkAuctionClose(prev: GameState, next: GameState): { violations: Violation[]; mechanisms: string[] } {
   const ledger = newLedger()
+  // Saldo corrente por jogador DENTRO deste passo. O fecho do leilão de propriedade e o
+  // dos lotes do pregão podem cair no mesmo passo — desde que `applyCommand` passou a
+  // disparar o gatilho de escassez também em `close-auction` (como o store sempre fez),
+  // arrematar uma propriedade pode ABRIR o pregão e fechar lotes na mesma volta. Quem
+  // paga o 2º evento paga com o caixa JÁ descontado pelo 1º.
+  const running = new Map<string, number>()
+  const take = (id: string, bid: number): number => {
+    const available = running.get(id) ?? cashOf(prev, id)
+    const charged = Math.min(bid, available)
+    running.set(id, available - charged)
+    return charged
+  }
+
   if (prev.resolution?.kind === 'auction' && next.resolution?.kind !== 'auction') {
     const a = prev.resolution.auction
     if (a.highBidder) {
-      const winner = a.highBidder
-      addCash(ledger, winner, -Math.min(a.currentBid, cashOf(prev, winner)))
+      addCash(ledger, a.highBidder, -take(a.highBidder, a.currentBid))
       mark(ledger, 'auction-close')
     }
   }
@@ -687,16 +699,12 @@ export function checkAuctionClose(prev: GameState, next: GameState): { violation
     // `prev` isoladamente (senão dá falso positivo quando o caixa não cobre todos os lotes
     // ao preço cheio).
     const nextLots = new Set((next.landAuction?.lots ?? []).map((l) => l.pos))
-    const running = new Map<string, number>()
     for (const lot of prev.landAuction.lots) {
       if (nextLots.has(lot.pos)) continue // ainda em aberto
       if (!lot.highBidder) continue // sem lance — permanece livre, sem dinheiro
       const winnerAlive = next.players.find((p) => p.id === lot.highBidder && !p.eliminated)
       if (!winnerAlive) continue // faliu entre o lance e o fecho — lote fica livre, sem dinheiro
-      const available = running.get(lot.highBidder) ?? cashOf(prev, lot.highBidder)
-      const charged = Math.min(lot.currentBid, available)
-      running.set(lot.highBidder, available - charged)
-      addCash(ledger, lot.highBidder, -charged)
+      addCash(ledger, lot.highBidder, -take(lot.highBidder, lot.currentBid))
       mark(ledger, 'land-auction-close')
     }
   }

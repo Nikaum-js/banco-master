@@ -88,13 +88,14 @@ const MODAL_WAITING = {
 
 export function ModalLayer() {
   const game = useGameStore((s) => s.game)
-  const placeBid = useGameStore((s) => s.placeBid)
-  const discardCard = useGameStore((s) => s.discardCard)
-  const chooseCardShortcut = useGameStore((s) => s.chooseCardShortcut)
-  const chooseBusMove = useGameStore((s) => s.chooseBusMove)
-  const chooseTripleDest = useGameStore((s) => s.chooseTripleDest)
-  const confirmCardReveal = useGameStore((s) => s.confirmCardReveal)
-  const useBusTicketCmd = useGameStore((s) => s.useBusTicket)
+  const dispatch = useGameStore((s) => s.dispatch)
+  const placeBid = (playerId: string, amount: number): void => dispatch({ kind: 'place-bid', playerId, amount })
+  const discardCard = (cardId: string): void => dispatch({ kind: 'discard-card', cardId })
+  const chooseCardShortcut = (dir: 'frente' | 'tras'): void => dispatch({ kind: 'choose-card-shortcut', dir })
+  const chooseBusMove = (opt: 'die0' | 'die1' | 'sum'): void => dispatch({ kind: 'choose-bus-move', opt })
+  const chooseTripleDest = (dest: number): void => dispatch({ kind: 'choose-triple-dest', dest })
+  const confirmCardReveal = (): void => dispatch({ kind: 'confirm-card-reveal' })
+  const useBusTicketCmd = (dest: number): void => dispatch({ kind: 'use-bus-ticket', dest })
   const busArmed = useBusTicketUI((s) => s.armed)
   const disarmBus = useBusTicketUI((s) => s.disarm)
 

@@ -54,14 +54,17 @@ export function Confetti() {
 
 export function NoticeLayer() {
   const notice = useGameStore((s) => s.game.notice)
-  const dismissNotice = useGameStore((s) => s.dismissNotice)
+  const dispatch = useGameStore((s) => s.dispatch)
+  const dismissNotice = (): void => dispatch({ kind: 'dismiss-notice' })
 
   // A loteria some sozinha depois de alguns segundos (além do clique).
   useEffect(() => {
     if (notice?.kind !== 'free-parking') return
-    const t = setTimeout(() => dismissNotice(), 5200)
+    const t = setTimeout(() => dispatch({ kind: 'dismiss-notice' }), 5200)
     return () => clearTimeout(t)
-  }, [notice, dismissNotice])
+    // `dispatch` é referência estável do store; `dismissNotice` seria recriada a cada
+    // render e reiniciaria o timer sem parar.
+  }, [notice, dispatch])
 
   return (
     <AnimatePresence>

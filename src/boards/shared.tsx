@@ -1695,14 +1695,15 @@ export function DiceArena() {
   const lastRoll = useGameStore((s) => s.game.turn.lastRoll)
   const paused = useGameStore((s) => s.game.paused)
   const phase = useGameStore((s) => s.game.phase)
-  const rollDiceCmd = useGameStore((s) => s.rollDice)
+  const dispatch = useGameStore((s) => s.dispatch)
+  const rollDiceCmd = (): void => dispatch({ kind: 'roll' })
   // Ações inline embaixo dos dados (sem modal de compra; finalizar manual)
   const resolution = useGameStore((s) => s.game.resolution)
   const consecutiveDoubles = useGameStore((s) => s.game.turn.consecutiveDoubles)
-  const buyProperty = useGameStore((s) => s.buyProperty)
-  const declineProperty = useGameStore((s) => s.declineProperty)
-  const finalizeTurn = useGameStore((s) => s.finalizeTurn)
-  const jailDecision = useGameStore((s) => s.jailDecision)
+  const buyProperty = (): void => dispatch({ kind: 'buy-property' })
+  const declineProperty = (): void => dispatch({ kind: 'decline-property' })
+  const finalizeTurn = (): void => dispatch({ kind: 'finalize' })
+  const jailDecision = (decision: 'pay' | 'card' | 'try'): void => dispatch({ kind: 'jail-decision', decision })
   const activeCash = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.cash ?? 0)
   const activeDiscount = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.nextPurchaseDiscount ?? 0) // Investidor Anjo (006)
   const jailAttempts = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.jail.attempts ?? 0)
@@ -1865,7 +1866,8 @@ export function DiceArena() {
 // momento do turno. Mostra credor, principal e o quanto sangra a cada GO.
 function LoanPanel() {
   const game = useGameStore((s) => s.game)
-  const payOffLoan = useGameStore((s) => s.payOffLoan)
+  const dispatch = useGameStore((s) => s.dispatch)
+  const payOffLoan = (): void => dispatch({ kind: 'pay-off-loan' })
   const active = game.players[game.turnOrder[game.activeSeat]]
   const loan = game.loans.find((l) => l.debtorId === active.id)
   if (!loan) return null
@@ -3259,12 +3261,13 @@ const BUILD_BLOCK_MSG: Record<string, string> = {
 // Ações de gestão (023) — só para o dono da vez. Reusado pelos 3 popovers.
 function DeedActions({ pos }: { pos: number }) {
   const game = useGameStore((s) => s.game)
-  const buildHouse = useGameStore((s) => s.buildHouse)
-  const sellBuilding = useGameStore((s) => s.sellBuilding)
-  const buildHangar = useGameStore((s) => s.buildHangar)
-  const sellHangar = useGameStore((s) => s.sellHangar)
-  const mortgageProperty = useGameStore((s) => s.mortgageProperty)
-  const unmortgageProperty = useGameStore((s) => s.unmortgageProperty)
+  const dispatch = useGameStore((s) => s.dispatch)
+  const buildHouse = (pos: number): void => dispatch({ kind: 'build-house', pos })
+  const sellBuilding = (pos: number): void => dispatch({ kind: 'sell-building', pos })
+  const buildHangar = (pos: number): void => dispatch({ kind: 'build-hangar', pos })
+  const sellHangar = (pos: number): void => dispatch({ kind: 'sell-hangar', pos })
+  const mortgageProperty = (pos: number): void => dispatch({ kind: 'mortgage', pos })
+  const unmortgageProperty = (pos: number): void => dispatch({ kind: 'unmortgage', pos })
 
   const dv = deedView(game, pos)
   if (!dv || !dv.ownedByActive) return null

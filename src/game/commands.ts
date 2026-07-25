@@ -90,20 +90,45 @@ export type SystemAction =
 
 export type GameAction = PlayerAction | SystemAction
 
-// Gatilhos de escassez de terrenos (031): mesmos pontos em que `store.ts` chama
-// `maybeOpenLand()` após uma mudança de estado.
+// Gatilhos de escassez de terrenos (031): os comandos que mudam a CONTAGEM de terrenos
+// sem dono. TABELA ÚNICA — antes existiam três conjuntos diferentes (store, este arquivo
+// e `tests/sim/engine/driver.ts`), e o da simulação disparava em `decline-property`,
+// `place-bid` e `accept-trade`, que não mudam a contagem, enquanto a produção não
+// disparava em `declare-bankruptcy`, que muda.
+//
+// `declare-bankruptcy` entra porque a falência devolve terreno ao BANCO quando não há
+// herdeiro (`falencia.ts:98` → `ownerId = null`), subindo a contagem acima do limiar —
+// o caso de re-arme que `maybeOpenLandAuction` documenta na própria assinatura.
+// Troca NÃO entra: transferir entre dois donos deixa a contagem intacta.
 const LAND_TRIGGERING = new Set<GameAction['kind']>([
   'finalize',
   'buy-property',
   'close-auction',
   'close-land-auction',
   'close-land-lots',
+  'declare-bankruptcy',
+])
+
+// Comandos de sistema — o único caminho que atravessa a pausa. Ver `PAUSE_GATE` abaixo.
+const SYSTEM_KINDS = new Set<GameAction['kind']>([
+  'close-auction',
+  'close-land-lots',
+  'close-land-auction',
+  'pause',
+  'resume',
 ])
 
 // Aplica UM comando ao estado. Puro: reducers no-op retornam a MESMA referência, então o
 // chamador detecta no-op por identidade (`next === state`) — base do "comando inválido =
 // no-op" (FR-009).
 export function applyCommand(state: GameState, action: GameAction, ctx: TurnCtx): GameState {
+  // GATE ÚNICO DE PAUSA (FR-011/FR-017). Antes vivia espalhado: 15 reducers checavam
+  // `state.paused` e 14 não, e online a diferença era mascarada por um único `if` em
+  // `host.ts:91`. Em single-player isso significava que `setPaused(true)` seguido de
+  // `mortgageProperty()` aplicava a hipoteca. As guardas nos reducers continuam lá como
+  // defesa em profundidade; esta é a que vale para qualquer chamador.
+  if (state.paused && !SYSTEM_KINDS.has(action.kind)) return state
+
   let next = state
   switch (action.kind) {
     // — turno —

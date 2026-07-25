@@ -133,12 +133,13 @@ function CardFrame({
 
 export function GameHUD() {
   const game = useGameStore((s) => s.game)
-  const payDebt = useGameStore((s) => s.payDebt)
-  const declareBankruptcy = useGameStore((s) => s.declareBankruptcy)
-  const proposeLoan = useGameStore((s) => s.proposeLoan)
-  const respondLoan = useGameStore((s) => s.respondLoan)
-  const respondReaction = useGameStore((s) => s.respondReaction)
+  const dispatch = useGameStore((s) => s.dispatch)
   const resetGame = useGameStore((s) => s.resetGame)
+  const payDebt = (): void => dispatch({ kind: 'pay-debt' })
+  const declareBankruptcy = (): void => dispatch({ kind: 'declare-bankruptcy' })
+  const proposeLoan = (creditorId: string): void => dispatch({ kind: 'propose-loan', creditorId })
+  const respondLoan = (accept: boolean, ratePct: number): void => dispatch({ kind: 'respond-loan', accept, ratePct })
+  const respondReaction = (use: boolean): void => dispatch({ kind: 'respond-reaction', use })
 
   const active = game.players[game.turnOrder[game.activeSeat]]
   const view = useLocalView() // spec 038: controles só do assento local (FR-002)

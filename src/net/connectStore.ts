@@ -1,16 +1,24 @@
 // Liga o `useGameStore` (Zustand, consumido pela UI) ao `client` multiplayer (spec 037, T017).
 //
-// ADITIVO por decisão de risco: NÃO refatora `store.ts`. Em single-player o store segue
-// idêntico (cada método aplica o reducer local). Ao entrar numa sala, `connectMultiplayer`
-// substitui os métodos de ação por versões que EMITEM comandos (`client.send`) — pessimista,
-// sem aplicar local — e injeta o `game` difundido no store a cada convergência. A UI não muda:
-// ela chama os mesmos métodos; só o destino muda.
+// Em single-player o store aplica o comando localmente. Ao entrar numa sala,
+// `connectMultiplayer` troca o destino do `dispatch`: o mesmo `GameAction` que ia para o
+// reducer local passa a ser EMITIDO para o host (pessimista, sem aplicar local), e o
+// estado só reflete quando o comando aceito volta pela difusão. A UI não muda.
+//
+// Card 1 do review de arquitetura (2026-07-25): este arquivo era 34 linhas de mapeamento
+// à mão de método-do-store → `GameAction`, mantidas em lockstep com `store.ts` e
+// `commands.ts` sem nenhuma checagem do compilador. Um método novo esquecido aqui fazia a
+// UI jogar LOCALMENTE no meio de uma partida online, em silêncio. Com uma porta só, não
+// há mais tabela para esquecer.
 import { useGameStore } from '@/game/store'
 import { useRoomStore } from './roomStore'
+import type { GameAction, PlayerAction } from '@/game/commands'
 import type { Client } from './client'
 
-// Conecta o store ao client. Retorna um desligador. Enquanto ativo, toda ação da UI vira um
-// comando enviado ao host; o estado só reflete quando o comando aceito volta pela difusão.
+const SYSTEM_KINDS = new Set<GameAction['kind']>(['close-auction', 'close-land-lots', 'close-land-auction', 'pause', 'resume'])
+
+// Conecta o store ao client. Retorna um desligador que RESTAURA o dispatch local — sair
+// da sala não pode deixar o store apontando para o `send` de um cliente morto.
 export function connectMultiplayer(client: Client): () => void {
   // Espelha o `game` no store do jogo e a SALA no store de sala (spec 038): identidade e
   // perspectiva vivem separadas do `GameState`, que segue sem PII (D-019).
@@ -22,53 +30,20 @@ export function connectMultiplayer(client: Client): () => void {
   const unsub = client.subscribe(sync)
   sync()
 
-  const send = client.send
-
-  // Sobrescreve os métodos de ação: cada um constrói o `GameAction` correspondente e envia.
-  // Ações de sistema (pausa, fecho de leilão por prazo) são do host — no-op vindas da UI.
+  const localDispatch = useGameStore.getState().dispatch
   useGameStore.setState({
-    rollDice: () => send({ kind: 'roll' }),
-    resolvePending: () => send({ kind: 'resolve-pending' }),
-    finalizeTurn: () => send({ kind: 'finalize' }),
-    jailDecision: (d) => send({ kind: 'jail-decision', decision: d }),
-    chooseBusMove: (opt) => send({ kind: 'choose-bus-move', opt }),
-    chooseTripleDest: (pos) => send({ kind: 'choose-triple-dest', dest: pos }),
-    useBusTicket: (dest) => send({ kind: 'use-bus-ticket', dest }),
-    buyProperty: () => send({ kind: 'buy-property' }),
-    declineProperty: () => send({ kind: 'decline-property' }),
-    placeBid: (playerId, amount) => send({ kind: 'place-bid', playerId, amount }),
-    passBid: (playerId) => send({ kind: 'pass-bid', playerId }),
-    placeLandBid: (playerId, pos, amount) => send({ kind: 'place-land-bid', playerId, pos, amount }),
-    buildHouse: (pos) => send({ kind: 'build-house', pos }),
-    sellBuilding: (pos) => send({ kind: 'sell-building', pos }),
-    buildHangar: (pos) => send({ kind: 'build-hangar', pos }),
-    sellHangar: (pos) => send({ kind: 'sell-hangar', pos }),
-    mortgageProperty: (pos) => send({ kind: 'mortgage', pos }),
-    unmortgageProperty: (pos) => send({ kind: 'unmortgage', pos }),
-    playHandCard: (cardId, target, targetPlayer) => send({ kind: 'play-hand-card', cardId, target, targetPlayer }),
-    discardCard: (cardId) => send({ kind: 'discard-card', cardId }),
-    chooseCardShortcut: (dir) => send({ kind: 'choose-card-shortcut', dir }),
-    confirmCardReveal: () => send({ kind: 'confirm-card-reveal' }),
-    payDebt: () => send({ kind: 'pay-debt' }),
-    declareBankruptcy: () => send({ kind: 'declare-bankruptcy' }),
-    grantLoan: (creditorId, principal, ratePct) => send({ kind: 'grant-loan', creditorId, principal, ratePct }),
-    proposeLoan: (creditorId) => send({ kind: 'propose-loan', creditorId }),
-    respondLoan: (accept, ratePct) => send({ kind: 'respond-loan', accept, ratePct }),
-    payOffLoan: () => send({ kind: 'pay-off-loan' }),
-    executeTrade: (trade) => send({ kind: 'execute-trade', trade }),
-    proposeTrade: (trade) => send({ kind: 'propose-trade', trade }),
-    acceptTrade: () => send({ kind: 'accept-trade' }),
-    rejectTrade: () => send({ kind: 'reject-trade' }),
-    respondReaction: (use) => send({ kind: 'respond-reaction', use }),
-    dismissNotice: () => send({ kind: 'dismiss-notice' }),
-    // Pausa e "novo jogo"/fecho manual de pregão são orquestrados pelo host — no-op da UI aqui.
-    setPaused: () => {},
-    resetGame: () => {},
-    closeLandAuction: () => {},
+    dispatch: (action) => {
+      // Ações de SISTEMA (fecho de leilão por prazo, pausa/retomada) são do host: ele as
+      // emite pelo próprio `tick()`/presença e as difunde. Vindas daqui, no-op — antes
+      // isso era escrito como três entradas `() => {}` na tabela de 34 mapeamentos.
+      if (SYSTEM_KINDS.has(action.kind)) return
+      client.send(action as PlayerAction)
+    },
   })
 
   return () => {
     unsub()
+    useGameStore.setState({ dispatch: localDispatch }) // volta a aplicar local
     useRoomStore.getState().reset() // sair da sala volta a UI ao modo local
   }
 }

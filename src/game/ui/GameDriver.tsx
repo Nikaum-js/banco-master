@@ -16,8 +16,7 @@ export function GameDriver() {
   const phase = useGameStore((s) => s.game.phase)
   const animating = useTokenAnim((s) => s.animating) // re-roda quando o peão chega
   const mayRollAgain = useGameStore((s) => s.game.turn.mayRollAgain)
-  const resolvePending = useGameStore((s) => s.resolvePending)
-  const finalizeTurn = useGameStore((s) => s.finalizeTurn)
+  const dispatch = useGameStore((s) => s.dispatch)
   // Online, o auto-avanço é do cliente do ATOR (spec 038, research D5): sem este gate,
   // N clientes emitiriam o mesmo comando para o host descartar N-1 — não corrompe nada
   // (FR-007 protege), mas é tráfego e log inútil. Sem sala, `mayAct` é sempre true.
@@ -33,15 +32,15 @@ export function GameDriver() {
     // não resolver antes do peão chegar.
     if (state === 'casa-a-resolver' && awaitingChoice === null && !hasResolution) {
       if (useTokenAnim.getState().animating) return // espera o peão terminar de andar
-      resolvePending()
+      dispatch({ kind: 'resolve-pending' })
       return
     }
     // DUPLA: re-rola sozinho (finalizeTurn só devolve a rolagem ao MESMO jogador) —
     // sem clique redundante. Passar a vez (não-dupla) segue MANUAL via "Finalizar turno".
     if (state === 'aguardando-finalizacao' && mayRollAgain) {
-      finalizeTurn()
+      dispatch({ kind: 'finalize' })
     }
-  }, [state, awaitingChoice, hasResolution, paused, phase, animating, mayRollAgain, mayResolve, resolvePending, finalizeTurn])
+  }, [state, awaitingChoice, hasResolution, paused, phase, animating, mayRollAgain, mayResolve, dispatch])
 
   return null
 }

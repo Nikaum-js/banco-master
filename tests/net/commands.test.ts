@@ -24,3 +24,41 @@ describe('applyCommand (FR-008/009)', () => {
     expect(applyCommand(game, { kind: 'build-house', pos: 1 }, ctx)).toBe(game)
   })
 })
+
+// Card 1 do review de arquitetura: a pausa era respeitada por 15 reducers e ignorada por
+// 14; online a diferença ficava mascarada pelo `if (game.paused)` do host, mas em
+// single-player `setPaused(true)` + `mortgageProperty()` aplicava a hipoteca. O gate
+// agora é único, no despacho, e vale para QUALQUER chamador.
+describe('gate de pausa no despacho (FR-011/FR-017)', () => {
+  const ctx = () => buildGameCtx(mulberry32(9), () => 1_000)
+  const paused = () => {
+    const g = buildInitialGame(['p1', 'p2'], mulberry32(1))
+    // Dá posse de uma propriedade a p1 para que a hipoteca fosse legal se não houvesse pausa.
+    g.titles[1].ownerId = 'p1'
+    return { ...g, paused: true }
+  }
+
+  it.each([
+    ['roll', { kind: 'roll' }],
+    ['mortgage', { kind: 'mortgage', pos: 1 }],
+    ['buy-property', { kind: 'buy-property' }],
+    ['finalize', { kind: 'finalize' }],
+    ['declare-bankruptcy', { kind: 'declare-bankruptcy' }],
+    ['dismiss-notice', { kind: 'dismiss-notice' }],
+  ] as const)('pausado, %s é no-op', (_label, action) => {
+    const g = paused()
+    expect(applyCommand(g, action, ctx())).toBe(g)
+  })
+
+  it('mas a RETOMADA atravessa a pausa — senão o jogo trava para sempre', () => {
+    const g = paused()
+    const next = applyCommand(g, { kind: 'resume', pausedMs: 0 }, ctx())
+    expect(next).not.toBe(g)
+    expect(next.paused).toBe(false)
+  })
+
+  it('sem pausa, a mesma hipoteca passa (o gate é a pausa, não a ação)', () => {
+    const g = { ...paused(), paused: false }
+    expect(applyCommand(g, { kind: 'mortgage', pos: 1 }, ctx())).not.toBe(g)
+  })
+})

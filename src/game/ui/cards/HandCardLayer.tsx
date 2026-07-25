@@ -48,14 +48,14 @@ export function HandCardLayer() {
   const cardId = useHandCardUI((s) => s.cardId)
   const close = useHandCardUI((s) => s.close)
   const game = useGameStore((s) => s.game)
-  const playHandCard = useGameStore((s) => s.playHandCard)
+  const dispatch = useGameStore((s) => s.dispatch)
   const view = useLocalView()
   // Alvos da carta do DONO DESTA TELA (spec 038, FR-005); sem sala, é o jogador da vez.
   const myId = view.seatId ?? game.players[game.turnOrder[game.activeSeat]]?.id
 
   const targets = cardId && myId ? cardTargets(game, myId, cardId) : null
   const play = (target?: number, targetPlayer?: string) => {
-    if (cardId) playHandCard(cardId, target, targetPlayer)
+    if (cardId) dispatch({ kind: 'play-hand-card', cardId, target, targetPlayer })
     close()
   }
 

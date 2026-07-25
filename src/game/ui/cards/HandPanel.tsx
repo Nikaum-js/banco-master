@@ -59,7 +59,7 @@ function HandSlots({ count }: { count: number }) {
 
 export function HandPanel() {
   const game = useGameStore((s) => s.game)
-  const playHandCard = useGameStore((s) => s.playHandCard)
+  const dispatch = useGameStore((s) => s.dispatch)
   const reduced = useReducedMotion()
   const view = useLocalView()
   // Assento local; sem sala, o dono da tela é o jogador da vez (cliente único).
@@ -68,7 +68,7 @@ export function HandPanel() {
 
   const onUse = (id: string, needsTarget: boolean) => {
     if (needsTarget) useHandCardUI.getState().open(id)
-    else playHandCard(id)
+    else dispatch({ kind: 'play-hand-card', cardId: id })
   }
 
   return (

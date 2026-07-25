@@ -1,5 +1,7 @@
-// T017 — `connectMultiplayer` liga o `useGameStore` (consumido pela UI) ao client: métodos de
-// ação viram comandos enviados ao host, e o `game` do store reflete a difusão (pessimista).
+// T017 — `connectMultiplayer` liga o `useGameStore` (consumido pela UI) ao client: o
+// `dispatch` da UI vira comando enviado ao host, e o `game` do store reflete a difusão
+// (pessimista). Card 1 do review: o store tem UMA porta de ação, então este teste cobre
+// o roteamento inteiro — antes cobria 1 dos 34 mapeamentos escritos à mão.
 import { afterEach, describe, expect, it } from 'vitest'
 import { useGameStore } from '@/game/store'
 import { connectMultiplayer } from '@/net/connectStore'
@@ -17,10 +19,33 @@ describe('connectMultiplayer (T017)', () => {
     // Store espelha o estado inicial do client.
     expect(JSON.stringify(useGameStore.getState().game)).toBe(JSON.stringify(hostClient.game()))
 
-    // UI chama `rollDice` → comando 'roll' → host aplica e difunde → store atualiza.
+    // UI despacha 'roll' → host aplica e difunde → store atualiza.
     const seqBefore = net.host.seq()
-    useGameStore.getState().rollDice()
+    useGameStore.getState().dispatch({ kind: 'roll' })
     expect(net.host.seq()).toBe(seqBefore + 1)
     expect(JSON.stringify(useGameStore.getState().game)).toBe(JSON.stringify(net.host.game()))
+  })
+
+  it('não emite ações de SISTEMA — fecho por prazo e pausa são do host', async () => {
+    const net = await setupGame(2, 5)
+    cleanup = connectMultiplayer(net.players[0].client)
+
+    const seqBefore = net.host.seq()
+    useGameStore.getState().dispatch({ kind: 'pause' })
+    useGameStore.getState().dispatch({ kind: 'close-auction' })
+    useGameStore.getState().dispatch({ kind: 'close-land-lots', now: 0 })
+    expect(net.host.seq()).toBe(seqBefore) // nada trafegou
+  })
+
+  it('o desligador RESTAURA o dispatch local — sair da sala não deixa o store morto', async () => {
+    const net = await setupGame(2, 5)
+    const disconnect = connectMultiplayer(net.players[0].client)
+    disconnect()
+
+    // Fora da sala, o dispatch volta a aplicar no reducer local.
+    const before = useGameStore.getState().game
+    useGameStore.getState().dispatch({ kind: 'roll' })
+    expect(useGameStore.getState().game).not.toBe(before)
+    expect(net.host.seq()).toBe(net.host.seq()) // nada foi enviado ao host
   })
 })

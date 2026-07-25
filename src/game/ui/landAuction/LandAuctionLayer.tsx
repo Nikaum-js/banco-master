@@ -165,7 +165,9 @@ export function LandAuctionLayer() {
   const auction = useGameStore((s) => s.game.landAuction)
   const players = useGameStore((s) => s.game.players)
   const game = useGameStore((s) => s.game)
-  const placeLandBid = useGameStore((s) => s.placeLandBid)
+  const dispatch = useGameStore((s) => s.dispatch)
+  const placeLandBid = (playerId: string, pos: number, amount: number): void =>
+    dispatch({ kind: 'place-land-bid', playerId, pos, amount })
 
   const [pickedBidder, setPickedBidder] = useState<string | null>(null)
   // Online, o licitante é o ASSENTO LOCAL (spec 038, FR-002) — o seletor de licitante do

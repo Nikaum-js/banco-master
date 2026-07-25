@@ -420,7 +420,8 @@ function Side({
 // ---------------------------------------------------------------------
 function Composer({ onClose }: { onClose: () => void }) {
   const game = useGameStore((s) => s.game)
-  const proposeTrade = useGameStore((s) => s.proposeTrade)
+  const dispatchTrade = useGameStore((s) => s.dispatch)
+  const proposeTrade = (trade: Trade): void => dispatchTrade({ kind: 'propose-trade', trade })
 
   const me = game.players[game.turnOrder[game.activeSeat]]
   const others = game.players.filter((p) => p.id !== me.id && !p.eliminated)
@@ -574,8 +575,9 @@ function ReadSide({ title, color, props, cash, tickets = 0 }: { title: string; c
 }
 
 function Received({ trade }: { trade: Trade }) {
-  const acceptTrade = useGameStore((s) => s.acceptTrade)
-  const rejectTrade = useGameStore((s) => s.rejectTrade)
+  const dispatch = useGameStore((s) => s.dispatch)
+  const acceptTrade = (): void => dispatch({ kind: 'accept-trade' })
+  const rejectTrade = (): void => dispatch({ kind: 'reject-trade' })
   const dismiss = useTradeUI((s) => s.dismiss)
   const game = useGameStore((s) => s.game)
   const stillValid = validateTrade(game, trade)
