@@ -168,16 +168,6 @@ export const BOARD: Square[] = [
   { pos: 47, kind: 'property', group: 'platinum', name: 'Dubai',       uf: 'AE', capital: 'Emirados', price: 650, rent: 72 },
 ]
 
-// Converte código ISO-3166-1 alfa-2 (BR, US, JP…) no emoji da bandeira via
-// pares de Regional Indicator Symbol. "BR" → U+1F1E7 U+1F1F7 = 🇧🇷.
-export function isoToFlagEmoji(iso2: string): string {
-  return iso2
-    .toUpperCase()
-    .split('')
-    .map((c) => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65))
-    .join('')
-}
-
 // Helpers para layouts que precisam separar as quatro arestas do tabuleiro
 // (cantos em 0/12/24/36).
 export const BOTTOM_SIDE = BOARD.slice(0, 13)   // 0..12  (incluindo cantos)

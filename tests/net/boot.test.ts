@@ -30,6 +30,7 @@ function makeSession(hub: LocalHub, token: string): { session: RoomSession; conn
       return () => {}
     },
     newRoomId: () => 'sala-fixa',
+    hostOptions: { rng: mulberry32(7), now: () => 1_000 }, // ordem de turno reprodutível
   })
   return { session, connected: () => connects, client: () => client }
 }
@@ -180,7 +181,10 @@ describe('createRoomSession — início da partida', () => {
     // Um comando aceito avança o `seq` acima de 0 — a marca de "partida em andamento".
     // No snapshot inicial (seq 0) ninguém jogou ainda, e aí o ritual É devido.
     anfitriao.session.orderSeen()
+    // A ordem de turno é sorteada (FR-030), então o ator do 1º turno depende da seed.
+    // Emitir dos dois é seguro: o host descarta quem não é o ator (FR-007, no-op).
     anfitriao.client()!.send({ kind: 'roll' })
+    convidado.client()!.send({ kind: 'roll' })
 
     const reconectado = makeSession(hub, 'tok-guest')
     await reconectado.session.enter('sala-fixa')

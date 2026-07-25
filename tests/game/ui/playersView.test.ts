@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { playersView, PLAYER_COLORS } from '@/boards/shared'
+import { playersView, PLAYER_COLORS } from '@/game/ui/panels/playersView'
 import { createSeedState } from '@/game/setup'
 import { createRoom, joinRoom, SEAT_COLORS } from '@/net/room'
 

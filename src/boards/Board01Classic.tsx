@@ -4,7 +4,6 @@ import { BOARD, type Square, type PropertySquare, type AirportSquare, type Utili
 import {
   ClassicSquare,
   CornerSquare,
-  sideOf,
   PlayersPanel,
   ActionsPanel,
   CenterArena,
@@ -13,21 +12,12 @@ import {
   UtilityPopover,
 } from './shared'
 import { LiveTokens } from '@/game/ui/LiveTokens'
+// A FORMA do tabuleiro (lados, células, faixas da grade) vem da topologia. Antes
+// `gridArea` morava aqui e `sideOf` no `shared.tsx`: a mesma família de geometria
+// partida em dois arquivos, com os cantos 0/12/24/36 escritos duas vezes.
+import { CLASSIC_TOPOLOGY } from './topology'
 
-// ---------------------------------------------------------------------
-// Posição em grid 11×11 a partir do índice clockwise (pos 0 = canto SE)
-// ---------------------------------------------------------------------
-function gridArea(pos: number): React.CSSProperties {
-  // Grade 13×13 · cantos em 0/12/24/36 · 11 casas por lado.
-  // bottom row: row 13
-  if (pos >= 0 && pos <= 12)  return { gridRow: 13, gridColumn: 13 - pos }
-  // left col: col 1
-  if (pos >= 13 && pos <= 24) return { gridRow: 13 - (pos - 12), gridColumn: 1 }
-  // top row: row 1
-  if (pos >= 25 && pos <= 36) return { gridRow: 1, gridColumn: pos - 23 }
-  // right col: col 13
-  return { gridRow: pos - 35, gridColumn: 13 }
-}
+const { sideOf, gridArea, trackTemplate } = CLASSIC_TOPOLOGY
 
 export default function Board01Classic() {
   // Casa selecionada — abre o popover-balão adjacente. Clicar fora ou em
@@ -58,16 +48,9 @@ export default function Board01Classic() {
         <div
           className="grid w-full h-full gap-px"
           style={{
-            // Grade 13×13: cantos (2fr) + 11 casas por lado (1fr).
-            // `minmax(0, …)` é ESSENCIAL: sem ele, o conteúdo grande dos
-            // cantos (glifo 56px + label) inflava as LINHAS de canto além do
-            // fr, deixando o tabuleiro retangular e as casas laterais
-            // (62×45) diferentes das de cima/baixo (50×102). Com minmax(0,…)
-            // as faixas ficam puramente proporcionais → board quadrado →
-            // casas do perímetro CONGRUENTES (cima/baixo 50×102 = transposto
-            // das laterais 102×50). Cantos = 2× o miolo dá os ~102/~50.
-            gridTemplateColumns: 'minmax(0, 2fr) repeat(11, minmax(0, 1fr)) minmax(0, 2fr)',
-            gridTemplateRows: 'minmax(0, 2fr) repeat(11, minmax(0, 1fr)) minmax(0, 2fr)',
+            // Faixas da grade e o porquê do `minmax(0, …)` vivem em `./topology`.
+            gridTemplateColumns: trackTemplate,
+            gridTemplateRows: trackTemplate,
           }}
         >
           {/* Centro */}

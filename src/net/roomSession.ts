@@ -10,7 +10,7 @@
 //
 // Aqui o transporte entra por PARÂMETRO. `OnlineGate` vira uma assinatura.
 import { createClient, type Client } from './client'
-import { createHost, type Host } from './host'
+import { createHost, type Host, type HostOptions } from './host'
 import { createRoom, hostSeat, seatByToken, type JoinError, type Room } from './room'
 import { newRoomId } from './session'
 import type { Transport, Unsubscribe } from './transport'
@@ -67,6 +67,8 @@ export interface RoomSessionOptions {
   describeError?(e: unknown): string
   /** Gerador de id de sala. Injetável para os testes terem ids determinísticos. */
   newRoomId?(): string
+  /** RNG/relógio do host. Injetáveis para o sorteio de ordem ser reprodutível nos testes. */
+  hostOptions?: HostOptions
 }
 
 export function createRoomSession(opts: RoomSessionOptions): RoomSession {
@@ -137,7 +139,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
 
   async function takeAuthority(initial: Room): Promise<void> {
     if (host || !transport) return
-    const h = createHost(transport, initial)
+    const h = createHost(transport, initial, opts.hostOptions)
     host = h
     subs.push(h.subscribe(() => emit({ room: h.room() })))
     await h.open()
