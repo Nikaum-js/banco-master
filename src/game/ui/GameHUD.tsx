@@ -16,7 +16,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Crown, HandCoins, Landmark, ShieldAlert } from 'lucide-react'
 import { PLAYER_COLORS, PlayerFace } from '@/boards/shared'
 import { useGameStore } from '@/game/store'
-import { useLocalView } from '@/net/roomStore'
+import { useLocalView, useRoomStore } from '@/net/roomStore'
 import { PlayerName } from '@/net/ui/PlayerName'
 import { WaitingBar } from '@/net/ui/WaitingBar'
 import { isBankrupt } from '@/game/falencia/falencia'
@@ -142,6 +142,7 @@ export function GameHUD() {
 
   const active = game.players[game.turnOrder[game.activeSeat]]
   const view = useLocalView() // spec 038: controles só do assento local (FR-002)
+  const online = useRoomStore((s) => s.room !== null)
   const res = game.resolution
   const loanOfActive = game.loans.find((l) => l.debtorId === active.id)
 
@@ -190,11 +191,13 @@ export function GameHUD() {
               transition={{ delay: 0.6, duration: 0.3 }}
               className="mt-8 inline-block"
             >
+              {/* Online, "novo jogo" não existe: a partida é da sala e o host não reinicia
+                  a mesa (spec 038, FR-027) — o caminho é voltar ao início e criar outra. */}
               <Button
-                onClick={() => resetGame()}
+                onClick={() => (online ? (window.location.search = '') : resetGame())}
                 className="px-6 py-2.5 text-base shadow-[0_4px_16px_-4px_color-mix(in_srgb,var(--color-brass)_60%,transparent)]"
               >
-                Novo jogo
+                {online ? 'Voltar ao início' : 'Novo jogo'}
               </Button>
             </motion.div>
           </motion.div>

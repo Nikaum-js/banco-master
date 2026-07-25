@@ -84,3 +84,44 @@ describe('congelamento de prazo em voo (FR-017)', () => {
     expect(resumed.resolution?.kind === 'auction' && resumed.resolution.auction.deadline).toBe(7_000) // janela restante preservada
   })
 })
+
+// D-029 (SRS §11.3 v1.5) — a exceção que a spec 038 introduziu: quem já foi eliminado não
+// tem patrimônio, turno nem decisão a proteger, e costuma fechar a aba. Como NÃO existe
+// timeout de desconexão (D-015), a regra literal deixava a mesa refém de quem já perdeu.
+describe('desconexão de jogador eliminado (D-029)', () => {
+  it('não pausa a partida dos sobreviventes', async () => {
+    const net = await setupGame(3, 21)
+    net.host.game().players[2].eliminated = true // p3 fora da partida
+
+    net.players[2].transport.disconnect()
+
+    expect(net.host.game().paused).toBe(false)
+    expect(net.host.room().seats[2].connected).toBe(false) // a sala registra a ausência…
+    // …mas ela não trava ninguém: o jogo segue aceitando comando de quem está vivo.
+    const seqAntes = net.host.seq()
+    const ator = net.players.find((p) => p.playerId === net.host.game().players[net.host.game().turnOrder[net.host.game().activeSeat]].id)!
+    ator.client.send({ kind: 'roll' })
+    expect(net.host.seq()).toBeGreaterThan(seqAntes)
+  })
+
+  it('jogador VIVO que cai continua pausando — a exceção não afrouxa a regra', async () => {
+    const net = await setupGame(3, 22)
+    net.host.game().players[2].eliminated = true
+
+    net.players[1].transport.disconnect() // p2 está vivo
+
+    expect(net.host.game().paused).toBe(true)
+  })
+
+  it('a volta do eliminado não é condição para retomar', async () => {
+    const net = await setupGame(3, 23)
+    net.host.game().players[2].eliminated = true
+    net.players[2].transport.disconnect() // eliminado sai (não pausa)
+    net.players[1].transport.disconnect() // vivo cai → pausa
+
+    expect(net.host.game().paused).toBe(true)
+    await net.players[1].client.join() // só o vivo volta
+
+    expect(net.host.game().paused).toBe(false) // retomou sem esperar o eliminado
+  })
+})

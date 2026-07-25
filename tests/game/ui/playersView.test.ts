@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { playersView, PLAYER_COLORS } from '@/boards/shared'
 import { createSeedState } from '@/game/store'
+import { createRoom, joinRoom, SEAT_COLORS } from '@/net/room'
 
 describe('playersView — GameState → painel (020)', () => {
   it('SC-001: mapeia caixa/mão/Bus Tickets/pos e cor por assento', () => {
@@ -11,7 +12,8 @@ describe('playersView — GameState → painel (020)', () => {
     g.players[1].hand = ['boicote-1', 'diplomacia-1']
     const view = playersView(g)
     expect(view).toHaveLength(3)
-    expect(view[1].name).toBe('p2')
+    expect(view[1].id).toBe('p2') // o id técnico segue no view-model...
+    expect(view[1].name).toBe('Jogador 2') // ...mas o nome exibível nunca é ele (038/FR-009)
     expect(view[1].money).toBe(1234)
     expect(view[1].pos).toBe(7)
     expect(view[1].busTickets).toBe(2)
@@ -39,5 +41,20 @@ describe('playersView — GameState → painel (020)', () => {
     expect(view[1].loanActive).toBe(false)
     expect(view[1].immune).toBe(true)
     expect(view[0].immune).toBe(false)
+  })
+
+  // 038: com sala, a identidade vem do lobby — é a única fonte de nome/cor (D-019).
+  it('FR-009: nome e cor vêm da sala; `you` marca o assento do token local', () => {
+    const g = createSeedState(['p1', 'p2'])
+    let room = createRoom('r1', { token: 'tok-nik', name: 'Nik', color: SEAT_COLORS[0], piece: 'aviao' })
+    const r = joinRoom(room, { token: 'tok-ana', name: 'Ana', color: SEAT_COLORS[1], piece: 'navio' })
+    if (!r.ok) throw new Error(r.reason)
+    room = r.room
+
+    const view = playersView(g, room, 'tok-ana')
+    expect(view.map((p) => p.name)).toEqual(['Nik', 'Ana'])
+    expect(view[1].color).toBe(SEAT_COLORS[1])
+    expect(view[0].you).toBe(false)
+    expect(view[1].you).toBe(true)
   })
 })

@@ -53,7 +53,12 @@ export function createClient(transport: Transport): Client {
     if (seat) {
       playerId = seat.playerId
       joinError = null // assento concedido (ou reanexado) → limpa recusa anterior
+      return
     }
+    // Meu assento sumiu da sala publicada: fui removido pelo anfitrião (spec 038, FR-024).
+    // Volto a ser um visitante sem assento — e um novo pedido fica sujeito às regras da sala
+    // (FR-026), em vez de o cliente seguir se achando sentado.
+    playerId = null
   }
 
   function applyAccepted(cmd: AcceptedCommand): void {

@@ -7,6 +7,9 @@ import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare, G
 import { BOARD } from '@/lib/boardData'
 import { rentLadder } from '@/game/economy/rent'
 import { useGameStore } from '@/game/store'
+import { identityOf } from '@/net/identity'
+import { seatByToken, type Room } from '@/net/room'
+import { useRoomStore } from '@/net/roomStore'
 import { cityLevel } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
 import { deedView } from '@/game/ui/deed/deedView'
@@ -1061,8 +1064,11 @@ export function PlayerTokens({
 // imunidades, Pote de Férias, Speed Die, GO progressivo, log de eventos.
 // ---------------------------------------------------------------------
 export type Player = {
+  id?: string               // playerId do motor ('p1'..'p8') — chave estável (nomes duplicam)
   name: string
   color: string
+  connected?: boolean       // spec 038 — status de sessão no painel (§12.3/FR-015)
+  you?: boolean             // spec 038 — o assento deste dispositivo
   money: number
   pos: number
   cardsInHand: number       // SRS §10.3 — privado, só contador é visível
@@ -1419,16 +1425,22 @@ function TradeLeg({ label, props, cash, tickets = 0 }: { label: string; props: n
 }
 
 // --- Ponte com o motor (020): estado reativo dos painéis ---------------------
-// Paleta de token por assento (disjunta das cores de grupo). Nome/token reais
-// virão do Lobby (M3); por ora nome = id e cor = assento.
+// Paleta de token por assento (disjunta das cores de grupo). Espelhada em
+// `src/net/room.ts` (SEAT_COLORS), que é a fonte para a escolha no lobby.
 export const PLAYER_COLORS = ['#d9a650', '#a76bf5', '#06b6d4', '#14b8a6', '#d946ef', '#f97316', '#35d97b', '#4d8bf5']
 
 // Mapeia o GameState real → view-model `Player` dos painéis. PURO (testável).
-export function playersView(game: GameState): Player[] {
+// A identidade (nome/cor) vem da SALA quando há uma (spec 038); sem sala, do fallback —
+// nunca do `GameState`, que segue sem PII (D-019). É aqui que `p1..pN` some da UI.
+export function playersView(game: GameState, room: Room | null = null, myToken: string | null = null): Player[] {
   const activeId = game.players[game.turnOrder[game.activeSeat]]?.id
-  return game.players.map((p, seat) => ({
-    name: p.id,
-    color: PLAYER_COLORS[seat % PLAYER_COLORS.length],
+  const mySeat = room && myToken ? seatByToken(room, myToken) : undefined
+  return game.players.map((p) => ({
+    id: p.id,
+    name: identityOf(room, p.id).name,
+    color: identityOf(room, p.id).color,
+    connected: room ? (room.seats.find((s) => s.playerId === p.id)?.connected ?? true) : true,
+    you: mySeat?.playerId === p.id,
     money: p.cash,
     pos: p.pos,
     cardsInHand: p.hand.length, // só o contador é público (privacidade §10.3)
@@ -1442,7 +1454,10 @@ export function playersView(game: GameState): Player[] {
 }
 
 function useLivePlayers(): Player[] {
-  return playersView(useGameStore((s) => s.game))
+  const game = useGameStore((s) => s.game)
+  const room = useRoomStore((s) => s.room)
+  const myToken = useRoomStore((s) => s.myToken)
+  return playersView(game, room, myToken)
 }
 
 export function PlayersPanel() {
@@ -1456,7 +1471,7 @@ export function PlayersPanel() {
           meta={<p className="label text-cream-muted">{players.filter((p) => !p.bankrupt).length} / 8</p>}
         />
         <div className="flex flex-col gap-2">
-          {players.map((p) => <PlayerRow key={p.name} player={p} />)}
+          {players.map((p) => <PlayerRow key={p.id ?? p.name} player={p} />)}
         </div>
         {/* Negociar movido pra a seção única "Negociações" (painel direito). */}
       </div>
@@ -1548,12 +1563,19 @@ function PlayerRow({ player: p }: { player: Player }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-1.5">
           <p className="display text-cream text-[17px] leading-none truncate">{p.name}</p>
+          {p.you         && <span title="Seu assento" className="label !text-gold">VOCÊ</span>}
           {p.loanActive  && <span title="Empréstimo ativo" className="label !text-logo">$$</span>}
           {p.immune      && <span title="Imunidade ativa"  className="label !text-gold">IMU</span>}
         </div>
         <div className="flex items-center gap-2 mt-1">
           {p.bankrupt ? (
             <span className="label text-cream-muted">Falido</span>
+          ) : p.connected === false ? (
+            // Status de sessão (§12.3/FR-015): quem caiu segue com tudo intacto (FR-020).
+            <span title="Desconectado — a partida espera" className="label text-logo inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-logo" aria-hidden />
+              Offline
+            </span>
           ) : (
             <span title="Cartas em mão (privadas)" className="label inline-flex items-center gap-1">
               <CardGlyph size={13} />

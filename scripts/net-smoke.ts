@@ -10,6 +10,7 @@ import { createHost } from '../src/net/host'
 import { createClient } from '../src/net/client'
 import { supabaseTransport, type SupabaseLike } from '../src/net/supabaseTransport'
 import { createRoom, SEAT_COLORS } from '../src/net/room'
+import { localView } from '../src/net/localView'
 
 const url = process.env.VITE_SUPABASE_URL
 const key = process.env.VITE_SUPABASE_ANON_KEY
@@ -61,25 +62,46 @@ async function main(): Promise<void> {
   const startMs = await until('estado inicial em ambos', () => Boolean(hostClient.game()) && Boolean(guest.game()))
   ok(`partida iniciada e estado inicial propagado em ${startMs}ms`)
 
-  // — SC-001/SC-002: comando do host propaga e converge —
+  // — perspectiva local (spec 038): quem joga é decidido pela ORDEM SORTEADA, não por
+  // quem criou a sala. Descobrir o ator pelo estado é o mesmo que a UI faz.
+  const g0 = hostClient.game()!
+  const activeId = g0.players[g0.turnOrder[g0.activeSeat]].id
+  const ator = [hostClient, guest].find((c) => c.playerId() === activeId)!
+  const naoAtor = [hostClient, guest].find((c) => c.playerId() !== activeId)!
+  const vistaAtor = localView(g0, ator.room(), ator.token)
+  const vistaOutro = localView(g0, naoAtor.room(), naoAtor.token)
+  if (!vistaAtor.mayAct('roll') || vistaOutro.mayAct('roll')) {
+    throw new Error('perspectiva local divergiu do estado da partida')
+  }
+  ok(`ordem sorteada: joga ${activeId}; só a tela dele oferece a rolagem (US1)`)
+
+  // Quem não é o ator tenta agir: o host descarta (a UI não ofereceria — isto é o adulterado).
+  const seqNaoAtor = guest.seq()
+  naoAtor.send({ kind: 'roll' })
+  await new Promise((r) => setTimeout(r, 900))
+  if (guest.seq() !== seqNaoAtor) throw new Error('FALHA: comando de não-ator foi aceito')
+  ok('comando de quem não é o ator descartado pelo host')
+
+  // — SC-001/SC-002: comando do ator propaga e converge —
   const seqBefore = guest.seq()
   const t0 = Date.now()
-  hostClient.send({ kind: 'roll' })
-  await until('comando difundido ao convidado', () => guest.seq() > seqBefore)
+  ator.send({ kind: 'roll' })
+  await until('comando difundido a todos', () => guest.seq() > seqBefore)
   const propMs = Date.now() - t0
-  ok(`comando propagou host→convidado em ${propMs}ms (SC-002: alvo <1000ms p95)`)
+  ok(`comando propagou em ${propMs}ms (SC-002: alvo <1000ms p95)`)
 
   const same = JSON.stringify(hostClient.game()) === JSON.stringify(guest.game())
   if (!same) throw new Error('DIVERGÊNCIA: estado do host ≠ estado do convidado')
   const roll = host.game().turn.lastRoll
   ok(`estados convergiram byte a byte (dados: ${JSON.stringify(roll)})`)
 
-  // — anti-spoof sobre o transporte real: convidado tenta agir como p1 —
+  // — anti-spoof sobre o transporte real: convidado declara ser OUTRO assento —
   const seqSpoof = host.seq()
-  guestTransport.submit({ senderId: 'p1', action: { kind: 'roll' } })
+  const forjado = guest.playerId() === 'p1' ? 'p2' : 'p1'
+  guestTransport.submit({ senderId: forjado, action: { kind: 'roll' } })
   await new Promise((r) => setTimeout(r, 1200))
   if (host.seq() !== seqSpoof) throw new Error('FALHA: comando forjado foi aceito pelo host')
-  ok('comando forjado (convidado dizendo ser p1) descartado pelo host')
+  ok(`comando forjado (convidado dizendo ser ${forjado}) descartado pelo host`)
 
   console.log('\ntudo verde. limpando a sala de teste…')
   host.stop()

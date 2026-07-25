@@ -15,7 +15,9 @@ import { createRoom } from '@/net/room'
 import { getSessionToken, newRoomId, parseRoomLink, roomLink } from '@/net/session'
 import { createSupabaseTransport, isSupabaseConfigured } from '@/net/supabaseClient'
 import type { Transport } from '@/net/transport'
-import { IdentityForm, LobbyMessage, RoomLobby } from './LobbyScreen'
+import { IdentityForm, LobbyMessage, RoomLobby, TurnOrderReveal } from './LobbyScreen'
+import { HomeScreen } from './HomeScreen'
+import { Button } from '@/game/ui/primitives'
 
 const TICK_MS = 250 // o host fecha prazos vencidos (soft-close de leilão, janela de reação)
 
@@ -29,12 +31,26 @@ function describeInfraError(e: unknown): string {
   return `Falha ao conectar na sala: ${raw}`
 }
 
-type Phase = 'identity' | 'lobby' | 'playing' | 'error'
+type Phase = 'home' | 'identity' | 'lobby' | 'order' | 'playing' | 'error'
 
 export function OnlineGate({ children }: { children: ReactNode }) {
   // A URL é lida uma vez: trocar de sala é recarregar a página.
   const [link] = useState(() => parseRoomLink(window.location.search))
-  if (!link.roomId && !link.createHost) return <>{children}</>
+  // `?local=1` (ou o botão "jogar local") entrega o cliente único de sempre — o andaime de
+  // desenvolvimento e demonstração segue existindo, intacto (FR-029/SC-007).
+  const [local, setLocal] = useState(() => new URLSearchParams(window.location.search).has('local'))
+
+  if (local) return <>{children}</>
+  if (!link.roomId && !link.createHost) {
+    // Porta de entrada de verdade (FR-021): ninguém precisa saber o que é `?host=1`.
+    return (
+      <HomeScreen
+        onCreate={() => { window.location.search = '?host=1' }}
+        onJoin={(roomId) => { window.location.search = `?room=${encodeURIComponent(roomId)}` }}
+        onLocal={() => setLocal(true)}
+      />
+    )
+  }
   if (!isSupabaseConfigured()) {
     return (
       <LobbyMessage
@@ -72,7 +88,9 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
     const game = client.game()
     if (game) {
       if (!disconnectStore.current) disconnectStore.current = connectMultiplayer(client)
-      setPhase('playing')
+      // Só quem chega no estado INICIAL vê a ordem sorteada; quem reconecta no meio da
+      // partida volta direto ao tabuleiro (FR-030 é ritual de início, não de reconexão).
+      setPhase((prev) => (prev === 'playing' || client.seq() > 0 ? 'playing' : 'order'))
     } else if (client.playerId()) {
       setPhase('lobby')
     }
@@ -114,6 +132,11 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
           setPhase('error')
           return
         }
+        if (client.game()?.phase === 'ended') {
+          setError('ended') // partida encerrada: o link não reabre a mesa (FR-028)
+          setPhase('error')
+          return
+        }
         const mine = seatByToken(current, token)
         if (mine && hostSeat(current).token === token) await takeAuthority(session, current)
         if (!mine && current.status !== 'lobby') {
@@ -145,12 +168,12 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
 
   // Criar sala (host): gera o id, abre a autoridade e troca a URL para o link da sala — assim
   // um F5 do host cai no fluxo de reentrada acima e reassume a autoridade.
-  async function createAndHost(name: string, color: string): Promise<void> {
+  async function createAndHost(name: string, color: string, piece: string): Promise<void> {
     setBusy(true)
     try {
       const id = newRoomId()
       const session = await openSession(id)
-      await takeAuthority(session, createRoom(id, { token, name, color }))
+      await takeAuthority(session, createRoom(id, { token, name, color, piece }))
       window.history.replaceState(null, '', roomLink(id, window.location.origin))
       setPhase('lobby')
     } catch (e) {
@@ -160,10 +183,10 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
     setBusy(false)
   }
 
-  function requestSeat(name: string, color: string): void {
+  function requestSeat(name: string, color: string, piece: string): void {
     setBusy(true)
     setError(null)
-    sessionRef.current?.client.requestJoin({ name, color })
+    sessionRef.current?.client.requestJoin({ name, color, piece })
     setTimeout(() => setBusy(false), 400) // resposta chega pelo `onRoom`/`onJoinRejected`
   }
 
@@ -174,16 +197,26 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
     setBusy(false)
   }
 
+  // Ordem sorteada: mostrada uma vez, antes do primeiro turno (FR-030).
+  if (phase === 'order' && room) {
+    return <TurnOrderReveal room={room} onDone={() => setPhase('playing')} />
+  }
+
   if (phase === 'playing') return <>{children}</>
 
   if (phase === 'error') {
+    const msg =
+      error === 'already-started'
+        ? 'A partida desta sala já começou. Peça um link novo ao anfitrião.'
+        : error === 'ended'
+          ? 'Esta partida já terminou. Crie uma sala nova para jogar de novo.'
+          : String(error ?? 'Erro desconhecido.')
     return (
       <LobbyMessage
         title="Não foi possível entrar"
-        message={
-          error === 'already-started'
-            ? 'A partida desta sala já começou. Peça um link novo ao anfitrião.'
-            : String(error ?? 'Erro desconhecido.')
+        message={msg}
+        action={
+          <Button onClick={() => { window.location.search = '' }}>Voltar ao início</Button>
         }
       />
     )
@@ -208,7 +241,7 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
         cta="Criar sala"
         busy={busy}
         error={error}
-        onSubmit={(name, color) => void createAndHost(name, color)}
+        onSubmit={(name, color, piece) => void createAndHost(name, color, piece)}
       />
     )
   }
@@ -223,6 +256,10 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
       link={roomLink(room.id, window.location.origin)}
       starting={busy}
       onStart={() => void startMatch()}
+      onKick={(target) => {
+        const r = hostRef.current?.kick(target)
+        if (r && !r.ok) setError(r.reason === 'is-host' ? 'O anfitrião não pode se remover.' : String(r.reason))
+      }}
     />
   )
 }
