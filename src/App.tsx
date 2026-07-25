@@ -11,17 +11,22 @@ import { AudioControl } from '@/game/ui/sound/AudioControl'
 import { ThemeControl } from '@/game/ui/theme/ThemeControl'
 import { SoundBoard } from '@/game/ui/sound/SoundBoard'
 import { DebugLogger } from '@/game/ui/DebugLogger'
+import { OnlineGate } from '@/net/ui/OnlineGate'
 
 // O tabuleiro Clássico É a tela inicial. A rolagem é o DiceArena central; o
 // GameDriver faz o turno "ir sozinho" (resolve/finaliza); o ModalLayer (022) traz
 // as decisões dirigidas por resolução; o GameHUD vira uma barra só de decisões
 // (prisão/dívida/reação) e some quando não há nada a decidir. DebugLogger (dev)
 // joga o estado no console do browser a cada mudança.
+//
+// `OnlineGate` (037) é transparente sem `?host=1`/`?room=<id>`: o boot single-player
+// segue idêntico. Com esses params, ele monta a sala online e só libera o tabuleiro
+// quando o estado da partida chega do host.
 export default function App() {
   // `?sons` abre o board de auditoria dos SFX (dev) no lugar do jogo.
   if (new URLSearchParams(window.location.search).has('sons')) return <SoundBoard />
   return (
-    <>
+    <OnlineGate>
       <Board01Classic />
       <GameDriver />
       <ModalLayer />
@@ -34,6 +39,6 @@ export default function App() {
       <AudioControl />
       <ThemeControl />
       <DebugLogger />
-    </>
+    </OnlineGate>
   )
 }
