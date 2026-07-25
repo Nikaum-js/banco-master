@@ -28,6 +28,12 @@ end $$;
 -- não consegue exigir "conhece o id" além do próprio filtro por id, então as políticas liberam
 -- o acesso anônimo à tabela; a obscuridade do id da sala é a barreira do MVP (aceito no free
 -- tier; endurecer — ex.: Edge Function validando token — fica para quando houver tração).
+-- O linter do Supabase sinaliza `rooms_anon_insert`/`rooms_anon_update` como permissivas
+-- demais (lint 0024) — é DELIBERADO enquanto a credencial for o link, e some junto com o
+-- endurecimento de identidade de transporte.
+--
+-- NÃO existe policy de DELETE de propósito: cliente anônimo não apaga sala (a limpeza de
+-- salas velhas é trabalho de rotina do lado servidor, por `updated_at`).
 alter table public.rooms enable row level security;
 
 drop policy if exists "rooms_anon_select" on public.rooms;
@@ -39,12 +45,18 @@ create policy "rooms_anon_insert" on public.rooms for insert with check (true);
 create policy "rooms_anon_update" on public.rooms for update using (true) with check (true);
 
 -- Toca `updated_at` a cada escrita (útil p/ expirar salas nunca iniciadas — Edge Cases).
-create or replace function public.touch_rooms_updated_at() returns trigger as $$
+-- `search_path` fixo em vazio (linter 0011): função de trigger com search_path mutável é
+-- vetor de escalada. Só usa `now()`, de pg_catalog — sempre resolvível.
+create or replace function public.touch_rooms_updated_at() returns trigger
+  language plpgsql
+  security invoker
+  set search_path = ''
+as $$
 begin
   new.updated_at = now();
   return new;
 end;
-$$ language plpgsql;
+$$;
 
 drop trigger if exists trg_rooms_touch on public.rooms;
 create trigger trg_rooms_touch before update on public.rooms
