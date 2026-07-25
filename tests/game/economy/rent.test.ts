@@ -66,7 +66,7 @@ describe('Aluguel — resolução (US2)', () => {
   it('SC-001: casa livre abre o modal de compra (resolução pendente)', () => {
     const g = createSeedState(['p1', 'p2'])
     const out = economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports, state: g })
-    expect(out).toEqual({ done: false, blocksFinalize: true })
+    expect(out).toEqual({ done: false })
     expect(g.resolution).toEqual({ kind: 'purchase', pos: 1 })
   })
 
@@ -75,7 +75,7 @@ describe('Aluguel — resolução (US2)', () => {
     g.titles[1].ownerId = 'p2'
     g.players[0].cash = 1 // < aluguel base 2
     const out = economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports, state: g })
-    expect(out).toEqual({ done: false, blocksFinalize: true })
+    expect(out).toEqual({ done: false })
     expect(g.resolution).toEqual({ kind: 'debt', amount: 2, creditorId: 'p2' }) // dívida (008)
     expect(g.players[0].cash).toBe(1) // não debitou
   })

@@ -11,7 +11,7 @@
 // Aqui o transporte entra por PARÂMETRO. `OnlineGate` vira uma assinatura.
 import { createClient, type Client } from './client'
 import { createHost, type Host, type HostOptions } from './host'
-import { createRoom, hostSeat, seatByToken, type JoinError, type Room } from './room'
+import { createRoom, hostSeat, seatByToken, type JoinError, type PieceId, type Room } from './room'
 import { newRoomId } from './session'
 import type { Transport, Unsubscribe } from './transport'
 
@@ -21,7 +21,7 @@ export type SessionPhase = 'identity' | 'lobby' | 'order' | 'playing' | 'error'
 export interface SessionIdentity {
   name: string
   color: string
-  piece: string
+  piece: PieceId
 }
 
 export interface RoomSessionState {

@@ -41,7 +41,7 @@ export function cardResolve(rctx: ResolveCtx): ResolutionOutcome | null {
     player.hand.push(id) // sai do deck, entra na mão
     if (player.hand.length > 3) {
       state.resolution = { kind: 'card-discard', deckId, drawnId: id } // 4ª → descarte forçado
-      return { done: false, blocksFinalize: true }
+      return { done: false }
     }
     return { done: true }
   }
@@ -50,7 +50,7 @@ export function cardResolve(rctx: ResolveCtx): ResolutionOutcome | null {
   if (card.effect === 'atalho') {
     logEvent(state, playerId, `${deckLabel}: ${name}`)
     state.resolution = { kind: 'card-shortcut', deckId, cardId: id } // escolha ±3
-    return { done: false, blocksFinalize: true }
+    return { done: false }
   }
   // Demais imediatas: loga o RESULTADO (o que a carta causou), não o nome do evento.
   const player = state.players.find((p) => p.id === playerId)!
@@ -62,7 +62,7 @@ export function cardResolve(rctx: ResolveCtx): ResolutionOutcome | null {
   // normal (comprar/pagar aluguel/etc.). gotojail no destino → 'encerrado' (resolvePending trata).
   if (card.effect === 'avance3' || card.effect === 'volte3') {
     land(state.turn, player, null)
-    return { done: false, blocksFinalize: true }
+    return { done: false }
   }
   return { done: true }
 }
@@ -110,7 +110,7 @@ export function cardRevealResolve(rctx: ResolveCtx): ResolutionOutcome | null {
   if (!cardId) return { done: true } // deck vazio (não ocorre na prática)
   if (cardById(cardId).mode === 'imediato') return cardResolve(rctx) // saca, aplica e loga — sem tela
   state.resolution = { kind: 'card-reveal', deckId, cardId } // só carta de mão revela
-  return { done: false, blocksFinalize: true }
+  return { done: false }
 }
 
 // 025 — Confirma a revelação: limpa o card-reveal e chama o cardResolve EXISTENTE

@@ -10,10 +10,9 @@ import { useGameStore } from '@/game/store'
 import { useLocalView, useRoomStore } from '@/net/roomStore'
 import { cityLevel } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
-import { deedView } from '@/game/ui/deed/deedView'
+import { deedView, type BuildBlock } from '@/game/ui/deed/deedView'
 import { useTradeUI } from '@/game/ui/trade/TradeLayer'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
-// `sideOf` do motor (lado do tabuleiro p/ regra do Bus Ticket) ≠ `sideOf` local (layout).
 import { markLayout, popoverPlacement, sideOf, type Side } from './topology'
 import { SquareIcon, CardGlyph, LotteryGlyph } from './glyphs/squares'
 import {
@@ -1853,8 +1852,14 @@ function DeedBtn({
   )
 }
 
-const BUILD_BLOCK_MSG: Record<string, string> = {
+// EXAUSTIVO por tipo. Era `Record<string, string>` com três das cinco razões, então
+// `topo` e `uniformidade` — as duas MAIS comuns para um botão de construir cinzento —
+// caíam em `undefined` e a dica renderizava vazia. Com o tipo certo, esquecer uma razão
+// nova é erro de compilação em vez de buraco silencioso de UX.
+const BUILD_BLOCK_MSG: Record<NonNullable<BuildBlock>, string> = {
   'hipoteca-no-grupo': 'Há propriedade hipotecada no grupo',
+  topo: 'Esta cidade já está no nível máximo',
+  uniformidade: 'Construa por igual — suba as outras cidades do grupo primeiro',
   'grupo-incompleto': 'Arranha-céu exige o grupo completo',
   caixa: 'Caixa insuficiente',
 }

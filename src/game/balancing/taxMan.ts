@@ -5,9 +5,9 @@
 import { BOARD } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
 import { roll, type RNG } from '../turn/dice'
-import { ownerOf, isMortgaged, groupOwnedCount, groupSize, countOwned, groupHasSkyscraper } from '../economy/titles'
-import { rentCity, rentAirport, rentUtility, diceValue } from '../economy/rent'
-import { apagaoActive, greveActive, isBoycotted } from '../economy/tempEffects'
+import { ownerOf, isMortgaged } from '../economy/titles'
+import { rentDue } from '../economy/rent'
+import { isBoycotted } from '../economy/tempEffects'
 
 export function rollTaxMan(state: GameState, rng: RNG): void {
   if (state.phase !== 'playing') return
@@ -22,23 +22,9 @@ export function rollTaxMan(state: GameState, rng: RNG): void {
   if (owner === null || isMortgaged(state, sq.pos)) return // livre/hipotecada: sem cobrança
   if (isBoycotted(state, sq.pos)) return // Boicote: não cobra (015, consistência)
 
-  let amount = 0
-  if (sq.kind === 'airport') {
-    const hangarDobra = state.titles[sq.pos].hangar && !apagaoActive(state) // Apagão desliga a dobra
-    amount = rentAirport(countOwned(state, 'airport', owner)) * (hangarDobra ? 2 : 1)
-  } else if (sq.kind === 'utility') {
-    amount = greveActive(state) ? 0 : rentUtility(countOwned(state, 'utility', owner), diceValue(r)) // Greve zera
-  } else {
-    const t = state.titles[sq.pos]
-    amount = rentCity(
-      sq.group,
-      sq.rent,
-      groupOwnedCount(state, sq.group, owner),
-      groupSize(sq.group),
-      { houses: t.houses, hotel: t.hotel, hotel2: t.hotel2, skyscraper: t.skyscraper },
-      groupHasSkyscraper(state, sq.group),
-    )
-  }
+  // MESMA função de aluguel que a resolução da casa usa — este bloco era uma cópia
+  // verbatim de `resolveRentable.ts`, e só aquela tinha teste.
+  const amount = rentDue(state, sq.pos, owner, r)
 
   const ownerP = state.players.find((p) => p.id === owner) // cobra mesmo se for o jogador da vez (§13.8)
   if (ownerP) ownerP.cash -= Math.min(ownerP.cash, amount) // banco (removido); paga o que houver (sem negativo)

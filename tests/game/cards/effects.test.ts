@@ -5,7 +5,7 @@ import { createSeedState } from '@/game/setup'
 import type { TurnPorts } from '@/game/turn/resolution'
 
 function ports(extra?: Partial<TurnPorts>): TurnPorts {
-  return { onPassGo: () => 200, onPayToCenter: () => {}, onCollectCenter: () => 0, isEliminated: () => false, ...extra }
+  return { onPassGo: () => 200, onPayToCenter: () => {}, onCollectCenter: () => 0, ...extra }
 }
 
 describe('Efeitos de carta (US1)', () => {

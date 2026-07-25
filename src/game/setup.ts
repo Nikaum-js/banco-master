@@ -101,16 +101,13 @@ export function buildInitialGame(playerIds: string[], rng: RNG): GameState {
   return g
 }
 
-// PORTAS DE PRODUÇÃO. `isEliminated` devolve false porque a checagem real é a
-// co-locada em `turnMachine.ts` (`!p.eliminated`); a porta sobrevive só como ponto
-// de extensão. O Fiscal (012) faz parte do produto — deixá-lo de fora do default
-// remove metade do dreno econômico do jogo que os testes exercitam.
+// PORTAS DE PRODUÇÃO. O Fiscal (012) faz parte do produto — deixá-lo de fora do
+// default remove metade do dreno econômico do jogo que os testes exercitam.
 export function buildPorts(overrides: Partial<TurnPorts> = {}): TurnPorts {
   return {
     onPassGo: (state, id) => goBonus(state, id), // GO (007)
     onPayToCenter: (state, amount) => payToCenter(state, amount), // pote (007)
     onCollectCenter: (state, id) => collectCenter(state, id), // Free Parking (007)
-    isEliminated: () => false,
     afterPassGo: (state, id) => {
       // ORDEM LOAD-BEARING: `chargeLoanInterest` pode instalar `resolution.debt`
       // no meio do `advance`, o que bloqueia o `resolvePending` seguinte.

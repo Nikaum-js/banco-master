@@ -66,7 +66,11 @@ function teleport(state: GameState, player: Player, dest: number, ports: TurnPor
 
 // Índice do lado do tabuleiro (0..3) — as 11 casas entre cantos; `null` para os
 // cantos 0/12/24/36 (que são fronteira, não pertencem a lado). SRS §10.7 / 009.
-export function sideOf(pos: number): 0 | 1 | 2 | 3 | null {
+// Renomeado de `sideOf` (card 7/menores do review): havia DOIS `sideOf` no repo — este,
+// que devolve `0|1|2|3|null` e é a REGRA do Bus Ticket, e o de `boards/topology`, que
+// devolve `'bottom'|'left'|…` e é LAYOUT. Mesmo nome, mesma partição do tabuleiro,
+// codomínios diferentes: `shared.tsx` tinha de apelidar um dos dois no import.
+export function busSideOf(pos: number): 0 | 1 | 2 | 3 | null {
   if (pos === 0 || pos === 12 || pos === 24 || pos === 36) return null
   if (pos <= 11) return 0 // 1..11
   if (pos <= 23) return 1 // 13..23
@@ -109,7 +113,7 @@ export function advanceSeat(s: GameState, ctx: TurnCtx): void {
   for (let i = 0; i < n; i++) {
     next = (next + 1) % n
     const p = s.players[s.turnOrder[next]]
-    if (!p.eliminated && !ctx.ports.isEliminated(p.id)) break // pula eliminados (FR-002)
+    if (!p.eliminated) break // pula eliminados (FR-002)
   }
   s.activeSeat = next
   startTurn(s)
@@ -234,7 +238,7 @@ export function canUseBusTicket(state: GameState): boolean {
   if (state.turn.state !== 'aguardando-rolagem' && state.turn.state !== 'aguardando-finalizacao') return false
   const player = activePlayer(state)
   if (player.busTickets < 1) return false // FR-002
-  return sideOf(player.pos) !== null // sobre canto: indisponível (FR-003a)
+  return busSideOf(player.pos) !== null // sobre canto: indisponível (FR-003a)
 }
 
 // Uso de Bus Ticket (009, SRS §10.7): antes de rolar, gasta 1 ticket e PULA DIRETO
@@ -242,8 +246,8 @@ export function canUseBusTicket(state: GameState): boolean {
 export function useBusTicket(state: GameState, dest: number, ctx: TurnCtx): GameState {
   if (!canUseBusTicket(state)) return state // FR-011/FR-002/FR-003a — mesma cadeia da UI
   const player = activePlayer(state)
-  const fromSide = sideOf(player.pos)
-  if (sideOf(dest) !== fromSide || dest === player.pos) return state // destino inválido (FR-003)
+  const fromSide = busSideOf(player.pos)
+  if (busSideOf(dest) !== fromSide || dest === player.pos) return state // destino inválido (FR-003)
   const s = clone(state)
   const turn = s.turn
   const p = activePlayer(s)

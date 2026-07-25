@@ -10,7 +10,7 @@
 // resta é o que de fato é React: ler a URL, assinar a sessão e escolher a tela.
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { connectMultiplayer } from '@/net/connectStore'
-import { hostSeat } from '@/net/room'
+import { hostSeat, type PieceId } from '@/net/room'
 import { getSessionToken, parseRoomLink, roomLink } from '@/net/session'
 import { createRoomSession, type RoomSession } from '@/net/roomSession'
 import { createSupabaseTransport, describeInfraError, isSupabaseConfigured } from '@/net/supabaseClient'
@@ -114,7 +114,7 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
   if (phase === 'identity') {
     // Criar a sala troca a URL para o link dela — assim um F5 do host cai no fluxo de
     // reentrada e reassume a autoridade (FR-015).
-    const createAndHost = (name: string, color: string, piece: string): void => {
+    const createAndHost = (name: string, color: string, piece: PieceId): void => {
       void session.create({ name, color, piece }).then((id) => {
         if (id) window.history.replaceState(null, '', roomLink(id, window.location.origin))
       })

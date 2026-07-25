@@ -5,7 +5,7 @@
 // (`Jogador N`) — nunca o id técnico `p1..p8` (FR-009).
 import { cn } from '@/lib/utils'
 import { useIdentity } from '@/net/roomStore'
-import { PIECES } from '@/net/identity'
+import { pieceOf } from '@/net/room'
 
 // Nome exibível. `dot` acrescenta o disco da cor do jogador antes do nome.
 export function PlayerName({
@@ -35,7 +35,7 @@ export function PlayerName({
 // Peça do jogador (emblema + cor) — usada no tabuleiro e no lobby.
 export function PlayerPiece({ playerId, size = 18 }: { playerId: string; size?: number }) {
   const id = useIdentity(playerId)
-  const piece = PIECES.find((p) => p.id === id.piece) ?? PIECES[0]
+  const piece = pieceOf(id.piece)
   return (
     <span
       className="inline-grid place-items-center rounded-full border-2 border-coffee-950/60 shrink-0"

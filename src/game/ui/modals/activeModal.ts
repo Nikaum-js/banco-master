@@ -15,7 +15,20 @@ export interface HandCardView {
 
 export type ModalView =
   // compra NÃO é mais modal — vira ação inline embaixo dos dados (DiceArena)
-  | { kind: 'auction'; pos: number; square: Square; currentBid: number; highBidder: string | null; deadline: number }
+  | {
+      kind: 'auction'
+      pos: number
+      square: Square
+      currentBid: number
+      highBidder: string | null
+      deadline: number
+      /**
+       * Quem ainda pode dar lance (`auction.ts:26` recusa quem não está aqui). Faltava na
+       * view, então a UI estruturalmente NÃO conseguia saber se o assento local já havia
+       * passado — e renderizava três botões de lance que o motor descartava em silêncio.
+       */
+      activeBidders: readonly string[]
+    }
   | { kind: 'card-discard'; playerId: string; cards: HandCardView[] }
   | { kind: 'card-shortcut' }
   | { kind: 'card-reveal'; deckId: DeckId; cardId: string; rarity: Rarity; effect: string; mode: CardMode }
@@ -51,7 +64,11 @@ export function activeModal(game: GameState): ModalView | null {
     // 'purchase': sem modal — a decisão de compra aparece inline na DiceArena.
     case 'auction': {
       const a = res.auction
-      return { kind: 'auction', pos: a.pos, square: BOARD[a.pos], currentBid: a.currentBid, highBidder: a.highBidder, deadline: a.deadline }
+      return {
+        kind: 'auction', pos: a.pos, square: BOARD[a.pos],
+        currentBid: a.currentBid, highBidder: a.highBidder, deadline: a.deadline,
+        activeBidders: a.activeBidders,
+      }
     }
     case 'card-discard': {
       const id = activeId(game)

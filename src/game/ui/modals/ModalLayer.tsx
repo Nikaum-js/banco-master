@@ -10,7 +10,7 @@ import { useLocalView } from '@/net/roomStore'
 import { WaitingBar } from '@/net/ui/WaitingBar'
 import { activeModal, type ModalView, type HandCardView } from './activeModal'
 import { BOARD, type PropertySquare } from '@/lib/boardData'
-import { sideOf, canUseBusTicket } from '@/game/turn/turnMachine'
+import { busSideOf, canUseBusTicket } from '@/game/turn/turnMachine'
 import { AUCTION_WINDOW } from '@/game/economy/purchase'
 import { RARITY_COLOR, RARITY_LABEL, cardLabel, CARD_DESC } from '@/game/ui/cards/cardMeta'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
@@ -301,8 +301,8 @@ function BusLine({ fromPos, onPick, onBoard }: { fromPos: number; onPick: (pos: 
   const [hover, setHover] = useState<number | null>(null)
   const [departing, setDeparting] = useState<number | null>(null)
   const activeIdx = turnOrder[activeSeat] // índice em players do jogador da vez
-  const side = sideOf(fromPos)
-  const cells = BOARD.filter((sq) => sideOf(sq.pos) === side).reverse() // casas do lado, na ordem do tabuleiro (de trás pra frente)
+  const side = busSideOf(fromPos)
+  const cells = BOARD.filter((sq) => busSideOf(sq.pos) === side).reverse() // casas do lado, na ordem do tabuleiro (de trás pra frente)
   // Rostos por casa (peão = carinha, nunca bolinha): cor por assento + destaque do jogador da vez.
   const facesAt: Record<number, { color: string; active: boolean }[]> = {}
   players.forEach((p, i) => {
@@ -580,6 +580,9 @@ function AuctionCard({
   placeBid: (playerId: string, amount: number) => void
 }) {
   const cash = useGameStore((s) => s.game.players.find((p) => p.id === activeId)?.cash ?? 0)
+  // Quem já passou não é mais licitante (`auction.ts:26` recusa o lance). Antes a view não
+  // trazia `activeBidders`, então a tela oferecia três botões que o motor descartava.
+  const stillBidding = view.activeBidders.includes(activeId)
   const players = useGameStore((s) => s.game.players)
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -664,14 +667,14 @@ function AuctionCard({
           </div>
 
           <div>
-            <p className="label text-cream-muted mb-2">Meu lance…</p>
+            <p className="label text-cream-muted mb-2">{stillBidding ? 'Meu lance…' : 'Você passou'}</p>
             <div className="flex gap-2">
               {[2, 10, 100].map((inc) => {
                 const next = view.currentBid + inc
                 return (
                   <Button
                     key={inc}
-                    disabled={next > cash}
+                    disabled={next > cash || !stillBidding}
                     onClick={() => placeBid(activeId, next)}
                     className="flex-1 flex-col px-1 py-3 gap-0"
                   >

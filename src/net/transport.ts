@@ -22,7 +22,7 @@
 import type { GameAction, PlayerAction } from '@/game/commands'
 import type { GameState } from '@/game/turn/types'
 import type { Resolved } from './recorder'
-import type { JoinError, Room } from './room'
+import type { JoinError, PieceId, Room } from './room'
 
 // Comando em trânsito guest→host: carrega o `playerId` DECLARADO pelo remetente. O host
 // confere contra a identidade real da conexão (FR-007).
@@ -60,7 +60,7 @@ export interface PresenceChange {
 export interface JoinRequest {
   name: string
   color: string
-  piece?: string // peça visual escolhida no lobby (spec 038); única por sala
+  piece?: PieceId // peça visual escolhida no lobby (spec 038); única por sala
 }
 
 export type Unsubscribe = () => void

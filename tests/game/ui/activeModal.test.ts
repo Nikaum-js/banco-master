@@ -40,7 +40,21 @@ describe('activeModal — leilão (US2)', () => {
       currentBid: 150,
       highBidder: 'p2',
       deadline: 9999,
+      // Sem `activeBidders` a UI não conseguia saber se o assento local já passou, e
+      // renderizava botões de lance que o motor descartava (auction.ts:26).
+      activeBidders: ['p1', 'p2'],
     })
+  })
+
+  it('quem passou sai de activeBidders — a view precisa disso para desabilitar o lance', () => {
+    const g = base()
+    g.resolution = {
+      kind: 'auction',
+      auction: { pos: 3, currentBid: 150, highBidder: 'p2', activeBidders: ['p2'], deadline: 9999 },
+    }
+    const v = activeModal(g)
+    expect(v?.kind).toBe('auction')
+    expect(v && 'activeBidders' in v && v.activeBidders).toEqual(['p2'])
   })
 })
 

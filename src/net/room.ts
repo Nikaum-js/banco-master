@@ -10,6 +10,35 @@
 
 // Paleta de assentos — espelha `PLAYER_COLORS` de `src/boards/shared.tsx` (mantida aqui para
 // não acoplar a casca de rede à UI). 8 cores → no máximo 8 assentos (§11.1).
+// Catálogo de PEÇAS — uma por assento possível (§11.1 = até 8, FR-023). Rótulos
+// temáticos do tabuleiro "Cidades do Mundo"; a arte fica na UI, aqui só id + emblema.
+//
+// Menores do review de arquitetura (2026-07-25): o catálogo morava em `identity.ts` mas a
+// REGRA de unicidade da peça já morava aqui (`joinRoom` → 'piece-taken'), enquanto a cor
+// tinha catálogo e regra no mesmo arquivo. A fragmentação cobrava um `as PieceId` em
+// `identityOf`; agora `Seat.piece` é tipado e o cast some.
+export const PIECES = [
+  { id: 'aviao', label: 'Avião', glyph: '✈' },
+  { id: 'navio', label: 'Navio', glyph: '⚓' },
+  { id: 'trem', label: 'Trem', glyph: '🚂' },
+  { id: 'taxi', label: 'Táxi', glyph: '🚕' },
+  { id: 'balao', label: 'Balão', glyph: '🎈' },
+  { id: 'bussola', label: 'Bússola', glyph: '🧭' },
+  { id: 'mala', label: 'Mala', glyph: '🧳' },
+  { id: 'farol', label: 'Farol', glyph: '🗼' },
+] as const
+
+export type PieceId = (typeof PIECES)[number]['id']
+
+/**
+ * Peça pelo id, com fallback. Uma resposta só: havia TRÊS lookups `PIECES.find(...)` com
+ * três fallbacks diferentes (`'●'` no `LobbyScreen`, `PIECES[0]` no `PlayerName`,
+ * `fallbackIdentity` no `identity.ts`) — a mesma peça aparecia diferente por tela.
+ */
+export function pieceOf(id?: string): (typeof PIECES)[number] {
+  return PIECES.find((p) => p.id === id) ?? PIECES[0]
+}
+
 export const SEAT_COLORS = ['#d9a650', '#a76bf5', '#06b6d4', '#14b8a6', '#d946ef', '#f97316', '#35d97b', '#4d8bf5'] as const
 
 export const MIN_SEATS = 2
@@ -22,7 +51,7 @@ export interface Seat {
   token: string // token de sessão (NUNCA entra no GameState) — chave de reconexão
   name: string // nome exibido (livre)
   color: string // cor (única por sala)
-  piece?: string // peça visual (única por sala, §12.5/spec 038); ausente em salas da 037
+  piece?: PieceId // peça visual (única por sala, §12.5/spec 038); ausente em salas da 037
   isHost: boolean
   connected: boolean
 }
@@ -40,7 +69,7 @@ export interface Identity {
   token: string
   name: string
   color: string
-  piece?: string // escolhida no lobby (spec 038); opcional para compatibilidade com a 037
+  piece?: PieceId // escolhida no lobby (spec 038); opcional para compatibilidade com a 037
 }
 
 function seatIdFor(index: number): string {
@@ -83,6 +112,12 @@ export function joinRoom(room: Room, who: Identity): JoinResult {
     connected: true,
   }
   return { ok: true, room: { ...room, seats: [...room.seats, seat] }, seat }
+}
+
+// Peças ainda livres na sala — escolha única por sala, como a cor (§12.5 / FR-022).
+export function availablePieces(room: Room): PieceId[] {
+  const taken = new Set<string>(room.seats.map((s) => s.piece).filter(Boolean) as string[])
+  return PIECES.map((p) => p.id).filter((id) => !taken.has(id))
 }
 
 // Cores ainda disponíveis para escolha no lobby mínimo.

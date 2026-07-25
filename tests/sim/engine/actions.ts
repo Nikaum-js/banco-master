@@ -11,7 +11,7 @@ import { committedCash } from '@/game/economy/landAuction'
 import { activeLoanFor } from '@/game/emprestimos/emprestimos'
 import { cardById } from '@/game/cards/catalog'
 import { reactorFor } from '@/game/cards/reacao'
-import { JAIL_FINE, sideOf } from '@/game/turn/turnMachine'
+import { JAIL_FINE, busSideOf } from '@/game/turn/turnMachine'
 import type { SimSession } from './driver'
 import type { DecisionPoint, SimAction } from './types'
 
@@ -19,11 +19,11 @@ const BOARD_SIZE = BOARD.length
 
 // Destinos válidos para Bus Ticket: mesmo lado, exceto a posição atual (009/034).
 function sameSideDestinations(pos: number): number[] {
-  const side = sideOf(pos)
+  const side = busSideOf(pos)
   if (side === null) return []
   const out: number[] = []
   for (let p = 0; p < BOARD_SIZE; p++) {
-    if (p !== pos && sideOf(p) === side) out.push(p)
+    if (p !== pos && busSideOf(p) === side) out.push(p)
   }
   return out
 }

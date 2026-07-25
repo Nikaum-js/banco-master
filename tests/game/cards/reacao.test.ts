@@ -75,7 +75,7 @@ describe('Bunker Fiscal — reação a imposto (US2)', () => {
   it('SC-003: imposto com Bunker abre reação', () => {
     const g = taxState(true)
     const outcome = taxBunkerResolve({ playerId: 'p1', square: BOARD[TAX], roll: null, ports: defaultPorts, state: g })
-    expect(outcome).toEqual({ done: false, blocksFinalize: true })
+    expect(outcome).toEqual({ done: false })
     expect(g.resolution?.kind).toBe('reaction-bunker')
   })
 

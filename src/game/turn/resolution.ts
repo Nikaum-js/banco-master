@@ -6,7 +6,6 @@
 //   - acaso/tesouro            → Sistema de Cartas
 //   - bus-ticket               → Bus Tickets
 //   - onPassGo / onPayToCenter / onCollectCenter → Mecânicas de Balanceamento
-//   - isEliminated             → Falência
 // Até a spec dona existir, o handler é um STUB no-op ({ done: true }).
 import type { Square } from '@/lib/boardData'
 import type { Roll, GameState } from './types'
@@ -17,8 +16,6 @@ export interface TurnPorts {
   onPassGo(state: GameState, playerId: string): number // bônus do GO; advance credita o retorno (007)
   onPayToCenter(state: GameState, amount: number): void // imposto/multa/$50 prisão → pote (007)
   onCollectCenter(state: GameState, playerId: string): void // Free Parking: coleta o pote (007)
-  isEliminated(playerId: string): boolean
-  onInsolvency?(playerId: string, amount: number, creditorId: string | null): void // → Falência (003)
   afterPassGo?(state: GameState, playerId: string): void // → juros de empréstimo no GO (010)
   taxMan?(state: GameState, rng: RNG): void // → Fiscal move 1×/turno e cobra o dono (012)
 }
@@ -31,9 +28,16 @@ export interface ResolveCtx {
   state: GameState // clone mutável — economia (003) lê titles/players e abre interação
 }
 
+// Menores do review de arquitetura (2026-07-25): esta interface encolheu três campos que
+// custavam cerimônia a todo autor de resolver novo sem entregar nada.
+//   • `onInsolvency` — zero chamadores em `src/` e em `tests/`.
+//   • `isEliminated` — TODO adapter devolvia `false`; a checagem real é a co-locada
+//     `!p.eliminated` em `turnMachine.ts`. Uma porta com um só comportamento é uma seam
+//     hipotética, não uma real.
+//   • `blocksFinalize` — sete produtores, ZERO leitores em `src/`. `done: false` já diz
+//     tudo o que o chamador precisa.
 export interface ResolutionOutcome {
   done: boolean
-  blocksFinalize?: boolean
 }
 
 export type ResolutionHandler = (ctx: ResolveCtx) => ResolutionOutcome
@@ -63,7 +67,7 @@ export const resolutionRegistry: Record<Square['kind'], ResolutionHandler> = {
     const p = state.players.find((x) => x.id === playerId)
     if (p && p.cash < square.amount) {
       state.resolution = { kind: 'debt', amount: square.amount, creditorId: null } // dívida ao banco (008)
-      return { done: false, blocksFinalize: true }
+      return { done: false }
     }
     if (p) p.cash -= square.amount // débito real (007)
     ports.onPayToCenter(state, square.amount) // → pote

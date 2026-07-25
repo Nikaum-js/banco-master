@@ -4,8 +4,7 @@
 import { useState } from 'react'
 import { Button, Chip } from '@/game/ui/primitives'
 import { ModalShell, ModalHeader } from '@/game/ui/shell'
-import { availableColors, MAX_SEATS, MIN_SEATS, type JoinError, type Room } from '@/net/room'
-import { availablePieces, PIECES, type PieceId } from '@/net/identity'
+import { availableColors, availablePieces, MAX_SEATS, MIN_SEATS, PIECES, pieceOf, type JoinError, type PieceId, type Room } from '@/net/room'
 
 const JOIN_ERROR_TEXT: Record<JoinError, string> = {
   'room-full': `Sala cheia — o limite é ${MAX_SEATS} jogadores.`,
@@ -213,13 +212,10 @@ export function RoomLobby({
 }
 
 // Emblema da peça escolhida — cai no ponto neutro em salas da 037 (sem peça).
-function pieceGlyph(id?: string): string {
-  return PIECES.find((p) => p.id === id)?.glyph ?? '●'
-}
-
-function pieceLabel(id?: string): string {
-  return PIECES.find((p) => p.id === id)?.label ?? 'Peça'
-}
+// Lookup e fallback vêm de `pieceOf` (net/room) — este arquivo tinha a terceira cópia,
+// com um fallback próprio ('●'), então a mesma peça saía diferente por tela.
+const pieceGlyph = (id?: string): string => pieceOf(id).glyph
+const pieceLabel = (id?: string): string => pieceOf(id).label
 
 // Ordem sorteada da mesa (FR-030): mostrada a todos antes do primeiro turno.
 export function TurnOrderReveal({ room, onDone }: { room: Room; onDone: () => void }) {

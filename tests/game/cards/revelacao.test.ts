@@ -27,7 +27,7 @@ describe('cardRevealResolve — peek + pausa (US1)', () => {
   it('SC-001: carta de MÃO seta card-reveal com o topo, sem mutar deck/mão', () => {
     const g = onCard('tesouro', ['saia-prisao-1', 'diplomacia-1'], 2) // topo = carta de mão
     const out = cardRevealResolve(rctx(g, 2))
-    expect(out).toEqual({ done: false, blocksFinalize: true })
+    expect(out).toEqual({ done: false })
     expect(g.resolution).toEqual({ kind: 'card-reveal', deckId: 'tesouro', cardId: 'saia-prisao-1' })
     expect(g.decks.tesouro).toEqual(['saia-prisao-1', 'diplomacia-1']) // deck intacto
     expect(g.players[0].hand).toEqual([]) // mão intacta

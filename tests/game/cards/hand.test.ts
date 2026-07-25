@@ -6,7 +6,7 @@ import type { TurnPorts } from '@/game/turn/resolution'
 import { BOARD } from '@/lib/boardData'
 
 function ports(): TurnPorts {
-  return { onPassGo: () => 200, onPayToCenter: () => {}, onCollectCenter: () => 0, isEliminated: () => false }
+  return { onPassGo: () => 200, onPayToCenter: () => {}, onCollectCenter: () => 0 }
 }
 
 describe('Mão (US2)', () => {
@@ -15,7 +15,7 @@ describe('Mão (US2)', () => {
     g.players[0].hand = ['saia-prisao-1', 'diplomacia-1', 'imunidade-1'] // 3 cartas de mão
     g.decks.acaso = ['aquisicao-hostil-1', 'volta-go-1']
     const out = cardResolve({ playerId: 'p1', square: BOARD[8], roll: null, ports: ports(), state: g })
-    expect(out).toEqual({ done: false, blocksFinalize: true })
+    expect(out).toEqual({ done: false })
     expect(g.players[0].hand.length).toBe(4)
     expect(g.resolution?.kind).toBe('card-discard')
 

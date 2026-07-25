@@ -24,7 +24,6 @@ export function mockPorts(): TurnPorts {
     onPassGo: vi.fn(() => 200),
     onPayToCenter: vi.fn(),
     onCollectCenter: vi.fn(() => 0),
-    isEliminated: vi.fn(() => false),
   }
 }
 

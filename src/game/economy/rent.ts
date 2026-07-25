@@ -3,9 +3,11 @@
 // PONTO DE EXTENSÃO (spec Construção): `rentCity` cobre o aluguel sem construção.
 // A spec de Construção envolverá esta função para somar os multiplicadores de
 // casas/hotéis/2º hotel/Skyscraper (SRS §5.1, linhas "com construção").
-import type { Roll } from '../turn/types'
-import type { GroupKey } from '@/lib/boardData'
+import type { Roll, GameState } from '../turn/types'
+import { BOARD, type GroupKey } from '@/lib/boardData'
 import { THEME } from '../theme'
+import { countOwned, groupOwnedCount, groupSize, groupHasSkyscraper } from './titles'
+import { apagaoActive, greveActive } from './tempEffects'
 
 // Maioria do grupo: 2 (grupo de 3) / 3 (grupo de 4). §13.3 + clarificação 2026-05-23.
 function majority(size: number): number {
@@ -79,4 +81,36 @@ export function rentUtility(owned: number, dice: number): number {
 export function diceValue(roll: Roll | null): number {
   if (!roll) return 0
   return roll.white[0] + roll.white[1] + (typeof roll.speed === 'number' ? roll.speed : 0)
+}
+
+/**
+ * ALUGUEL DEVIDO por parar em `pos`, já com os modificadores de posse e de efeito
+ * temporário aplicados (Hangar dobra, Apagão desliga a dobra, Greve zera a utilidade).
+ * NÃO decide quem paga, nem se paga — isso é do chamador.
+ *
+ * Menores do review de arquitetura (2026-07-25): este bloco existia VERBATIM em dois
+ * lugares — `economy/resolveRentable.ts` e `balancing/taxMan.ts` —, com as mesmas seis
+ * chamadas e os mesmos seis imports. Mudar a regra de aluguel exigia duas edições, e só
+ * uma delas tinha teste.
+ */
+export function rentDue(state: GameState, pos: number, ownerId: string, roll: Roll | null): number {
+  const sq = BOARD[pos]
+  if (sq.kind === 'airport') {
+    const hangarDobra = state.titles[pos].hangar && !apagaoActive(state) // Apagão desliga a dobra (015)
+    return rentAirport(countOwned(state, 'airport', ownerId)) * (hangarDobra ? 2 : 1) // Hangar dobra (011, §13.6)
+  }
+  if (sq.kind === 'utility') {
+    if (greveActive(state)) return 0 // Greve zera (015)
+    return rentUtility(countOwned(state, 'utility', ownerId), diceValue(roll))
+  }
+  if (sq.kind !== 'property') return 0
+  const t = state.titles[pos]
+  return rentCity(
+    sq.group,
+    sq.rent,
+    groupOwnedCount(state, sq.group, ownerId),
+    groupSize(sq.group),
+    { houses: t.houses, hotel: t.hotel, hotel2: t.hotel2, skyscraper: t.skyscraper },
+    groupHasSkyscraper(state, sq.group),
+  )
 }

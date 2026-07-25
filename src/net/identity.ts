@@ -7,22 +7,11 @@
 // O fallback sintético existe para que NENHUMA superfície precise de `if (multiplayer)`:
 // com ou sem sala, a UI pede a identidade e recebe algo exibível — que é como `p1..p8`
 // some da interface inteira de uma vez (FR-009).
-import { SEAT_COLORS, type Room } from './room'
+// O VOCABULÁRIO de assento (cores, peças e as regras de unicidade das duas) vive em
+// `./room`. Aqui fica só a projeção de EXIBIÇÃO: playerId → o que aparece na tela.
+import { PIECES, SEAT_COLORS, type PieceId, type Room } from './room'
 
-// Catálogo de peças — uma por assento possível (§11.1 = até 8, FR-023). São os rótulos
-// temáticos do tabuleiro "Cidades do Mundo"; a arte fica na UI, aqui só o id + o emblema.
-export const PIECES = [
-  { id: 'aviao', label: 'Avião', glyph: '✈' },
-  { id: 'navio', label: 'Navio', glyph: '⚓' },
-  { id: 'trem', label: 'Trem', glyph: '🚂' },
-  { id: 'taxi', label: 'Táxi', glyph: '🚕' },
-  { id: 'balao', label: 'Balão', glyph: '🎈' },
-  { id: 'bussola', label: 'Bússola', glyph: '🧭' },
-  { id: 'mala', label: 'Mala', glyph: '🧳' },
-  { id: 'farol', label: 'Farol', glyph: '🗼' },
-] as const
-
-export type PieceId = (typeof PIECES)[number]['id']
+export { PIECES, type PieceId } // reexport: a UI já os importa daqui
 
 export interface PlayerIdentity {
   playerId: string
@@ -57,12 +46,8 @@ export function identityOf(room: Room | null, playerId: string): PlayerIdentity 
     playerId,
     name: seat.name.trim() || fb.name, // nome vazio nunca chega à tela (FR-012)
     color: seat.color || fb.color,
-    piece: (seat.piece as PieceId | undefined) ?? fb.piece,
+    piece: seat.piece ?? fb.piece,
   }
 }
 
-// Peças ainda livres na sala — a escolha é única por sala, como a cor (§12.5 / FR-022).
-export function availablePieces(room: Room): PieceId[] {
-  const taken = new Set(room.seats.map((s) => s.piece).filter(Boolean))
-  return PIECES.map((p) => p.id).filter((id) => !taken.has(id))
-}
+export { availablePieces } from './room' // a regra de unicidade é da SALA

@@ -6,7 +6,7 @@ import type { TurnPorts } from '@/game/turn/resolution'
 import { BOARD } from '@/lib/boardData'
 
 function ports(): TurnPorts {
-  return { onPassGo: () => 200, onPayToCenter: () => {}, onCollectCenter: () => 0, isEliminated: () => false }
+  return { onPassGo: () => 200, onPayToCenter: () => {}, onCollectCenter: () => 0 }
 }
 
 describe('Decks e saque (US1)', () => {

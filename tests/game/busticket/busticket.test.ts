@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createSeedState } from '@/game/setup'
-import { useBusTicket, sideOf, resolvePending, finalizeTurn } from '@/game/turn/turnMachine'
+import { useBusTicket, busSideOf, resolvePending, finalizeTurn } from '@/game/turn/turnMachine'
 import { economyResolve } from '@/game/economy/resolveRentable'
 import { BOARD } from '@/lib/boardData'
 import type { GameState } from '@/game/turn/types'
@@ -8,7 +8,7 @@ import type { TurnCtx } from '@/game/turn/turnMachine'
 import { ctxWith, mockPorts } from '../turn/_helpers'
 
 // Primeira propriedade livre do lado 0 (1..11) — destino "comprável" determinístico.
-const PROP_SIDE0 = BOARD.find((sq) => sq.kind === 'property' && sideOf(sq.pos) === 0)!.pos
+const PROP_SIDE0 = BOARD.find((sq) => sq.kind === 'property' && busSideOf(sq.pos) === 0)!.pos
 
 // ctx que resolve economia (compra/aluguel), como o store real.
 function ctxEcon(): TurnCtx {
@@ -23,13 +23,13 @@ function withTicketAt(pos: number, tickets = 1): GameState {
   return g
 }
 
-describe('Bus Ticket — sideOf (009)', () => {
+describe('Bus Ticket — busSideOf (009)', () => {
   it('mapeia cada lado e retorna null para cantos', () => {
-    expect([1, 6, 11].map(sideOf)).toEqual([0, 0, 0])
-    expect([13, 23].map(sideOf)).toEqual([1, 1])
-    expect([25, 35].map(sideOf)).toEqual([2, 2])
-    expect([37, 47].map(sideOf)).toEqual([3, 3])
-    expect([0, 12, 24, 36].map(sideOf)).toEqual([null, null, null, null])
+    expect([1, 6, 11].map(busSideOf)).toEqual([0, 0, 0])
+    expect([13, 23].map(busSideOf)).toEqual([1, 1])
+    expect([25, 35].map(busSideOf)).toEqual([2, 2])
+    expect([37, 47].map(busSideOf)).toEqual([3, 3])
+    expect([0, 12, 24, 36].map(busSideOf)).toEqual([null, null, null, null])
   })
 })
 

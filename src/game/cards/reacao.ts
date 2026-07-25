@@ -60,7 +60,7 @@ export function taxBunkerResolve(rctx: ResolveCtx): ResolutionOutcome | null {
   if (square.kind !== 'tax') return null
   if (!findReactionCard(state, playerId, 'bunkerFiscal')) return null
   state.resolution = { kind: 'reaction-bunker', reactorId: playerId, amount: square.amount }
-  return { done: false, blocksFinalize: true }
+  return { done: false }
 }
 
 // Responde a reação pendente (Diplomacia/Bunker): usar (cancela) ou recusar (aplica). Puro.
