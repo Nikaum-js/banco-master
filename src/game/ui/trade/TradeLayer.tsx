@@ -6,40 +6,23 @@
 // Único ponto com efeito: dispara proposeTrade/acceptTrade/rejectTrade. A regra
 // (validade) vem de validateTrade. Troca-se propriedade + dinheiro + Bus Tickets (D-028).
 import { useState, useEffect, type ReactNode } from 'react'
-import { create } from 'zustand'
 import { motion, AnimatePresence } from 'motion/react'
 import { Bus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
+import { useTradeUI } from './tradeUI'
 import { useLocalView } from '@/net/roomStore'
 import { WaitingBar } from '@/net/ui/WaitingBar'
 import { validateTrade, tradableProps } from '@/game/economy/trade'
 import type { Trade } from '@/game/economy/types'
 import { BOARD, type PropertySquare, type Square } from '@/lib/boardData'
-import { GROUP_COLOR, SquareIcon, PlayerFace, PLAYER_COLORS } from '@/boards/shared'
+import { PlayerFace } from '@/boards/shared'
+import { GROUP_COLOR } from '@/boards/groupColors'
+import { SquareIcon } from '@/boards/glyphs/squares'
+import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
 import { CoinIcon } from '@/game/ui/icons'
 import { Button, EmptyState } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
-
-// Store de UI mínimo: abre/fecha o compositor (botão "Negociar" mora noutro
-// arquivo) e controla o "fechar sem responder" da proposta recebida —
-// `dismissed` esconde o modal, mas a proposta segue na mesa (painel lateral
-// reabre via respond()).
-export const useTradeUI = create<{
-  open: boolean
-  dismissed: boolean
-  show: () => void
-  hide: () => void
-  dismiss: () => void
-  respond: () => void
-}>((set) => ({
-  open: false,
-  dismissed: false,
-  show: () => set({ open: true }),
-  hide: () => set({ open: false }),
-  dismiss: () => set({ dismissed: true }),
-  respond: () => set({ dismissed: false }),
-}))
 
 const money = (v: number) => `R$ ${v.toLocaleString('pt-BR')}`
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n))
@@ -434,11 +417,14 @@ function Composer({ onClose }: { onClose: () => void }) {
   const [fromTickets, setFromTickets] = useState(0)
   const [toTickets, setToTickets] = useState(0)
 
-  // Trocar de destinatário reseta o que dependia dele.
-  useEffect(() => {
+  // Trocar de destinatário reseta o que dependia dele. Feito no próprio handler
+  // (`pickRecipient`), não num efeito sobre `toId`: só o clique muda o destinatário, e
+  // resetar em efeito custava um render intermediário com pedido de outra pessoa na tela.
+  const pickRecipient = (id: string): void => {
+    setToId(id)
     setRequested(new Set())
     setToTickets(0)
-  }, [toId])
+  }
 
   const recipient = others.find((p) => p.id === toId)
   const myProps = tradableProps(game, me.id)
@@ -446,7 +432,8 @@ function Composer({ onClose }: { onClose: () => void }) {
 
   const toggle = (set: Set<number>, setter: (s: Set<number>) => void, pos: number) => {
     const next = new Set(set)
-    next.has(pos) ? next.delete(pos) : next.add(pos)
+    if (next.has(pos)) next.delete(pos)
+    else next.add(pos)
     setter(next)
   }
 
@@ -493,7 +480,7 @@ function Composer({ onClose }: { onClose: () => void }) {
                 key={p.id}
                 type="button"
                 title={p.id}
-                onClick={() => setToId(p.id)}
+                onClick={() => pickRecipient(p.id)}
                 className={cn('rounded-full p-0.5 border transition-colors', p.id === toId ? 'border-gold bg-gold/15' : 'border-transparent hover:border-gold/50')}
               >
                 <PlayerFace color={colorOf(game.players, p.id)} size={24} active={p.id === toId} />

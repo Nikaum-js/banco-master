@@ -1,7 +1,7 @@
 // Notificações informativas (030, §12.2). Loteria (ex-"Free Parking") = celebração
 // com confete (sem modal); Aquisição Hostil sofrida = modal. Dispensa por clique
 // (a loteria também some sozinha após alguns segundos). Não bloqueia o turno.
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useGameStore } from '@/game/store'
 import { BOARD } from '@/lib/boardData'
@@ -19,23 +19,24 @@ const CONFETTI_COLORS = [
   'var(--color-starlight)',
 ]
 
+// Layout do confete sorteado UMA vez, no import — não em render. O sorteio em `useMemo`
+// era impuro durante o render (o compilador pode reexecutar a memo), e a aleatoriedade
+// aqui é só decorativa: a mesma chuva serve para todas as celebrações da sessão.
+const CONFETTI_PIECES = Array.from({ length: 130 }, (_, i) => ({
+  id: i,
+  left: Math.random() * 100,
+  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+  delay: Math.random() * 2.2,
+  duration: 2.4 + Math.random() * 2,
+  w: 6 + Math.random() * 6,
+  rot: Math.random() * 360,
+  drift: (Math.random() - 0.5) * 90,
+}))
+
 // Confete caindo do topo — peças coloridas com posição/rotação/tempo aleatórios.
 // Exportado: reusado na celebração do vencedor (GameHUD, fim de jogo).
 export function Confetti() {
-  const pieces = useMemo(
-    () =>
-      Array.from({ length: 130 }, (_, i) => ({
-        id: i,
-        left: Math.random() * 100,
-        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-        delay: Math.random() * 2.2,
-        duration: 2.4 + Math.random() * 2,
-        w: 6 + Math.random() * 6,
-        rot: Math.random() * 360,
-        drift: (Math.random() - 0.5) * 90,
-      })),
-    [],
-  )
+  const pieces = CONFETTI_PIECES
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {pieces.map((p) => (

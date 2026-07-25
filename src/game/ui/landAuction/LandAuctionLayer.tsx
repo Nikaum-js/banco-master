@@ -13,7 +13,8 @@ import { rentLadder } from '@/game/economy/rent'
 import { buildCost } from '@/game/economy/construction'
 import type { LandLot } from '@/game/economy/types'
 import { BOARD, type PropertySquare, type Square } from '@/lib/boardData'
-import { GROUP_COLOR, SquareIcon } from '@/boards/shared'
+import { GROUP_COLOR } from '@/boards/groupColors'
+import { SquareIcon } from '@/boards/glyphs/squares'
 import { CoinIcon, HouseIcon, HotelIcon, GavelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
@@ -173,8 +174,14 @@ export function LandAuctionLayer() {
   // Online, o licitante é o ASSENTO LOCAL (spec 038, FR-002) — o seletor de licitante do
   // 031 existia porque o cliente único jogava por todos. Sem sala, ele continua.
   const local = useLocalView()
-  const bidder = local.seatId ?? pickedBidder
+  // O licitante válido é DERIVADO, não sincronizado por efeito: a escolha só vale enquanto
+  // estiver na lista de licitantes do pregão em curso (ela muda quando um pregão fecha e
+  // outro abre), senão cai no primeiro. Guardar isso em estado exigia um efeito que
+  // corrigia o próprio estado — um render intermediário com licitante inválido na tela.
   const setBidder = setPickedBidder
+  const bidder =
+    local.seatId ??
+    (pickedBidder && auction?.bidders.includes(pickedBidder) ? pickedBidder : auction?.bidders[0] ?? null)
   const [now, setNow] = useState(() => Date.now())
 
   // Tick do relógio (barras) enquanto há pregão aberto.
@@ -183,13 +190,6 @@ export function LandAuctionLayer() {
     const t = setInterval(() => setNow(Date.now()), 250)
     return () => clearInterval(t)
   }, [auction])
-
-  // Garante um licitante válido selecionado.
-  useEffect(() => {
-    if (!auction) return
-    if (local.seatId) return // assento fixo: nada a escolher
-    if (!bidder || !auction.bidders.includes(bidder)) setBidder(auction.bidders[0] ?? null)
-  }, [auction, bidder, local.seatId, setBidder])
 
   if (!auction || !bidder) return null
 

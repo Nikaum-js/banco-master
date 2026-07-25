@@ -122,7 +122,7 @@ function rentDue(state: GameState, pos: number, ownerIdOverride?: string): { own
   if (isMortgaged(state, pos)) return null
   if (isBoycotted(state, pos)) return null
 
-  let amount = 0
+  let amount: number
   if (sq.kind === 'airport') {
     const hangarDobra = state.titles[pos].hangar && !apagaoActive(state)
     amount = rentAirport(countOwned(state, 'airport', owner)) * (hangarDobra ? 2 : 1)

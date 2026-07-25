@@ -3,7 +3,7 @@
 // Carta náutica e guilloché do miolo do tabuleiro. SVG decorativo, sem lógica.
 
 // Fixos de navegação — cruzetas discretas espalhadas pela carta.
-export const CHART_FIXES: [number, number][] = [
+const CHART_FIXES: [number, number][] = [
   [12, 16], [30, 9], [68, 12], [88, 20], [9, 55], [92, 58], [16, 84], [45, 92], [80, 86],
 ]
 

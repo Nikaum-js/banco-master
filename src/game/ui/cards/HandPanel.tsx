@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
 import { useLocalView } from '@/net/roomStore'
 import { handCardsView } from './handView'
-import { useHandCardUI } from './HandCardLayer'
+import { useHandCardUI } from './handCardUI'
 import { Button, SectionHeader, EmptyState } from '@/game/ui/primitives'
 
 function LockGlyph({ size = 11 }: { size?: number }) {

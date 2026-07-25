@@ -4,26 +4,36 @@
 // "exibida" por jogador e a avançamos de 1 em 1 até a posição real — cada passo
 // é uma transição curta. Movimentos grandes/para trás (teleporte, volte-3) dão
 // snap direto, evitando dar a volta pelo caminho errado.
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { motion } from 'motion/react'
 import { useGameStore } from '@/game/store'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
 import { play } from '@/game/ui/sound/engine'
-import { PlayerFace, PLAYER_COLORS } from '@/boards/shared'
+import { PlayerFace } from '@/boards/shared'
+import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
 
 const BOARD_SIZE = 48
 const STEP_MS = 150 // tempo entre passos
 const WALK_MAX = 12 // distância máx. (horária) que anima passo a passo; acima disso, snap
 
+// Estado da caminhada: posição EXIBIDA por jogador + contador de "plop" por chegada.
+// Os dois moram na MESMA slice de propósito: a chegada é a transição andando→parado, e
+// detectá-la num efeito separado (comparando `shown` com `targets` a cada render) era
+// setState em efeito — um render a mais e uma segunda fonte de verdade para o mesmo evento.
+// Aqui o passo que faz o peão chegar já incrementa o `pop` no mesmo commit.
+type Walk = { shown: Record<string, number>; pop: Record<string, number> }
+
 // Hook: posição exibida por jogador, andando de 1 em 1 até a posição real.
 // `paused` (dados rolando): congela o peão — só anda quando o dado para.
-function useWalkedPositions(targets: Record<string, number>, paused: boolean): Record<string, number> {
-  const [shown, setShown] = useState<Record<string, number>>(targets)
+function useWalkedPositions(targets: Record<string, number>, paused: boolean): Walk {
+  const [walk, setWalk] = useState<Walk>(() => ({ shown: targets, pop: {} }))
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const shown = walk.shown
 
   useEffect(() => {
     if (paused) return // dados em arremesso: não anda ainda
     const next: Record<string, number> = {}
+    const arrived: string[] = [] // chegaram NESTE passo (andando→parado)
     let moving = false
     let walked = false
     for (const id of Object.keys(targets)) {
@@ -32,19 +42,35 @@ function useWalkedPositions(targets: Record<string, number>, paused: boolean): R
       if (cur === undefined) { next[id] = tgt; continue } // jogador novo: entra na posição
       if (cur === tgt) { next[id] = cur; continue }
       const fwd = (tgt - cur + BOARD_SIZE) % BOARD_SIZE
-      if (fwd >= 1 && fwd <= WALK_MAX) { next[id] = (cur + 1) % BOARD_SIZE; moving = true; walked = true } // anda 1
-      else { next[id] = tgt; moving = true } // teleporte/para trás: snap (sem tick — só chegada)
+      if (fwd >= 1 && fwd <= WALK_MAX) {
+        next[id] = (cur + 1) % BOARD_SIZE // anda 1
+        moving = true
+        walked = true
+        if (next[id] === tgt) arrived.push(id)
+      } else {
+        next[id] = tgt // teleporte/para trás: snap (sem tick — só chegada)
+        moving = true
+        arrived.push(id)
+      }
     }
     if (walked) play('step-tick') // um tick por batida de STEP_MS, mesmo com N peões (035)
     // Remove ids que sumiram (eliminados não importam aqui).
     const changed = Object.keys(next).some((id) => next[id] !== shown[id]) || Object.keys(shown).length !== Object.keys(next).length
     if (changed) {
-      timer.current = setTimeout(() => setShown(next), moving ? STEP_MS : 0)
+      timer.current = setTimeout(() => {
+        setWalk((cur) => {
+          if (!arrived.length) return { shown: next, pop: cur.pop }
+          const pop = { ...cur.pop }
+          for (const id of arrived) pop[id] = (pop[id] ?? 0) + 1
+          return { shown: next, pop }
+        })
+        if (arrived.length) play('step-land') // um som por chegada, mesmo com N peões (035)
+      }, moving ? STEP_MS : 0)
       return () => { if (timer.current) clearTimeout(timer.current) }
     }
   }, [targets, shown, paused])
 
-  return shown
+  return walk
 }
 
 export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSProperties }) {
@@ -52,10 +78,14 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
   const rolling = useTokenAnim((s) => s.rolling)
   const activeId = game.players[game.turnOrder[game.activeSeat]]?.id
 
-  // Alvo de posição por jogador (não-eliminado).
-  const targets: Record<string, number> = {}
-  game.players.forEach((p) => { if (!p.eliminated) targets[p.id] = p.pos })
-  const shown = useWalkedPositions(targets, rolling)
+  // Alvo de posição por jogador (não-eliminado). Memoizado: é a dependência dos efeitos
+  // da caminhada, e um objeto novo a cada render os reexecutaria sem nada ter mudado.
+  const targets = useMemo(() => {
+    const t: Record<string, number> = {}
+    game.players.forEach((p) => { if (!p.eliminated) t[p.id] = p.pos })
+    return t
+  }, [game.players])
+  const { shown, pop } = useWalkedPositions(targets, rolling)
 
   // Sinaliza ao GameDriver se o peão do jogador da vez ainda está andando —
   // o driver segura a resolução da casa até o peão chegar (024.1).
@@ -63,27 +93,6 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
     const walking = activeId != null && shown[activeId] !== undefined && shown[activeId] !== targets[activeId]
     useTokenAnim.getState().set(walking)
   }, [shown, targets, activeId])
-
-  // "Plop" de chegada: tick por jogador que incrementa quando ele PARA de andar
-  // (a transição andando→parado). O wrapper com key={tick} replay a escala.
-  const [pop, setPop] = useState<Record<string, number>>({})
-  const prevWalking = useRef<Record<string, boolean>>({})
-  useEffect(() => {
-    const landed: string[] = []
-    for (const id of Object.keys(targets)) {
-      const w = shown[id] !== undefined && shown[id] !== targets[id]
-      if (prevWalking.current[id] && !w) landed.push(id) // chegou
-      prevWalking.current[id] = w
-    }
-    if (landed.length) {
-      setPop((cur) => {
-        const next = { ...cur }
-        for (const id of landed) next[id] = (next[id] ?? 0) + 1
-        return next
-      })
-      play('step-land') // um som por chegada, mesmo com N peões (035)
-    }
-  }, [shown, targets])
 
   // Casa de destino do jogador da vez, enquanto ele anda — recebe um realce.
   const activeTarget = activeId != null ? targets[activeId] : undefined

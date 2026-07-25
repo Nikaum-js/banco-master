@@ -8,7 +8,6 @@ import { economyResolve } from '@/game/economy/resolveRentable'
 import { cardResolve } from '@/game/cards/draw'
 import { payDebt, declareBankruptcy } from '@/game/falencia/falencia'
 import { BOARD } from '@/lib/boardData'
-import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
 import { ctxWith } from './turn/_helpers'
 

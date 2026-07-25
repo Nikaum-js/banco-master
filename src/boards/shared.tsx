@@ -3,15 +3,16 @@ import { Bus, Crown } from 'lucide-react'
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from 'motion/react'
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
-import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare, GroupKey } from '@/lib/boardData'
+import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare } from '@/lib/boardData'
 import { BOARD } from '@/lib/boardData'
-import { rentLadder } from '@/game/economy/rent'
 import { useGameStore } from '@/game/store'
 import { useLocalView, useRoomStore } from '@/net/roomStore'
 import { cityLevel } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
 import { deedView, type BuildBlock } from '@/game/ui/deed/deedView'
-import { useTradeUI } from '@/game/ui/trade/TradeLayer'
+import { computeRents } from '@/game/ui/deed/deedRents'
+import { GROUP_COLOR } from './groupColors'
+import { useTradeUI } from '@/game/ui/trade/tradeUI'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { markLayout, popoverPlacement, sideOf, type Side } from './topology'
 import { SquareIcon, CardGlyph, LotteryGlyph } from './glyphs/squares'
@@ -29,25 +30,9 @@ import { ShopIcon, GavelIcon, DiceIcon, CoinIcon, HouseIcon } from '@/game/ui/ic
 import { Button, SectionHeader, Chip, EmptyState } from '@/game/ui/primitives'
 import type { TempEffect, Trade } from '@/game/economy/types'
 
-// Reexportados porque a UI já os importa daqui; as FONTES são `./topology` e `./glyphs/*`.
-export { sideOf, SquareIcon, type Side }
-export { playersView, PLAYER_COLORS, type Player } // fonte: @/game/ui/panels/playersView
-
-// Cores dos grupos como var() de --color-group-* — seguem o TEMA ativo do
-// tabuleiro (Atlas/Café) em runtime. Usadas onde Tailwind class não dá
-// (style inline, gradientes, color-mix, modal etc).
-export const GROUP_COLOR: Record<string, string> = {
-  brown:   'var(--color-group-brown)',
-  skyblue: 'var(--color-group-skyblue)',
-  pink:    'var(--color-group-pink)',
-  orange:  'var(--color-group-orange)',
-  red:     'var(--color-group-red)',
-  yellow:  'var(--color-group-yellow)',
-  green:   'var(--color-group-green)',
-  navy:    'var(--color-group-navy)',
-  purple:  'var(--color-group-purple)',
-  platinum: 'var(--color-group-platinum)', // Emirados (super-luxo) — ônix (033)
-}
+// Este módulo exporta SÓ componentes — cada consumidor importa constante e seletor da
+// própria fonte (`./groupColors`, `./topology`, `./glyphs/squares`, `@/game/ui/panels/playersView`).
+// As reexportações de compatibilidade que moravam aqui custavam o fast refresh do arquivo.
 
 // ---------------------------------------------------------------------
 function FlagAvatar({ iso2, side }: { iso2: string; side: Side }) {
@@ -888,8 +873,7 @@ function PlayerRow({ player: p }: { player: Player }) {
 }
 
 // Log de eventos — SRS §12.3, alimentado pelas ações do turno.
-const SPEED_FACES = ['one', 'two', 'three', 'mr', 'bus'] as const
-type SpeedFace = (typeof SPEED_FACES)[number]
+type SpeedFace = 'one' | 'two' | 'three' | 'mr' | 'bus'
 
 // Face do Speed Die do motor (1|2|3|'mr-banco'|'onibus') → face visual.
 function toUiSpeedFace(speed: number | 'mr-banco' | 'onibus'): SpeedFace {
@@ -1714,22 +1698,6 @@ export function CenterArena() {
 // aluguéis (base / 1-4 casas / hotel / skyscraper), preço, custo de
 // casa, hipoteca e dono se houver. Fecha clicando no backdrop ou Esc.
 // =====================================================================
-// Adaptador de view sobre a FONTE ÚNICA (rentLadder, 032): mapeia para o formato dos deeds.
-// Não recalcula nada — só delega ao motor, garantindo que UI e cobrança batem.
-export function computeRents(group: GroupKey, base: number) {
-  const l = rentLadder(group, base)
-  return {
-    base,
-    house1: l.house[0],
-    house2: l.house[1],
-    house3: l.house[2],
-    house4: l.house[3],
-    hotel: l.hotel,
-    hotel2: l.hotel2,
-    skyscraper: l.skyscraper,
-  }
-}
-
 function fmtMoney(n: number) {
   if (n == null || Number.isNaN(n)) return '—' // blindagem: nunca quebra por valor ausente
   return n.toLocaleString('pt-BR')

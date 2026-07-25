@@ -14,7 +14,11 @@ import { busSideOf, canUseBusTicket } from '@/game/turn/turnMachine'
 import { AUCTION_WINDOW } from '@/game/economy/purchase'
 import { RARITY_COLOR, RARITY_LABEL, cardLabel, CARD_DESC } from '@/game/ui/cards/cardMeta'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
-import { GROUP_COLOR, SquareIcon, PlayerFace, computeRents, PLAYER_COLORS } from '@/boards/shared'
+import { PlayerFace } from '@/boards/shared'
+import { GROUP_COLOR } from '@/boards/groupColors'
+import { SquareIcon } from '@/boards/glyphs/squares'
+import { computeRents } from '@/game/ui/deed/deedRents'
+import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
 import { buildCost } from '@/game/economy/construction'
 import { GavelIcon, CoinIcon, HouseIcon, HotelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
@@ -95,7 +99,7 @@ export function ModalLayer() {
   const chooseBusMove = (opt: 'die0' | 'die1' | 'sum'): void => dispatch({ kind: 'choose-bus-move', opt })
   const chooseTripleDest = (dest: number): void => dispatch({ kind: 'choose-triple-dest', dest })
   const confirmCardReveal = (): void => dispatch({ kind: 'confirm-card-reveal' })
-  const useBusTicketCmd = (dest: number): void => dispatch({ kind: 'use-bus-ticket', dest })
+  const spendBusTicket = (dest: number): void => dispatch({ kind: 'use-bus-ticket', dest })
   const busArmed = useBusTicketUI((s) => s.armed)
   const disarmBus = useBusTicketUI((s) => s.disarm)
 
@@ -123,7 +127,7 @@ export function ModalLayer() {
             fromPos={activePlayer.pos}
             title="Usar Bus Ticket"
             subtitle="Vá para uma casa do mesmo lado"
-            onPick={(pos) => { useBusTicketCmd(pos); disarmBus() }}
+            onPick={(pos) => { spendBusTicket(pos); disarmBus() }}
             onCancel={disarmBus}
           />
         </Overlay>
@@ -447,7 +451,7 @@ function BusLine({ fromPos, onPick, onBoard }: { fromPos: number; onPick: (pos: 
 
 // Seletor de destino do Bus Ticket — a linha de ônibus acima + canhoto de
 // bilhete picotado no rodapé. Usado pelo Bus Ticket guardado (carta ou espaço
-// §2.7) via useBusTicket.
+// §2.7) via spendBusTicket.
 function BusPicker({
   fromPos,
   title,

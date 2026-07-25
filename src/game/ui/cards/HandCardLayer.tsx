@@ -2,7 +2,6 @@
 // dispara playHandCard(cardId, target?, targetPlayer?). Os alvos vêm de cardTargets
 // (puro) — exatamente os que o motor aceita. Diplomacia é interceptada pelo motor.
 import { type ReactNode } from 'react'
-import { create } from 'zustand'
 import { AnimatePresence } from 'motion/react'
 import { useGameStore } from '@/game/store'
 import { useLocalView } from '@/net/roomStore'
@@ -12,15 +11,10 @@ import { cardById } from '@/game/cards/catalog'
 import { ownerOf } from '@/game/economy/titles'
 import { cardLabel } from './cardMeta'
 import { cardTargets } from './handView'
+import { useHandCardUI } from './handCardUI'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 
-// Store de UI efêmero: qual carta está escolhendo alvo (null = fechado).
-export const useHandCardUI = create<{ cardId: string | null; open: (id: string) => void; close: () => void }>((set) => ({
-  cardId: null,
-  open: (id) => set({ cardId: id }),
-  close: () => set({ cardId: null }),
-}))
 
 const propName = (pos: number) => BOARD[pos]?.name ?? `#${pos}`
 

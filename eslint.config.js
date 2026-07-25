@@ -18,5 +18,14 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // `_algo` = parâmetro/binding mantido de propósito (assinatura de porta que a
+      // implementação atual não usa, destructuring posicional). Renomear para `_` é a
+      // convenção; o lint não deve exigir apagar o nome que documenta a posição.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+    },
   },
 ])
