@@ -37,8 +37,13 @@ export function OnlineGate({ children }: { children: ReactNode }) {
   // A URL é lida uma vez: trocar de sala é recarregar a página.
   const [link] = useState(() => parseRoomLink(window.location.search))
   // `?local=1` (ou o botão "jogar local") entrega o cliente único de sempre — o andaime de
-  // desenvolvimento e demonstração segue existindo, intacto (FR-029/SC-007).
-  const [local, setLocal] = useState(() => new URLSearchParams(window.location.search).has('local'))
+  // desenvolvimento e demonstração segue existindo, intacto (FR-029/SC-007). `?players=N`
+  // é o hook de boot do smoke E2E (036): também é partida local e NÃO pode ver a home,
+  // senão o gate desta spec quebraria a suíte de ponta a ponta que já existia.
+  const [local, setLocal] = useState(() => {
+    const q = new URLSearchParams(window.location.search)
+    return q.has('local') || q.has('players')
+  })
 
   if (local) return <>{children}</>
   if (!link.roomId && !link.createHost) {
