@@ -31,7 +31,8 @@ O design técnico detalhado de cada feature vive no `plan.md` da própria spec (
 |---|---|---|---|
 | **Princípios** | [`.specify/memory/constitution.md`](./.specify/memory/constitution.md) | Princípios não-negociáveis do projeto (I a VII) | **Sempre, antes de qualquer spec** |
 | **Verdade de negócio** | [`docs/SRS.md`](./docs/SRS.md) | Fonte de verdade absoluta das regras | **Sempre, antes de qualquer spec** (grep pela feature) |
-| **Decisões** | [`docs/adr/README.md`](docs/adr/README.md) | ADR — decisões aceitas e rejeitadas | **Sempre, antes de qualquer spec** (verificar decisões relacionadas) |
+| **Vocabulário** | [`CONTEXT.md`](./CONTEXT.md) | Glossário do domínio — só os nomes, nunca a regra | **Sempre, antes de qualquer spec** (e ao nomear qualquer coisa nova) |
+| **Decisões** | [`docs/adr/`](./docs/adr/README.md) | ADR — um arquivo por decisão, id `D-0xx` estável | **Sempre, antes de qualquer spec** (verificar decisões relacionadas) |
 | **Cartas** | [`docs/CARTAS.md`](./docs/CARTAS.md) | Catálogo detalhado (rascunho de discovery) | Ao mexer em cartas — migrará pra uma spec |
 | **Guia Spec Kit** | [`docs/SPEC-KIT.md`](./docs/SPEC-KIT.md) | Manual de uso do Spec Kit (para o Nikolas) | Quando o usuário tiver dúvida de como usar |
 | **Specs** | [`specs/<feature>/`](./specs/) | Uma pasta por feature, criada pelo Spec Kit | Ao trabalhar numa feature |

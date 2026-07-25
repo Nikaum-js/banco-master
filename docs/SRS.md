@@ -988,37 +988,9 @@ Jogadores podem conceder empréstimos entre si durante a partida, criando dinâm
 
 ## 17. Glossário
 
-| Termo | Definição |
-|---|---|
-| GO / Início | Casa índice 0. Receber valor progressivo ao passar/parar (Seção 13.5) |
-| Grupo completo | Um jogador possui todas as propriedades de um grupo de cor |
-| Dupla | Mesmos valores nos dois dados brancos |
-| Hipoteca | Propriedade dada como garantia ao banco em troca de metade do valor |
-| Hotel | Construção máxima de casas: substitui 4 casas. Até 2 hotéis por propriedade |
-| Skyscraper | Construção acima do 2º hotel, requer grupo completo (Seção 13.7) |
-| Leilão | Disputa de lances por uma propriedade ou casa |
-| Acaso | Deck de cartas de acaso (Chance no Monopoly clássico) — efeitos ofensivos/caóticos. Termo canônico — [D-018](adr/D-018-termo-canonico-acaso-antes-surpresa.md) |
-| Tesouro | Deck de cartas de baú comunitário (Community Chest) — efeitos defensivos/benignos |
-| Carta Lendária | Carta de alto impacto (cor laranja), geralmente vai para a mão |
-| Carta Rara | Carta de impacto médio (cor azul), pode ir para a mão ou ter efeito imediato grande |
-| Carta Comum | Carta de baixo impacto (cor verde), geralmente efeito imediato |
-| Carta em mão | Carta retida pelo jogador após saque. Privada, não-negociável, com limite de 3 |
-| Carta de reação | Carta jogável fora do próprio turno em resposta a um evento (Diplomacia, Bunker Fiscal) |
-| Aquisição Hostil | Carta Lendária: força transferência de propriedade pelo preço original |
-| Diplomacia | Carta Lendária de reação: cancela carta ofensiva contra você |
-| Bus Ticket | Item de mão que permite mover para qualquer casa do lado atual do tabuleiro |
-| Turno ativo | O turno do jogador que deve agir no momento |
-| Speed Die | Terceiro dado especial ativado após a 1ª volta. Faces: 1/2/3, Mr. Banco Master, Ônibus |
-| Mr. Banco Master | Face do Speed Die que envia o jogador à próxima propriedade disponível |
-| Free Parking / Férias | Casa índice 24 que acumula prêmio em dinheiro |
-| Bônus de GO | Valor fixo recebido no GO: $200 ao passar, $400 ao parar exatamente (D-007) |
-| Imunidade de Aluguel | Benefício negociável: passar por propriedade sem pagar aluguel por N voltas |
-| Empréstimo | Transferência de dinheiro entre jogadores, juros 10–50% por GO |
-| Credor | Jogador que concedeu o empréstimo |
-| Devedor | Jogador que recebeu o empréstimo |
-| Hangar | Melhoria de aeroporto que dobra o aluguel daquele aeroporto |
-| Tax Man / Fiscal | Token controlado pelo banco que cobra aluguel ao banco quando cai em propriedade com dono |
-| Catch-up mechanic | Mecanismo de design que dá vantagens a jogadores em desvantagem |
+O glossário do domínio mudou de lugar: vive em [`CONTEXT.md`](../CONTEXT.md) na raiz do repo,
+ao lado do código que os termos nomeiam. Esta seção existe só como ponteiro — o SRS segue
+sendo a fonte de verdade da **regra**, o `CONTEXT.md` é a fonte dos **nomes**.
 
 ---
 

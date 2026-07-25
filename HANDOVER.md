@@ -1,13 +1,14 @@
 # HANDOVER — Banco Master
 
-> Última atualização: 2026-07-24 · branch `037-sala-online-estado-sincronizado`
+> Última atualização: 2026-07-25 · branch `main` (fluxo sem branch por feature)
 > Leitura de partida: este arquivo → `CLAUDE.md` → `docs/AUDITORIA-2026-07-23.md` → a spec ativa.
 
 ## Estado atual
 
 - **Motor (M1): completo e sem gaps de regra conhecidos** — os 3 bugs achados pela auditoria de 2026-07-23 foram corrigidos (ver abaixo). **UI jogável (M2): fechada**. **Simulação (spec 036): entregue**.
-- **Multiplayer (M3): spec 037 COMPLETA, infra viva** — casca host-autoritativa em `src/net/` + `src/game/commands.ts`/`ctx.ts`, provada headless via `LocalTransport` e agora também contra o Supabase real (migration aplicada; `bun run scripts/net-smoke.ts` mede 27ms de propagação). Ligada ao app por `src/net/ui/OnlineGate.tsx`. Motor intacto (princípio I / SC-007). **Próximo: spec 038** (perspectiva de jogador local) — ver abaixo.
-- **Gates:** `bunx vitest run` → **397 testes / 56 arquivos verdes** (363 motor + 34 rede em `tests/net/`); `bunx tsc --noEmit -p tsconfig.app.json` limpo; `bun run build` ok; lint do delta (`src/net`, `src/App.tsx`, `tests/net`) limpo. **Lint global: 36 erros pré-existentes** inalterados. **Sem CI**.
+- **Multiplayer (M3): specs 037 e 038 COMPLETAS, infra viva** — fundação host-autoritativa (037) + **partida online jogável** (038: perspectiva de jogador local, identidade real, sessão visível, roteamento). Motor intacto (princípio I / SC-007).
+- **Gates:** `bunx vitest run` → **436 testes / 60 arquivos verdes** (363 motor + 73 rede em `tests/net/`); `tsc` limpo; `bun run build` ok; **lint de `src/net` zerado** e os arquivos de UI tocados mantêm exatamente os erros pré-existentes (medido contra o baseline). `bun run scripts/net-smoke.ts` verde contra o Supabase real. **Lint global: 36 erros pré-existentes** inalterados. **Sem CI**.
+- **E2E:** `bunx playwright test` → 2 e 3 jogadores passam; **6 jogadores estoura o timeout de 150s — falha PRÉ-EXISTENTE** (reproduzida no commit anterior à 038, ver "Sessão 2026-07-25").
 - **Push agora é rotina:** remote `origin` = `github.com:Nikaum-js/banco-master` — commits desta e da sessão anterior foram pushados. Backdate de commits segue a regra do `~/.claude/rules/git-conventions.md` (hook injeta).
 - **Auditoria completa em `docs/AUDITORIA-2026-07-23.md`** — 17 itens priorizados por impacto×esforço; é o backlog técnico vigente (itens 1, 2, 7 e 14 já resolvidos).
 
@@ -32,6 +33,26 @@
 Aprendizados da infra que valem para o 038: (1) `broadcast.self: true` é obrigatório no canal — sem o eco, o host não veria os próprios comandos; (2) upsert parcial de sala não zera `game`/`seq` (premissa do `saveRoom`, agora verificada contra o PostgREST); (3) **não há policy de DELETE** de propósito — cliente anônimo não apaga sala, então limpeza de salas velhas é rotina de servidor por `updated_at`; (4) o linter do Supabase acusa `rooms_anon_insert`/`update` como permissivas (lint 0024) — deliberado enquanto a credencial for o link (D-019), some junto com o endurecimento de identidade de transporte.
 
 **Limitações conhecidas (038+):** a UI ainda não tem **perspectiva de jogador local** — ela mostra os controles do jogador da vez para todos; cliques de quem não é o ator são simplesmente descartados pelo host (FR-007), então não há risco de estado, só de confusão visual. Nomes/cores da sala vivem fora do `GameState` (D-019) e ainda não aparecem no tabuleiro. **Anti-spoof no transporte Supabase** (token auto-declarado no broadcast) precisa de endurecimento (Edge Function/segredo de sessão) para paridade plena com o `LocalTransport` — a LÓGICA do host já rejeita spoof.
+
+## Spec 038 — partida online jogável (2026-07-25)
+
+**Entregue: US1–US5.** `specs/038-partida-online-jogavel/` (spec + plan + research + data-model + contracts + tasks). O que mudou, em uma linha: a UI deixou de renderizar "a vez de quem está jogando" e passou a renderizar "o que EU posso ver e fazer".
+
+**A chave do desenho** foi não escrever lógica nova de permissão: `actorOf` (`src/game/commands.ts`) já respondia "quem é o ator legítimo desta ação" e **é o que o host usa para validar**. Extraí `actorOfKind` da MESMA tabela e a UI passou a consumi-la (`src/net/localView.ts`). Affordance e autoridade não podem divergir porque não existe uma segunda lista para esquecer de atualizar — e `localView.test.ts` tem um teste de **exaustividade** que quebra se alguém adicionar comando sem decidir a perspectiva dele.
+
+**Módulos novos** (`src/net/`): `localView` (quem sou eu, o que posso acionar — puro), `identity` (playerId → nome/cor/peça, da SALA, com fallback `Jogador N` sem sala), `roomStore` (Zustand aditivo — não toca `store.ts`, mesma decisão de risco da 037), `ui/PlayerName` + `ui/WaitingBar` + `ui/PauseBanner` + `ui/HomeScreen`.
+
+**Onde a UI mudou** (11 arquivos): mão de cartas passa a ser a do DONO DA TELA (era a do jogador da vez — vazava a mão alheia a cada turno, princípio VI); modais de decisão só para o ator, os demais veem "aguardando \<nome\>"; lance de leilão e de pregão presos ao assento local; `GameDriver` só auto-avança no cliente do ator; `playersView` (`boards/shared.tsx`) troca `p.id` por identidade da sala — é ali que `p1..pN` sumiu da UI inteira.
+
+**Regra tocada (com ADR antes, nunca dentro da spec):** D-029 — desconexão de **eliminado** não pausa mais a partida (SRS §11.3 v1.5). Sem isso, como não há timeout, quem já perdeu travava a mesa ao fechar a aba. D-030 fixou o alcance da privacidade de cartas: garantia **de apresentação**, não de dados (o estado completo chega a todos os clientes por exigência do modelo de sincronização) — limitação registrada no SRS §10.3, não escondida.
+
+**Testes de rede: 73** (era 34). Novos: `localView` (11), `identity` (11), `perspective` (5, sobre o hub com 3 clientes), `kick` (7), + D-029 no `pause` e ordem sorteada no `lobby`.
+
+**Bug real achado pela suíte:** o cliente removido do lobby continuava se achando sentado — `resolvePlayerId` nunca limpava o assento quando ele sumia da sala publicada. Corrigido em `client.ts`.
+
+**Cuidado que quase passou:** o gate de roteamento teria quebrado o smoke E2E do 036, que boota com `?players=N` e cairia na home nova. `?players` e `?local` entram no boot local (commit `🐛 fix(net): keep the players boot hook out of the online gate`).
+
+**Pendente:** T036 — roteiro manual em dois browsers (`quickstart.md`). É o que a suíte headless não cobre: ver com os próprios olhos a mão privada, a barra de espera, o banner de pausa e o kick.
 
 ## Sessão de 2026-07-23/24 — auditoria ponta a ponta + 3 fixes de engine + SRS v1.3
 

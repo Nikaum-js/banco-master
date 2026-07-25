@@ -3,7 +3,7 @@
 > **O que este doc é:** a visão de **produto** amarrando objetivo → épicos → specs → status, e o
 > **mapa do que falta para o v1.0**. Não substitui o [`SRS.md`](./SRS.md) (verdade de regras) nem o
 > [`MILESTONES.md`](./MILESTONES.md) (roadmap macro) — é a camada de rastreabilidade entre eles.
-> Última atualização: 2026-07-24 · 397 testes verdes · engine e UI single-player fechados; **fundação multiplayer entregue (spec 037)** — falta a experiência online (perspectiva local, identidade real, roteamento).
+> Última atualização: 2026-07-25 · 436 testes verdes · engine e UI single-player fechados; **fundação multiplayer entregue (spec 037)** — falta a experiência online (perspectiva local, identidade real, roteamento).
 
 ---
 
@@ -109,8 +109,8 @@ Legenda: ✅ entregue · ❌ descontinuada · ⏳ pendente (sem spec ainda).
 | Spec | O que entrega | Status |
 |---|---|---|
 | 037 | Fundação host-autoritativa: `applyCommand` puro, difusão por comando com não-determinismo gravado/replicado, snapshot upsert, pausa por presença, reconexão/reload, anti-spoof, lobby mínimo (nome+cor+link+iniciar), migration + adapter Supabase | ✅ (infra viva pendente: aplicar a migration) |
-| 038 (próxima) | Partida online de verdade: perspectiva de jogador local, identidade real (nomes/cores/tokens no lugar de `p1..pN`), status de conexão/pausa visível, roteamento home → sala → partida → fim, kick no lobby, ordem inicial | ⏳ |
-| 039 (planejada) | Leilão dos bens do falido-ao-banco (§9.2) — precisa de vários jogadores | ⏳ |
+| 038 | Partida online de verdade: perspectiva de jogador local (mão privada de fato), identidade real (nomes/cores/peças no lugar de `p1..pN`), status de conexão/pausa visível, roteamento home → sala → partida → fim, kick no lobby, ordem inicial sorteada | ✅ |
+| 039 (próxima) | Leilão dos bens do falido-ao-banco (§9.2) — precisa de vários jogadores | ⏳ |
 
 ### E16 — Polimento & Lançamento (M4) — **NÃO COMEÇOU**
 | ⏳ | Tela de fim de jogo com resumo; acessibilidade/responsivo; telemetria mínima; deploy + CI | ⏳ |
@@ -130,9 +130,8 @@ O engine e a UI single-player estão fechados, e a **fundação multiplayer saiu
 
 1. **037 Fundação multiplayer** — ✅ entregue (falta aplicar a migration no projeto Supabase e
    medir SC-002/SC-006 numa partida real).
-2. **038 Partida online de verdade** — perspectiva de jogador local (cada cliente só decide pelo
-   próprio assento), identidade real (mata o gap D1: nomes no lugar de `p1..pN`), status de
-   conexão/pausa visível, roteamento home → sala → partida → fim.
+2. **038 Partida online de verdade** — ✅ entregue (2026-07-25). Falta só o roteiro manual em
+   dois browsers; o DoD #4 do §3 (lobby com nomes reais) está cumprido.
 3. **039 Leilão do falido-ao-banco** (§9.2) — regra que só existe com N jogadores, destravada pelo M3.
 4. **M4:** tela de fim de jogo, acessibilidade, telemetria, deploy + CI.
 
