@@ -12,15 +12,15 @@ Tema inicial: "Cidades do Mundo". Base extensível para outros temas no futuro.
 
 ## 2. Fase atual
 
-**Discovery / design.** Ainda não estamos escrevendo código de produção.
+**Implementação (M3 — multiplayer).** A discovery terminou: specs 001–037 estão implementadas, o motor e a UI single-player estão fechados e a fundação multiplayer está viva sobre o Supabase. A spec ativa é a **038** (perspectiva de jogador local, identidade real, roteamento).
 
 Comportamento esperado:
 
-- **Validar, propor, perguntar** antes de implementar.
-- Discutir trade-offs e edge cases por escrito antes de gerar código.
-- Discovery termina em `/speckit-specify` (e opcionalmente `/speckit-clarify`). **Não avançar** para `/speckit-plan` ou `/speckit-implement` sem confirmação explícita do usuário.
+- **Clarificar ambiguidade nova antes de codar** — mas não travar implementação já autorizada.
+- **Regra nunca nasce numa spec**: comportamento novo que contrarie ou refine o SRS exige ADR em `DECISIONS.md` (e bump do SRS) **antes** de virar requisito. Foi assim com D-029/D-030 na 038.
+- O ciclo por feature continua `/speckit-specify → clarify → plan → tasks → implement`, mas `/speckit-plan` e `/speckit-implement` seguem exigindo confirmação explícita do usuário.
 
-## 3. Stack (quando partirmos pro código)
+## 3. Stack
 
 React + Vite + TypeScript + Tailwind + Zustand + Supabase (realtime + persistência).
 O design técnico detalhado de cada feature vive no `plan.md` da própria spec (gerado por `/speckit-plan`).
@@ -93,10 +93,10 @@ Detalhe em [`docs/DECISIONS.md`](./docs/DECISIONS.md).
 
 - **Idioma:** português (Brasil) em tudo — specs, plans, tasks, discussão.
 - **Respostas concisas.** Não resumir o que já está no diff.
-- **Discovery, não código.** Em fase atual, paramos em `/speckit-specify` (+ opcionalmente `/speckit-clarify`).
+- **Confirmação antes de avançar de fase.** Specificar e clarificar são livres; `plan`/`implement` só com o seu "pode seguir".
 
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-[`specs/036-simulacao-partidas/plan.md`](./specs/036-simulacao-partidas/plan.md)
+[`specs/038-partida-online-jogavel/plan.md`](./specs/038-partida-online-jogavel/plan.md)
 <!-- SPECKIT END -->
