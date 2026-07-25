@@ -184,58 +184,99 @@ function applyResume(state: GameState, pausedMs: number): GameState {
   return s
 }
 
+// TABELA ÚNICA de "quem é o ator deste comando" (spec 037 FR-007 · spec 038 US1).
+//
+// Consumida por DOIS lados que não podem divergir:
+//   • host  (`src/net/host.ts`) — AUTORIDADE: descarta comando cujo remetente ≠ ator;
+//   • UI    (`src/net/localView.ts`) — AFFORDANCE: só oferece o controle a quem é o ator.
+// Uma tabela, dois consumidores: uma segunda lista na UI sairia de sincronia no primeiro
+// comando novo. `Record` exaustivo — comando novo sem regra de ator não compila.
+//
+// Três formas de ator:
+//   'active'  → o jogador da vez;
+//   'sender'  → quem a própria ação declara (licitante, proponente). O host confere o
+//               declarado contra o assento da conexão, então TODO jogador é ator legítimo
+//               em NOME PRÓPRIO — a elegibilidade (ser licitante ativo, ter caixa) segue
+//               sendo dos gates do motor, não desta tabela;
+//   função    → derivado do estado pendente (destinatário da troca, credor, alvo da reação).
+type ActorRule = 'active' | 'sender' | ((state: GameState) => string | null)
+
+const ACTOR_RULES: Record<PlayerAction['kind'], ActorRule> = {
+  // Ações do jogador ativo.
+  roll: 'active',
+  finalize: 'active',
+  'jail-decision': 'active',
+  'choose-bus-move': 'active',
+  'choose-triple-dest': 'active',
+  'use-bus-ticket': 'active',
+  'resolve-pending': 'active',
+  'buy-property': 'active',
+  'decline-property': 'active',
+  'build-house': 'active',
+  'sell-building': 'active',
+  'build-hangar': 'active',
+  'sell-hangar': 'active',
+  mortgage: 'active',
+  unmortgage: 'active',
+  'play-hand-card': 'active',
+  'discard-card': 'active',
+  'choose-card-shortcut': 'active',
+  'confirm-card-reveal': 'active',
+  'pay-debt': 'active',
+  'declare-bankruptcy': 'active',
+  'grant-loan': 'active',
+  'propose-loan': 'active',
+  'pay-off-loan': 'active',
+  'dismiss-notice': 'active',
+  // Ator declarado pelo remetente (licitante / proponente).
+  'place-bid': 'sender',
+  'pass-bid': 'sender',
+  'place-land-bid': 'sender',
+  'propose-trade': 'sender',
+  'execute-trade': 'sender',
+  // Respostas do contra-parte — derivadas do estado pendente.
+  'respond-reaction': (state) => {
+    const r = state.resolution
+    return r?.kind === 'reaction-diplomacia' || r?.kind === 'reaction-bunker' ? r.reactorId : null
+  },
+  'respond-loan': (state) => state.pendingLoan?.creditorId ?? null,
+  'accept-trade': (state) => state.pendingTrade?.toId ?? null,
+  'reject-trade': (state) => state.pendingTrade?.toId ?? null,
+}
+
+// Ator por KIND, sem a ação montada — o que a UI precisa para perguntar "esta decisão é
+// minha?" antes de existir payload. `null` significa "ator não determinável a partir do
+// kind": ou depende do remetente ('sender'), ou não há estado pendente que o defina.
+// Quem decide o que fazer com o null é o chamador (a UI trata 'sender' como "sou eu").
+export function actorOfKind(state: GameState, kind: PlayerAction['kind']): string | null {
+  const rule = ACTOR_RULES[kind]
+  if (rule === 'active') return activePlayer(state).id
+  if (rule === 'sender') return null
+  return rule(state)
+}
+
+// True quando o ator do comando é decidido pelo próprio remetente (agir em nome próprio).
+export function isSenderActed(kind: PlayerAction['kind']): boolean {
+  return ACTOR_RULES[kind] === 'sender'
+}
+
 // Deriva o ATOR de um comando de jogador a partir do estado — quem o host exige que seja o
 // remetente (FR-007, fecha `store.ts:262` / item 17 da auditoria). NÃO adiciona gate de
 // turno além do que o motor já impõe: apenas garante que o remetente é o jogador em nome de
 // quem o comando age (US4-3). Retorna null quando o ator não é determinável no estado atual
 // (ex.: responder sem proposta pendente) — o host trata como comando descartável.
 export function actorOf(state: GameState, action: PlayerAction): string | null {
+  if (!isSenderActed(action.kind)) return actorOfKind(state, action.kind)
+  // 'sender': o ator é o que a ação declara — `playerId` (leilões) ou `trade.fromId` (trocas).
   switch (action.kind) {
-    // Ações do jogador ativo.
-    case 'roll':
-    case 'finalize':
-    case 'jail-decision':
-    case 'choose-bus-move':
-    case 'choose-triple-dest':
-    case 'use-bus-ticket':
-    case 'resolve-pending':
-    case 'buy-property':
-    case 'decline-property':
-    case 'build-house':
-    case 'sell-building':
-    case 'build-hangar':
-    case 'sell-hangar':
-    case 'mortgage':
-    case 'unmortgage':
-    case 'play-hand-card':
-    case 'discard-card':
-    case 'choose-card-shortcut':
-    case 'confirm-card-reveal':
-    case 'pay-debt':
-    case 'declare-bankruptcy':
-    case 'grant-loan':
-    case 'propose-loan':
-    case 'pay-off-loan':
-    case 'dismiss-notice':
-      return activePlayer(state).id
-    // Licitante explícito.
     case 'place-bid':
     case 'pass-bid':
     case 'place-land-bid':
       return action.playerId
-    // Respostas do contra-parte (derivadas do estado pendente).
-    case 'respond-reaction': {
-      const r = state.resolution
-      if (r?.kind === 'reaction-diplomacia' || r?.kind === 'reaction-bunker') return r.reactorId
-      return null
-    }
-    case 'respond-loan':
-      return state.pendingLoan?.creditorId ?? null
-    case 'accept-trade':
-    case 'reject-trade':
-      return state.pendingTrade?.toId ?? null
     case 'propose-trade':
     case 'execute-trade':
       return action.trade.fromId
+    default:
+      return null
   }
 }

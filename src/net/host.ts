@@ -12,6 +12,8 @@ import { recordingCtx } from './recorder'
 import {
   anyDisconnected,
   joinRoom,
+  kickSeat,
+  shuffleSeatOrder,
   markConnected,
   markDisconnected,
   playerIdsInOrder,
@@ -30,6 +32,7 @@ export interface Host {
   open(): Promise<void> // abre o LOBBY: escuta pedidos de assento/presença e publica a sala (FR-001/002)
   start(): Promise<void> // cria o estado inicial, persiste como 1º snapshot e publica a sala em 'playing'
   startMatch(): Promise<{ ok: true } | { ok: false; reason: 'too-few' | 'already-started' | 'not-host' }> // lobby → partida (FR-006)
+  kick(token: string): { ok: true } | { ok: false; reason: 'not-in-lobby' | 'is-host' | 'unknown-token' } // remoção no lobby (FR-024)
   stop(): void
   tick(): void // fecha leilões/lotes vencidos pelo prazo (emite comandos de sistema) — browser agenda; testes chamam
   room(): Room
@@ -94,7 +97,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   // Pedido de assento no lobby (FR-002/005). A identidade do assento é o token da CONEXÃO —
   // o pedinte só escolhe nome e cor. Recusa (cheia/cor tomada/já iniciada) volta ao pedinte.
   function handleJoinRequest(who: JoinRequest, fromToken: string): void {
-    const result = joinRoom(room, { token: fromToken, name: who.name, color: who.color })
+    const result = joinRoom(room, { token: fromToken, name: who.name, color: who.color, piece: who.piece })
     if (!result.ok) {
       transport.rejectJoin(fromToken, result.reason)
       return
@@ -115,12 +118,19 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     syncPause()
   }
 
-  // Pausa global se QUALQUER assento está desconectado; retoma quando TODOS voltam (FR-016/018).
-  // Host desconectado entra no mesmo caminho: pausa indefinida, sem transferência (FR-019) — a
-  // autoridade É o host, então enquanto ele está fora ninguém aplica nada de qualquer forma.
+  // Ids de quem já saiu da partida — não contam para pausa nem para retomada (D-029).
+  function eliminatedIds(): ReadonlySet<string> {
+    if (!game) return new Set()
+    return new Set(game.players.filter((p) => p.eliminated).map((p) => p.id))
+  }
+
+  // Pausa global se algum assento que AINDA JOGA está desconectado; retoma quando todos eles
+  // voltam (FR-016/018). Host desconectado entra no mesmo caminho: pausa indefinida, sem
+  // transferência (FR-019) — a autoridade É o host, então enquanto ele está fora ninguém
+  // aplica nada de qualquer forma. Eliminado que cai NÃO trava a mesa (D-029/FR-018a).
   function syncPause(): void {
     if (!game) return
-    const shouldPause = anyDisconnected(room)
+    const shouldPause = anyDisconnected(room, eliminatedIds())
     if (shouldPause && !game.paused) {
       pausedAt = now()
       accept({ kind: 'pause' })
@@ -168,12 +178,25 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
 
     start: startInternal,
 
-    // Fecha o lobby e inicia a partida com os assentos atuais (FR-006). Ordem = entrada.
+    // Fecha o lobby e inicia a partida (FR-006). A ordem da mesa é SORTEADA aqui (spec 038,
+    // FR-030) com o RNG do host — o resultado vive no snapshot, então os clientes o recebem
+    // por leitura, sem replay (mesmo padrão do embaralho das cartas).
     async startMatch() {
       const started = startGameRoom(room)
       if (!started.ok) return started
-      room = started.room
+      room = shuffleSeatOrder(started.room, rng)
       await startInternal()
+      return { ok: true as const }
+    },
+
+    // Remoção de jogador pelo host, só no lobby (§11.1 / FR-024). O removido é avisado pelo
+    // mesmo canal de recusa de entrada (research D6) e a sala republicada sem o assento.
+    kick(token: string) {
+      const result = kickSeat(room, token)
+      if (!result.ok) return result
+      room = result.room
+      transport.rejectJoin(token, 'kicked')
+      publishAndPersistRoom()
       return { ok: true as const }
     },
 

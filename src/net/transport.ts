@@ -48,6 +48,7 @@ export interface PresenceChange {
 export interface JoinRequest {
   name: string
   color: string
+  piece?: string // peça visual escolhida no lobby (spec 038); única por sala
 }
 
 export type Unsubscribe = () => void

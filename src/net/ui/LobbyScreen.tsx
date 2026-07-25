@@ -9,8 +9,10 @@ import { availableColors, MAX_SEATS, MIN_SEATS, type JoinError, type Room } from
 const JOIN_ERROR_TEXT: Record<JoinError, string> = {
   'room-full': `Sala cheia — o limite é ${MAX_SEATS} jogadores.`,
   'color-taken': 'Essa cor já foi escolhida por outro jogador.',
+  'piece-taken': 'Essa peça já foi escolhida por outro jogador.',
   'already-started': 'A partida já começou — não é possível entrar agora.',
   'unknown-token': 'Sessão não reconhecida nesta sala.',
+  kicked: 'O anfitrião removeu você desta sala.',
 }
 
 // Moldura comum das telas de sala (fundo do jogo + cartão central).

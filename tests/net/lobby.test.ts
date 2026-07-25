@@ -132,15 +132,19 @@ describe('lobby sobre a rede (FR-001..006)', () => {
 
   it('reabrir o link com token já assentado re-anexa ao mesmo assento (FR-004)', async () => {
     const { hub, host } = await openLobby()
-    await guestJoins(hub, 'tok-a', 'Ana', SEAT_COLORS[1])
+    const ana = await guestJoins(hub, 'tok-a', 'Ana', SEAT_COLORS[1])
     await host.startMatch()
     await flush()
+    // A ordem da mesa é sorteada no início (FR-030), então o assento da Ana é o que a sala
+    // diz AGORA — não o da ordem de entrada. É isso que a reconexão precisa devolver.
+    const meuAssento = ana.playerId()
+    expect(meuAssento).not.toBeNull()
 
     const again = createClient(localTransport(hub, 'tok-a')) // nova aba, mesmo token
     await again.join()
     await flush()
 
-    expect(again.playerId()).toBe('p2')
+    expect(again.playerId()).toBe(meuAssento)
     expect(host.room().seats).toHaveLength(2)
     expect(JSON.stringify(again.game())).toBe(JSON.stringify(host.game()))
   })
@@ -166,9 +170,43 @@ describe('lobby sobre a rede (FR-001..006)', () => {
     expect(revived.seq()).toBe(host.seq())
     expect(JSON.stringify(revived.game())).toBe(before)
 
-    // E a autoridade volta a funcionar: comando da Ana é aceito e difundido.
+    // E a autoridade volta a funcionar: quem NÃO é o jogador da vez tenta rolar e é
+    // descartado (a ordem é sorteada, então descobrimos quem é o não-ator pelo estado).
+    const g = revived.game()
+    const activeId = g.players[g.turnOrder[g.activeSeat]].id
+    const naoAtor = [hostClient, ana].find((c) => c.playerId() !== activeId)!
     const seqBefore = revived.seq()
-    ana.send({ kind: 'roll' }) // fora do turno dela → no-op legítimo, não avança seq
+    naoAtor.send({ kind: 'roll' })
     expect(revived.seq()).toBe(seqBefore)
+  })
+
+  it('a ordem da mesa é sorteada no início, não a de entrada (FR-030/031)', async () => {
+    // Mesmos assentos, seeds diferentes → ordens diferentes em algum momento. O que importa
+    // para a spec é que a ordem seja (a) igual em todos os clientes e (b) não fixa pela entrada.
+    const ordens = new Set<string>()
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const hub = new LocalHub()
+      const transport = localTransport(hub, 'tok-host')
+      const hostClient = createClient(transport)
+      await hostClient.join()
+      const host = createHost(transport, createRoom('r', { token: 'tok-host', name: 'Host', color: SEAT_COLORS[0] }), {
+        rng: mulberry32(seed),
+        now: () => 1_000,
+      })
+      await host.open()
+      const ana = await guestJoins(hub, 'tok-a', 'Ana', SEAT_COLORS[1])
+      const bob = await guestJoins(hub, 'tok-b', 'Bob', SEAT_COLORS[2])
+      await host.startMatch()
+      await flush()
+
+      // (a) todos veem a MESMA ordem
+      const daSala = host.room().seats.map((s) => `${s.name}:${s.playerId}`).join(',')
+      for (const c of [hostClient, ana, bob]) {
+        expect(c.room()!.seats.map((s) => `${s.name}:${s.playerId}`).join(',')).toBe(daSala)
+      }
+      ordens.add(host.room().seats.map((s) => s.name).join('>'))
+    }
+    // (b) não é sempre a ordem de entrada
+    expect(ordens.size).toBeGreaterThan(1)
   })
 })

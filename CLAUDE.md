@@ -18,7 +18,7 @@ Comportamento esperado:
 
 - **Clarificar ambiguidade nova antes de codar** — mas não travar implementação já autorizada.
 - **Regra nunca nasce numa spec**: comportamento novo que contrarie ou refine o SRS exige ADR em `DECISIONS.md` (e bump do SRS) **antes** de virar requisito. Foi assim com D-029/D-030 na 038.
-- O ciclo por feature continua `/speckit-specify → clarify → plan → tasks → implement`, mas `/speckit-plan` e `/speckit-implement` seguem exigindo confirmação explícita do usuário.
+- O ciclo por feature é `/speckit-specify → clarify → plan → tasks → implement` e roda **encadeado, sem pedir permissão a cada etapa** — uma vez que a feature está autorizada, siga até o fim. Pare apenas em ambiguidade que mude o resultado do trabalho (aí pergunte tudo de uma vez).
 
 ## 3. Stack
 
@@ -93,7 +93,7 @@ Detalhe em [`docs/DECISIONS.md`](./docs/DECISIONS.md).
 
 - **Idioma:** português (Brasil) em tudo — specs, plans, tasks, discussão.
 - **Respostas concisas.** Não resumir o que já está no diff.
-- **Confirmação antes de avançar de fase.** Specificar e clarificar são livres; `plan`/`implement` só com o seu "pode seguir".
+- **Não peça permissão etapa por etapa.** Feature autorizada = rodar spec → plan → tasks → implement em sequência, reportando no fim.
 
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,

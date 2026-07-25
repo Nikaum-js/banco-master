@@ -6,18 +6,21 @@
 // sem aplicar local — e injeta o `game` difundido no store a cada convergência. A UI não muda:
 // ela chama os mesmos métodos; só o destino muda.
 import { useGameStore } from '@/game/store'
+import { useRoomStore } from './roomStore'
 import type { Client } from './client'
 
 // Conecta o store ao client. Retorna um desligador. Enquanto ativo, toda ação da UI vira um
 // comando enviado ao host; o estado só reflete quando o comando aceito volta pela difusão.
 export function connectMultiplayer(client: Client): () => void {
-  // Espelha o `game` do client no store a cada mudança (difusão/snapshot/resync).
-  const unsub = client.subscribe(() => {
+  // Espelha o `game` no store do jogo e a SALA no store de sala (spec 038): identidade e
+  // perspectiva vivem separadas do `GameState`, que segue sem PII (D-019).
+  const sync = (): void => {
     const g = client.game()
     if (g) useGameStore.setState({ game: g })
-  })
-  const g0 = client.game()
-  if (g0) useGameStore.setState({ game: g0 })
+    useRoomStore.setState({ room: client.room(), myToken: client.token })
+  }
+  const unsub = client.subscribe(sync)
+  sync()
 
   const send = client.send
 
@@ -64,5 +67,8 @@ export function connectMultiplayer(client: Client): () => void {
     closeLandAuction: () => {},
   })
 
-  return () => unsub()
+  return () => {
+    unsub()
+    useRoomStore.getState().reset() // sair da sala volta a UI ao modo local
+  }
 }

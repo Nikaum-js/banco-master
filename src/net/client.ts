@@ -13,6 +13,7 @@ import { seatByToken, type JoinError, type Room } from './room'
 import type { AcceptedCommand, JoinRequest, Transport, Unsubscribe } from './transport'
 
 export interface Client {
+  readonly token: string // token de sessão desta aba — a UI usa para achar o próprio assento
   join(): Promise<void> // conecta, lê o snapshot (entrada/reconexão) e passa a aplicar a difusão
   requestJoin(who: JoinRequest): void // pede assento no lobby (FR-002) — host aceita e publica a sala
   leave(): void
@@ -82,6 +83,8 @@ export function createClient(transport: Transport): Client {
   }
 
   return {
+    token: transport.token,
+
     async join(): Promise<void> {
       await transport.connect()
       subs.push(transport.onBroadcast(applyAccepted))
