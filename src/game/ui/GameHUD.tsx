@@ -16,6 +16,9 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Crown, HandCoins, Landmark, ShieldAlert } from 'lucide-react'
 import { PLAYER_COLORS, PlayerFace } from '@/boards/shared'
 import { useGameStore } from '@/game/store'
+import { useLocalView } from '@/net/roomStore'
+import { PlayerName } from '@/net/ui/PlayerName'
+import { WaitingBar } from '@/net/ui/WaitingBar'
 import { isBankrupt } from '@/game/falencia/falencia'
 import { Confetti } from '@/game/ui/NoticeLayer'
 import { Button, Chip } from '@/game/ui/primitives'
@@ -138,6 +141,7 @@ export function GameHUD() {
   const resetGame = useGameStore((s) => s.resetGame)
 
   const active = game.players[game.turnOrder[game.activeSeat]]
+  const view = useLocalView() // spec 038: controles só do assento local (FR-002)
   const res = game.resolution
   const loanOfActive = game.loans.find((l) => l.debtorId === active.id)
 
@@ -178,7 +182,7 @@ export function GameHUD() {
               className="display leading-none mt-2"
               style={{ fontSize: 64, ...GOLD_TEXT }}
             >
-              {winner?.id ?? '—'}
+              {winner ? <PlayerName playerId={winner.id} /> : '—'}
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -201,6 +205,13 @@ export function GameHUD() {
 
   // ---- Solicitação de empréstimo aguardando o credor (§15.2/§15.3) ----
   if (game.pendingLoan) {
+    if (!view.mayAct('respond-loan')) {
+      return (
+        <AnimatePresence>
+          <WaitingBar playerId={game.pendingLoan.creditorId} what="resposta ao empréstimo" />
+        </AnimatePresence>
+      )
+    }
     return (
       <AnimatePresence>
         <LoanRequestCard req={game.pendingLoan} players={game.players} onRespond={respondLoan} />
@@ -210,6 +221,13 @@ export function GameHUD() {
 
   // ---- Reação: Diplomacia ----
   if (res?.kind === 'reaction-diplomacia') {
+    if (!view.mayAct('respond-reaction')) {
+      return (
+        <AnimatePresence>
+          <WaitingBar playerId={res.reactorId} what="reação à carta ofensiva" />
+        </AnimatePresence>
+      )
+    }
     return (
       <AnimatePresence>
         <DecisionShell dim>
@@ -233,6 +251,13 @@ export function GameHUD() {
 
   // ---- Reação: Bunker Fiscal ----
   if (res?.kind === 'reaction-bunker') {
+    if (!view.mayAct('respond-reaction')) {
+      return (
+        <AnimatePresence>
+          <WaitingBar playerId={res.reactorId} what="reação ao imposto" />
+        </AnimatePresence>
+      )
+    }
     return (
       <AnimatePresence>
         <DecisionShell dim>
@@ -253,6 +278,13 @@ export function GameHUD() {
 
   // ---- Dívida pendente — "conta vencida" ----
   if (res?.kind === 'debt') {
+    if (!view.mayAct('pay-debt')) {
+      return (
+        <AnimatePresence>
+          <WaitingBar playerId={active.id} what="pagamento de dívida" />
+        </AnimatePresence>
+      )
+    }
     const shortfall = res.amount - active.cash
     const canPay = active.cash >= res.amount
     const lenders = loanOfActive
@@ -285,7 +317,9 @@ export function GameHUD() {
                 {/* Devedor (jogador da vez) */}
                 <div className="flex flex-col items-center gap-1 w-20">
                   <PlayerFace color={activeColor} size={40} />
-                  <span className="label text-cream truncate max-w-full">{active.id}</span>
+                  <span className="label text-cream truncate max-w-full">
+                    <PlayerName playerId={active.id} />
+                  </span>
                 </div>
 
                 {/* Trilho de fluxo com seta animada do devedor → credor */}
@@ -374,7 +408,9 @@ export function GameHUD() {
                       className="w-full justify-start gap-2"
                     >
                       {lc && <PlayerFace color={lc} size={22} />}
-                      <span className="flex-1 text-left">Pedir {fmt(shortfall)} a {p.id}</span>
+                      <span className="flex-1 text-left">
+                        Pedir {fmt(shortfall)} a <PlayerName playerId={p.id} />
+                      </span>
                       <HandCoins size={15} className="text-gold-glow shrink-0" />
                     </Button>
                   )

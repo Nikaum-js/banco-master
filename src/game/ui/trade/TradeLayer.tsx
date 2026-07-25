@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from 'motion/react'
 import { Bus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
+import { useLocalView } from '@/net/roomStore'
+import { WaitingBar } from '@/net/ui/WaitingBar'
 import { validateTrade, tradableProps } from '@/game/economy/trade'
 import type { Trade } from '@/game/economy/types'
 import { BOARD, type PropertySquare, type Square } from '@/lib/boardData'
@@ -635,10 +637,15 @@ export function TradeLayer() {
   // Proposta pendente tem prioridade (precisa de resposta) — a menos que o
   // destinatário tenha fechado pra decidir depois (dismissed).
   const showComposer = open && !pendingTrade
+  // Online, a proposta recebida abre no DESTINATÁRIO (spec 038, FR-002); quem propôs vê
+  // o aviso de espera. Sem sala, `mayAct` é sempre true e nada muda (cliente único).
+  const iAnswer = useLocalView().mayAct('accept-trade')
 
   return (
     <AnimatePresence>
-      {pendingTrade && !dismissed ? (
+      {pendingTrade && !iAnswer ? (
+        <WaitingBar key="trade-waiting" playerId={pendingTrade.toId} what="resposta à proposta" />
+      ) : pendingTrade && !dismissed ? (
         <Backdrop key="received">
           <Received trade={pendingTrade} />
         </Backdrop>

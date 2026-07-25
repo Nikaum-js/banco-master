@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'motion/react'
 import { Bus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
+import { useLocalView } from '@/net/roomStore'
+import { WaitingBar } from '@/net/ui/WaitingBar'
 import { activeModal, type ModalView, type HandCardView } from './activeModal'
 import { BOARD, type PropertySquare } from '@/lib/boardData'
 import { sideOf } from '@/game/turn/turnMachine'
@@ -65,6 +67,25 @@ function Card({ children, wide = false }: { children: React.ReactNode; wide?: bo
   )
 }
 
+// Modal → comando que ele dispara (para perguntar "é minha esta decisão?") e rótulo de espera.
+const MODAL_ACTION = {
+  'card-discard': 'discard-card',
+  'card-shortcut': 'choose-card-shortcut',
+  'card-reveal': 'confirm-card-reveal',
+  'bus-move': 'choose-bus-move',
+  'triple-dest': 'choose-triple-dest',
+  auction: 'place-bid',
+} as const
+
+const MODAL_WAITING = {
+  'card-discard': 'descarte de carta',
+  'card-shortcut': 'escolha do atalho',
+  'card-reveal': 'carta sacada',
+  'bus-move': 'escolha do dado',
+  'triple-dest': 'escolha da casa',
+  auction: 'leilão',
+} as const
+
 export function ModalLayer() {
   const game = useGameStore((s) => s.game)
   const placeBid = useGameStore((s) => s.placeBid)
@@ -78,13 +99,21 @@ export function ModalLayer() {
   const disarmBus = useBusTicketUI((s) => s.disarm)
 
   const view = activeModal(game)
+  const local = useLocalView()
   const activeId = game.players[game.turnOrder[game.activeSeat]].id
+  // Quem decide neste modal? O leilão é PÚBLICO (todos licitam); os demais são do jogador
+  // ativo — e o de descarte mostra a MÃO dele, então renderizá-lo para os outros vazaria
+  // carta (princípio VI / FR-006). Para quem não decide, fica só o aviso de espera.
+  const mineModal = view === null || view.kind === 'auction' || local.mayAct(MODAL_ACTION[view.kind])
   const activePlayer = game.players[game.turnOrder[game.activeSeat]]
   // Seletor de uso de ticket GUARDADO: aberto pelo HUD. Usável antes de rolar OU no fim do turno (034).
   const showBusArmed = busArmed && (game.turn.state === 'aguardando-rolagem' || game.turn.state === 'aguardando-finalizacao') && activePlayer.busTickets >= 1 && sideOf(activePlayer.pos) !== null
 
   return (
     <AnimatePresence>
+      {view && !mineModal && (
+        <WaitingBar key="modal-waiting" playerId={activeId} what={MODAL_WAITING[view.kind]} />
+      )}
       {showBusArmed && (
         <Overlay key="bus-armed-backdrop" z={60}>
           <BusPicker
@@ -96,10 +125,10 @@ export function ModalLayer() {
           />
         </Overlay>
       )}
-      {view && (
+      {view && mineModal && (
         <Overlay key="modal-backdrop" z={60}>
           {view.kind === 'auction' && (
-            <AuctionCard view={view} activeId={activeId} placeBid={placeBid} />
+            <AuctionCard view={view} activeId={local.seatId ?? activeId} placeBid={placeBid} />
           )}
 
           {view.kind === 'card-discard' && (

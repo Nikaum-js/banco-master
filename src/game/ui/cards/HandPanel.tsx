@@ -1,9 +1,12 @@
-// Painel "Minhas Cartas" (029, §12.4) — a mão do jogador da vez, com botão "Usar"
-// gated por timing. Privacidade (VI): só o jogador ativo; demais veem só o contador
-// (PlayersPanel). Sem alvo → joga direto; com alvo → abre o HandCardLayer.
+// Painel "Minhas Cartas" (029, §12.4) — a mão do DONO DESTA TELA, com botão "Usar" gated
+// por timing. Privacidade (VI/§10.3): online, a mão é sempre a do assento local (spec 038,
+// FR-005) — nunca a do jogador da vez, senão a tela de todo mundo viraria a dele a cada
+// turno. Sem sala (cliente único), o assento local é o jogador ativo, que é o comportamento
+// de sempre. Demais jogadores aparecem só como contador (PlayersPanel, §12.3/FR-006).
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
+import { useLocalView } from '@/net/roomStore'
 import { handCardsView } from './handView'
 import { useHandCardUI } from './HandCardLayer'
 import { Button, SectionHeader, EmptyState } from '@/game/ui/primitives'
@@ -58,8 +61,10 @@ export function HandPanel() {
   const game = useGameStore((s) => s.game)
   const playHandCard = useGameStore((s) => s.playHandCard)
   const reduced = useReducedMotion()
-  const activeId = game.players[game.turnOrder[game.activeSeat]]?.id
-  const cards = activeId ? handCardsView(game, activeId) : []
+  const view = useLocalView()
+  // Assento local; sem sala, o dono da tela é o jogador da vez (cliente único).
+  const myId = view.seatId ?? game.players[game.turnOrder[game.activeSeat]]?.id
+  const cards = myId ? handCardsView(game, myId) : []
 
   const onUse = (id: string, needsTarget: boolean) => {
     if (needsTarget) useHandCardUI.getState().open(id)

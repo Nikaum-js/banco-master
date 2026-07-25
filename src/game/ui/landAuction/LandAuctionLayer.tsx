@@ -6,6 +6,8 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useGameStore } from '@/game/store'
+import { useLocalView } from '@/net/roomStore'
+import { PlayerName } from '@/net/ui/PlayerName'
 import { committedCash, LAND_AUCTION_WINDOW } from '@/game/economy/landAuction'
 import { rentLadder } from '@/game/economy/rent'
 import { buildCost } from '@/game/economy/construction'
@@ -165,7 +167,12 @@ export function LandAuctionLayer() {
   const game = useGameStore((s) => s.game)
   const placeLandBid = useGameStore((s) => s.placeLandBid)
 
-  const [bidder, setBidder] = useState<string | null>(null)
+  const [pickedBidder, setPickedBidder] = useState<string | null>(null)
+  // Online, o licitante é o ASSENTO LOCAL (spec 038, FR-002) — o seletor de licitante do
+  // 031 existia porque o cliente único jogava por todos. Sem sala, ele continua.
+  const local = useLocalView()
+  const bidder = local.seatId ?? pickedBidder
+  const setBidder = setPickedBidder
   const [now, setNow] = useState(() => Date.now())
 
   // Tick do relógio (barras) enquanto há pregão aberto.
@@ -178,8 +185,9 @@ export function LandAuctionLayer() {
   // Garante um licitante válido selecionado.
   useEffect(() => {
     if (!auction) return
+    if (local.seatId) return // assento fixo: nada a escolher
     if (!bidder || !auction.bidders.includes(bidder)) setBidder(auction.bidders[0] ?? null)
-  }, [auction, bidder])
+  }, [auction, bidder, local.seatId, setBidder])
 
   if (!auction || !bidder) return null
 
@@ -199,10 +207,14 @@ export function LandAuctionLayer() {
         <ModalShell className="w-[860px] max-w-[97vw] max-h-[92vh] overflow-auto">
           <ModalHeader center title="Leilão de Escassez" className="sticky top-0 z-10 [&_h3]:text-xl" />
 
-          {/* Seletor de licitante (single-client) + caixa disponível */}
+          {/* Licitante (fixo no assento local quando online) + caixa disponível */}
           <div className="px-5 py-3 border-b border-coffee-700 flex items-center gap-2 flex-wrap">
             <span className="label text-cream-muted">Lance por:</span>
-            {bidders.map((id) => (
+            {local.seatId ? (
+              <span className="px-2.5 py-1 rounded-[var(--radius-sharp)] text-sm font-bold border bg-gold text-coffee-900 border-gold">
+                <PlayerName playerId={local.seatId} />
+              </span>
+            ) : bidders.map((id) => (
               <button
                 key={id}
                 type="button"
@@ -211,7 +223,7 @@ export function LandAuctionLayer() {
                   id === bidder ? 'bg-gold text-coffee-900 border-gold' : 'bg-coffee-700 text-cream border-coffee-500 hover:border-gold'
                 }`}
               >
-                {id}
+                <PlayerName playerId={id} />
               </button>
             ))}
             <div className="ml-auto flex items-center gap-1.5 pl-3 pr-3.5 py-1.5 rounded-full bg-coffee-950/55 border border-coffee-500/40 shadow-[var(--shadow-press)]">

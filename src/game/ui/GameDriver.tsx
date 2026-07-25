@@ -5,6 +5,7 @@
 // apenas dispara, no tempo certo, os comandos já existentes do store.
 import { useEffect } from 'react'
 import { useGameStore } from '@/game/store'
+import { useLocalView } from '@/net/roomStore'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
 
 export function GameDriver() {
@@ -17,9 +18,14 @@ export function GameDriver() {
   const mayRollAgain = useGameStore((s) => s.game.turn.mayRollAgain)
   const resolvePending = useGameStore((s) => s.resolvePending)
   const finalizeTurn = useGameStore((s) => s.finalizeTurn)
+  // Online, o auto-avanço é do cliente do ATOR (spec 038, research D5): sem este gate,
+  // N clientes emitiriam o mesmo comando para o host descartar N-1 — não corrompe nada
+  // (FR-007 protege), mas é tráfego e log inútil. Sem sala, `mayAct` é sempre true.
+  const mayResolve = useLocalView().mayAct('resolve-pending')
 
   useEffect(() => {
     if (paused || phase !== 'playing') return
+    if (!mayResolve) return // a vez é de outro dispositivo — ele conduz o próprio turno
 
     // Resolve a casa sozinho — a menos que haja escolha de Speed Die pendente
     // (triple/ônibus) ou um modal/decisão aberto (leilão/descarte/atalho/dívida)
@@ -35,7 +41,7 @@ export function GameDriver() {
     if (state === 'aguardando-finalizacao' && mayRollAgain) {
       finalizeTurn()
     }
-  }, [state, awaitingChoice, hasResolution, paused, phase, animating, mayRollAgain, resolvePending, finalizeTurn])
+  }, [state, awaitingChoice, hasResolution, paused, phase, animating, mayRollAgain, mayResolve, resolvePending, finalizeTurn])
 
   return null
 }

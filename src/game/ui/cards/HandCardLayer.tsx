@@ -5,6 +5,8 @@ import { type ReactNode } from 'react'
 import { create } from 'zustand'
 import { AnimatePresence } from 'motion/react'
 import { useGameStore } from '@/game/store'
+import { useLocalView } from '@/net/roomStore'
+import { PlayerName } from '@/net/ui/PlayerName'
 import { BOARD } from '@/lib/boardData'
 import { cardById } from '@/game/cards/catalog'
 import { ownerOf } from '@/game/economy/titles'
@@ -47,9 +49,11 @@ export function HandCardLayer() {
   const close = useHandCardUI((s) => s.close)
   const game = useGameStore((s) => s.game)
   const playHandCard = useGameStore((s) => s.playHandCard)
-  const activeId = game.players[game.turnOrder[game.activeSeat]]?.id
+  const view = useLocalView()
+  // Alvos da carta do DONO DESTA TELA (spec 038, FR-005); sem sala, é o jogador da vez.
+  const myId = view.seatId ?? game.players[game.turnOrder[game.activeSeat]]?.id
 
-  const targets = cardId && activeId ? cardTargets(game, activeId, cardId) : null
+  const targets = cardId && myId ? cardTargets(game, myId, cardId) : null
   const play = (target?: number, targetPlayer?: string) => {
     if (cardId) playHandCard(cardId, target, targetPlayer)
     close()
@@ -68,13 +72,17 @@ export function HandCardLayer() {
                 return (
                   <TargetBtn key={`p${pos}`} onClick={() => play(pos)}>
                     <span className="flex-1 min-w-0 truncate">{propName(pos)}</span>
-                    {owner && owner !== activeId && <span className="text-cream-muted text-xs shrink-0">de {owner}</span>}
+                    {owner && owner !== myId && (
+                      <span className="text-cream-muted text-xs shrink-0">
+                        de <PlayerName playerId={owner} />
+                      </span>
+                    )}
                   </TargetBtn>
                 )
               })}
               {(targets.players ?? []).map((pid) => (
                 <TargetBtn key={`j${pid}`} onClick={() => play(undefined, pid)}>
-                  <span className="flex-1 min-w-0 truncate">{pid}</span>
+                  <PlayerName playerId={pid} dot className="flex-1 min-w-0" />
                 </TargetBtn>
               ))}
             </div>
