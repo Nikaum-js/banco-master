@@ -93,7 +93,7 @@ description: "Task list — Rebalanceamento de economia e tabuleiro (032)"
 ## Phase 6: Polish & Cross-Cutting (docs + verificação)
 
 - [x] T013 [P] `docs/SRS.md`: §2.3 reescrito para a estrutura real (9 grupos: 8 de 3 + verde de 4; temas reais) e §5.1 atualizado (aluguel por grupo + tabela de tiers de casa).
-- [x] T014 [P] `docs/DECISIONS.md`: atualizar **D-017** (composição/economia recalibrada) + registrar **ADR novo (D-024)** sobre o modelo de custo/aluguel por grupo + os alvos; índice.
+- [x] T014 [P] `../../docs/adr/README.md`: atualizar **D-017** (composição/economia recalibrada) + registrar **ADR novo (D-024)** sobre o modelo de custo/aluguel por grupo + os alvos; índice.
 - [x] T015 [P] Atualizar `HANDOVER.md`, `docs/MILESTONES.md` (032 entregue) e `.specify/feature.json`.
 - [x] T016 Verificação final: `bunx vitest run tests/game` (verde) + `bun run build` (exit 0) + `grep` garantindo zero `bank`/`BankStock`; conferir no `bun run dev` que deed/popover, leilão comum e pregão 031 mostram os mesmos valores que o motor cobra (fonte única).
 

@@ -133,7 +133,7 @@ As 28 propriedades são divididas em **10 grupos de cores** (tema "Cidades do Mu
 
 > **Balanceamento:** grupos de 3 seguram o *runaway leader* e forçam negociação — dá pra construir com 1 cidade (50% do aluguel), mas **completar o país leva a 100%** e dobra o set bonus sem construção (§5.1/§13.3). **Laranja/Vermelho** (meio do tabuleiro) são o *sweet spot* (casa barata, bom aluguel). Os duos do topo — **França** e **Emirados** — rendem 50% com 1 cidade e 100% com as 2, e são caros: os **Emirados** (Abu Dhabi/Dubai) são o **super-luxo** (preços/aluguéis muito acima, armadilha de prestígio — ver §5 e D-025).
 
-> 📌 Preços ($60→$650), aluguéis-base e **custos de construção (tier por grupo)** vivem no tema (`theme.ts`) — fonte única tunável. Composição e calibração: [D-017](DECISIONS.md) (rev.) + [D-024](DECISIONS.md) + [D-025](DECISIONS.md).
+> 📌 Preços ($60→$650), aluguéis-base e **custos de construção (tier por grupo)** vivem no tema (`theme.ts`) — fonte única tunável. Composição e calibração: [D-017](adr/README.md) (rev.) + [D-024](adr/README.md) + [D-025](adr/README.md).
 
 ### 2.4 Aeroportos
 
@@ -351,7 +351,7 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 
 ### 7.3 Leilão de Escassez de Terrenos (pregão simultâneo)
 
-Mecanismo de fim de jogo que evita a partida se arrastar esperando alguém *cair* nos últimos terrenos livres. **Não confundir** com o antigo leilão de *casas* (removido — [D-022](DECISIONS.md)); aqui leiloam-se **terrenos** (cidades/aeroportos/utilidades sem dono).
+Mecanismo de fim de jogo que evita a partida se arrastar esperando alguém *cair* nos últimos terrenos livres. **Não confundir** com o antigo leilão de *casas* (removido — [D-022](adr/README.md)); aqui leiloam-se **terrenos** (cidades/aeroportos/utilidades sem dono).
 
 - **Gatilho:** quando o número de terrenos compráveis **sem dono** cai a **≤ 3** (mas ≥ 1) **e** há **≥ 2 jogadores não-eliminados**, abre-se automaticamente um pregão por esses terrenos. É um **evento próprio**, fora do turno em andamento (abrir/encerrar não altera a vez).
 - **Pregão simultâneo:** todos os terrenos restantes vão a leilão **ao mesmo tempo**; cada um é um leilão inglês próprio (lance atual + maior licitante).
@@ -997,7 +997,7 @@ Jogadores podem conceder empréstimos entre si durante a partida, criando dinâm
 | Hotel | Construção máxima de casas: substitui 4 casas. Até 2 hotéis por propriedade |
 | Skyscraper | Construção acima do 2º hotel, requer grupo completo (Seção 13.7) |
 | Leilão | Disputa de lances por uma propriedade ou casa |
-| Acaso | Deck de cartas de acaso (Chance no Monopoly clássico) — efeitos ofensivos/caóticos. Termo canônico — [D-018](DECISIONS.md#d-018--termo-canônico-acaso-antes-surpresa) |
+| Acaso | Deck de cartas de acaso (Chance no Monopoly clássico) — efeitos ofensivos/caóticos. Termo canônico — [D-018](adr/D-018-termo-canonico-acaso-antes-surpresa.md) |
 | Tesouro | Deck de cartas de baú comunitário (Community Chest) — efeitos defensivos/benignos |
 | Carta Lendária | Carta de alto impacto (cor laranja), geralmente vai para a mão |
 | Carta Rara | Carta de impacto médio (cor azul), pode ir para a mão ou ter efeito imediato grande |

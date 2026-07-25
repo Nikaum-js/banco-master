@@ -17,7 +17,7 @@ A economia atual tem dois problemas de balanceamento:
 
 Além disso, o **tabuleiro real diverge do SRS**: o SRS §2.3 diz "8 grupos, premium laranja/vermelho/amarelo/verde com 4 cada", mas o tabuleiro implementado tem **9 grupos** com composição 3/3/3/3/**2**/3/4/4/3 — o **laranja (Alemanha) só tem 2 cidades**.
 
-Esta feature recalibra os valores e reconcilia a estrutura, **reusando o motor de construção/aluguel existente** (specs 004/011) — sem reintroduzir o estoque do banco (construção segue ilimitada, [D-022](../../docs/DECISIONS.md)).
+Esta feature recalibra os valores e reconcilia a estrutura, **reusando o motor de construção/aluguel existente** (specs 004/011) — sem reintroduzir o estoque do banco (construção segue ilimitada, [D-022](../../docs/adr/README.md)).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -106,7 +106,7 @@ Como jogador, todos os grupos têm tamanho coerente: o **laranja deixa de ter s�
 - **FR-008**: Preços das cidades MUST seguir a **escada ascendente por posição** (cada posição mantém seu preço; nomes/grupos podem ser reatribuídos).
 - **FR-009**: Aeroportos, utilidades, impostos, caixa inicial ($2.000) e GO ($200/$400) MUST permanecer **inalterados**.
 - **FR-010**: A construção MUST seguir **ilimitada** (sem estoque do banco — D-022); os tiers afetam apenas custo/ROI.
-- **FR-011** (docs): O **SRS §2.3** MUST ser corrigido para a estrutura real (9 grupos: 8 de 3 + verde de 4; temas reais), e o **§5.1** atualizado para refletir o modelo de aluguel por grupo + os tiers de casa. Uma decisão MUST ser registrada em `docs/DECISIONS.md` (atualizar D-017 e/ou ADR novo).
+- **FR-011** (docs): O **SRS §2.3** MUST ser corrigido para a estrutura real (9 grupos: 8 de 3 + verde de 4; temas reais), e o **§5.1** atualizado para refletir o modelo de aluguel por grupo + os tiers de casa. Uma decisão MUST ser registrada em `../../docs/adr/README.md` (atualizar D-017 e/ou ADR novo).
 - **FR-012**: Todo texto/valor visível MUST estar em **português (Brasil)** e os valores econômicos MUST viver no arquivo de tema (fonte única, tunável — spec 018).
 
 ### Key Entities *(include if feature involves data)*

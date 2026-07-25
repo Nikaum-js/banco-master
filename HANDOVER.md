@@ -90,5 +90,5 @@ Duas decisões viraram ADR antes de entrar na spec (regra nunca nasce numa spec 
 ## Ponteiros
 
 - `docs/AUDITORIA-2026-07-23.md` — backlog técnico priorizado (17 itens).
-- `docs/SRS.md` (v1.3) — verdade das regras · `docs/DECISIONS.md` — ADRs (D-007 GO fixo, D-020 M3 host-autoritativo, D-022/24/26 economia).
+- `docs/SRS.md` (v1.3) — verdade das regras · `docs/adr/README.md` — ADRs (D-007 GO fixo, D-020 M3 host-autoritativo, D-022/24/26 economia).
 - `specs/00N-*/` — spec/plan/tasks por feature · `docs/MILESTONES.md` — roadmap.

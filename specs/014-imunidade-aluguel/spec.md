@@ -10,7 +10,7 @@
 
 **Depende de**: [`003`](../003-compra-aluguel/spec.md) (aluguel, títulos) · [`007`](../007-balanceamento-catchup/spec.md) / [`010`](../010-emprestimos/spec.md) (porta `afterPassGo` no GO) · [`013`](../013-negociacao-troca/spec.md) (`Trade`/`executeTrade` — a imunidade entra na troca)
 
-> **Escopo desta spec:** **conceder** imunidade de aluguel dentro de uma troca (§8.4), a **isenção** de aluguel para o beneficiário, a **expiração por N voltas** (ou permanente) e a **exibição no HUD**. **Não** cobre a **transferência** de uma imunidade já existente para um novo beneficiário ("transferíveis em novas negociações" — caso avançado, deferido com nota). Fonte de verdade: [`docs/SRS.md`](../../docs/SRS.md) §8.4 / [D-010](../../docs/DECISIONS.md).
+> **Escopo desta spec:** **conceder** imunidade de aluguel dentro de uma troca (§8.4), a **isenção** de aluguel para o beneficiário, a **expiração por N voltas** (ou permanente) e a **exibição no HUD**. **Não** cobre a **transferência** de uma imunidade já existente para um novo beneficiário ("transferíveis em novas negociações" — caso avançado, deferido com nota). Fonte de verdade: [`docs/SRS.md`](../../docs/SRS.md) §8.4 / [D-010](../../docs/adr/README.md).
 
 ## User Scenarios & Testing *(mandatory)*
 

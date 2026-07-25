@@ -127,7 +127,7 @@ SPA única (plan §Project Structure): código em `src/game/`, testes em `tests/
 ## Phase 6: Polish & Cross-Cutting Concerns
 
 - [X] T034 [P] Rodar a validação do `quickstart.md` (`npx vitest run tests/game/turn`) e confirmar SC-001…007 todos verdes
-- [ ] T035 [P] Concluir a propagação de [D-018](../../docs/DECISIONS.md#d-018--termo-canônico-acaso-antes-surpresa) (Acaso): find-replace "Surpresa" → "Acaso" em SRS §2.1/§4.6/§10/§13.4 e `docs/CARTAS.md` — fazer **junto da spec de Sistema de Cartas** (a decisão, o FR-010, o glossário e a constitution já foram alinhados) — **apenas docs**, sem mudar lógica
+- [ ] T035 [P] Concluir a propagação de [D-018](../../docs/adr/D-018-termo-canonico-acaso-antes-surpresa.md) (Acaso): find-replace "Surpresa" → "Acaso" em SRS §2.1/§4.6/§10/§13.4 e `docs/CARTAS.md` — fazer **junto da spec de Sistema de Cartas** (a decisão, o FR-010, o glossário e a constitution já foram alinhados) — **apenas docs**, sem mudar lógica
 - [X] T036 [P] Adicionar teste de round-trip de serialização (`GameState` sobrevive a `JSON.parse(JSON.stringify(...))`) — invariante #9 do `data-model.md` — em `tests/game/turn/turnMachine.test.ts`
 - [X] T037 Documentar no header de `src/game/turn/resolution.ts` quais handlers são stubs e o ponto de extensão, para os autores das specs irmãs (Compra & Aluguel, Cartas, Construção, Balanceamento, Sessão)
 

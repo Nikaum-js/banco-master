@@ -85,7 +85,7 @@ tests/game/economy/
 
 docs/
 ├── SRS.md                   # + §7.x: gatilho "escassez de terrenos" + subseção do pregão simultâneo
-└── DECISIONS.md             # + ADR novo (D-023) — leilão de escassez de terrenos
+└── ../../docs/adr/README.md             # + ADR novo (D-023) — leilão de escassez de terrenos
 ```
 
 **Structure Decision**: Single project, padrão consolidado do `src/game/` (motor puro + store + UI layer autônomo). O pregão segue o **padrão de evento autônomo** (`pendingTrade`/`notice`), não o de `resolution` (turno). Reuso do timer/`deadline` do 003 generalizado para N lotes via um módulo novo.

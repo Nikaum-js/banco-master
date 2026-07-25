@@ -74,7 +74,7 @@ tests/game/board.test.ts        # composição: 10 grupos, navy 2, platinum 2 (M
 tests/game/economy/rebalance.test.ts  # Alta Roda = preço/hotel mais alto; ROI < orange/red; grupo de 2
 
 docs/SRS.md            # §2.3 (10 grupos) + §5.1 (nota super-luxo)
-docs/DECISIONS.md      # D-025 (novo) + atualizar D-017
+../../docs/adr/README.md      # D-025 (novo) + atualizar D-017
 ```
 
 **Structure Decision**: Single project; **aditivo** sobre o modelo 032 (mais um grupo + cor + remanejo do board). Nenhuma regra/estado novo — a economia já é por grupo via `rentLadder` (fonte única).

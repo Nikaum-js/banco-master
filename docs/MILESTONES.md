@@ -2,14 +2,14 @@
 
 > Roadmap macro até a v1.0. Lista **o que** falta, não **como** fazer.
 > **Abordagem real:** desenvolvimento **vertical por feature** com GitHub Spec Kit — cada feature percorre `spec → plan → tasks → implement` (com testes) antes da próxima. Não é waterfall (specs todas, depois planos todos).
-> Cada feature vive em `specs/NNN-*/`. Decisões em [`DECISIONS.md`](./DECISIONS.md); regras em [`SRS.md`](./SRS.md).
+> Cada feature vive em `specs/NNN-*/`. Decisões em [`adr/README.md`](adr/README.md); regras em [`SRS.md`](./SRS.md).
 
 ---
 
 ## M0 — Discovery & Mockup ✅
 
 - ✅ Constitution (princípios I–VII) e SRS v1.2 consolidados
-- ✅ ADRs aceitas e rejeitadas registradas em DECISIONS.md (até D-018)
+- ✅ ADRs aceitas e rejeitadas registradas em adr/README.md (até D-018)
 - ✅ Catálogo de cartas rascunhado em CARTAS.md
 - ✅ Spec Kit instalado e configurado
 - ✅ Design System "Café Coado" (tokens, tipografia, paleta de grupos)
@@ -21,7 +21,7 @@
 ## M1 — Motor de jogo (lógica) ✅ (single-player; 2 regras multiplayer movidas ao M3)
 
 Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vitest). Cada item abaixo é uma feature SDD completa (`spec→plan→tasks→implement`).
-**Estado: 234 testes verdes (`bunx vitest run tests/game`). Motor completo para uma partida single-player (turno, economia, construção, cartas — 0 no-op, tema, §8.4, §9.3/§9.4). Auditoria SRS×código (2026-05-24) confirmou as regras de turno/economia/cartas; resta 1 regra que só faz sentido com vários jogadores — leilão dos bens do falido-ao-banco (§9.2) — realocada para o M3. _(2026-05-25: escassez de construção + leilão de casas §5.4 **removidos**; construção ilimitada — [D-022](DECISIONS.md).)_**
+**Estado: 234 testes verdes (`bunx vitest run tests/game`). Motor completo para uma partida single-player (turno, economia, construção, cartas — 0 no-op, tema, §8.4, §9.3/§9.4). Auditoria SRS×código (2026-05-24) confirmou as regras de turno/economia/cartas; resta 1 regra que só faz sentido com vários jogadores — leilão dos bens do falido-ao-banco (§9.2) — realocada para o M3. _(2026-05-25: escassez de construção + leilão de casas §5.4 **removidos**; construção ilimitada — [D-022](adr/README.md).)_**
 
 ### Feito
 
@@ -48,7 +48,7 @@ Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vite
 ### Pendente (engine)
 - ✅ **Transferência de imunidade existente** (§8.4 "transferíveis") — entregue no **028** (re-atribui beneficiário, preserva voltas/`granterId`).
 - ⤳ **Leilão dos bens do falido-ao-banco** (§9.2): hoje as propriedades voltam **direto** ao banco (grátis); o SRS pede **leilão**. Precisa de licitantes = vários jogadores → **movido ao M3**.
-- ❌ **Leilão de casas em escassez** (§5.4): **removido** (2026-05-25, [D-022](DECISIONS.md)) — construção é ilimitada, não há escassez de casas. Spec 026 descontinuada.
+- ❌ **Leilão de casas em escassez** (§5.4): **removido** (2026-05-25, [D-022](adr/README.md)) — construção é ilimitada, não há escassez de casas. Spec 026 descontinuada.
 - [ ] **Rebalanceamento pós-playtest** (tuning dos knobs em `theme.ts`).
 
 ---
@@ -65,7 +65,7 @@ O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o 
 - ✅ **024** — **Negociação (trade) na UI**: `validateTrade` extraído (executeTrade delega) + `tradableProps` + `GameState.pendingTrade` + reducers `proposeTrade`/`acceptTrade`/`rejectTrade` (testados) + `TradeLayer` (compositor 2 colunas + modal recebido, com imunidades §8.4) + botão "Negociar". _Acabamento visual a confirmar no `bun run dev`._
 - ✅ **Polimento de fluidez** (glue, fora do SDD): **cor real do dono** na célula comprada (`ClassicSquare` lê `game.titles`); **token = `PlayerFace`** (rosto) de volta no `LiveTokens`; HUD de prisão explicita a 3ª tentativa; **feedback de caixa** (delta flutuante no `PlayerRow`); painel **"Efeitos ativos" real** (`tempEffects`) + **`EffectMark`** pulsante nas casas afetadas (apagão/greve/boicote/imunidade-temp); dado já anima (3D no `DiceArena`)
 - ✅ **025** — **Revelação de carta sacada**: `card-reveal` (ResolutionSlice) + `cardRevealResolve` (peek) + `confirmCardReveal` (saca via `cardResolve` intacto); modal central (nome/deck/raridade/descrição + "Continuar"). _Acabamento visual a confirmar no `bun run dev`._
-- ❌ **026** — **Leilão de casas em escassez**: **DESCONTINUADA (2026-05-25, [D-022](DECISIONS.md))** — escassez de construção removida (construção ilimitada). `economy/houseAuction.ts`, `HouseAuctionLayer`, botão no `PlayersPanel` e testes apagados; `GameState.houseAuction` removido.
+- ❌ **026** — **Leilão de casas em escassez**: **DESCONTINUADA (2026-05-25, [D-022](adr/README.md))** — escassez de construção removida (construção ilimitada). `economy/houseAuction.ts`, `HouseAuctionLayer`, botão no `PlayersPanel` e testes apagados; `GameState.houseAuction` removido.
 - ✅ **027** — **Painel Trades ao vivo**: `GameState.tradeHistory` (bounded) + `acceptTrade` registra/loga; `tradesView` (puro) + painel real (pendente + histórico); mock removido.
 - ✅ **028** — **Transferência de imunidade existente** (§8.4): `Trade += fromImmunityTransfers?`/`toImmunityTransfers?` (posições); `validateTrade` exige `hasImmunity(ofertante, pos)`; `executeTrade` re-atribui o `beneficiaryId` (preserva voltas + `granterId`), antes das concessões novas. Compositor ganha seção "Transferir imunidade" por lado; modal recebido lista 🛡️➡️. _Acabamento visual a confirmar no `bun run dev`._
 
@@ -96,8 +96,8 @@ O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o 
 
 ### Decisões travadas (ADR — 2026-05-24) ✅
 
-- ✅ **[D-019](./DECISIONS.md#d-019--autenticação-anônima-por-link-sem-contas-no-v1) — Autenticação anônima por link**: sem contas no v1; identidade = token de sessão (`localStorage`) + nome/token visual escolhidos no lobby; o link da sala é a credencial; o token viabiliza reconexão (§11.4). E-mail/perfis = v2.
-- ✅ **[D-020](./DECISIONS.md#d-020--modelo-de-autoridade--sincronização-host-autoritativo--realtime--snapshot) — Autoridade & sync: host-autoritativo + Realtime + snapshot**: o host roda o reducer puro; clientes enviam **comandos**; host aplica e **difunde o snapshot**; snapshot do `GameState` **persistido** a cada comando (resiliência §11.4). Autoridade única lineariza (sem conflito) e casa com §11.3 (host cai → pausa, sem transferência). Reducer puro pronto p/ migrar a server-autoritativo depois.
+- ✅ **[D-019](adr/D-019-autenticacao-anonima-por-link-sem-contas-no-v1.md) — Autenticação anônima por link**: sem contas no v1; identidade = token de sessão (`localStorage`) + nome/token visual escolhidos no lobby; o link da sala é a credencial; o token viabiliza reconexão (§11.4). E-mail/perfis = v2.
+- ✅ **[D-020](adr/D-020-modelo-de-autoridade-sincronizacao-host-autoritativo-realtim.md) — Autoridade & sync: host-autoritativo + Realtime + snapshot**: o host roda o reducer puro; clientes enviam **comandos**; host aplica e **difunde o snapshot**; snapshot do `GameState` **persistido** a cada comando (resiliência §11.4). Autoridade única lineariza (sem conflito) e casa com §11.3 (host cai → pausa, sem transferência). Reducer puro pronto p/ migrar a server-autoritativo depois.
 
 ### Sequência de features (cada uma é uma fatia SDD)
 
@@ -131,4 +131,4 @@ O salto para **jogar de verdade**. O **HUD inferior** (`GameHUD`) já consome o 
 
 ---
 
-**Documento vivo.** Atualizar ao concluir cada feature/milestone e ao registrar nova decisão em `docs/DECISIONS.md`.
+**Documento vivo.** Atualizar ao concluir cada feature/milestone e ao registrar nova decisão em `adr/README.md`.

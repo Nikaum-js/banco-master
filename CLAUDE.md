@@ -17,7 +17,7 @@ Tema inicial: "Cidades do Mundo". Base extensível para outros temas no futuro.
 Comportamento esperado:
 
 - **Clarificar ambiguidade nova antes de codar** — mas não travar implementação já autorizada.
-- **Regra nunca nasce numa spec**: comportamento novo que contrarie ou refine o SRS exige ADR em `DECISIONS.md` (e bump do SRS) **antes** de virar requisito. Foi assim com D-029/D-030 na 038.
+- **Regra nunca nasce numa spec**: comportamento novo que contrarie ou refine o SRS exige ADR em `docs/adr/README.md` (e bump do SRS) **antes** de virar requisito. Foi assim com D-029/D-030 na 038.
 - O ciclo por feature é `/speckit-specify → clarify → plan → tasks → implement` e roda **encadeado, sem pedir permissão a cada etapa** — uma vez que a feature está autorizada, siga até o fim. Pare apenas em ambiguidade que mude o resultado do trabalho (aí pergunte tudo de uma vez).
 
 ## 3. Stack
@@ -31,7 +31,7 @@ O design técnico detalhado de cada feature vive no `plan.md` da própria spec (
 |---|---|---|---|
 | **Princípios** | [`.specify/memory/constitution.md`](./.specify/memory/constitution.md) | Princípios não-negociáveis do projeto (I a VII) | **Sempre, antes de qualquer spec** |
 | **Verdade de negócio** | [`docs/SRS.md`](./docs/SRS.md) | Fonte de verdade absoluta das regras | **Sempre, antes de qualquer spec** (grep pela feature) |
-| **Decisões** | [`docs/DECISIONS.md`](./docs/DECISIONS.md) | ADR — decisões aceitas e rejeitadas | **Sempre, antes de qualquer spec** (verificar decisões relacionadas) |
+| **Decisões** | [`docs/adr/README.md`](docs/adr/README.md) | ADR — decisões aceitas e rejeitadas | **Sempre, antes de qualquer spec** (verificar decisões relacionadas) |
 | **Cartas** | [`docs/CARTAS.md`](./docs/CARTAS.md) | Catálogo detalhado (rascunho de discovery) | Ao mexer em cartas — migrará pra uma spec |
 | **Guia Spec Kit** | [`docs/SPEC-KIT.md`](./docs/SPEC-KIT.md) | Manual de uso do Spec Kit (para o Nikolas) | Quando o usuário tiver dúvida de como usar |
 | **Specs** | [`specs/<feature>/`](./specs/) | Uma pasta por feature, criada pelo Spec Kit | Ao trabalhar numa feature |
@@ -58,7 +58,7 @@ Os comandos abaixo estão instalados como skills em `.claude/skills/speckit-*`. 
 > **Antes de invocar `/speckit-specify`**, leia obrigatoriamente:
 > 1. `.specify/memory/constitution.md` — princípios
 > 2. `docs/SRS.md` (busca por termos da feature) — regra de negócio
-> 3. `docs/DECISIONS.md` — decisões relacionadas já tomadas
+> 3. `docs/adr/README.md` — decisões relacionadas já tomadas
 > 4. Specs existentes em `specs/` que possam ter dependência
 >
 > Specs nunca inventam regras — operacionalizam o SRS dentro dos princípios do constitution. Entidades, invariantes e constantes técnicas pertencem à própria spec (seção Key Entities + requisitos funcionais), não a um doc global.
@@ -87,7 +87,7 @@ Detalhe em [`.specify/memory/constitution.md`](./.specify/memory/constitution.md
 - Modo hotseat — fora do escopo v1.0
 - Timer obrigatório de turno — quebra negociações
 
-Detalhe em [`docs/DECISIONS.md`](./docs/DECISIONS.md).
+Detalhe em [`docs/adr/README.md`](docs/adr/README.md).
 
 ## 8. Como conversar comigo
 

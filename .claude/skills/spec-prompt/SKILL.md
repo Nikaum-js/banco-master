@@ -35,7 +35,7 @@ Copie e siga:
 - [ ] **2. Docs relevantes.** Sempre: `.specify/memory/constitution.md`, `docs/PRD.md`, `HANDOVER.md`.
       Além desses, achar o que a feature toca:
   - `grep -in "<termos da feature>" docs/SRS.md` → listar os **§ específicos** que a spec operacionaliza.
-  - `grep -in "<termos>" docs/DECISIONS.md` → listar as **Ds relacionadas** (aceitas E rejeitadas).
+  - `grep -in "<termos>" ../../../docs/adr/README.md` → listar as **Ds relacionadas** (aceitas E rejeitadas).
   - `ls specs/` → specs existentes com dependência.
 - [ ] **3. Derivar escopo e restrições** da feature + docs acima (não inventar — ver Regras fixas).
 - [ ] **4. Preencher o template** abaixo, substituindo tudo entre `«»`.
@@ -48,7 +48,7 @@ Embutir na seção "Restrições inegociáveis" do template, sempre:
 
 - Idioma **PT-BR**; parar em `/speckit-specify` (+ `/speckit-clarify`), **nunca** avançar pra plan/implement.
 - **Não inventar regra de jogo** — o SRS é a verdade absoluta (princípio I); a spec **operacionaliza**,
-  não cria. Regra nova exige ADR em `DECISIONS.md` primeiro.
+  não cria. Regra nova exige ADR em `../../../docs/adr/README.md` primeiro.
 - Respeitar os **princípios I–VII** do constitution (esp. III tesouro impacta, IV catch-up discreto,
   VI privacidade de cartas, VII resiliência de sessão).
 - Entidades/invariantes/constantes vivem **na própria spec** (não há doc global de arquitetura).
@@ -62,7 +62,7 @@ Idioma: PT-BR. NÃO escreva código — pare em /speckit-specify (+ /speckit-cla
 ## Leia OBRIGATORIAMENTE antes de specificar (nesta ordem)
 1. `.specify/memory/constitution.md` — princípios I–VII «(destacar os que a feature mais toca)».
 2. `docs/SRS.md` «§X, §Y — títulos» — regra de negócio que esta spec operacionaliza.
-3. `docs/DECISIONS.md` — «D-0NN (título) …» relacionadas «(incluir rejeitadas a não revisitar)».
+3. `../../../docs/adr/README.md` — «D-0NN (título) …» relacionadas «(incluir rejeitadas a não revisitar)».
 4. `docs/PRD.md` «§ relevante» — enquadramento de produto e faseamento.
 5. `HANDOVER.md` — estado atual do engine/UI.
 «6. specs/0NN-* — dependências, se houver.»

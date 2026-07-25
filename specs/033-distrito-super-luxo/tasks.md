@@ -89,7 +89,7 @@ description: "Task list — Distrito Super-Luxo 'Alta Roda' (033)"
 ## Phase 6: Polish & Cross-Cutting (docs + verificação)
 
 - [x] T012 [P] `docs/SRS.md`: §2.3 → **10 grupos** (tabela 8×3 + navy 2 + Alta Roda 2; cidades reais) + §5.1 (nota da zona nobre super-luxo).
-- [x] T013 [P] `docs/DECISIONS.md`: registrar **D-025** (distrito super-luxo Alta Roda) + atualizar **D-017** (composição → 10 grupos); índice.
+- [x] T013 [P] `../../docs/adr/README.md`: registrar **D-025** (distrito super-luxo Alta Roda) + atualizar **D-017** (composição → 10 grupos); índice.
 - [x] T014 [P] Atualizar `HANDOVER.md`, `docs/MILESTONES.md` (033) e `.specify/feature.json`.
 - [x] T015 Verificação final: `bunx vitest run tests/game` (verde) + `bun run build` (exit 0) + `grep` anti-`bank`/`BankStock`; conferir as **3 fontes de cor** sincronizadas (GROUPS/GROUP_COLOR/CSS) e que engine↔UI mostram o mesmo aluguel (rentLadder).
 

@@ -10,7 +10,7 @@
 
 ## Contexto
 
-O jogo tem 9 grupos / 28 cidades / 48 casas, com o topo (navy/França) calibrado em hotel ~$1.800 pra caber no caixa de $2.000 ([D-024](../../docs/DECISIONS.md)). Falta uma **"zona nobre"** de propriedades *bemmm caras* — o equivalente ao azul-escuro (Park Place/Boardwalk) do Monopoly: a região dos sonhos, alvo de cobiça e *flex* do líder.
+O jogo tem 9 grupos / 28 cidades / 48 casas, com o topo (navy/França) calibrado em hotel ~$1.800 pra caber no caixa de $2.000 ([D-024](../../docs/adr/README.md)). Falta uma **"zona nobre"** de propriedades *bemmm caras* — o equivalente ao azul-escuro (Park Place/Boardwalk) do Monopoly: a região dos sonhos, alvo de cobiça e *flex* do líder.
 
 Esta feature adiciona um **10º grupo, "Alta Roda" (super-luxo)**, com 2 cidades (Mônaco, Dubai) no fim do tabuleiro, desenhado como **armadilha de prestígio** (caríssimo, aluguel alto, mas raro de cair) — **não** um sweet spot. Reusa o modelo econômico da 032 (`HOUSE_COST`/`RENT_MULT` por grupo + fonte única `rentLadder`); só adiciona um grupo, recalibra o topo e reestrutura o lado direito do board.
 

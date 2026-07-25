@@ -105,7 +105,7 @@ description: "Task list — Leilão de escassez de terrenos (031)"
 **Purpose**: fonte de verdade e fechamento.
 
 - [x] T018 [P] Atualizar `docs/SRS.md` §7: em "7.1 Quando ocorre" adicionar "escassez de terrenos"; nova subseção "7.x Leilão de escassez de terrenos (pregão simultâneo)" com gatilho (≤3 + ≥2 vivos), formato simultâneo, cronômetro soft-close, trava de solvência, sem-lance-fica-livre.
-- [x] T019 [P] Registrar **ADR D-023** em `docs/DECISIONS.md` (decisão/por quê/como aplicar; referenciar [D-022] para contrastar com o leilão de casas removido) + linha no índice.
+- [x] T019 [P] Registrar **ADR D-023** em `../../docs/adr/README.md` (decisão/por quê/como aplicar; referenciar [D-022] para contrastar com o leilão de casas removido) + linha no índice.
 - [x] T020 [P] Atualizar `HANDOVER.md` e `docs/MILESTONES.md`: 031 entregue (motor + UI), apontar feature ativa.
 - [x] T021 Verificação final: `bunx vitest run tests/game` (toda a suíte verde, incl. `landAuction.test.ts`) + `bun run build` (exit 0) + grep garantindo zero `bank`/`houseAuction` reintroduzidos.
 

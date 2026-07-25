@@ -8,7 +8,7 @@
 
 **Input**: User description: "Leilão de escassez de terrenos — quando sobram poucos terrenos sem dono no tabuleiro, eles vão a um pregão automático (simultâneo), disparado quando restam ≤3 terrenos compráveis sem dono e há ≥2 jogadores vivos; cada terreno é um leilão inglês próprio, fechando todos juntos por cronômetro; um jogador pode arrematar vários, limitado pelo caixa; sem lance, o terreno fica livre."
 
-> ⚠️ **Não confundir** com o antigo *leilão de casas em escassez* (SRS §5.4 / spec 026), **removido na [D-022](../../docs/DECISIONS.md)**. Aquele leiloava peças de construção (casas), que hoje são ilimitadas. **Este** leiloa **terrenos** (cidades/aeroportos/utilidades sem dono), que são finitos por natureza.
+> ⚠️ **Não confundir** com o antigo *leilão de casas em escassez* (SRS §5.4 / spec 026), **removido na [D-022](../../docs/adr/README.md)**. Aquele leiloava peças de construção (casas), que hoje são ilimitadas. **Este** leiloa **terrenos** (cidades/aeroportos/utilidades sem dono), que são finitos por natureza.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -125,5 +125,5 @@ Como jogador, vejo um modal do pregão com **todos** os terrenos em disputa (nom
 - **Pode arrematar vários**: decisão registrada com o usuário — sem limite de "1 por jogador"; a trava de solvência é o único limitador (mais livre, o líder paga caro por varrer). Aceita-se que tende a favorecer quem tem mais caixa (Princípio IV: catch-up segue discreto, sem destacar).
 - **Sem lance → fica livre**: decisão registrada com o usuário — sem compra forçada (Princípio V); o terreno volta ao fluxo normal.
 - **Parte testável**: os reducers do evento; o render do modal é validado no `bun run dev` (o projeto não tem testes de UI).
-- **Documentação de verdade**: esta feature **adiciona** ao **SRS §7** (Leilão) um novo gatilho (escassez de terrenos) + subseção do pregão simultâneo, e registra um **ADR novo** em `docs/DECISIONS.md`. A spec apenas operacionaliza essas regras (Princípio I).
+- **Documentação de verdade**: esta feature **adiciona** ao **SRS §7** (Leilão) um novo gatilho (escassez de terrenos) + subseção do pregão simultâneo, e registra um **ADR novo** em `../../docs/adr/README.md`. A spec apenas operacionaliza essas regras (Princípio I).
 - **Dependências**: 003 (motor de leilão / compra / recusa-leilão / `Auction`/`deadline`), 008 (falência → terreno volta ao banco, re-arma episódio), 022 (modais centrais / padrão de evento autônomo na UI).

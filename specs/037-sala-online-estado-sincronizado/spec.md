@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Depende de**: specs 001–034 (motor M1 completo — reducers puros, `GameState` serializável), 020–030 (UI M2 — HUD/modais que passam a refletir estado remoto) · ADRs [D-016](../../docs/DECISIONS.md#d-016--desconexo-pausa-partida), [D-019](../../docs/DECISIONS.md#d-019--autenticação-anônima-por-link-sem-contas-no-v1), [D-020 + Refinamento 2026-07-24](../../docs/DECISIONS.md#d-020--modelo-de-autoridade--sincronização-host-autoritativo--realtime--snapshot) · SRS §11, §12.3, §12.5, §16
+**Depende de**: specs 001–034 (motor M1 completo — reducers puros, `GameState` serializável), 020–030 (UI M2 — HUD/modais que passam a refletir estado remoto) · ADRs [D-016](../../docs/adr/D-016-desconexao-pausa-a-partida.md), [D-019](../../docs/adr/D-019-autenticacao-anonima-por-link-sem-contas-no-v1.md), [D-020 + Refinamento 2026-07-24](../../docs/adr/D-020-modelo-de-autoridade-sincronizacao-host-autoritativo-realtim.md) · SRS §11, §12.3, §12.5, §16
 
 **Input**: User description: "Sala online e estado sincronizado (fundação do multiplayer host-autoritativo)"
 

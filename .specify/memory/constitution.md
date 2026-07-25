@@ -27,7 +27,7 @@ Jogador sem grupos completos ainda precisa ter caminho de progresso. A construç
 
 ### VI. Privacidade estratégica de cartas
 
-Cartas em mão são **privadas** (outros jogadores veem apenas contador), **não-negociáveis** em propostas, **limite 3 totais** somando os dois decks. Bus Tickets são contador separado. Estes três atributos são alavancas estratégicas — alterá-los exige decisão registrada em [`docs/DECISIONS.md`](../../docs/DECISIONS.md).
+Cartas em mão são **privadas** (outros jogadores veem apenas contador), **não-negociáveis** em propostas, **limite 3 totais** somando os dois decks. Bus Tickets são contador separado. Estes três atributos são alavancas estratégicas — alterá-los exige decisão registrada em [`../../docs/adr/README.md`](../../docs/adr/README.md).
 
 ### VII. Resiliência de sessão
 
@@ -39,12 +39,12 @@ Este projeto adota Spec-Driven Development com a seguinte hierarquia de document
 
 - **`docs/SRS.md`** — fonte de verdade absoluta das regras de negócio (única referência transversal)
 - **`.specify/memory/constitution.md`** (este arquivo) — princípios não-negociáveis
-- **`docs/DECISIONS.md`** — log append-only de decisões aceitas e rejeitadas (ADR)
+- **`../../docs/adr/README.md`** — log append-only de decisões aceitas e rejeitadas (ADR)
 - **`specs/<feature>/`** — uma pasta por feature contendo `spec.md`, `plan.md`, `tasks.md` (geradas pelo Spec Kit)
 
 Especificamente **não existe** um doc global de entidades/constantes/máquina de estados — isso pertence à própria spec onde a entidade nasce (seção `Key Entities` + `Functional Requirements`). Quando uma spec depende de conceito definido em outra, declarar `Depende de: spec-X` no header.
 
-Specs lêem o constitution e o SRS antes de serem escritas. Se uma spec exigir mudança em princípio, isso é decisão estratégica — registrar em DECISIONS.md primeiro.
+Specs lêem o constitution e o SRS antes de serem escritas. Se uma spec exigir mudança em princípio, isso é decisão estratégica — registrar em ../../docs/adr/README.md primeiro.
 
 ## Workflow de Desenvolvimento
 
@@ -63,19 +63,19 @@ Em fase de discovery, paramos no passo 1 ou 2. Não avançar para `/speckit-plan
 
 As seguintes ideias foram descartadas durante discovery. Não propor novamente sem motivo concreto e novo:
 
-- **Sistema de draft** de propriedades no início da partida ([D-R01](../../docs/DECISIONS.md))
-- **Co-propriedade** (dois donos para uma mesma propriedade) ([D-R02](../../docs/DECISIONS.md))
+- **Sistema de draft** de propriedades no início da partida ([D-R01](../../docs/adr/README.md))
+- **Co-propriedade** (dois donos para uma mesma propriedade) ([D-R02](../../docs/adr/README.md))
 - **IA / bots** — fora do escopo da v1.0
 - **Modo hotseat** — fora do escopo da v1.0
 - **Timer obrigatório de turno** — quebra negociações complexas
 
 ## Governance
 
-Esta constitution **substitui** qualquer convenção informal anterior. Toda spec deve declarar conformidade com os princípios I–VII. Conflito entre uma decisão de spec e este documento se resolve em favor do constitution, salvo emenda formal registrada em DECISIONS.md.
+Esta constitution **substitui** qualquer convenção informal anterior. Toda spec deve declarar conformidade com os princípios I–VII. Conflito entre uma decisão de spec e este documento se resolve em favor do constitution, salvo emenda formal registrada em ../../docs/adr/README.md.
 
 Emendas a este documento requerem:
 
-1. Entrada em [`docs/DECISIONS.md`](../../docs/DECISIONS.md) com justificativa
+1. Entrada em [`../../docs/adr/README.md`](../../docs/adr/README.md) com justificativa
 2. Atualização do campo "Last Amended" abaixo
 3. Bump de versão (MAJOR para princípios novos/removidos, MINOR para revisões substantivas, PATCH para clarificações)
 

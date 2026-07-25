@@ -352,7 +352,7 @@ banco-master/
 │
 ├── docs/                              ← documentação humana (sua)
 │   ├── SRS.md                         ← regras do jogo (verdade absoluta)
-│   ├── DECISIONS.md                   ← log de decisões (ADR)
+│   ├── adr/README.md                   ← log de decisões (ADR)
 │   ├── CARTAS.md                      ← rascunho de discovery, vira spec depois
 │   └── SPEC-KIT.md                    ← este arquivo
 │
@@ -379,7 +379,7 @@ banco-master/
 
 ```
 1. Edita a spec diretamente (é só um .md)
-2. Se a mudança for grande: registra em docs/DECISIONS.md o porquê
+2. Se a mudança for grande: registra em adr/README.md o porquê
 3. Se a mudança afeta princípio do projeto: /speckit-constitution
 ```
 
@@ -398,7 +398,7 @@ banco-master/
 ### Cenário D: "Tenho uma dúvida sobre o que já decidi"
 
 Não use Spec Kit pra isso. Apenas:
-- Abra `docs/DECISIONS.md` — decisões registradas
+- Abra `adr/README.md` — decisões registradas
 - Abra `.specify/memory/constitution.md` — princípios
 - Abra `docs/SRS.md` — regras
 
@@ -516,7 +516,7 @@ Não tem botão. Você edita o campo `Status: Draft` → `Status: Approved` no t
 | **Tasks** | Lista atômica do que codar, em ordem |
 | **Constitution** | Princípios do projeto que não podem ser quebrados |
 | **SRS** (nosso) | Regras de negócio completas — fonte absoluta |
-| **ADR** | Architecture Decision Record — registro de "por que decidimos X" (nosso DECISIONS.md) |
+| **ADR** | Architecture Decision Record — registro de "por que decidimos X" (nosso adr/README.md) |
 | **User Story** | Frase no formato "Como X, eu quero Y, para Z" |
 | **Acceptance Scenario** | "Dado X, Quando Y, Então Z" — teste em linguagem natural |
 | **MVP** | Minimum Viable Product — o menor pedaço que entrega valor |

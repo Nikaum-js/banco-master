@@ -85,7 +85,7 @@ tests/game/               # atualizar asserts de valor: economy/construction, ec
 
 docs/
 ├── SRS.md                # §2.3 (9 grupos: 8×3 + verde×4) + §5.1 (modelo por grupo + tiers)
-└── DECISIONS.md          # atualizar D-017 (composição/economia) + ADR novo (recalibração)
+└── ../../docs/adr/README.md          # atualizar D-017 (composição/economia) + ADR novo (recalibração)
 ```
 
 **Structure Decision**: Single project; mudança concentrada em tema + board + 2 módulos do motor, com **unificação do cálculo de aluguel** numa função pura (`rentLadder`) para eliminar a divergência engine↔UI. Sem mudança de estado/serialização.

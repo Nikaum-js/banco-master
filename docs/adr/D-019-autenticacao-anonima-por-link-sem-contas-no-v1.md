@@ -1,0 +1,6 @@
+# D-019 — Autenticação anônima por link (sem contas no v1)
+
+**Data:** 2026-05-24 · **Status:** aceita
+**Decisão:** No v1 não há sistema de contas/login. A identidade do jogador é **anônima por link**: ao entrar numa sala (§11.1/§11.2), o cliente gera/guarda um **token de sessão** (no `localStorage`) e o jogador escolhe **nome + token visual** no lobby. O **link da sala é a credencial** — quem tem o link entra. Sem e-mail, sem senha, sem perfil persistente entre partidas.
+**Por quê:** Resolve o item em aberto do SRS §16 ("a definir se auth anônima ou por e-mail"). Entrada sem fricção espelha o Richup.io e é coerente com [D-001](D-001-multiplayer-online-exclusivo.md) (social/competitivo, humanos) e [D-002](D-002-ate-8-jogadores-por-sala.md). Zero PII = menos superfície legal/segurança no v1. Contas/e-mail/perfis ficam candidatos a v2 (SRS §16).
+**Como aplicar:** o token de sessão (UUID no `localStorage`) identifica o jogador na sala e **viabiliza a reconexão** ([D-016](D-016-desconexao-pausa-a-partida.md) / §11.4): reabrir o link com o mesmo token re-anexa ao assento. A associação assento↔token vive no estado da sala (servidor). O `GameState` não ganha PII — só ids de jogador (já serializáveis, princípio VII).

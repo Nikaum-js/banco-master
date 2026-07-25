@@ -6,7 +6,7 @@
 
 ## Summary
 
-Expandir o tabuleiro de 40 → 48 casas (SRS §2, decisão [D-017](../../docs/DECISIONS.md#d-017--tabuleiro-de-48-casas)), preservando o tema "Países do Mundo" (cada grupo de cor = um país; propriedades = cidades). A abordagem técnica: estender a fonte de dados estática do tabuleiro (`src/lib/boardData.ts`) para uma sequência canônica de 48 casas com cantos em 0/12/24/36, recalcular a geometria de grade de 11×11 → **13×13** nos componentes de board (`Board01Classic.tsx` e helpers em `boards/shared.tsx`), e adicionar dois novos tipos de casa (`bus-ticket` e uma 3ª utilidade). A maior parte do trabalho é **dado + geometria**, sem nova lógica de jogo (movimento, aluguel, prisão etc. já existem e apenas passam a operar sobre 48 índices).
+Expandir o tabuleiro de 40 → 48 casas (SRS §2, decisão [D-017](../../docs/adr/D-017-tabuleiro-de-48-casas.md)), preservando o tema "Países do Mundo" (cada grupo de cor = um país; propriedades = cidades). A abordagem técnica: estender a fonte de dados estática do tabuleiro (`src/lib/boardData.ts`) para uma sequência canônica de 48 casas com cantos em 0/12/24/36, recalcular a geometria de grade de 11×11 → **13×13** nos componentes de board (`Board01Classic.tsx` e helpers em `boards/shared.tsx`), e adicionar dois novos tipos de casa (`bus-ticket` e uma 3ª utilidade). A maior parte do trabalho é **dado + geometria**, sem nova lógica de jogo (movimento, aluguel, prisão etc. já existem e apenas passam a operar sobre 48 índices).
 
 ## Technical Context
 

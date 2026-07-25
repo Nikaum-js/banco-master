@@ -8,7 +8,7 @@
 
 **Input**: User description: "Tabuleiro de 48 casas (expansão do tabuleiro clássico de 40 → 48, inspirado no Monopoly Mega Edition). Operacionaliza a estrutura definida no SRS §2 e na decisão D-017."
 
-> **Escopo desta spec:** define a **estrutura e o layout** do tabuleiro de 48 casas — quantas casas, de que tipo, em que posição, regras de composição dos grupos, e os ajustes de economia que acompanham (dinheiro inicial, estoque de construção). **Não** enumera os preços/aluguéis concretos das 28 cidades nem desenha as cartas — isso é dado de tema, tratado a jusante (ver Assumptions). Fonte de verdade: [`docs/SRS.md`](../../docs/SRS.md) §2 e decisão [D-017](../../docs/DECISIONS.md#d-017--tabuleiro-de-48-casas).
+> **Escopo desta spec:** define a **estrutura e o layout** do tabuleiro de 48 casas — quantas casas, de que tipo, em que posição, regras de composição dos grupos, e os ajustes de economia que acompanham (dinheiro inicial, estoque de construção). **Não** enumera os preços/aluguéis concretos das 28 cidades nem desenha as cartas — isso é dado de tema, tratado a jusante (ver Assumptions). Fonte de verdade: [`docs/SRS.md`](../../docs/SRS.md) §2 e decisão [D-017](../../docs/adr/D-017-tabuleiro-de-48-casas.md).
 
 ## User Scenarios & Testing *(mandatory)*
 

@@ -38,12 +38,12 @@ Sobre isso, três camadas finas e puras — `localView` (quem sou eu, o que poss
 
 | Princípio | Conformidade |
 |---|---|
-| **I. SRS é verdade absoluta** | ✅ Nenhuma regra nova. A única mudança de comportamento de regra é o gatilho de pausa ignorar eliminados — e ela **já virou ADR antes desta spec** ([D-029](../../docs/DECISIONS.md#d-029--desconexão-de-jogador-eliminado-não-pausa-a-partida), SRS §11.3 v1.5). Os reducers de `src/game/{turn,economy,cards,...}` não são tocados. |
+| **I. SRS é verdade absoluta** | ✅ Nenhuma regra nova. A única mudança de comportamento de regra é o gatilho de pausa ignorar eliminados — e ela **já virou ADR antes desta spec** ([D-029](../../docs/adr/D-029-desconexao-de-jogador-eliminado-nao-pausa-a-partida.md), SRS §11.3 v1.5). Os reducers de `src/game/{turn,economy,cards,...}` não são tocados. |
 | **II. Discovery antes de código** | ✅ Spec 038 aprovada, sem `[NEEDS CLARIFICATION]`; este plan a operacionaliza. |
 | **III. Tesouro precisa impactar** | ✅ Não afetado — nenhuma mecânica muda. |
 | **IV. Catch-up é discreto** | ✅ As superfícies novas (banner de pausa, painel de jogadores com nomes) não destacam mecanismo de catch-up algum. |
 | **V. Sem dependência de cooperação** | ✅ Não afetado. |
-| **VI. Privacidade de cartas** | ✅ É o coração da US1: a mão exibida passa a ser a do **dono da tela**. Alcance da garantia (apresentação, não dados) fixado por [D-030](../../docs/DECISIONS.md#d-030--privacidade-de-cartas-é-garantia-de-apresentação-no-v1) e registrado no SRS §10.3 — a spec não promete mais do que entrega. |
+| **VI. Privacidade de cartas** | ✅ É o coração da US1: a mão exibida passa a ser a do **dono da tela**. Alcance da garantia (apresentação, não dados) fixado por [D-030](../../docs/adr/D-030-privacidade-de-cartas-e-garantia-de-apresentacao-no-v1.md) e registrado no SRS §10.3 — a spec não promete mais do que entrega. |
 | **VII. Resiliência de sessão** | ✅ Torna visível o que a 037 já fazia: quem caiu, pausa sem timeout, retomada automática. A UI de pausa não tem contagem regressiva nem ação destrutiva. |
 
 Sem violações. Complexity Tracking vazia.

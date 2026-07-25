@@ -68,7 +68,7 @@ Single-page web app (frontend único). Caminhos a partir da raiz do repo: `src/l
 
 - [x] T009 [US2] Adicionar as 6 cidades novas (Florença/IT, Calcutá/IN, Shenzhen/CN, Brasília/BR, Miami/US, Manchester/GB) às entradas property de `BOARD` nos respectivos grupos, em `src/lib/boardData.ts` (depende de T004)
 - [x] T010 [US2] Ajustar a escada de preços/aluguéis das 28 cidades (faixa ~$60–$400, monotônica ao longo do percurso) em `src/lib/boardData.ts` conforme [research.md §Decisão 5](./research.md) (depende de T009)
-- [x] ~~T011 [US2] Garantir exatamente 2 coringas — `pos 11` (Egito·Luxor) e `pos 35` (Brasil·Brasília)~~ — **revogada (2026-05-23): Coringa removida do produto** ([D-005](../../docs/DECISIONS.md) revogada); a flag `coringa` foi removida de `boardData.ts`.
+- [x] ~~T011 [US2] Garantir exatamente 2 coringas — `pos 11` (Egito·Luxor) e `pos 35` (Brasil·Brasília)~~ — **revogada (2026-05-23): Coringa removida do produto** ([D-005](../../docs/adr/README.md) revogada); a flag `coringa` foi removida de `boardData.ts`.
 - [x] T012 [US2] Verificar distribuição por grupo (data-model §Invariante 4: brown/skyblue/pink/navy=3; orange/red/yellow/green=4) e que o limiar de monopólio parcial bate com o tamanho do grupo (depende de T009, T010, T011)
 
 **Checkpoint**: economia de propriedades correta e auditável.
