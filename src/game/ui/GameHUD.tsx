@@ -20,6 +20,7 @@ import { useLocalView, useRoomStore } from '@/net/roomStore'
 import { PlayerName } from '@/net/ui/PlayerName'
 import { WaitingBar } from '@/net/ui/WaitingBar'
 import { isBankrupt } from '@/game/falencia/falencia'
+import { eligibleLenders, interestOf, loanShortfall } from '@/game/emprestimos/emprestimos'
 import { Confetti } from '@/game/ui/NoticeLayer'
 import { Button, Chip } from '@/game/ui/primitives'
 import type { LoanRequest } from '@/game/economy/types'
@@ -145,7 +146,6 @@ export function GameHUD() {
   const view = useLocalView() // spec 038: controles só do assento local (FR-002)
   const online = useRoomStore((s) => s.room !== null)
   const res = game.resolution
-  const loanOfActive = game.loans.find((l) => l.debtorId === active.id)
 
   const activeColor = colorOfPlayer(game.players, active.id) ?? 'var(--color-brass)'
 
@@ -289,11 +289,11 @@ export function GameHUD() {
         </AnimatePresence>
       )
     }
-    const shortfall = res.amount - active.cash
+    const shortfall = loanShortfall(game)
     const canPay = active.cash >= res.amount
-    const lenders = loanOfActive
-      ? []
-      : game.players.filter((p) => p.id !== active.id && !p.eliminated && p.cash >= shortfall && shortfall > 0)
+    // Elegibilidade vem do MOTOR (§15.2): antes esta lista refazia à mão 5 das 8 guardas
+    // de `proposeLoan`, e deixava `paused` de fora.
+    const lenders = eligibleLenders(game).map((id) => game.players.find((p) => p.id === id)!)
     const creditorColor = colorOfPlayer(game.players, res.creditorId)
     // % do valor já coberto pelo caixa atual — alimenta a barra credor↔devedor.
     const covered = Math.max(0, Math.min(1, active.cash / res.amount))
@@ -482,7 +482,7 @@ function LoanRequestCard({
 }) {
   const [rate, setRate] = useState<number>(20)
   const debtorColor = colorOfPlayer(players, req.debtorId) ?? 'var(--color-brass)'
-  const interest = Math.round((req.principal * rate) / 100)
+  const interest = interestOf(req.principal, rate) // §15.4 — fórmula do motor, não uma cópia
 
   return (
     <DecisionShell dim>

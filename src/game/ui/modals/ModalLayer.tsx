@@ -10,7 +10,7 @@ import { useLocalView } from '@/net/roomStore'
 import { WaitingBar } from '@/net/ui/WaitingBar'
 import { activeModal, type ModalView, type HandCardView } from './activeModal'
 import { BOARD, type PropertySquare } from '@/lib/boardData'
-import { sideOf } from '@/game/turn/turnMachine'
+import { sideOf, canUseBusTicket } from '@/game/turn/turnMachine'
 import { AUCTION_WINDOW } from '@/game/economy/purchase'
 import { RARITY_COLOR, RARITY_LABEL, cardLabel, CARD_DESC } from '@/game/ui/cards/cardMeta'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
@@ -108,7 +108,9 @@ export function ModalLayer() {
   const mineModal = view === null || view.kind === 'auction' || local.mayAct(MODAL_ACTION[view.kind])
   const activePlayer = game.players[game.turnOrder[game.activeSeat]]
   // Seletor de uso de ticket GUARDADO: aberto pelo HUD. Usável antes de rolar OU no fim do turno (034).
-  const showBusArmed = busArmed && (game.turn.state === 'aguardando-rolagem' || game.turn.state === 'aguardando-finalizacao') && activePlayer.busTickets >= 1 && sideOf(activePlayer.pos) !== null
+  // Elegibilidade vem do MOTOR (`canUseBusTicket`): a cópia que morava aqui não checava
+  // `paused`, então com o jogo pausado o seletor abria e o clique era no-op.
+  const showBusArmed = busArmed && canUseBusTicket(game)
 
   return (
     <AnimatePresence>

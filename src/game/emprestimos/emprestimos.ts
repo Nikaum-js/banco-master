@@ -14,10 +14,20 @@ export function activeLoanFor(state: GameState, debtorId: string): Loan | undefi
   return state.loans.find((l) => l.debtorId === debtorId)
 }
 
-// Juros simples sobre o principal original (§15.4).
-function interestOf(loan: Loan): number {
-  return Math.round((loan.principal * loan.ratePct) / 100)
+/**
+ * Juros simples sobre o principal original (§15.4).
+ *
+ * Card 3 do review de arquitetura: a fórmula era privada e recebia um `Loan`, mas a UI
+ * precisa dela ANTES do empréstimo existir (o credor escolhe a taxa olhando o valor).
+ * O formato do parâmetro forçou duas cópias — `GameHUD.tsx:484` e `shared.tsx:1874` —
+ * de uma expressão onde trocar `round` por `floor` custa "o jogo cobrou $1 a mais do
+ * que a carta prometeu", sem nenhum teste pegando.
+ */
+export function interestOf(principal: number, ratePct: number): number {
+  return Math.round((principal * ratePct) / 100)
 }
+
+const interestOfLoan = (loan: Loan): number => interestOf(loan.principal, loan.ratePct)
 
 // Concede um empréstimo já aceito pelo credor (com taxa). Valida §15.2/§15.3. No-op se inválido.
 export function grantLoan(
@@ -44,6 +54,31 @@ export function grantLoan(
   s.players.find((p) => p.id === debtorId)!.cash += principal
   s.loans.push({ debtorId, creditorId, principal, ratePct })
   return s
+}
+
+/**
+ * A quem o jogador da vez pode pedir empréstimo AGORA (§15.2). Lista vazia = a janela
+ * está fechada, ou ninguém cobre o déficit.
+ *
+ * Card 3 do review de arquitetura: `proposeLoan` tem oito guardas, e o `GameHUD`
+ * refazia cinco delas à mão para montar a lista de credores — deixando `paused` de
+ * fora. Este predicado é derivado do MESMO comando: se `proposeLoan` recusaria, o
+ * credor não entra na lista.
+ */
+export function eligibleLenders(state: GameState): string[] {
+  const debtorId = state.players[state.turnOrder[state.activeSeat]]?.id
+  if (!debtorId) return []
+  return state.players
+    .filter((p) => proposeLoan(state, debtorId, p.id) !== state) // "o comando aceitaria?"
+    .map((p) => p.id)
+}
+
+/** Déficit que o empréstimo cobriria — `0` fora da janela de dívida. */
+export function loanShortfall(state: GameState): number {
+  if (state.resolution?.kind !== 'debt') return 0
+  const debtor = state.players[state.turnOrder[state.activeSeat]]
+  if (!debtor) return 0
+  return Math.max(0, state.resolution.amount - debtor.cash)
 }
 
 // Solicitação de empréstimo (§15.2): o devedor (em dívida) pede a um credor específico.
@@ -111,7 +146,7 @@ export function chargeLoanInterest(state: GameState, debtorId: string): void {
   const creditor = state.players.find((p) => p.id === loan.creditorId)
   if (!debtor || !creditor) return
 
-  const interest = interestOf(loan)
+  const interest = interestOfLoan(loan)
   if (debtor.cash >= interest) {
     debtor.cash -= interest
     creditor.cash += interest

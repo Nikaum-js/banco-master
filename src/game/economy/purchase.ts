@@ -16,11 +16,25 @@ function priceOf(pos: number): number {
   return 'price' in sq ? sq.price : 0
 }
 
+/**
+ * Quanto o jogador da vez pagaria pela propriedade em `pos`, já com o desconto do
+ * Investidor Anjo (006). `null` quando não há nada comprável ali.
+ *
+ * Card 3 do review de arquitetura: o cálculo só existia dentro de `buyProperty`, e o
+ * `DiceArena` (`shared.tsx`) o reescrevia com o comentário "espelha buyProperty (motor)"
+ * — um espelho é exatamente o que sai de sincronia quando a regra muda.
+ */
+export function purchasePrice(state: GameState, pos: number): number | null {
+  const base = priceOf(pos)
+  if (base === 0) return null
+  const discount = activePlayer(state).nextPurchaseDiscount ?? 0 // Investidor Anjo (006)
+  return Math.round(base * (1 - discount))
+}
+
 export function buyProperty(state: GameState): GameState {
   if (state.resolution?.kind !== 'purchase') return state
   const pos = state.resolution.pos
-  const discount = activePlayer(state).nextPurchaseDiscount ?? 0 // Investidor Anjo (006)
-  const price = Math.round(priceOf(pos) * (1 - discount))
+  const price = purchasePrice(state, pos) ?? 0
   if (activePlayer(state).cash < price) return state // sem caixa: não compra fiado (FR-004)
   const s = clone(state)
   const player = activePlayer(s)

@@ -16,7 +16,8 @@ import { deedView } from '@/game/ui/deed/deedView'
 import { useTradeUI } from '@/game/ui/trade/TradeLayer'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
 // `sideOf` do motor (lado do tabuleiro p/ regra do Bus Ticket) ≠ `sideOf` local (layout).
-import { sideOf as busSideOf } from '@/game/turn/turnMachine'
+import { canUseBusTicket } from '@/game/turn/turnMachine'
+import { purchasePrice } from '@/game/economy/purchase'
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 import { HandPanel } from '@/game/ui/cards/HandPanel'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
@@ -1695,6 +1696,7 @@ export function DiceArena() {
   const lastRoll = useGameStore((s) => s.game.turn.lastRoll)
   const paused = useGameStore((s) => s.game.paused)
   const phase = useGameStore((s) => s.game.phase)
+  const game = useGameStore((s) => s.game) // predicados do motor precisam do estado inteiro
   const dispatch = useGameStore((s) => s.dispatch)
   const rollDiceCmd = (): void => dispatch({ kind: 'roll' })
   // Ações inline embaixo dos dados (sem modal de compra; finalizar manual)
@@ -1708,7 +1710,6 @@ export function DiceArena() {
   const activeDiscount = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.nextPurchaseDiscount ?? 0) // Investidor Anjo (006)
   const jailAttempts = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.jail.attempts ?? 0)
   const activeBusTickets = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.busTickets ?? 0)
-  const activePos = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.pos ?? 0)
 
   const [rollKey, setRollKey] = useState(0)
   const [rolling, setRolling] = useState(false)
@@ -1733,14 +1734,13 @@ export function DiceArena() {
   const purchasePos = resolution?.kind === 'purchase' ? resolution.pos : null
   const buySq = purchasePos != null ? BOARD[purchasePos] : null
   const buyPrice = buySq && 'price' in buySq ? buySq.price : 0
-  const finalBuyPrice = Math.round(buyPrice * (1 - activeDiscount)) // espelha buyProperty (motor)
+  const finalBuyPrice = purchasePos != null ? (purchasePrice(game, purchasePos) ?? 0) : 0 // motor, não espelho
   const hasBuyDiscount = activeDiscount > 0 && finalBuyPrice < buyPrice
   const canFinalize = phase === 'playing' && !paused && turnState === 'aguardando-finalizacao'
   // Bus Ticket guardado (§10.7): facultativo ANTES de rolar ou no FIM do turno (D-027).
   // Mora aqui — junto da decisão de turno — e não numa pílula flutuante sobre o board.
-  const canBus =
-    phase === 'playing' && !paused && !rolling && activeBusTickets >= 1 && busSideOf(activePos) !== null &&
-    (turnState === 'aguardando-rolagem' || turnState === 'aguardando-finalizacao')
+  // Elegibilidade vem do MOTOR (`canUseBusTicket`); `rolling` é o único gate de UI.
+  const canBus = !rolling && canUseBusTicket(game)
 
   function handleRoll() {
     if (!canRoll) return

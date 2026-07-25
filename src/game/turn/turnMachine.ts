@@ -218,16 +218,31 @@ export function chooseTripleDest(state: GameState, dest: number, ctx: TurnCtx): 
   return finishIfEnded(s, ctx)
 }
 
+/**
+ * O jogador da vez pode usar Bus Ticket AGORA? (009, SRS §10.7)
+ *
+ * Card 3 do review de arquitetura: esta cadeia de guardas só existia DENTRO do comando,
+ * então a UI — que precisa saber "posso?" antes de agir — a reescrevia. Havia duas
+ * cópias (`ModalLayer.tsx` e o `DiceArena` de `shared.tsx`) e elas já divergiam: a do
+ * ModalLayer não checava `paused`, então com o jogo pausado o seletor de ônibus
+ * aparecia e o clique era no-op. Uma pergunta, uma resposta.
+ */
+export function canUseBusTicket(state: GameState): boolean {
+  if (state.paused) return false // FR-011
+  if (state.phase !== 'playing') return false
+  // 034: usável ANTES de rolar OU no fim do turno (depois de resolver a jogada).
+  if (state.turn.state !== 'aguardando-rolagem' && state.turn.state !== 'aguardando-finalizacao') return false
+  const player = activePlayer(state)
+  if (player.busTickets < 1) return false // FR-002
+  return sideOf(player.pos) !== null // sobre canto: indisponível (FR-003a)
+}
+
 // Uso de Bus Ticket (009, SRS §10.7): antes de rolar, gasta 1 ticket e PULA DIRETO
 // para uma casa do MESMO LADO (não percorre o tabuleiro → NÃO cruza o GO, sem $200).
 export function useBusTicket(state: GameState, dest: number, ctx: TurnCtx): GameState {
-  if (state.paused) return state // FR-011
-  // 034: usável ANTES de rolar OU no fim do turno (depois de resolver a jogada) — não só pré-rolagem.
-  if (state.turn.state !== 'aguardando-rolagem' && state.turn.state !== 'aguardando-finalizacao') return state
+  if (!canUseBusTicket(state)) return state // FR-011/FR-002/FR-003a — mesma cadeia da UI
   const player = activePlayer(state)
-  if (player.busTickets < 1) return state // FR-002
   const fromSide = sideOf(player.pos)
-  if (fromSide === null) return state // sobre canto: indisponível (FR-003a)
   if (sideOf(dest) !== fromSide || dest === player.pos) return state // destino inválido (FR-003)
   const s = clone(state)
   const turn = s.turn
