@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { shuffle } from '@/game/cards/decks'
 import { cardResolve } from '@/game/cards/draw'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import type { TurnPorts } from '@/game/turn/resolution'
 import { BOARD } from '@/lib/boardData'
 

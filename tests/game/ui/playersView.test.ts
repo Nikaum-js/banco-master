@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { playersView, PLAYER_COLORS } from '@/boards/shared'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import { createRoom, joinRoom, SEAT_COLORS } from '@/net/room'
 
 describe('playersView — GameState → painel (020)', () => {

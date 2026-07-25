@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buyProperty, declineProperty } from '@/game/economy/purchase'
-import { createSeedState, defaultPorts } from '@/game/store'
+import { createSeedState, defaultPorts } from '@/game/setup'
 import { finalizeTurn } from '@/game/turn/turnMachine'
 import type { GameState } from '@/game/turn/types'
 

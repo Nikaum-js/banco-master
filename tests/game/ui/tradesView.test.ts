@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { tradesView } from '@/game/ui/trade/tradesView'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import type { Trade } from '@/game/economy/types'
 
 const t = (fromId: string, toId: string): Trade => ({ fromId, toId, fromProps: [], fromCash: 0, toProps: [], toCash: 0 })

@@ -8,7 +8,7 @@ import {
   committedCash,
   LAND_AUCTION_WINDOW,
 } from '@/game/economy/landAuction'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import { BOARD } from '@/lib/boardData'
 

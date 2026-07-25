@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { placeBid, closeAuction } from '@/game/economy/auction'
 import { declineProperty, AUCTION_WINDOW } from '@/game/economy/purchase'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 
 // Estado com um leilão aberto (recusa em pos 1, deadline = now0 + WINDOW).

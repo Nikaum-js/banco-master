@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { goBonus, payToCenter, collectCenter } from '@/game/balancing/balancing'
 import { jailDecision } from '@/game/turn/turnMachine'
 import { resolveSquare } from '@/game/turn/resolution'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import type { TurnPorts } from '@/game/turn/resolution'
 import { BOARD } from '@/lib/boardData'
 

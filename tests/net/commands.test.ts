@@ -2,7 +2,7 @@
 // motor e trata comando inválido como no-op (mesma referência preservada).
 import { describe, expect, it } from 'vitest'
 import { applyCommand } from '@/game/commands'
-import { buildGameCtx, buildInitialGame } from '@/game/ctx'
+import { buildGameCtx, buildInitialGame } from '@/game/setup'
 import { mulberry32 } from '../sim/engine/rng'
 
 describe('applyCommand (FR-008/009)', () => {

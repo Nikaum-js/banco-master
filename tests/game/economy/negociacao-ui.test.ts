@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { validateTrade, tradableProps, proposeTrade, acceptTrade, rejectTrade } from '@/game/economy/trade'
 import { hasImmunity } from '@/game/economy/imunidade'
 import type { Trade } from '@/game/economy/types'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 
 // p1 dono de pos 1 (Roma, brown); p2 dono de pos 7 (Cairo, skyblue) e do aeroporto pos 6.

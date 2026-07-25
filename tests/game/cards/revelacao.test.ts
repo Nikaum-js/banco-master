@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { cardRevealResolve, confirmCardReveal } from '@/game/cards/draw'
 import { activeModal } from '@/game/ui/modals/activeModal'
-import { createSeedState, defaultPorts } from '@/game/store'
+import { createSeedState, defaultPorts } from '@/game/setup'
 import { BOARD } from '@/lib/boardData'
 import type { GameState } from '@/game/turn/types'
 

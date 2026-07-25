@@ -7,7 +7,7 @@ import type { RNG } from '@/game/turn/dice'
 import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
 import { actorOf, applyCommand, type GameAction, type SystemAction } from '@/game/commands'
-import { buildGameCtx, buildInitialGame } from '@/game/ctx'
+import { buildGameCtx, buildInitialGame } from '@/game/setup'
 import { recordingCtx } from './recorder'
 import {
   anyDisconnected,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import { jailDecision } from '@/game/turn/turnMachine'
 import type { GameState } from '@/game/turn/types'
 import { rngFromDice, mockPorts } from './_helpers'

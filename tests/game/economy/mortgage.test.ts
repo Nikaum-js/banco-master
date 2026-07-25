@@ -7,7 +7,7 @@ import {
   transferKeepFee,
 } from '@/game/economy/mortgage'
 import { buildHouse } from '@/game/economy/construction'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import { BOARD } from '@/lib/boardData'
 

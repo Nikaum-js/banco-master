@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { rentCity, rentAirport, rentUtility, diceValue, posseFactor } from '@/game/economy/rent'
 import { economyResolve } from '@/game/economy/resolveRentable'
-import { createSeedState, defaultPorts } from '@/game/store'
+import { createSeedState, defaultPorts } from '@/game/setup'
 import { BOARD } from '@/lib/boardData'
 import type { Roll } from '@/game/turn/types'
 

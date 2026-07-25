@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
 import { localView, waitingForOf } from '@/net/localView'
 import { actorOfKind, isSenderActed, type PlayerAction } from '@/game/commands'
 import { createRoom, joinRoom, SEAT_COLORS, type Room } from '@/net/room'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 
 // Todos os kinds de PlayerAction — a lista é conferida contra o union no teste de exaustividade.

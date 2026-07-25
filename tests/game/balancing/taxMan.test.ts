@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { rollTaxMan } from '@/game/balancing/taxMan'
 import { rollDice, resolvePending, finalizeTurn } from '@/game/turn/turnMachine'
-import { createSeedState, defaultPorts } from '@/game/store'
+import { createSeedState, defaultPorts } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
 import type { RNG } from '@/game/turn/dice'

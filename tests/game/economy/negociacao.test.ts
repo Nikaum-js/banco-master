@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { executeTrade } from '@/game/economy/trade'
 import { transferKeepFee } from '@/game/economy/mortgage'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import { BOARD } from '@/lib/boardData'
 

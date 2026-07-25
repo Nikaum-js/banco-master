@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import { useBusTicket, sideOf, resolvePending, finalizeTurn } from '@/game/turn/turnMachine'
 import { economyResolve } from '@/game/economy/resolveRentable'
 import { BOARD } from '@/lib/boardData'

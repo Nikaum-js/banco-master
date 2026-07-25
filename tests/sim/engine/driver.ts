@@ -2,8 +2,7 @@
 // ao Zustand — sem Zustand, sem timers reais. `now()` é um relógio LÓGICO controlado
 // pelo próprio harness (não Date.now()), avançado explicitamente para fechar leilões.
 import { BOARD } from '@/lib/boardData'
-import { THEME } from '@/game/theme'
-import { createSeedState } from '@/game/store'
+import { buildGameCtx, buildInitialGame } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
 import {
@@ -16,23 +15,16 @@ import {
   useBusTicket,
   activePlayer,
 } from '@/game/turn/turnMachine'
-import { economyResolve } from '@/game/economy/resolveRentable'
 import { buyProperty, declineProperty } from '@/game/economy/purchase'
 import { placeBid, passBid, closeAuction } from '@/game/economy/auction'
 import { maybeOpenLandAuction, placeLandBid, closeExpiredLandLots } from '@/game/economy/landAuction'
 import { buildHouse, sellBuilding, buildHangar, sellHangar } from '@/game/economy/construction'
 import { mortgageProperty, unmortgageProperty } from '@/game/economy/mortgage'
-import { goBonus, payToCenter, collectCenter } from '@/game/balancing/balancing'
 import { payDebt, declareBankruptcy } from '@/game/falencia/falencia'
-import { proposeLoan, respondLoan, payOffLoan, chargeLoanInterest } from '@/game/emprestimos/emprestimos'
-import { rollTaxMan } from '@/game/balancing/taxMan'
-import { executeTrade as _executeTrade, proposeTrade, acceptTrade, rejectTrade } from '@/game/economy/trade'
-import { tickImmunities } from '@/game/economy/imunidade'
-import { tickTempEffects } from '@/game/economy/tempEffects'
-import { deckCardIds } from '@/game/cards/catalog'
-import { weightedShuffle } from '@/game/cards/decks'
-import { cardRevealResolve, confirmCardReveal, playHandCard, resolveCardDiscard, resolveCardShortcut } from '@/game/cards/draw'
-import { taxBunkerResolve, respondReaction } from '@/game/cards/reacao'
+import { proposeLoan, respondLoan, payOffLoan } from '@/game/emprestimos/emprestimos'
+import { proposeTrade, acceptTrade, rejectTrade } from '@/game/economy/trade'
+import { confirmCardReveal, playHandCard, resolveCardDiscard, resolveCardShortcut } from '@/game/cards/draw'
+import { respondReaction } from '@/game/cards/reacao'
 import { mulberry32 } from './rng'
 import type { SimAction } from './types'
 
@@ -42,39 +34,15 @@ export interface SimSession {
   clock: number // relógio lógico (ms simulados); avançado só pelo driver, nunca Date.now()
 }
 
-// Mesmas portas de src/game/store.ts (defaultPorts + taxMan) — a simulação usa a
-// configuração padrão do produto, sem modos especiais (FR-013).
-function buildPorts() {
-  return {
-    onPassGo: (state: GameState, id: string) => goBonus(state, id),
-    onPayToCenter: (state: GameState, amount: number) => payToCenter(state, amount),
-    onCollectCenter: (state: GameState, id: string) => collectCenter(state, id),
-    isEliminated: () => false,
-    onInsolvency: () => {},
-    afterPassGo: (state: GameState, id: string) => {
-      chargeLoanInterest(state, id)
-      tickImmunities(state, id)
-      tickTempEffects(state, id)
-    },
-    taxMan: (s: GameState, rng: TurnCtx['rng']) => rollTaxMan(s, rng),
-  }
-}
-
 export function createSimSession(seed: number, playerIds: string[]): SimSession {
   const rng = mulberry32(seed)
-  const game = createSeedState(playerIds)
-  // Baralhos embaralhados pela MESMA seed (nunca freshGame()/Math.random() — FR-003).
-  game.decks.acaso = weightedShuffle(deckCardIds('acaso'), rng)
-  game.decks.tesouro = weightedShuffle(deckCardIds('tesouro'), rng)
+  // Baralhos embaralhados pela MESMA seed (nunca Math.random() — FR-003).
+  const game = buildInitialGame(playerIds, rng)
 
   const session: SimSession = { game, clock: 0, ctx: null as unknown as TurnCtx }
-  session.ctx = {
-    rng,
-    ports: buildPorts(),
-    resolve: (r) => economyResolve(r) ?? cardRevealResolve(r) ?? taxBunkerResolve(r),
-    now: () => session.clock,
-    speedDie: THEME.SPEED_DIE_ENABLED,
-  }
+  // MESMA fábrica do store e do host (`@/game/setup`): a simulação valida a
+  // configuração do produto, não uma paralela (FR-013).
+  session.ctx = buildGameCtx(rng, () => session.clock)
   return session
 }
 

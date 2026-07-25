@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { deedView } from '@/game/ui/deed/deedView'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 
 // p1 é o jogador da vez. brown = {1,3,5} (maioria 2). Aeroporto em pos 6.

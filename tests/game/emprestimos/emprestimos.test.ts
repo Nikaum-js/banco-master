@@ -3,7 +3,7 @@ import { grantLoan, proposeLoan, respondLoan, payOffLoan, chargeLoanInterest, ac
 import { payDebt, declareBankruptcy } from '@/game/falencia/falencia'
 import { advance, resolvePending, finishIfEnded } from '@/game/turn/turnMachine'
 import { economyResolve } from '@/game/economy/resolveRentable'
-import { createSeedState, defaultPorts } from '@/game/store'
+import { createSeedState, defaultPorts } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import type { Loan } from '@/game/economy/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'

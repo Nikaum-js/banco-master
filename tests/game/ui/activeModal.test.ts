@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { activeModal } from '@/game/ui/modals/activeModal'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import { BOARD } from '@/lib/boardData'
 import type { GameState } from '@/game/turn/types'
 

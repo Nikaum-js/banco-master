@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import { collectCenter } from '@/game/balancing/balancing'
 import { acquire } from '@/game/cards/ofensivas'
 import { dismissNotice } from '@/game/turn/turnMachine'

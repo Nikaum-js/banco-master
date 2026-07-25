@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { logEvent } from '@/game/log'
-import { createSeedState, defaultPorts } from '@/game/store'
+import { createSeedState, defaultPorts } from '@/game/setup'
 import { rollDice } from '@/game/turn/turnMachine'
 import { resolveSquare } from '@/game/turn/resolution'
 import { buyProperty } from '@/game/economy/purchase'

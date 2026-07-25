@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { liquidationValue, isBankrupt, payDebt, declareBankruptcy, checkEndGame } from '@/game/falencia/falencia'
-import { createSeedState, defaultPorts } from '@/game/store'
+import { createSeedState, defaultPorts } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { playHandCard } from '@/game/cards/draw'
 import { transferKeepFee } from '@/game/economy/mortgage'
-import { createSeedState, defaultPorts } from '@/game/store'
+import { createSeedState, defaultPorts } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import { BOARD } from '@/lib/boardData'
 

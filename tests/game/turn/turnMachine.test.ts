@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import {
   rollDice,
   resolvePending,
@@ -120,7 +120,7 @@ describe('Speed Die no movimento (US3)', () => {
   it('FR-026/Q1: triple encerra a rolagem sem re-roll', () => {
     let g = createSeedState(['p1', 'p2'])
     g.players[0].completouPrimeiraVolta = true
-    const ctx = ctxWith([3, 3, 3]) // triple
+    const ctx = ctxWith([3, 3, 3], { speedDie: true }) // triple (D-003: suspenso em produção, teste preservado)
     g = rollDice(g, ctx)
     expect(g.turn.awaitingChoice).toBe('triple')
     g = chooseTripleDest(g, 20, ctx)
@@ -132,7 +132,7 @@ describe('Speed Die no movimento (US3)', () => {
   it('FR-025/Q3: Ônibus move um dado e não quebra a dupla', () => {
     let g = createSeedState(['p1', 'p2'])
     g.players[0].completouPrimeiraVolta = true
-    const ctx = ctxWith([4, 4, 6]) // brancos 4,4 (dupla) + ônibus
+    const ctx = ctxWith([4, 4, 6], { speedDie: true }) // brancos 4,4 (dupla) + ônibus
     g = rollDice(g, ctx)
     expect(g.turn.awaitingChoice).toBe('onibus')
     g = chooseBusMove(g, 'die0', ctx)
@@ -143,7 +143,7 @@ describe('Speed Die no movimento (US3)', () => {
   it('FR-024: Mr. Banco Master avança até a próxima casa comprável', () => {
     let g = createSeedState(['p1', 'p2'])
     g.players[0].completouPrimeiraVolta = true
-    const ctx = ctxWith([1, 1, 4]) // brancos 1,1 + mr-banco → move 2 (pos2 tesouro), depois comprável
+    const ctx = ctxWith([1, 1, 4], { speedDie: true }) // brancos 1,1 + mr-banco → move 2 (pos2 tesouro), depois comprável
     g = rollDice(g, ctx)
     expect(g.players[0].pos).toBe(3) // pos2 não-comprável → pos3 (property)
     expect(g.turn.state).toBe('casa-a-resolver')

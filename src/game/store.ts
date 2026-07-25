@@ -1,11 +1,7 @@
 // Store raiz da partida (Zustand). Único ponto com efeito — regra vive nos reducers
 // puros de turn/ e economy/. Estado serializável (princípio VII).
 import { create } from 'zustand'
-import { BOARD } from '@/lib/boardData'
-import { THEME } from './theme'
-import type { GameState, Player } from './turn/types'
-import type { Title } from './economy/types'
-import type { TurnPorts } from './turn/resolution'
+import type { GameState } from './turn/types'
 import {
   rollDice,
   resolvePending,
@@ -14,108 +10,26 @@ import {
   chooseBusMove,
   chooseTripleDest,
   useBusTicket,
-  startTurn,
   activePlayer,
   dismissNotice,
   type TurnCtx,
 } from './turn/turnMachine'
-import { economyResolve } from './economy/resolveRentable'
+import { buildGameCtx, buildInitialGame } from './setup'
 import { buyProperty, declineProperty } from './economy/purchase'
 import { placeBid, passBid, closeAuction } from './economy/auction'
 import { maybeOpenLandAuction, placeLandBid, closeLandAuction, closeExpiredLandLots } from './economy/landAuction'
 import { buildHouse, sellBuilding, buildHangar, sellHangar } from './economy/construction'
 import { mortgageProperty, unmortgageProperty } from './economy/mortgage'
-import { goBonus, payToCenter, collectCenter } from './balancing/balancing'
 import { payDebt, declareBankruptcy } from './falencia/falencia'
-import { grantLoan, proposeLoan, respondLoan, payOffLoan, chargeLoanInterest } from './emprestimos/emprestimos'
-import { rollTaxMan } from './balancing/taxMan'
+import { grantLoan, proposeLoan, respondLoan, payOffLoan } from './emprestimos/emprestimos'
 import { executeTrade, proposeTrade, acceptTrade, rejectTrade, type Trade } from './economy/trade'
-import { tickImmunities } from './economy/imunidade'
-import { tickTempEffects } from './economy/tempEffects'
-import { deckCardIds } from './cards/catalog'
-import { weightedShuffle } from './cards/decks'
-import { cardRevealResolve, confirmCardReveal, playHandCard, resolveCardDiscard, resolveCardShortcut } from './cards/draw'
-import { taxBunkerResolve, respondReaction } from './cards/reacao'
-
-// Portas default — placeholders até as specs irmãs (Balanceamento, Falência).
-export const defaultPorts: TurnPorts = {
-  onPassGo: (state, id) => goBonus(state, id), // GO Progressivo (007)
-  onPayToCenter: (state, amount) => payToCenter(state, amount), // pote (007)
-  onCollectCenter: (state, id) => collectCenter(state, id), // Free Parking (007)
-  isEliminated: () => false,
-  onInsolvency: () => {},
-  afterPassGo: (state, id) => {
-    chargeLoanInterest(state, id) // juros de empréstimo no GO (010)
-    tickImmunities(state, id) // expira imunidades por volta do beneficiário (014)
-    tickTempEffects(state, id) // expira efeitos temporários por volta do originador (015)
-  },
-}
-
-function seedTitles(): Record<number, Title> {
-  const titles: Record<number, Title> = {}
-  for (const sq of BOARD) {
-    if (sq.kind === 'property' || sq.kind === 'airport' || sq.kind === 'utility') {
-      titles[sq.pos] = { ownerId: null, mortgaged: false, houses: 0, hotel: false, hotel2: false, skyscraper: false, hangar: false }
-    }
-  }
-  return titles
-}
-
-export function createSeedState(playerIds: string[]): GameState {
-  const players: Player[] = playerIds.map((id) => ({
-    id,
-    pos: 0,
-    completouPrimeiraVolta: false,
-    jail: { inJail: false, attempts: 0 },
-    eliminated: false,
-    cash: THEME.INITIAL_CASH, // SRS §3.1 (tema)
-    hand: [],
-    busTickets: 0,
-    nextPurchaseDiscount: 0,
-  }))
-  const state: GameState = {
-    players,
-    turnOrder: players.map((_, i) => i),
-    activeSeat: 0,
-    turn: {
-      state: 'aguardando-rolagem',
-      seat: 0,
-      consecutiveDoubles: 0,
-      lastRoll: null,
-      pendingResolve: false,
-      mayRollAgain: false,
-      awaitingChoice: null,
-    },
-    paused: false,
-    phase: 'playing',
-    titles: seedTitles(),
-    resolution: null,
-    decks: { acaso: deckCardIds('acaso'), tesouro: deckCardIds('tesouro') }, // 006 — embaralhar no store
-    centerPot: THEME.PARKING_SEED, // 007 — Free Parking (tema)
-    loans: [], // 010 — empréstimos ativos
-    pendingLoan: null, // 010 — solicitação de empréstimo aguardando resposta do credor (§15.2)
-    taxManPos: 0, // 012 — Fiscal começa em GO
-    immunities: [], // 014 — imunidades de aluguel ativas
-    tempEffects: [], // 015 — efeitos temporários de carta
-    log: [], // 021 — event log do jogo
-    pendingTrade: null, // 024 — proposta de troca pendente
-    landAuction: null, // 031 — pregão de escassez de terrenos (evento autônomo)
-    landAuctionArmed: true, // 031 — trava de episódio: armado de início
-    tradeHistory: [], // 027 — histórico de trocas aceitas
-    notice: null, // 030 — notificação informativa (Free Parking / Aquisição Hostil)
-  }
-  startTurn(state)
-  return state
-}
+import { confirmCardReveal, playHandCard, resolveCardDiscard, resolveCardShortcut } from './cards/draw'
+import { respondReaction } from './cards/reacao'
 
 // Jogo novo pronto pra jogar: seed + baralhos embaralhados (FR-001). Usado no
-// boot e no "Novo jogo" (reset ao fim da partida).
-export function freshGame(ids: string[]): GameState {
-  const g = createSeedState(ids)
-  const rng = (): number => Math.random()
-  g.decks.acaso = weightedShuffle(g.decks.acaso, rng)
-  g.decks.tesouro = weightedShuffle(g.decks.tesouro, rng)
-  return g
+// boot e no "Novo jogo" (reset ao fim da partida). A composição vive em `setup.ts`.
+function freshGame(ids: string[]): GameState {
+  return buildInitialGame(ids, () => Math.random())
 }
 
 interface GameStore {
@@ -227,15 +141,8 @@ export const useGameStore = create<GameStore>((set, get) => {
 
   return {
     game: freshGame(initialPlayerIds()),
-    ctx: {
-      rng: () => Math.random(),
-      // Fiscal injetado só aqui (jogo real); defaultPorts segue sem ele p/ não afetar os testes (012)
-      ports: { ...defaultPorts, taxMan: (s, rng) => rollTaxMan(s, rng) },
-      resolve: (r) => economyResolve(r) ?? cardRevealResolve(r) ?? taxBunkerResolve(r), // 025: revela antes de processar; +Bunker (017)
-      now: () => Date.now(),
-      speedDie: THEME.SPEED_DIE_ENABLED, // Speed Die suspenso pós-playtest (D-003) — sempre 2 dados
-
-    },
+    // Composição do jogo: uma fábrica só, compartilhada com host, cliente e simulação.
+    ctx: buildGameCtx(() => Math.random(), () => Date.now()),
     rollDice: () => set((st) => ({ game: rollDice(st.game, st.ctx) })),
     resolvePending: () => set((st) => ({ game: resolvePending(st.game, st.ctx) })),
     finalizeTurn: () => {

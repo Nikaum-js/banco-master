@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { applyEffect, netWorth } from '@/game/cards/effects'
 import { playHandCard } from '@/game/cards/draw'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import type { TurnPorts } from '@/game/turn/resolution'
 
 function ports(extra?: Partial<TurnPorts>): TurnPorts {

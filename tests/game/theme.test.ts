@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { BOARD } from '@/lib/boardData'
 import { THEME } from '@/game/theme'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 
 describe('Tema Cidades do Mundo (018)', () => {
   it('SC-003: nenhum nome duplicado entre casas nomeadas (cidade/aeroporto/utilidade/imposto)', () => {

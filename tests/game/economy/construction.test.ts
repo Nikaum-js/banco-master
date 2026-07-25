@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildHouse, sellBuilding, buildCost } from '@/game/economy/construction'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import type { PropertySquare } from '@/lib/boardData'
 import { BOARD } from '@/lib/boardData'

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { handCardsView, cardTargets } from '@/game/ui/cards/handView'
-import { createSeedState } from '@/game/store'
+import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import { RARITY_COLOR } from '@/game/ui/cards/cardMeta'
 

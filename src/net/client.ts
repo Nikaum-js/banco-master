@@ -7,7 +7,7 @@
 import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
 import { applyCommand, type PlayerAction } from '@/game/commands'
-import { buildGameCtx } from '@/game/ctx'
+import { buildGameCtx } from '@/game/setup'
 import { replayCtx } from './recorder'
 import { seatByToken, type JoinError, type Room } from './room'
 import type { AcceptedCommand, JoinRequest, Transport, Unsubscribe } from './transport'

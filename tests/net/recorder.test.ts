@@ -3,7 +3,7 @@
 // sem tocar `Math.random`/`Date.now`.
 import { describe, expect, it } from 'vitest'
 import { applyCommand } from '@/game/commands'
-import { buildGameCtx, buildInitialGame } from '@/game/ctx'
+import { buildGameCtx, buildInitialGame } from '@/game/setup'
 import { recordingCtx, replayCtx } from '@/net/recorder'
 import { mulberry32 } from '../sim/engine/rng'
 
