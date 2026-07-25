@@ -4,13 +4,13 @@
 // comando aceita", que é a única coisa que impede affordance e regra de divergirem.
 import { describe, expect, it } from 'vitest'
 import { createSeedState } from '@/game/setup'
-import { canUseBusTicket, useBusTicket } from '@/game/turn/turnMachine'
+import { canUseBusTicket, spendBusTicket } from '@/game/turn/turnMachine'
 import { purchasePrice, buyProperty } from '@/game/economy/purchase'
 import { interestOf, eligibleLenders, loanShortfall, proposeLoan } from '@/game/emprestimos/emprestimos'
 import { ctxWith } from '../turn/_helpers'
 import type { GameState } from '@/game/turn/types'
 
-describe('canUseBusTicket ⟺ useBusTicket', () => {
+describe('canUseBusTicket ⟺ spendBusTicket', () => {
   const comTicket = (over: Partial<GameState> = {}): GameState => {
     const g = createSeedState(['p1', 'p2'])
     g.players[0].busTickets = 1
@@ -21,34 +21,34 @@ describe('canUseBusTicket ⟺ useBusTicket', () => {
   it('diz sim quando o comando aceita', () => {
     const g = comTicket()
     expect(canUseBusTicket(g)).toBe(true)
-    expect(useBusTicket(g, 5, ctxWith([1]))).not.toBe(g)
+    expect(spendBusTicket(g, 5, ctxWith([1]))).not.toBe(g)
   })
 
   it('PAUSADO diz não — era exatamente a guarda que a cópia do ModalLayer não tinha', () => {
     const g = comTicket({ paused: true })
     expect(canUseBusTicket(g)).toBe(false)
-    expect(useBusTicket(g, 5, ctxWith([1]))).toBe(g)
+    expect(spendBusTicket(g, 5, ctxWith([1]))).toBe(g)
   })
 
   it('sem ticket, diz não (FR-002)', () => {
     const g = comTicket()
     g.players[0].busTickets = 0
     expect(canUseBusTicket(g)).toBe(false)
-    expect(useBusTicket(g, 5, ctxWith([1]))).toBe(g)
+    expect(spendBusTicket(g, 5, ctxWith([1]))).toBe(g)
   })
 
   it('sobre um canto, diz não (FR-003a)', () => {
     const g = comTicket()
     g.players[0].pos = 0 // GO é canto
     expect(canUseBusTicket(g)).toBe(false)
-    expect(useBusTicket(g, 5, ctxWith([1]))).toBe(g)
+    expect(spendBusTicket(g, 5, ctxWith([1]))).toBe(g)
   })
 
   it('fora das duas janelas de turno, diz não (034/D-027)', () => {
     const g = comTicket()
     g.turn.state = 'casa-a-resolver'
     expect(canUseBusTicket(g)).toBe(false)
-    expect(useBusTicket(g, 5, ctxWith([1]))).toBe(g)
+    expect(spendBusTicket(g, 5, ctxWith([1]))).toBe(g)
   })
 
   it('partida encerrada diz não', () => {

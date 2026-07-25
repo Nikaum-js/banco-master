@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createSeedState } from '@/game/setup'
-import { useBusTicket, busSideOf, resolvePending, finalizeTurn } from '@/game/turn/turnMachine'
+import { spendBusTicket, busSideOf, resolvePending, finalizeTurn } from '@/game/turn/turnMachine'
 import { economyResolve } from '@/game/economy/resolveRentable'
 import { BOARD } from '@/lib/boardData'
 import type { GameState } from '@/game/turn/types'
@@ -36,7 +36,7 @@ describe('Bus Ticket — busSideOf (009)', () => {
 describe('Bus Ticket — uso (US1)', () => {
   it('SC-001: move para casa do mesmo lado, gasta 1 ticket e abre resolução', () => {
     const g = withTicketAt(5, 2)
-    const out = useBusTicket(g, 9, ctxWith([3, 2]))
+    const out = spendBusTicket(g, 9, ctxWith([3, 2]))
     expect(out.players[0].pos).toBe(9)
     expect(out.players[0].busTickets).toBe(1)
     expect(out.turn.state).toBe('casa-a-resolver')
@@ -48,27 +48,27 @@ describe('Bus Ticket — uso (US1)', () => {
     const ctx = ctxWith([3, 2])
     // sem ticket
     const semTicket = withTicketAt(5, 0)
-    expect(useBusTicket(semTicket, 9, ctx)).toBe(semTicket)
+    expect(spendBusTicket(semTicket, 9, ctx)).toBe(semTicket)
     // sobre canto (pos 0)
     const noCanto = withTicketAt(0, 1)
-    expect(useBusTicket(noCanto, 9, ctx)).toBe(noCanto)
+    expect(spendBusTicket(noCanto, 9, ctx)).toBe(noCanto)
     // destino em outro lado
     const g = withTicketAt(5, 1)
-    expect(useBusTicket(g, 20, ctx)).toBe(g)
+    expect(spendBusTicket(g, 20, ctx)).toBe(g)
     // destino = posição atual
-    expect(useBusTicket(g, 5, ctx)).toBe(g)
+    expect(spendBusTicket(g, 5, ctx)).toBe(g)
     // fora do estado aguardando-rolagem
-    const movido = useBusTicket(g, 9, ctx) // agora casa-a-resolver
-    expect(useBusTicket(movido, 7, ctx)).toBe(movido)
+    const movido = spendBusTicket(g, 9, ctx) // agora casa-a-resolver
+    expect(spendBusTicket(movido, 7, ctx)).toBe(movido)
     // pausado
     const pausado = { ...withTicketAt(5, 1), paused: true }
-    expect(useBusTicket(pausado, 9, ctx)).toBe(pausado)
+    expect(spendBusTicket(pausado, 9, ctx)).toBe(pausado)
   })
 
   it('SC-005: após resolver o destino, finaliza sem nova rolagem', () => {
     const ctx = ctxWith([3, 2]) // sem resolve → property resolve como done:true (stub)
     let g = withTicketAt(5, 1)
-    g = useBusTicket(g, 9, ctx)
+    g = spendBusTicket(g, 9, ctx)
     g = resolvePending(g, ctx)
     expect(g.turn.state).toBe('aguardando-finalizacao')
     expect(g.activeSeat).toBe(0)
@@ -79,7 +79,7 @@ describe('Bus Ticket — uso (US1)', () => {
 
   it('SC-003: destino propriedade livre abre compra (reuso 003)', () => {
     let g = withTicketAt(PROP_SIDE0 === 1 ? 2 : 1, 1) // garante origem ≠ destino, mesmo lado
-    g = useBusTicket(g, PROP_SIDE0, ctxEcon())
+    g = spendBusTicket(g, PROP_SIDE0, ctxEcon())
     g = resolvePending(g, ctxEcon())
     expect(g.resolution?.kind).toBe('purchase')
     if (g.resolution?.kind === 'purchase') expect(g.resolution.pos).toBe(PROP_SIDE0)
@@ -88,7 +88,7 @@ describe('Bus Ticket — uso (US1)', () => {
   it('pulo direto NÃO cruza o GO, mesmo indo "pra trás" no lado (sem bônus)', () => {
     const ports = mockPorts()
     const g = withTicketAt(45, 1)
-    const out = useBusTicket(g, 38, { rng: () => 0, ports })
+    const out = spendBusTicket(g, 38, { rng: () => 0, ports })
     expect(out.players[0].pos).toBe(38) // vai direto, sem dar a volta
     expect(ports.onPassGo).not.toHaveBeenCalled() // não percorre o tabuleiro → não cruza o GO
   })
@@ -96,14 +96,14 @@ describe('Bus Ticket — uso (US1)', () => {
   it('movimento dentro do lado nunca credita o GO', () => {
     const ports = mockPorts()
     const g = withTicketAt(38, 1)
-    useBusTicket(g, 45, { rng: () => 0, ports })
+    spendBusTicket(g, 45, { rng: () => 0, ports })
     expect(ports.onPassGo).not.toHaveBeenCalled()
   })
 
   it('034: usável também no FIM do turno (aguardando-finalizacao), não só antes de rolar', () => {
     const g = withTicketAt(5, 1)
     g.turn.state = 'aguardando-finalizacao' // já rolou/resolveu — pode usar o ticket agora
-    const out = useBusTicket(g, 9, ctxWith([3, 2]))
+    const out = spendBusTicket(g, 9, ctxWith([3, 2]))
     expect(out).not.toBe(g) // NÃO é no-op
     expect(out.players[0].pos).toBe(9)
     expect(out.players[0].busTickets).toBe(0) // gastou o ticket

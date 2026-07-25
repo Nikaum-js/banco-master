@@ -16,7 +16,7 @@ import {
   jailDecision,
   chooseBusMove,
   chooseTripleDest,
-  useBusTicket as applyBusTicket, // alias: evita falso-positivo do react-hooks (prefixo "use")
+  spendBusTicket,
   activePlayer,
   dismissNotice,
 } from './turn/turnMachine'
@@ -137,7 +137,7 @@ export function applyCommand(state: GameState, action: GameAction, ctx: TurnCtx)
     case 'jail-decision': next = jailDecision(state, action.decision, ctx); break
     case 'choose-bus-move': next = chooseBusMove(state, action.opt, ctx); break
     case 'choose-triple-dest': next = chooseTripleDest(state, action.dest, ctx); break
-    case 'use-bus-ticket': next = applyBusTicket(state, action.dest, ctx); break
+    case 'use-bus-ticket': next = spendBusTicket(state, action.dest, ctx); break
     case 'resolve-pending': next = resolvePending(state, ctx); break
     // — compra —
     case 'buy-property': next = buyProperty(state); break
