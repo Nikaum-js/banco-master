@@ -165,10 +165,13 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
     return () => clearInterval(id)
   }, [])
 
+  // Desligar o store ao desmontar é seguro; DERRUBAR A CONEXÃO não é. Em dev, o StrictMode
+  // monta → desmonta → remonta: o cleanup fechava o canal recém-aberto e o guard `booted`
+  // impedia a reconexão, deixando o convidado presoLike em "Conectando…" para sempre. A
+  // conexão vive enquanto a aba viver — quem a encerra é o `leave()` explícito (sair da sala)
+  // ou o próprio browser ao fechar/recarregar. Achado pelo E2E de dois browsers (T036).
   useEffect(() => () => {
     disconnectStore.current?.()
-    hostRef.current?.stop()
-    sessionRef.current?.client.leave()
   }, [])
 
   // Criar sala (host): gera o id, abre a autoridade e troca a URL para o link da sala — assim

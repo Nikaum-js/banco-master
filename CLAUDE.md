@@ -37,7 +37,7 @@ O design técnico detalhado de cada feature vive no `plan.md` da própria spec (
 | **Guia Spec Kit** | [`docs/SPEC-KIT.md`](./docs/SPEC-KIT.md) | Manual de uso do Spec Kit (para o Nikolas) | Quando o usuário tiver dúvida de como usar |
 | **Specs** | [`specs/<feature>/`](./specs/) | Uma pasta por feature, criada pelo Spec Kit | Ao trabalhar numa feature |
 
-> **Nota arquitetural:** intencionalmente NÃO existe um `CORE.md`, `ROADMAP.md` ou `ARCHITECTURE.md` global. Entidades, invariantes técnicas, constantes, status e design técnico vivem nas próprias specs/feature. O SRS é a única referência transversal.
+> **Nota arquitetural:** intencionalmente NÃO existe um `CORE.md`, `ROADMAP.md` ou `ARCHITECTURE.md` global. Entidades, invariantes técnicas, constantes, status e design técnico vivem nas próprias specs/feature. As únicas referências transversais são o **SRS** (a regra), o **`CONTEXT.md`** (os nomes) e os **ADRs** (as decisões) — três papéis distintos, sem sobreposição: se um termo e uma regra discordarem, o SRS ganha e o `CONTEXT.md` é corrigido.
 
 ## 5. Comandos do GitHub Spec Kit (fluxo SDD)
 

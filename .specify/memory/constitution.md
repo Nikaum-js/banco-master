@@ -37,9 +37,10 @@ Desconexão mid-game **pausa** a partida; nenhum jogador perde propriedades por 
 
 Este projeto adota Spec-Driven Development com a seguinte hierarquia de documentos:
 
-- **`docs/SRS.md`** — fonte de verdade absoluta das regras de negócio (única referência transversal)
+- **`docs/SRS.md`** — fonte de verdade absoluta das regras de negócio
+- **`CONTEXT.md`** — glossário do domínio: define os **nomes**, nunca a regra. Divergência entre ele e o SRS se resolve em favor do SRS
 - **`.specify/memory/constitution.md`** (este arquivo) — princípios não-negociáveis
-- **`../../docs/adr/README.md`** — log append-only de decisões aceitas e rejeitadas (ADR)
+- **`docs/adr/`** — decisões aceitas e rejeitadas, um arquivo por decisão, id `D-0xx` estável e append-only ([índice](../../docs/adr/README.md))
 - **`specs/<feature>/`** — uma pasta por feature contendo `spec.md`, `plan.md`, `tasks.md` (geradas pelo Spec Kit)
 
 Especificamente **não existe** um doc global de entidades/constantes/máquina de estados — isso pertence à própria spec onde a entidade nasce (seção `Key Entities` + `Functional Requirements`). Quando uma spec depende de conceito definido em outra, declarar `Depende de: spec-X` no header.
@@ -63,8 +64,8 @@ Em fase de discovery, paramos no passo 1 ou 2. Não avançar para `/speckit-plan
 
 As seguintes ideias foram descartadas durante discovery. Não propor novamente sem motivo concreto e novo:
 
-- **Sistema de draft** de propriedades no início da partida ([D-R01](../../docs/adr/README.md))
-- **Co-propriedade** (dois donos para uma mesma propriedade) ([D-R02](../../docs/adr/README.md))
+- **Sistema de draft** de propriedades no início da partida ([D-R01](../../docs/adr/D-R01-sistema-de-draft-rejeitada.md))
+- **Co-propriedade** (dois donos para uma mesma propriedade) ([D-R02](../../docs/adr/D-R02-co-propriedade-rejeitada.md))
 - **IA / bots** — fora do escopo da v1.0
 - **Modo hotseat** — fora do escopo da v1.0
 - **Timer obrigatório de turno** — quebra negociações complexas

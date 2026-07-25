@@ -9,7 +9,7 @@ import { rentLadder } from '@/game/economy/rent'
 import { useGameStore } from '@/game/store'
 import { identityOf } from '@/net/identity'
 import { seatByToken, type Room } from '@/net/room'
-import { useRoomStore } from '@/net/roomStore'
+import { useLocalView, useRoomStore } from '@/net/roomStore'
 import { cityLevel } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
 import { deedView } from '@/game/ui/deed/deedView'
@@ -1719,7 +1719,11 @@ export function DiceArena() {
     }
   }, [])
 
-  const canRoll = phase === 'playing' && !paused && turnState === 'aguardando-rolagem' && !rolling
+  // Só o dono da decisão vê os controles (spec 038, FR-002). Sem sala, `mayAct` é sempre
+  // true e a arena segue idêntica ao cliente único (FR-029/SC-007).
+  const local = useLocalView()
+  const iAct = local.mayAct('roll')
+  const canRoll = iAct && phase === 'playing' && !paused && turnState === 'aguardando-rolagem' && !rolling
   const d1 = lastRoll ? lastRoll.white[0] : 1
   const d2 = lastRoll ? lastRoll.white[1] : 1
   const sd: SpeedFace = lastRoll && lastRoll.speed != null ? toUiSpeedFace(lastRoll.speed) : 'one'
@@ -1765,6 +1769,7 @@ export function DiceArena() {
   const isDoubleReroll = turnState === 'aguardando-rolagem' && consecutiveDoubles > 0
   const status =
     phase === 'ended' ? 'Fim de jogo'
+    : !iAct ? `Vez de ${active.name}`
     : isDoubleReroll ? 'Dupla! Role de novo'
     : turnState === 'aguardando-rolagem' ? 'Sua vez'
     : turnState === 'prisao-decisao' ? `Preso · tentativa ${jailAttempts + 1}/3`
@@ -1788,9 +1793,10 @@ export function DiceArena() {
         <Dice value={d2} rollKey={rollKey} />
         {THEME.SPEED_DIE_ENABLED && active.speedDieReady && <SpeedDie face={sd} rollKey={rollKey} />}
       </div>
-      {/* Zona de ação contextual — embaixo dos dados (sem modal de compra) */}
+      {/* Zona de ação contextual — embaixo dos dados (sem modal de compra). Só para quem
+          decide: na tela dos demais fica o estado, sem botão morto (FR-003). */}
       <div className="flex flex-col items-center gap-2 w-full max-w-[280px]">
-        {buySq ? (
+        {!iAct ? null : buySq ? (
             <div className="flex gap-2 w-full">
               <TurnActionBtn
                 variant="primary"

@@ -89,8 +89,8 @@ Legenda: `[P]` = paralelizável (arquivo independente) · `[USn]` = user story d
 
 - [x] **T034** Gates: `bunx vitest run` (motor intacto — SC-007), `bunx tsc --noEmit -p tsconfig.app.json`, `bunx eslint src/net src/game/ui src/App.tsx`, `bun run build`.
 - [x] **T035** `scripts/net-smoke.ts`: passo de perspectiva contra a infra real (convidado não consegue acionar decisão do host; host sim).
-- [ ] **T036** Roteiro manual do [quickstart.md](./quickstart.md) em dois browsers (US1–US5) — é o que a suíte headless não cobre.
-- [ ] **T037** Atualizar `HANDOVER.md` + `docs/PRD.md` (E15: 038 entregue) e a memória do projeto.
+- [x] **T036** **Automatizado** em `e2e/multiplayer.spec.ts` (dois `BrowserContext` isolados — abas do mesmo browser compartilhariam o token de sessão): home → criar sala → entrar por link → iniciar → ordem sorteada → identidade sem `pN` → só o ator tem "Rolar dados" → jogada propaga. ~7s, 3/3 estável. O passo de **pausa por queda** ficou em teste OPT-IN (`E2E_PRESENCE=1`): depende do heartbeat do Realtime (imediato em fechamento limpo, ~60-75s em queda abrupta) e não pode ser gate.
+- [x] **T037** `HANDOVER.md` + `docs/PRD.md` + memória atualizados.
 
 ---
 

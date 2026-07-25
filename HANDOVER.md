@@ -52,7 +52,13 @@ Aprendizados da infra que valem para o 038: (1) `broadcast.self: true` é obriga
 
 **Cuidado que quase passou:** o gate de roteamento teria quebrado o smoke E2E do 036, que boota com `?players=N` e cairia na home nova. `?players` e `?local` entram no boot local (commit `🐛 fix(net): keep the players boot hook out of the online gate`).
 
-**Pendente:** T036 — roteiro manual em dois browsers (`quickstart.md`). É o que a suíte headless não cobre: ver com os próprios olhos a mão privada, a barra de espera, o banner de pausa e o kick.
+**E2E de dois browsers** (`e2e/multiplayer.spec.ts`, T036): dois `BrowserContext` isolados contra a infra real — home → criar sala → entrar por link → iniciar → ordem sorteada → nenhum `pN` na tela → só o ator tem "Rolar dados" → jogada propaga. ~7s, estável (3/3). Rode com `bunx playwright test e2e/multiplayer.spec.ts`.
+
+**Dois bugs que SÓ o E2E pegou** (a suíte headless passava verde nos dois casos):
+1. **Convidado travava em "Conectando…"** — em dev, o StrictMode monta → desmonta → remonta, e o cleanup do gate fechava o canal recém-aberto enquanto o guard `booted` impedia a reconexão. O host não sofria porque cria a sala no clique, não no efeito de montagem. Corrigido: o cleanup só desliga o store, não derruba a conexão.
+2. **O botão "Rolar dados" não tinha gate de perspectiva** — ele vive no `DiceArena` (`boards/shared.tsx`), junto com compra inline, prisão e finalizar turno; todo o resto da UI estava gated, a arena central não. Os dois clientes mostravam o botão. Corrigido com `mayAct` + status "Vez de \<nome\>" para quem observa.
+
+**Limitação medida (não é bug, é o transporte):** a pausa por **queda abrupta** (crash/aba morta) só aparece quando o heartbeat do Phoenix expira — **~60-75s**. Fechamento limpo da aba emite o `leave` na hora. O **SC-004 da spec pede "até 2 segundos"**, então ele vale para saída limpa, não para queda abrupta. Cumprir os 2s exigiria heartbeat próprio na camada de aplicação (candidato ao 039+). Por isso o passo de pausa no E2E é opt-in (`E2E_PRESENCE=1`) — a mecânica já está provada headless em `pause.test.ts`.
 
 ## Sessão de 2026-07-23/24 — auditoria ponta a ponta + 3 fixes de engine + SRS v1.3
 
@@ -105,7 +111,7 @@ Duas decisões viraram ADR antes de entrar na spec (regra nunca nasce numa spec 
 
 - **bun, nunca npm/npx.** Lógica pura em `src/game/**` (reducers `(state, ctx) → state` com `structuredClone`; único efeito é o store Zustand). `GameState` 100% serializável (princípio VII). RNG e relógio injetáveis via `ctx`.
 - Resolução de casa = slice única em `GameState.resolution` — **cuidado: slot único** (ver fix `e5bb33e`); eventos autônomos (`pendingTrade`, `landAuction`, `notice`) vivem FORA dela.
-- Workflow por feature: Spec Kit (`/speckit-specify → plan → tasks → implement`); próxima spec é a **037**. Antes de specificar: constitution + SRS (agora v1.3) + DECISIONS.
+- Workflow por feature: Spec Kit (`/speckit-specify → plan → tasks → implement`); próxima spec é a **037**. Antes de specificar: constitution + SRS (agora v1.3) + `CONTEXT.md` + `docs/adr/`.
 - Commits: inglês, emoji+conventional, backdate via hook, NUNCA co-author. Push em `main` direto.
 
 ## Ponteiros

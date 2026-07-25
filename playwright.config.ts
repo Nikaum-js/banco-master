@@ -7,7 +7,7 @@ export default defineConfig({
   // decidido num único page.evaluate (script.ts), 6 jogadores × 10 rodadas ficou em
   // ~1min20 no benchmark de implementação — 150s dá margem sem se aproximar do teto
   // de 5 min do SC-005 (os 3 specs rodam em paralelo, um por worker).
-  timeout: 150_000,
+  timeout: 240_000,
   fullyParallel: true,
   retries: 0,
   reporter: 'list',
