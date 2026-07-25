@@ -1,0 +1,97 @@
+name: CI
+
+# Gate do que já está fechado (motor M1 + UI M2 + rede M3). O ativo mais valioso do repo é o
+# motor puro e determinístico; este workflow é o que impede uma regressão nele de passar batido.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # Um push novo no mesmo ref cancela o anterior — a fila não acumula runs obsoletos.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    name: lint · types · testes · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      # `--frozen-lockfile`: o CI instala exatamente o que está no `bun.lock`. Se o lockfile
+      # estiver dessincronizado do package.json, é aqui que se descobre — não em produção.
+      - name: Instalar dependências
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun run lint
+
+      # `tsc -b` do build já checa tipos, mas rodar antes dá o erro de tipo sem esperar o bundle.
+      - name: Tipos
+        run: bunx tsc --noEmit -p tsconfig.app.json
+
+      - name: Testes
+        run: bunx vitest run
+
+      - name: Build
+        run: bun run build
+
+  simulation:
+    name: simulação seedada
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Instalar dependências
+        run: bun install --frozen-lockfile
+
+      # Lote CURTO e seedado (036): 30 partidas em 2/3/6 jogadores sob o teto padrão de rodadas.
+      # Roda em job separado do gate principal porque é o passo mais lento e não bloqueia
+      # o feedback de lint/tipos. Seed fixa: uma falha aqui é reproduzível localmente com
+      # `bun run sim:batch -- --games=10 --counts=2,3,6`. `--report=` desliga a escrita em
+      # `reports/` (ignorado pelo git, sem valor num runner efêmero).
+      - name: Lote de simulação
+        run: bun run sim:batch -- --games=10 --counts=2,3,6 --report=
+
+  e2e:
+    name: smoke E2E (2/3/6 jogadores)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Instalar dependências
+        run: bun install --frozen-lockfile
+
+      # `--with-deps` traz as bibliotecas de sistema que o chromium precisa no runner limpo.
+      - name: Instalar chromium do Playwright
+        run: bunx playwright install --with-deps chromium
+
+      # Só o smoke single-player (036): sobe o app pelo `webServer` do config e dirige a
+      # partida pela UI real. O `multiplayer.spec.ts` (038) fica FORA — depende de credencial
+      # Supabase e de rede, então não serve como gate de PR de fora do repo.
+      - name: Smoke E2E
+        run: bunx playwright test e2e/2players.spec.ts e2e/3players.spec.ts e2e/6players.spec.ts
+
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
