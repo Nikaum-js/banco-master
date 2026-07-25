@@ -21,6 +21,7 @@ import { PlayerName } from '@/net/ui/PlayerName'
 import { WaitingBar } from '@/net/ui/WaitingBar'
 import { isBankrupt } from '@/game/falencia/falencia'
 import { eligibleLenders, interestOf, loanShortfall } from '@/game/emprestimos/emprestimos'
+import { activeHudView } from '@/game/ui/panels/activeHudView'
 import { Confetti } from '@/game/ui/NoticeLayer'
 import { Button, Chip } from '@/game/ui/primitives'
 import type { LoanRequest } from '@/game/economy/types'
@@ -145,12 +146,14 @@ export function GameHUD() {
   const active = game.players[game.turnOrder[game.activeSeat]]
   const view = useLocalView() // spec 038: controles só do assento local (FR-002)
   const online = useRoomStore((s) => s.room !== null)
-  const res = game.resolution
+  // PRECEDÊNCIA das cinco telas do HUD vem de `activeHudView` (testada), não da ordem dos
+  // `return` abaixo. Adicionar uma sexta tela é editar a tabela, não adivinhar a posição.
+  const hud = activeHudView(game)
 
   const activeColor = colorOfPlayer(game.players, active.id) ?? 'var(--color-brass)'
 
   // ---- Fim de jogo — celebração do vencedor (confete + coroa, estilo loteria) ----
-  if (game.phase === 'ended') {
+  if (hud?.kind === 'winner') {
     const winner = game.players.find((p) => !p.eliminated)
     return (
       <AnimatePresence>
@@ -208,27 +211,27 @@ export function GameHUD() {
   }
 
   // ---- Solicitação de empréstimo aguardando o credor (§15.2/§15.3) ----
-  if (game.pendingLoan) {
+  if (hud?.kind === 'loan-request') {
     if (!view.mayAct('respond-loan')) {
       return (
         <AnimatePresence>
-          <WaitingBar playerId={game.pendingLoan.creditorId} what="resposta ao empréstimo" />
+          <WaitingBar playerId={hud.req.creditorId} what="resposta ao empréstimo" />
         </AnimatePresence>
       )
     }
     return (
       <AnimatePresence>
-        <LoanRequestCard req={game.pendingLoan} players={game.players} onRespond={respondLoan} />
+        <LoanRequestCard req={hud.req} players={game.players} onRespond={respondLoan} />
       </AnimatePresence>
     )
   }
 
   // ---- Reação: Diplomacia ----
-  if (res?.kind === 'reaction-diplomacia') {
+  if (hud?.kind === 'reaction-diplomacia') {
     if (!view.mayAct('respond-reaction')) {
       return (
         <AnimatePresence>
-          <WaitingBar playerId={res.reactorId} what="reação à carta ofensiva" />
+          <WaitingBar playerId={hud.reactorId} what="reação à carta ofensiva" />
         </AnimatePresence>
       )
     }
@@ -240,7 +243,7 @@ export function GameHUD() {
             <div className="p-5">
               <div className="flex items-center justify-center gap-2">
                 <span className="label text-cream-muted">Efeito</span>
-                <Chip tone="gold" className="text-sm normal-case">{res.effect}</Chip>
+                <Chip tone="gold" className="text-sm normal-case">{hud.effect}</Chip>
               </div>
               <div className="flex gap-2 mt-5">
                 <PrimaryBtn onClick={() => respondReaction(true)}>Usar Diplomacia</PrimaryBtn>
@@ -254,11 +257,11 @@ export function GameHUD() {
   }
 
   // ---- Reação: Bunker Fiscal ----
-  if (res?.kind === 'reaction-bunker') {
+  if (hud?.kind === 'reaction-bunker') {
     if (!view.mayAct('respond-reaction')) {
       return (
         <AnimatePresence>
-          <WaitingBar playerId={res.reactorId} what="reação ao imposto" />
+          <WaitingBar playerId={hud.reactorId} what="reação ao imposto" />
         </AnimatePresence>
       )
     }
@@ -268,7 +271,7 @@ export function GameHUD() {
           <CardFrame accent="var(--color-brass)" glow="color-mix(in srgb, var(--color-brass) 45%, transparent)" width={400}>
             <ReactionHead icon={<Landmark size={20} className="text-gold-glow" />} title="Reação" subtitle="Imposto sobre você" />
             <div className="p-5">
-              <p className="text-center currency leading-none" style={{ fontSize: 40, ...GOLD_TEXT }}>{fmt(res.amount)}</p>
+              <p className="text-center currency leading-none" style={{ fontSize: 40, ...GOLD_TEXT }}>{fmt(hud.amount)}</p>
               <div className="flex gap-2 mt-5">
                 <PrimaryBtn onClick={() => respondReaction(true)}>Usar Bunker</PrimaryBtn>
                 <GhostBtn onClick={() => respondReaction(false)}>Recusar</GhostBtn>
@@ -281,7 +284,7 @@ export function GameHUD() {
   }
 
   // ---- Dívida pendente — "conta vencida" ----
-  if (res?.kind === 'debt') {
+  if (hud?.kind === 'debt') {
     if (!view.mayAct('pay-debt')) {
       return (
         <AnimatePresence>
@@ -290,15 +293,15 @@ export function GameHUD() {
       )
     }
     const shortfall = loanShortfall(game)
-    const canPay = active.cash >= res.amount
+    const canPay = active.cash >= hud.amount
     // Elegibilidade vem do MOTOR (§15.2): antes esta lista refazia à mão 5 das 8 guardas
     // de `proposeLoan`, e deixava `paused` de fora.
     const lenders = eligibleLenders(game).map((id) => game.players.find((p) => p.id === id)!)
-    const creditorColor = colorOfPlayer(game.players, res.creditorId)
+    const creditorColor = colorOfPlayer(game.players, hud.creditorId)
     // % do valor já coberto pelo caixa atual — alimenta a barra credor↔devedor.
-    const covered = Math.max(0, Math.min(1, active.cash / res.amount))
+    const covered = Math.max(0, Math.min(1, active.cash / hud.amount))
     // §9.1: só pode declarar falência se nem liquidando tudo cobre a dívida.
-    const canFalir = isBankrupt(game, active.id, res.amount)
+    const canFalir = isBankrupt(game, active.id, hud.amount)
 
     return (
       <AnimatePresence>
@@ -348,14 +351,14 @@ export function GameHUD() {
 
                 {/* Credor — PlayerFace na cor do assento, ou banco */}
                 <div className="flex flex-col items-center gap-1 w-20">
-                  {res.creditorId && creditorColor ? (
+                  {hud.creditorId && creditorColor ? (
                     <PlayerFace color={creditorColor} size={40} />
                   ) : (
                     <div className="w-10 h-10 rounded-full flex items-center justify-center bg-coffee-900 border border-brass/50">
                       <Landmark size={20} className="text-gold" />
                     </div>
                   )}
-                  <span className="label text-cream truncate max-w-full">{res.creditorId ?? 'Banco'}</span>
+                  <span className="label text-cream truncate max-w-full">{hud.creditorId ?? 'Banco'}</span>
                 </div>
               </div>
 
@@ -370,7 +373,7 @@ export function GameHUD() {
                 ] }}
                 transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
               >
-                {fmt(res.amount)}
+                {fmt(hud.amount)}
               </motion.p>
 
               {/* Barra de cobertura: quanto o caixa já cobre da dívida */}
@@ -401,7 +404,7 @@ export function GameHUD() {
               </div>
 
               <div className="flex flex-col gap-2 mt-4">
-                <PrimaryBtn onClick={payDebt} disabled={!canPay}>Pagar {fmt(res.amount)}</PrimaryBtn>
+                <PrimaryBtn onClick={payDebt} disabled={!canPay}>Pagar {fmt(hud.amount)}</PrimaryBtn>
                 {lenders.map((p) => {
                   const lc = colorOfPlayer(game.players, p.id)
                   return (

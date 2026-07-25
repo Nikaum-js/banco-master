@@ -14,7 +14,6 @@ import { deedView } from '@/game/ui/deed/deedView'
 import { useTradeUI } from '@/game/ui/trade/TradeLayer'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
 // `sideOf` do motor (lado do tabuleiro p/ regra do Bus Ticket) ≠ `sideOf` local (layout).
-import { canUseBusTicket } from '@/game/turn/turnMachine'
 import { markLayout, popoverPlacement, sideOf, type Side } from './topology'
 import { SquareIcon, CardGlyph, LotteryGlyph } from './glyphs/squares'
 import {
@@ -23,13 +22,12 @@ import {
 } from './glyphs/badges'
 import { ChartPattern, GuillochePattern } from './glyphs/patterns'
 import { playersView, PLAYER_COLORS, type Player } from '@/game/ui/panels/playersView'
-import { purchasePrice } from '@/game/economy/purchase'
+import { diceArenaView } from '@/game/ui/panels/diceArenaView'
 import { useBoardTheme } from '@/game/ui/theme/boardTheme'
 import { HandPanel } from '@/game/ui/cards/HandPanel'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
 import { ShopIcon, GavelIcon, DiceIcon, CoinIcon, HouseIcon } from '@/game/ui/icons'
 import { Button, SectionHeader, Chip, EmptyState } from '@/game/ui/primitives'
-import { tradesView } from '@/game/ui/trade/tradesView'
 import type { TempEffect, Trade } from '@/game/economy/types'
 
 // Reexportados porque a UI já os importa daqui; as FONTES são `./topology` e `./glyphs/*`.
@@ -983,24 +981,15 @@ function BusTicketStub({ count, onClick }: { count: number; onClick: () => void 
 export function DiceArena() {
   const players = useLivePlayers()
   const active = players.find((p) => p.active) ?? players[0]
-  const turnState = useGameStore((s) => s.game.turn.state)
-  const lastRoll = useGameStore((s) => s.game.turn.lastRoll)
-  const paused = useGameStore((s) => s.game.paused)
-  const phase = useGameStore((s) => s.game.phase)
-  const game = useGameStore((s) => s.game) // predicados do motor precisam do estado inteiro
+  // UMA assinatura de estado e UMA derivação (`diceArenaView`) no lugar de 17 seletores.
+  const game = useGameStore((s) => s.game)
   const dispatch = useGameStore((s) => s.dispatch)
+  const activeBusTickets = game.players[game.turnOrder[game.activeSeat]]?.busTickets ?? 0
   const rollDiceCmd = (): void => dispatch({ kind: 'roll' })
-  // Ações inline embaixo dos dados (sem modal de compra; finalizar manual)
-  const resolution = useGameStore((s) => s.game.resolution)
-  const consecutiveDoubles = useGameStore((s) => s.game.turn.consecutiveDoubles)
   const buyProperty = (): void => dispatch({ kind: 'buy-property' })
   const declineProperty = (): void => dispatch({ kind: 'decline-property' })
   const finalizeTurn = (): void => dispatch({ kind: 'finalize' })
   const jailDecision = (decision: 'pay' | 'card' | 'try'): void => dispatch({ kind: 'jail-decision', decision })
-  const activeCash = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.cash ?? 0)
-  const activeDiscount = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.nextPurchaseDiscount ?? 0) // Investidor Anjo (006)
-  const jailAttempts = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.jail.attempts ?? 0)
-  const activeBusTickets = useGameStore((s) => s.game.players[s.game.turnOrder[s.game.activeSeat]]?.busTickets ?? 0)
 
   const [rollKey, setRollKey] = useState(0)
   const [rolling, setRolling] = useState(false)
@@ -1015,23 +1004,10 @@ export function DiceArena() {
   // Só o dono da decisão vê os controles (spec 038, FR-002). Sem sala, `mayAct` é sempre
   // true e a arena segue idêntica ao cliente único (FR-029/SC-007).
   const local = useLocalView()
-  const iAct = local.mayAct('roll')
-  const canRoll = iAct && phase === 'playing' && !paused && turnState === 'aguardando-rolagem' && !rolling
-  const d1 = lastRoll ? lastRoll.white[0] : 1
-  const d2 = lastRoll ? lastRoll.white[1] : 1
-  const sd: SpeedFace = lastRoll && lastRoll.speed != null ? toUiSpeedFace(lastRoll.speed) : 'one'
-
-  // Compra inline (sem modal): se a resolução pendente é 'purchase', mostra Comprar/Recusar.
-  const purchasePos = resolution?.kind === 'purchase' ? resolution.pos : null
-  const buySq = purchasePos != null ? BOARD[purchasePos] : null
-  const buyPrice = buySq && 'price' in buySq ? buySq.price : 0
-  const finalBuyPrice = purchasePos != null ? (purchasePrice(game, purchasePos) ?? 0) : 0 // motor, não espelho
-  const hasBuyDiscount = activeDiscount > 0 && finalBuyPrice < buyPrice
-  const canFinalize = phase === 'playing' && !paused && turnState === 'aguardando-finalizacao'
-  // Bus Ticket guardado (§10.7): facultativo ANTES de rolar ou no FIM do turno (D-027).
-  // Mora aqui — junto da decisão de turno — e não numa pílula flutuante sobre o board.
-  // Elegibilidade vem do MOTOR (`canUseBusTicket`); `rolling` é o único gate de UI.
-  const canBus = !rolling && canUseBusTicket(game)
+  const v = diceArenaView(game, local, { rolling, activeName: active?.name })
+  const { canRoll, canFinalize, canBus, canJailDecide, purchase } = v
+  const [d1, d2] = v.dice
+  const sd: SpeedFace = v.speed != null ? toUiSpeedFace(v.speed) : 'one'
 
   function handleRoll() {
     if (!canRoll) return
@@ -1058,15 +1034,7 @@ export function DiceArena() {
     }, ROLL_DURATION_MS)
   }
 
-  const isDoubleReroll = turnState === 'aguardando-rolagem' && consecutiveDoubles > 0
-  const status =
-    phase === 'ended' ? 'Fim de jogo'
-    : !iAct ? `Vez de ${active.name}`
-    : isDoubleReroll ? 'Dupla! Role de novo'
-    : turnState === 'aguardando-rolagem' ? 'Sua vez'
-    : turnState === 'prisao-decisao' ? `Preso · tentativa ${jailAttempts + 1}/3`
-    : turnState === 'casa-a-resolver' ? 'Resolva a jogada'
-    : 'Finalize o turno'
+  const { isDoubleReroll, status } = v
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -1088,23 +1056,23 @@ export function DiceArena() {
       {/* Zona de ação contextual — embaixo dos dados (sem modal de compra). Só para quem
           decide: na tela dos demais fica o estado, sem botão morto (FR-003). */}
       <div className="flex flex-col items-center gap-2 w-full max-w-[280px]">
-        {!iAct ? null : buySq ? (
+        {purchase ? (
             <div className="flex gap-2 w-full">
               <TurnActionBtn
                 variant="primary"
                 className="flex-[3]"
-                disabled={activeCash < finalBuyPrice}
+                disabled={!purchase.affordable}
                 icon={<ShopIcon size={17} className="shrink-0" />}
                 onClick={() => buyProperty()}
               >
-                {hasBuyDiscount ? (
+                {purchase.discounted ? (
                   <span className="inline-flex items-baseline gap-1.5">
                     Comprar
-                    <span className="line-through opacity-55">R$ {buyPrice}</span>
-                    <span className="font-bold">R$ {finalBuyPrice}</span>
+                    <span className="line-through opacity-55">R$ {purchase.listPrice}</span>
+                    <span className="font-bold">R$ {purchase.price}</span>
                   </span>
                 ) : (
-                  <>Comprar R$ {buyPrice}</>
+                  <>Comprar R$ {purchase.price}</>
                 )}
               </TurnActionBtn>
               <TurnActionBtn
@@ -1117,7 +1085,7 @@ export function DiceArena() {
                 Leilão
               </TurnActionBtn>
             </div>
-        ) : turnState === 'prisao-decisao' ? (
+        ) : canJailDecide ? (
           <div className="flex gap-2 w-full">
             <TurnActionBtn
               variant="primary"
@@ -1131,11 +1099,11 @@ export function DiceArena() {
             <TurnActionBtn
               variant="secondary"
               className="flex-1"
-              disabled={activeCash < 50}
+              disabled={!v.canPayJailFine}
               onClick={() => jailDecision('pay')}
               title="Pagar a fiança e sair"
             >
-              Pagar $50
+              Pagar R$ {v.jailFine}
             </TurnActionBtn>
           </div>
         ) : canFinalize ? (
@@ -1275,7 +1243,9 @@ function PotCard({ pot }: { pot: number }) {
 export function ActionsPanel() {
   const game = useGameStore((s) => s.game)
   const pot = game.centerPot
-  const trades = tradesView(game) // 027 — painel ao vivo
+  // 027 — painel ao vivo. `tradesView` era um módulo de duas expressões com um chamador:
+  // a interface (tipo + módulo + arquivo de teste) era maior que a implementation.
+  const trades = { pending: game.pendingTrade, history: [...game.tradeHistory].reverse() }
   const colorById = Object.fromEntries(
     game.players.map((p, i) => [p.id, PLAYER_COLORS[i % PLAYER_COLORS.length]]),
   ) as Record<string, string>
