@@ -9,6 +9,7 @@ import { purchasePrice, buyProperty } from '@/game/economy/purchase'
 import { interestOf, eligibleLenders, loanShortfall, proposeLoan } from '@/game/emprestimos/emprestimos'
 import { ctxWith } from '../turn/_helpers'
 import type { GameState } from '@/game/turn/types'
+import { pausedBy } from '../../net/harness'
 
 describe('canUseBusTicket ⟺ spendBusTicket', () => {
   const comTicket = (over: Partial<GameState> = {}): GameState => {
@@ -25,7 +26,7 @@ describe('canUseBusTicket ⟺ spendBusTicket', () => {
   })
 
   it('PAUSADO diz não — era exatamente a guarda que a cópia do ModalLayer não tinha', () => {
-    const g = comTicket({ paused: true })
+    const g = comTicket({ paused: pausedBy('disconnect') })
     expect(canUseBusTicket(g)).toBe(false)
     expect(spendBusTicket(g, 5, ctxWith([1]))).toBe(g)
   })
@@ -124,7 +125,7 @@ describe('eligibleLenders ⟺ proposeLoan', () => {
   })
 
   it('PAUSADO, ninguém é elegível — guarda que o HUD não tinha', () => {
-    expect(eligibleLenders(emDivida({ paused: true }))).toEqual([])
+    expect(eligibleLenders(emDivida({ paused: pausedBy('disconnect') }))).toEqual([])
   })
 
   it('fora da janela de dívida, ninguém é elegível', () => {

@@ -145,7 +145,7 @@ export function createClient(transport: Transport): Client {
     room: () => room,
     playerId: () => playerId,
     joinError: () => joinError,
-    paused: () => game?.paused ?? false,
+    paused: () => Boolean(game?.paused),
     seq: () => seq,
 
     subscribe(cb): Unsubscribe {

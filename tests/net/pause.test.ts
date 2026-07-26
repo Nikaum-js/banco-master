@@ -19,7 +19,7 @@ describe('pausa global por desconexão (SC-004)', () => {
     p3.client.leave()
 
     // Pausa global (FR-016): host e demais clientes veem `paused`.
-    expect(net.host.game().paused).toBe(true)
+    expect(net.host.game().paused).not.toBeNull()
     expect(net.players[0].client.paused()).toBe(true)
     expect(net.players[1].client.paused()).toBe(true)
     // Status do desconectado visível a todos (FR-016, §12.3).
@@ -43,12 +43,12 @@ describe('pausa global por desconexão (SC-004)', () => {
     const p2Before = JSON.stringify(net.host.game().players.find((p) => p.id === 'p2'))
 
     guest.client.leave()
-    expect(net.host.game().paused).toBe(true)
+    expect(net.host.game().paused).not.toBeNull()
 
     const fresh = createClient(localTransport(net.hub, guest.token))
     await fresh.join()
 
-    expect(net.host.game().paused).toBe(false) // retomou sozinho, sem ação manual
+    expect(net.host.game().paused).toBeNull() // retomou sozinho, sem ação manual
     const p2After = JSON.stringify(net.host.game().players.find((p) => p.id === 'p2'))
     expect(p2After).toBe(p2Before) // propriedades/cartas/saldo intactos (FR-020)
   })
@@ -59,11 +59,11 @@ describe('pausa global por desconexão (SC-004)', () => {
     for (let i = 0; i < 15; i++) stepOnce(net, pick)
 
     net.players[0].client.leave() // host cai
-    expect(net.host.game().paused).toBe(true)
+    expect(net.host.game().paused).not.toBeNull()
 
     // Segue pausado enquanto o host não volta — o convidado não pode destravar.
     for (let i = 0; i < 10; i++) stepOnce(net, pick)
-    expect(net.host.game().paused).toBe(true)
+    expect(net.host.game().paused).not.toBeNull()
   })
 })
 
@@ -75,12 +75,12 @@ describe('congelamento de prazo em voo (FR-017)', () => {
       ...base,
       resolution: { kind: 'auction', auction: { pos: 5, currentBid: 100, highBidder: 'p1', activeBidders: ['p1', 'p2'], deadline: 5_000 } },
     }
-    const paused = applyCommand(g, { kind: 'pause' }, ctx)
-    expect(paused.paused).toBe(true)
+    const paused = applyCommand(g, { kind: 'pause', cause: 'disconnect', at: 1_000 }, ctx)
+    expect(paused.paused).toEqual({ causes: ['disconnect'], since: 1_000 })
     expect(paused.resolution).toEqual(g.resolution) // pausar não mexe no deadline
 
-    const resumed = applyCommand(paused, { kind: 'resume', pausedMs: 2_000 }, ctx)
-    expect(resumed.paused).toBe(false)
+    const resumed = applyCommand(paused, { kind: 'resume', cause: 'disconnect', at: 3_000 }, ctx)
+    expect(resumed.paused).toBeNull()
     expect(resumed.resolution?.kind === 'auction' && resumed.resolution.auction.deadline).toBe(7_000) // janela restante preservada
   })
 })
@@ -95,7 +95,7 @@ describe('desconexão de jogador eliminado (D-029)', () => {
 
     net.players[2].transport.disconnect()
 
-    expect(net.host.game().paused).toBe(false)
+    expect(net.host.game().paused).toBeNull()
     expect(net.host.room().seats[2].connected).toBe(false) // a sala registra a ausência…
     // …mas ela não trava ninguém: o jogo segue aceitando comando de quem está vivo.
     const seqAntes = net.host.seq()
@@ -110,7 +110,7 @@ describe('desconexão de jogador eliminado (D-029)', () => {
 
     net.players[1].transport.disconnect() // p2 está vivo
 
-    expect(net.host.game().paused).toBe(true)
+    expect(net.host.game().paused).not.toBeNull()
   })
 
   it('a volta do eliminado não é condição para retomar', async () => {
@@ -119,9 +119,9 @@ describe('desconexão de jogador eliminado (D-029)', () => {
     net.players[2].transport.disconnect() // eliminado sai (não pausa)
     net.players[1].transport.disconnect() // vivo cai → pausa
 
-    expect(net.host.game().paused).toBe(true)
+    expect(net.host.game().paused).not.toBeNull()
     await net.players[1].client.join() // só o vivo volta
 
-    expect(net.host.game().paused).toBe(false) // retomou sem esperar o eliminado
+    expect(net.host.game().paused).toBeNull() // retomou sem esperar o eliminado
   })
 })

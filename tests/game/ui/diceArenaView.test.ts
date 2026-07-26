@@ -9,6 +9,7 @@ import { createSeedState } from '@/game/setup'
 import { localView } from '@/net/localView'
 import type { GameState } from '@/game/turn/types'
 import type { LocalView } from '@/net/localView'
+import { pausedBy } from '../../net/harness'
 
 // Sem sala: cliente único, todos os assentos são deste dispositivo (FR-029).
 const soloView = (g: GameState): LocalView => localView(g, null, null)
@@ -40,7 +41,7 @@ describe('diceArenaView — rolar', () => {
   })
 
   it('PAUSADO ninguém rola (FR-011)', () => {
-    const g = { ...base(), paused: true }
+    const g = { ...base(), paused: pausedBy('disconnect') }
     expect(diceArenaView(g, soloView(g)).canRoll).toBe(false)
   })
 

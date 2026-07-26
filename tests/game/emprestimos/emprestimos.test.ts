@@ -7,6 +7,7 @@ import { createSeedState, defaultPorts } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import type { Loan } from '@/game/economy/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
+import { pausedBy } from '../../net/harness'
 
 const ctx: TurnCtx = { rng: () => 0, ports: defaultPorts }
 
@@ -66,7 +67,7 @@ describe('Empréstimos — conceder/validar (US1)', () => {
     const semDebt = createSeedState(['p1', 'p2'])
     expect(grantLoan(semDebt, 'p1', 'p2', 400, 20)).toBe(semDebt)
     // pausado
-    const pausado = { ...withDebt('p2', 500), paused: true }
+    const pausado = { ...withDebt('p2', 500), paused: pausedBy('disconnect') }
     pausado.players[0].cash = 100
     expect(grantLoan(pausado, 'p1', 'p2', 400, 20)).toBe(pausado)
   })

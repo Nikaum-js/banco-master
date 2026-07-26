@@ -10,6 +10,7 @@ import {
 import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
 import { ctxWith, mockPorts, rngFromDice } from './_helpers'
+import { pausedBy } from '../../net/harness'
 
 function fullTurn(g: GameState, ctx: TurnCtx): GameState {
   g = rollDice(g, ctx)
@@ -69,7 +70,7 @@ describe('Ciclo de turno (US1)', () => {
 
   it('SC-007: pausa torna comandos no-op e preserva o jogador ativo', () => {
     const g = createSeedState(['p1', 'p2'])
-    g.paused = true
+    g.paused = pausedBy('disconnect')
     const r = rollDice(g, ctxWith([3, 2]))
     expect(r).toBe(g)
     expect(r.activeSeat).toBe(0)

@@ -49,7 +49,6 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   let room = initialRoom
   let game: GameState | null = null
   let seq = -1 // -1 = ainda não iniciado; o snapshot inicial fica em seq 0
-  let pausedAt: number | null = null
   let opened = false
   const subs: Unsubscribe[] = []
   const listeners = new Set<() => void>()
@@ -131,13 +130,11 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   function syncPause(): void {
     if (!game) return
     const shouldPause = anyDisconnected(room, eliminatedIds())
-    if (shouldPause && !game.paused) {
-      pausedAt = now()
-      accept({ kind: 'pause' })
-    } else if (!shouldPause && game.paused) {
-      const pausedMs = pausedAt === null ? 0 : Math.max(0, now() - pausedAt)
-      pausedAt = null
-      accept({ kind: 'resume', pausedMs }) // desloca deadlines em voo (FR-017)
+    const hasDisconnectCause = Boolean(game.paused?.causes.includes('disconnect'))
+    if (shouldPause && !hasDisconnectCause) {
+      accept({ kind: 'pause', cause: 'disconnect', at: now() })
+    } else if (!shouldPause && hasDisconnectCause) {
+      accept({ kind: 'resume', cause: 'disconnect', at: now() }) // desloca deadlines em voo (FR-017)
     }
   }
 

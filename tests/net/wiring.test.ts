@@ -31,7 +31,7 @@ describe('connectMultiplayer (T017)', () => {
     cleanup = connectMultiplayer(net.players[0].client)
 
     const seqBefore = net.host.seq()
-    useGameStore.getState().dispatch({ kind: 'pause' })
+    useGameStore.getState().dispatch({ kind: 'pause', cause: 'disconnect', at: 0 })
     useGameStore.getState().dispatch({ kind: 'close-auction' })
     useGameStore.getState().dispatch({ kind: 'close-land-lots', now: 0 })
     expect(net.host.seq()).toBe(seqBefore) // nada trafegou

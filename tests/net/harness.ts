@@ -8,10 +8,17 @@ import { createRoom, joinRoom, startGame, SEAT_COLORS, type Room } from '@/net/r
 import type { Transport } from '@/net/transport'
 import type { PlayerAction } from '@/game/commands'
 import type { RNG } from '@/game/turn/dice'
+import type { PauseCause, PauseState } from '@/game/turn/types'
 import { enumerateActions } from '../sim/engine/actions'
 import { pickAction } from '../sim/engine/agent'
 import type { SimSession } from '../sim/engine/driver'
 import { mulberry32 } from '../sim/engine/rng'
+
+// Monta um `PauseState` para suítes que montam estado diretamente (041, T004) — um lugar
+// só para o literal `paused: true` de antes, para não envelhecer em doze velocidades.
+export function pausedBy(cause: PauseCause, at = 0): PauseState {
+  return { causes: [cause], since: at }
+}
 
 export interface NetPlayer {
   token: string

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { applyCommand } from '@/game/commands'
 import { buildGameCtx, buildInitialGame } from '@/game/setup'
 import { mulberry32 } from '../sim/engine/rng'
+import { pausedBy } from './harness'
 
 describe('applyCommand (FR-008/009)', () => {
   it('aplica um comando válido e avança o estado', () => {
@@ -35,7 +36,7 @@ describe('gate de pausa no despacho (FR-011/FR-017)', () => {
     const g = buildInitialGame(['p1', 'p2'], mulberry32(1))
     // Dá posse de uma propriedade a p1 para que a hipoteca fosse legal se não houvesse pausa.
     g.titles[1].ownerId = 'p1'
-    return { ...g, paused: true }
+    return { ...g, paused: pausedBy('disconnect') }
   }
 
   it.each([
@@ -52,13 +53,13 @@ describe('gate de pausa no despacho (FR-011/FR-017)', () => {
 
   it('mas a RETOMADA atravessa a pausa — senão o jogo trava para sempre', () => {
     const g = paused()
-    const next = applyCommand(g, { kind: 'resume', pausedMs: 0 }, ctx())
+    const next = applyCommand(g, { kind: 'resume', cause: 'disconnect', at: 0 }, ctx())
     expect(next).not.toBe(g)
-    expect(next.paused).toBe(false)
+    expect(next.paused).toBe(null)
   })
 
   it('sem pausa, a mesma hipoteca passa (o gate é a pausa, não a ação)', () => {
-    const g = { ...paused(), paused: false }
+    const g = { ...paused(), paused: null }
     expect(applyCommand(g, { kind: 'mortgage', pos: 1 }, ctx())).not.toBe(g)
   })
 })

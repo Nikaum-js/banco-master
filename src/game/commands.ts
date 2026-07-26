@@ -7,7 +7,7 @@
 // responsabilidade da casca (store single-player / host multiplayer), não deste dispatcher:
 // aqui só entra o gatilho de escassez de terrenos (`maybeOpenLandAuction`), que é mudança
 // de ESTADO, nos mesmos pontos em que o store o chama.
-import type { GameState } from './turn/types'
+import type { GameState, PauseCause } from './turn/types'
 import type { TurnCtx } from './turn/turnMachine'
 import {
   rollDice,
@@ -85,8 +85,8 @@ export type SystemAction =
   | { kind: 'close-auction' } // deadline do leilão de propriedade venceu
   | { kind: 'close-land-lots'; now: number } // lotes do pregão (031) expiraram
   | { kind: 'close-land-auction' } // fecho manual do pregão (026/031)
-  | { kind: 'pause' } // desconexão detectada → pausa global (FR-016)
-  | { kind: 'resume'; pausedMs: number } // reconexão → retoma; desloca deadlines em voo (FR-017)
+  | { kind: 'pause'; cause: PauseCause; at: number } // desconexão ou falha de persistência → pausa (041, FR-016)
+  | { kind: 'resume'; cause: PauseCause; at: number } // causa resolvida → retoma se for a última (FR-017)
 
 export type GameAction = PlayerAction | SystemAction
 
@@ -186,10 +186,10 @@ export function applyCommand(state: GameState, action: GameAction, ctx: TurnCtx)
     case 'dismiss-notice': next = dismissNotice(state); break
     // — sistema: pausa/retomada —
     case 'pause':
-      next = state.paused ? state : { ...state, paused: true }
+      next = applyPause(state, action.cause, action.at)
       break
     case 'resume':
-      next = applyResume(state, action.pausedMs)
+      next = applyResume(state, action.cause, action.at)
       break
   }
   // Gatilho de escassez de terrenos — só quando o comando mudou o estado (paridade com store).
@@ -199,11 +199,26 @@ export function applyCommand(state: GameState, action: GameAction, ctx: TurnCtx)
   return next
 }
 
-// Retoma a partida e DESLOCA os deadlines em voo (leilão de propriedade + lotes do pregão)
-// pelo tempo pausado, preservando a janela de decisão restante (FR-017). Puro.
-function applyResume(state: GameState, pausedMs: number): GameState {
-  if (!state.paused) return state
-  const s: GameState = { ...state, paused: false }
+// Ativa uma causa de pausa (041, D-034/data-model §2). `since` só é escrito na transição
+// null → PauseState; uma segunda causa entrando NÃO o reinicia (FR-018/FR-019).
+function applyPause(state: GameState, cause: PauseCause, at: number): GameState {
+  if (!state.paused) return { ...state, paused: { causes: [cause], since: at } }
+  if (state.paused.causes.includes(cause)) return state
+  return { ...state, paused: { causes: [...state.paused.causes, cause], since: state.paused.since } }
+}
+
+// Resolve uma causa de pausa. Só quando é a ÚLTIMA causa ativa a partida retoma de fato,
+// e só então os deadlines em voo (leilão de propriedade + lotes do pregão) são deslocados
+// pelo intervalo INTEIRO da pausa (`at - since`), preservando a janela de decisão restante
+// (FR-017). O número vem do próprio estado, não da memória do host — é o que conserta o
+// defeito 4 (D2/D3 do plan).
+function applyResume(state: GameState, cause: PauseCause, at: number): GameState {
+  if (!state.paused || !state.paused.causes.includes(cause)) return state
+  const remaining = state.paused.causes.filter((c) => c !== cause)
+  if (remaining.length > 0) return { ...state, paused: { causes: remaining, since: state.paused.since } }
+
+  const pausedMs = at - state.paused.since
+  const s: GameState = { ...state, paused: null }
   if (pausedMs > 0) {
     if (s.resolution?.kind === 'auction') {
       s.resolution = { ...s.resolution, auction: { ...s.resolution.auction, deadline: s.resolution.auction.deadline + pausedMs } }

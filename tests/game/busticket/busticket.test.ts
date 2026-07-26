@@ -6,6 +6,7 @@ import { BOARD } from '@/lib/boardData'
 import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
 import { ctxWith, mockPorts } from '../turn/_helpers'
+import { pausedBy } from '../../net/harness'
 
 // Primeira propriedade livre do lado 0 (1..11) — destino "comprável" determinístico.
 const PROP_SIDE0 = BOARD.find((sq) => sq.kind === 'property' && busSideOf(sq.pos) === 0)!.pos
@@ -61,7 +62,7 @@ describe('Bus Ticket — uso (US1)', () => {
     const movido = spendBusTicket(g, 9, ctx) // agora casa-a-resolver
     expect(spendBusTicket(movido, 7, ctx)).toBe(movido)
     // pausado
-    const pausado = { ...withTicketAt(5, 1), paused: true }
+    const pausado = { ...withTicketAt(5, 1), paused: pausedBy('disconnect') }
     expect(spendBusTicket(pausado, 9, ctx)).toBe(pausado)
   })
 

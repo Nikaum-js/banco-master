@@ -10,6 +10,7 @@ import { actorOfKind, isSenderActed, type PlayerAction } from '@/game/commands'
 import { createRoom, joinRoom, SEAT_COLORS, type Room } from '@/net/room'
 import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
+import { pausedBy } from './harness'
 
 // Todos os kinds de PlayerAction — a lista é conferida contra o union no teste de exaustividade.
 const ALL_KINDS: PlayerAction['kind'][] = [
@@ -125,7 +126,7 @@ describe('perspectiva local com sala', () => {
 
   it('durante a pausa ninguém decide (FR-014)', () => {
     const game = jogo()
-    game.paused = true
+    game.paused = pausedBy('disconnect')
     const view = localView(game, sala(), 'tok-1') // jogador da vez
 
     expect(view.mayAct('roll')).toBe(false)

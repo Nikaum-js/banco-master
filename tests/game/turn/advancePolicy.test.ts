@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { advancePolicy } from '@/game/turn/advancePolicy'
 import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
+import { pausedBy } from '../../net/harness'
 
 // Estado no ponto exato em que o jogo deve resolver a casa sozinho.
 function aResolver(over: Partial<GameState> = {}): GameState {
@@ -64,7 +65,7 @@ describe('advancePolicy — finalizar', () => {
 
 describe('advancePolicy — portões globais', () => {
   it('pausado, o jogo não anda sozinho (VII, FR-011)', () => {
-    expect(advancePolicy(aResolver({ paused: true }))).toBeNull()
+    expect(advancePolicy(aResolver({ paused: pausedBy('disconnect') }))).toBeNull()
   })
 
   it('partida encerrada não anda sozinha', () => {
