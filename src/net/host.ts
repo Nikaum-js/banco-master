@@ -123,6 +123,19 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     return new Set(game.players.filter((p) => p.eliminated).map((p) => p.id))
   }
 
+  // Reconciliação de presença (041, FR-021/022): sobrescreve `seats[].connected` pelo
+  // conjunto REALMENTE observado no canal — nunca confia no `connected` do snapshot, que é
+  // um retrato de antes da queda/reload. Chamar ANTES de `syncPause` é o que evita emitir
+  // `pause` seguido de `resume` a cada reassunção (a pausa só é decidida depois de a mesa
+  // já refletir quem está de verdade presente).
+  function reconcilePresence(tokens: ReadonlySet<string>): void {
+    for (const seat of room.seats) {
+      const connected = tokens.has(seat.token)
+      if (seat.connected === connected) continue
+      room = connected ? markConnected(room, seat.token) : markDisconnected(room, seat.token)
+    }
+  }
+
   // Pausa global se algum assento que AINDA JOGA está desconectado; retoma quando todos eles
   // voltam (FR-016/018). Host desconectado entra no mesmo caminho: pausa indefinida, sem
   // transferência (FR-019) — a autoridade É o host, então enquanto ele está fora ninguém
@@ -146,6 +159,19 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     subs.push(transport.onSubmit(handleSubmit))
     subs.push(transport.onPresence(handlePresence))
     subs.push(transport.onJoinRequest(handleJoinRequest))
+    // FR-021/022: reconcilia presença ANTES de decidir pausa — nunca o contrário.
+    subs.push(transport.onPresenceSync((tokens) => {
+      reconcilePresence(tokens)
+      publishAndPersistRoom()
+      syncPause()
+    }))
+    // D8/D10: o adapter cru nunca emite isto — é o decorator `durableWrites` quem sobrescreve
+    // `onWriteExhausted`/`onWriteRecovered` (único ponto de montagem em `supabaseClient.ts`).
+    // A circularidade é o desenho, não um bug: a PRÓPRIA gravação desta pausa também falha
+    // enquanto a persistência estiver fora — o comando vive na memória do host e nas telas de
+    // todos por difusão, e a fila drena o estado (que já contém a pausa) quando o banco volta.
+    subs.push(transport.onWriteExhausted(() => accept({ kind: 'pause', cause: 'persistence', at: now() })))
+    subs.push(transport.onWriteRecovered(() => accept({ kind: 'resume', cause: 'persistence', at: now() })))
     await transport.saveRoom(room)
   }
 

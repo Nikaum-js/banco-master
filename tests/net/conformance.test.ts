@@ -9,20 +9,24 @@
 // `takeover: false` fixo, então `if (change.takeover) return` (host.ts:110) nunca
 // disparava online — um F5 do convidado gerava `join`+`leave` com a mesma chave e o
 // `leave` derrubava o assento, pausando a partida sem motivo.
-import { describe, expect, it } from 'vitest'
-import type { Transport, PresenceChange, AcceptedCommand } from '@/net/transport'
+import { describe, expect, it, vi } from 'vitest'
+import type { Transport, PresenceChange, AcceptedCommand, PersistedSnapshot } from '@/net/transport'
 import { LocalHub, localTransport } from '@/net/localTransport'
 import { supabaseTransport } from '@/net/supabaseTransport'
+import { durableWrites } from '@/net/durableWrites'
 import { fakeSupabase } from './fakeSupabase'
 import type { Room } from '@/net/room'
 
 // Fábrica de N transportes ligados na MESMA sala — a única coisa que difere entre adapters.
 // 041: ganhou `dropChannel`/`restoreChannel` — a queda/restauração de CANAL sem contar como
-// takeover (o cenário do defeito 1), uma por adapter, para §1/§2 do contrato novo.
+// takeover (o cenário do defeito 1) — e `failWrites`/`failRead`, as faltas de persistência
+// que §4 do contrato cobra nos dois adapters.
 type Fixture = {
   make(token: string): Transport
   dropChannel(token: string): void
   restoreChannel(token: string): void
+  failWrites(n: number | 'always'): void
+  failRead(fail: boolean): void
 }
 
 const ADAPTERS: [string, () => Fixture][] = [
@@ -32,6 +36,8 @@ const ADAPTERS: [string, () => Fixture][] = [
       make: (token) => localTransport(hub, token),
       dropChannel: (token) => hub.dropChannel(token),
       restoreChannel: (token) => hub.restoreChannel(token),
+      failWrites: (n) => hub.failWrites(n),
+      failRead: (fail) => hub.failReadSnapshot(fail),
     }
   }],
   ['supabaseTransport', () => {
@@ -40,6 +46,8 @@ const ADAPTERS: [string, () => Fixture][] = [
       make: (token) => supabaseTransport(fake.client(token), 'sala1', token),
       dropChannel: (token) => fake.channelByToken(token)?.simulateDrop(),
       restoreChannel: (token) => fake.channelByToken(token)?.simulateResubscribe(),
+      failWrites: (n) => fake.failWrites(n),
+      failRead: (fail) => fake.failRead(fail),
     }
   }],
 ]
@@ -220,7 +228,8 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const t = f.make('t-host')
     await t.connect()
-    const game = { marcador: 'estado-da-partida', log: [] } as never // log: [] — supabaseTransport normaliza no load (040)
+    // `log: []` e `paused: null` — supabaseTransport normaliza os dois no load (040/041).
+    const game = { marcador: 'estado-da-partida', log: [], paused: null } as never
     await t.saveSnapshot({ seq: 7, game, room: { ...ROOM, status: 'playing' } })
 
     // Uma mudança de ASSENTOS no meio da partida não pode zerar `game`/`seq`.
@@ -325,6 +334,85 @@ describe.each(ADAPTERS)('contrato de Transport (041) — %s', (_name, fixture) =
 
       f.restoreChannel('t-host')
       expect(seenByB.has('t-host')).toBe(true)
+    })
+  })
+
+  describe('§4 gravação — durabilidade, ordem e monotonia', () => {
+    const ROOM_STUB: Room = { id: 'sala1', status: 'playing', seats: [] }
+    const snap = (seq: number): PersistedSnapshot => ({ seq, game: { marcador: seq } as never, room: ROOM_STUB })
+
+    async function tick(n = 15): Promise<void> {
+      for (let i = 0; i < n; i++) await Promise.resolve()
+    }
+
+    it('falha transitória se recupera na repetição', async () => {
+      const f = fixture()
+      const raw = f.make('t-host')
+      await raw.connect()
+      f.failWrites(1) // a 1ª tentativa falha; a repetição deve suceder
+      const onExhausted = vi.fn()
+      const wrapped = durableWrites(raw, { retries: 3, sleep: () => Promise.resolve(), backoff: () => 0, onExhausted, onRecovered: vi.fn() })
+
+      await wrapped.saveSnapshot(snap(1))
+      await tick()
+
+      expect(onExhausted).not.toHaveBeenCalled()
+      expect((await raw.loadSnapshot())?.seq).toBe(1)
+    })
+
+    it('falha persistente chama onExhausted UMA vez', async () => {
+      const f = fixture()
+      const raw = f.make('t-host')
+      await raw.connect()
+      f.failWrites('always')
+      const onExhausted = vi.fn()
+      const wrapped = durableWrites(raw, { retries: 2, sleep: () => Promise.resolve(), backoff: () => 0, onExhausted, onRecovered: vi.fn() })
+
+      await wrapped.saveSnapshot(snap(1))
+      await tick(20)
+
+      expect(onExhausted).toHaveBeenCalledTimes(1)
+    })
+
+    it('a volta chama onRecovered', async () => {
+      const f = fixture()
+      const raw = f.make('t-host')
+      await raw.connect()
+      f.failWrites('always')
+      const onExhausted = vi.fn()
+      const onRecovered = vi.fn()
+      const wrapped = durableWrites(raw, { retries: 0, sleep: () => Promise.resolve(), backoff: () => 0, onExhausted, onRecovered })
+
+      await wrapped.saveSnapshot(snap(1))
+      await tick(15)
+      expect(onExhausted).toHaveBeenCalledTimes(1)
+
+      f.failWrites(0)
+      await wrapped.saveSnapshot(snap(2))
+      await tick(15)
+      expect(onRecovered).toHaveBeenCalledTimes(1)
+    })
+
+    it('escrita com seq menor NÃO regride o que loadSnapshot devolve (guarda monotônica, D9)', async () => {
+      const f = fixture()
+      const raw = f.make('t-host')
+      await raw.connect()
+      await raw.saveSnapshot(snap(5))
+      await raw.saveSnapshot(snap(3)) // regressiva — a guarda de armazenamento descarta
+
+      expect((await raw.loadSnapshot())?.seq).toBe(5)
+    })
+
+    it('SC-004: duas escritas cruzadas deixam gravada a MAIS RECENTE', async () => {
+      const f = fixture()
+      const raw = f.make('t-host')
+      await raw.connect()
+      // "Cruzadas": a de seq maior chega primeiro (rede embaralhou); a mais velha aterrissa
+      // depois e não pode vencer.
+      await raw.saveSnapshot(snap(2))
+      await raw.saveSnapshot(snap(1))
+
+      expect((await raw.loadSnapshot())?.seq).toBe(2)
     })
   })
 })

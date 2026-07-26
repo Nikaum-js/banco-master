@@ -58,14 +58,19 @@ export class LocalHub {
 
   // — usado pelo transporte (abaixo) —
 
-  register(token: string): Connection {
+  // `preAttached` — 041: `onStatus`/`onPresenceSync` precisam ser assináveis ANTES de
+  // `connect()` (o host assina durante `ensureOpen()`, que roda antes do seu PRÓPRIO client
+  // chamar `connect()` — mesma ordem que o supabase-js exige: `.on()` antes de `.subscribe()`).
+  // O facade (abaixo) cria os arrays e os passa aqui, para a conexão nova escrever nos MESMOS
+  // arrays que o chamador já pode ter assinado.
+  register(token: string, preAttached?: { onStatus: StatusCb[]; onPresenceSync: PresenceSyncCb[] }): Connection {
     // Takeover (FR-006a): já existe conexão viva com este token → a última assume, a antiga cai.
     const prior = [...this.conns.values()].find((c) => c.token === token)
     const takeover = prior !== undefined
     if (prior) this.conns.delete(prior.id)
     const conn: Connection = {
       id: this.nextId++, token, onBroadcast: [], onRoom: [], onJoinRejected: [],
-      onStatus: [], onPresenceSync: [], channelUp: true,
+      onStatus: preAttached?.onStatus ?? [], onPresenceSync: preAttached?.onPresenceSync ?? [], channelUp: true,
     }
     this.conns.set(conn.id, conn)
     // Presença: conexão nova. `takeover` NÃO é desconexão (não pausa) — mas ainda sinaliza que
@@ -238,12 +243,15 @@ export class LocalHub {
 // esta conexão; reconectar = novo `localTransport(...).connect()` com o mesmo token.
 export function localTransport(hub: LocalHub, token: string): Transport {
   let conn: Connection | null = null
+  // Vivem no facade, não na `Connection` — assináveis ANTES de `connect()` (ver `register`).
+  const statusCbs: StatusCb[] = []
+  const presenceSyncCbs: PresenceSyncCb[] = []
 
   return {
     token,
 
     connect(): Promise<void> {
-      conn = hub.register(token)
+      conn = hub.register(token, { onStatus: statusCbs, onPresenceSync: presenceSyncCbs })
       return Promise.resolve()
     },
 
@@ -313,22 +321,26 @@ export function localTransport(hub: LocalHub, token: string): Transport {
     },
 
     onStatus(cb): Unsubscribe {
-      // NÃO faz replay (contrato §1.4) — só o valor corrente a partir de agora.
-      if (!conn) return () => {}
-      conn.onStatus.push(cb)
-      return detach(conn.onStatus, cb)
+      // NÃO faz replay (contrato §1.4) — só o valor corrente a partir de agora. Assinável
+      // ANTES de `connect()` — os arrays vivem no facade, não em `conn`.
+      statusCbs.push(cb)
+      return detach(statusCbs, cb)
     },
 
     onPresenceSync(cb): Unsubscribe {
-      if (!conn) return () => {}
-      conn.onPresenceSync.push(cb)
+      presenceSyncCbs.push(cb)
       cb(hub.presentTokens()) // conveniência local: estado inicial logo após assinar (contrato §2.2)
-      return detach(conn.onPresenceSync, cb)
+      return detach(presenceSyncCbs, cb)
     },
 
     saveSnapshot(snap: PersistedSnapshot): Promise<void> {
       return hub.saveSnapshot(snap)
     },
+
+    // O adapter CRU não repete sozinho, então nunca esgota — quem sobrescreve isto é o
+    // decorator `durableWrites` (041, D8), único ponto de montagem de produção.
+    onWriteExhausted: () => () => {},
+    onWriteRecovered: () => () => {},
 
     loadSnapshot(): Promise<PersistedSnapshot | null> {
       return hub.loadSnapshot()

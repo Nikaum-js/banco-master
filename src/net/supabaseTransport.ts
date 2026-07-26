@@ -20,6 +20,27 @@
 import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import type { JoinError, Room } from './room'
 import { normalizeLog } from '@/game/log'
+import type { PauseState } from '@/game/turn/types'
+
+// Migração de dados (041, data-model — Migração de dados): salas persistidas ANTES desta
+// spec têm `game.paused` como booleano. `since` recebe o instante da LEITURA, nunca `0` — o
+// momento real da pausa não foi gravado, e assumir a época faria a retomada deslocar prazos
+// por décadas. É a única perda aceita, e só afeta salas criadas antes do deploy.
+function normalizePaused(paused: unknown, readAt: number): PauseState | null {
+  if (paused === true) return { causes: ['disconnect'], since: readAt }
+  if (paused && typeof paused === 'object') return paused as PauseState // já no formato novo
+  return null // `false` ou ausente
+}
+
+// Absorve `normalizeLog` (021/040) e a migração de `paused` legado — o mesmo ponto onde
+// `loadSnapshot` já normalizava o log agora normaliza o snapshot inteiro.
+export function normalizeSnapshot(game: PersistedSnapshot['game'], now: () => number = Date.now): PersistedSnapshot['game'] {
+  return {
+    ...game,
+    log: normalizeLog(game.log ?? []),
+    paused: normalizePaused((game as { paused?: unknown }).paused, now()),
+  }
+}
 
 // Subconjunto estrutural do supabase-js efetivamente usado (evita depender do pacote no build).
 export interface SupabaseChannelLike {
@@ -229,12 +250,17 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
       if (error) throw error
     },
 
+    // O adapter CRU não repete sozinho, então nunca esgota — quem sobrescreve isto é o
+    // decorator `durableWrites` (041, D8), único ponto de montagem de produção.
+    onWriteExhausted: () => () => {},
+    onWriteRecovered: () => () => {},
+
     async loadSnapshot(): Promise<PersistedSnapshot | null> {
       const { data, error } = await supabase.from('rooms').select('id,status,seats,seq,game').eq('id', roomId).maybeSingle()
       if (error) throw error
       if (!data || data.game == null || data.seq < 0) return null
       const room: Room = { id: data.id, status: data.status as Room['status'], seats: data.seats }
-      const game = { ...data.game, log: normalizeLog(data.game.log ?? []) }
+      const game = normalizeSnapshot(data.game)
       return { seq: data.seq, game, room }
     },
   }

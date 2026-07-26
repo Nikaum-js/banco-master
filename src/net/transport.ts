@@ -115,4 +115,10 @@ export interface Transport {
   // snapshot (host escreve; qualquer um lê ao entrar/reconectar)
   saveSnapshot(snap: PersistedSnapshot): Promise<void>
   loadSnapshot(): Promise<PersistedSnapshot | null>
+
+  // Esgotamento/recuperação da gravação (041, D8/D10) — o adapter CRU nunca emite (ele não
+  // repete sozinho); é o decorator `durableWrites` quem sobrescreve estes dois ao embrulhar.
+  // O host liga isto à pausa por persistência sem precisar conhecer o decorator.
+  onWriteExhausted(cb: () => void): Unsubscribe
+  onWriteRecovered(cb: () => void): Unsubscribe
 }

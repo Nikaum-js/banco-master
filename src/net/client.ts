@@ -12,6 +12,18 @@ import { replayCtx } from './recorder'
 import { seatByToken, type JoinError, type Room } from './room'
 import type { AcceptedCommand, JoinRequest, Transport, Unsubscribe } from './transport'
 
+// Conexão da PRÓPRIA sessão (041, data-model §4) — não é regra de jogo (difere por cliente,
+// não trafega por difusão: quem está desconectado não recebe difusão nenhuma). `reconnecting
+// → connected` passa PELA ressincronização — declarar-se conectado antes de reconciliar
+// mostraria estado velho como atual (FR-005).
+export type ConnectionState = 'connected' | 'reconnecting' | 'desynced'
+
+export interface ClientOptions {
+  retries?: number // tentativas de ressincronização além da 1ª; padrão 5
+  sleep?(ms: number): Promise<void> // injetado — testes não esperam de verdade
+  backoff?(attempt: number): number // ms da n-ésima espera; padrão exponencial com teto
+}
+
 export interface Client {
   readonly token: string // token de sessão desta aba — a UI usa para achar o próprio assento
   join(): Promise<void> // conecta, lê o snapshot (entrada/reconexão) e passa a aplicar a difusão
@@ -24,10 +36,14 @@ export interface Client {
   joinError(): JoinError | null
   paused(): boolean
   seq(): number
+  connection(): ConnectionState
   subscribe(cb: () => void): Unsubscribe // notifica a cada mudança de estado (liga a UI/store)
 }
 
-export function createClient(transport: Transport): Client {
+export function createClient(transport: Transport, opts: ClientOptions = {}): Client {
+  const retries = opts.retries ?? 5
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)))
+  const backoff = opts.backoff ?? ((attempt: number) => Math.min(500 * 2 ** (attempt - 1), 8_000))
   // O cliente nunca consome RNG/relógio reais: o replay injeta os valores gravados pelo host.
   const baseCtx: TurnCtx = buildGameCtx(
     () => { throw new Error('cliente não deve consumir RNG fora do replay') },
@@ -42,6 +58,8 @@ export function createClient(transport: Transport): Client {
   const pending: AcceptedCommand[] = [] // difusões chegadas antes do snapshot (buffer de corrida)
   const listeners = new Set<() => void>()
   const subs: Unsubscribe[] = []
+  let connection: ConnectionState = 'connected'
+  let resyncing = false // no máximo UMA ressincronização em voo por vez (D11 do plan)
 
   function notify(): void {
     for (const cb of listeners) cb()
@@ -77,14 +95,38 @@ export function createClient(transport: Transport): Client {
     for (const cmd of pending.splice(0)) applyAccepted(cmd)
   }
 
+  // Ressincroniza pelo snapshot completo, com espera crescente (D11 do plan). Só UMA em voo
+  // por vez — cada difusão com lacuna chamava outra antes disso, e era tempestade. Ao esgotar
+  // as tentativas, declara-se `'desynced'` em vez do `return` mudo de antes (FR-005) — a UI
+  // sabe que a reconciliação parou de tentar, em vez de mostrar estado velho como atual.
   async function resync(): Promise<void> {
-    const snap = await transport.loadSnapshot()
-    if (!snap) return
-    game = snap.game
-    room = snap.room
-    seq = snap.seq
-    resolvePlayerId()
-    notify()
+    if (resyncing) return
+    resyncing = true
+    try {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          const snap = await transport.loadSnapshot()
+          if (!snap) return // ainda no lobby (sem partida) — não é falha, não repete
+          game = snap.game
+          room = snap.room
+          seq = snap.seq
+          resolvePlayerId()
+          drainPending() // difusões chegadas DURANTE a ressincronização — aplicadas em ordem, não descartadas
+          connection = 'connected'
+          notify()
+          return
+        } catch {
+          if (attempt >= retries) {
+            connection = 'desynced'
+            notify()
+            return
+          }
+          await sleep(backoff(attempt + 1))
+        }
+      }
+    } finally {
+      resyncing = false
+    }
   }
 
   return {
@@ -105,6 +147,17 @@ export function createClient(transport: Transport): Client {
         if (target !== transport.token) return // recusa dirigida a outro pedinte
         joinError = reason
         notify()
+      }))
+      // Conexão da PRÓPRIA sessão (041, D5/D11): queda vira `'reconnecting'` na hora;
+      // restabelecimento — inclusive numa REASSINATURA — ressincroniza para recuperar as
+      // difusões perdidas durante a queda (FR-003), e só então volta a `'connected'`.
+      subs.push(transport.onStatus((status) => {
+        if (status === 'reconnecting') {
+          connection = 'reconnecting'
+          notify()
+          return
+        }
+        void resync()
       }))
       const snap = await transport.loadSnapshot() // entrada/reconexão: snapshot completo (FR-014/015)
       if (snap) {
@@ -147,6 +200,7 @@ export function createClient(transport: Transport): Client {
     joinError: () => joinError,
     paused: () => Boolean(game?.paused),
     seq: () => seq,
+    connection: () => connection,
 
     subscribe(cb): Unsubscribe {
       listeners.add(cb)
