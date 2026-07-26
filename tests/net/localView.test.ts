@@ -132,6 +132,23 @@ describe('perspectiva local com sala', () => {
     expect(view.mayAct('roll')).toBe(false)
     expect(view.mayAct('place-bid')).toBe(false)
   })
+
+  it('desconectado ninguém decide — inclusive fora da vez e sem estado pendente (041, FR-007)', () => {
+    const game = jogo() // p1 é o jogador da vez
+    const room = sala()
+    const ator = localView(game, room, 'tok-1', 'reconnecting')
+    const foraDaVez = localView(game, room, 'tok-2', 'desynced')
+
+    for (const kind of ALL_KINDS) expect(ator.mayAct(kind)).toBe(false)
+    // Lance de leilão/resposta a proposta são legítimos de qualquer assento — mas não
+    // desconectado. É exatamente aqui que uma guarda incompleta passaria despercebida.
+    for (const kind of ALL_KINDS) expect(foraDaVez.mayAct(kind)).toBe(false)
+  })
+
+  it('modo local (sem sala) nunca bloqueia por conexão — SC-007', () => {
+    const view = localView(jogo(), null, null, 'desynced')
+    expect(view.mayAct('roll')).toBe(true)
+  })
 })
 
 describe('sem sala (cliente único) — SC-007', () => {

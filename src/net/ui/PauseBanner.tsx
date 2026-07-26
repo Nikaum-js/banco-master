@@ -6,26 +6,18 @@
 // desconexão (§11.3, D-015) e a partida espera o tempo que for.
 import { AnimatePresence, motion } from 'motion/react'
 import { useGameStore } from '@/game/store'
-import { blockingSeats } from '@/net/room'
 import { useRoomStore } from '@/net/roomStore'
+import { pauseBannerView } from './pauseBannerView'
 import { PlayerName } from './PlayerName'
 
 export function PauseBanner() {
-  const paused = useGameStore((s) => s.game.paused)
-  const players = useGameStore((s) => s.game.players)
+  const game = useGameStore((s) => s.game)
   const room = useRoomStore((s) => s.room)
-
-  if (!room) return null // cliente único: a pausa local é do próprio jogador, sem banner
-
-  // Eliminados não travam a mesa (D-029) — e por isso também não aparecem aqui.
-  const eliminados = new Set(players.filter((p) => p.eliminated).map((p) => p.id))
-  const ausentes = blockingSeats(room, eliminados)
-  const show = paused && ausentes.length > 0
-  const hostFora = ausentes.some((s) => s.isHost)
+  const view = pauseBannerView(game, room)
 
   return (
     <AnimatePresence>
-      {show && (
+      {view && (
         <motion.div
           key="pause-banner"
           initial={{ opacity: 0, y: -16 }}
@@ -41,14 +33,15 @@ export function PauseBanner() {
             <div className="min-w-0">
               <p className="display text-gold leading-none">Partida pausada</p>
               <p className="label text-cream-muted mt-1.5 leading-snug">
-                {ausentes.length === 1 ? 'Aguardando ' : 'Aguardando '}
-                {ausentes.map((s, i) => (
+                Aguardando{' '}
+                {view.ausentes.map((s, i) => (
                   <span key={s.token}>
-                    {i > 0 && (i === ausentes.length - 1 ? ' e ' : ', ')}
+                    {i > 0 && (i === view.ausentes.length - 1 ? ' e ' : ', ')}
                     <PlayerName playerId={s.playerId} dot className="text-cream" />
+                    {i === view.ausentes.length - 1 && ' '}
                   </span>
                 ))}
-                {hostFora ? ' — o anfitrião voltar. Não há transferência de comando.' : ' reconectar.'}
+                {view.tail}.{view.hostFora && ' Não há transferência de comando.'}
               </p>
               <p className="text-cream-muted/70 mt-1" style={{ fontSize: 10 }}>
                 Nada se perde: saldo, propriedades, cartas e prazos ficam exatamente como estão.
