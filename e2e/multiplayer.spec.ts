@@ -29,12 +29,7 @@ test.skip(!SUPABASE_CONFIGURED, 'sem VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY �
 
 const HOST_NAME = 'Anfitriao'
 const GUEST_NAME = 'Convidada'
-const SEAT_COUNT = 8 // `SEAT_COLORS`/`PIECES` em src/net/room.ts — as listas cheias, antes de qualquer assento
-// As peças são localizadas pelo `aria-label`, NUNCA pelo glifo: `/^[^ ]$/` sobre o texto casa
-// uma unidade UTF-16, e 🚂/🎈/🧭/🧳/🗼/🚕 são pares surrogate — o filtro por glifo enxergava
-// só ✈ e ⚓. O `.catch(() => {})` que existia aqui engolia esse erro, então a peça nunca era
-// escolhida pelo roteiro; ele passava só porque o formulário pré-seleciona a primeira livre.
-const PIECE_LABELS = ['Avião', 'Navio', 'Trem', 'Táxi', 'Balão', 'Bússola', 'Mala', 'Farol']
+const SEAT_COUNT = 8 // `SEAT_COLORS` em src/net/room.ts — a lista cheia, antes de qualquer assento
 
 // FR-054: nenhum roteiro pode deixar sala de teste para trás. Não existe policy de DELETE
 // anônimo por design (`supabase/migrations/0001_rooms_snapshots.sql`: "a limpeza de salas
@@ -60,22 +55,18 @@ test.afterEach(async () => {
   })
 })
 
-// Preenche nome + escolhe a 1ª cor e a 1ª peça livres, e confirma.
+// Preenche nome + escolhe a 1ª cor livre e confirma.
 //
-// `free` NÃO é decoração. As DUAS listas (cor e peça) começam completas e só excluem o que já
-// está tomado quando a prévia da sala chega. Clicar na "primeira" antes disso pegava a cor OU a
-// peça do anfitrião; o pedido voltava `color-taken`/`piece-taken`, e o convidado ficava preso
-// num botão "Conectando…" — falha que parecia do transporte e era corrida no roteiro. Esperar
-// as duas encolherem é o sinal de que a sala já foi lida. As duas: cobrir só a cor deixava
-// metade da corrida viva, e ela reaparecia como instabilidade intermitente.
+// `free` NÃO é decoração. A lista de cores começa completa e só exclui o que já está tomado
+// quando a prévia da sala chega. Clicar na "primeira" antes disso pegava a cor do anfitrião; o
+// pedido voltava `color-taken`, e o convidado ficava preso num botão "Conectando…" — falha que
+// parecia do transporte e era corrida no roteiro. Esperar a lista encolher é o sinal de que a
+// sala já foi lida.
 async function fillIdentity(page: Page, name: string, cta: RegExp, free = SEAT_COUNT): Promise<void> {
   const colors = page.locator('button[aria-label^="Cor "]')
-  const pieces = page.locator(PIECE_LABELS.map((l) => `button[aria-label="${l}"]`).join(', '))
   await expect(colors).toHaveCount(free, { timeout: 20_000 })
-  await expect(pieces).toHaveCount(free, { timeout: 20_000 })
   await page.getByLabel('Seu nome').fill(name)
   await colors.first().click()
-  await pieces.first().click()
   await page.getByRole('button', { name: cta }).click()
 }
 
@@ -95,7 +86,7 @@ test('dois browsers jogam a mesma partida, cada um da sua perspectiva', async ({
   await expect(host.getByRole('button', { name: 'Começar uma partida' })).toBeVisible()
 
   await host.getByRole('button', { name: 'Começar uma partida' }).click()
-  await fillIdentity(host, HOST_NAME, /^Confirmar e criar sala$/)
+  await fillIdentity(host, HOST_NAME, /^Criar sala$/)
 
   // — 2. Sala aberta: link compartilhável e o host sentado —
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
@@ -187,7 +178,7 @@ test('queda do convidado pausa a mesa e diz quem caiu', async ({ browser }) => {
 
   await host.goto('/')
   await host.getByRole('button', { name: 'Começar uma partida' }).click()
-  await fillIdentity(host, HOST_NAME, /^Confirmar e criar sala$/)
+  await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   const roomUrl = host.url()
   const createdRoomId = roomIdFromUrl(roomUrl)
@@ -256,7 +247,7 @@ test('leilão sobrevive ao reload do host — prazo preservado (SC-005/SC-009)',
 
   await host.goto('/')
   await host.getByRole('button', { name: 'Começar uma partida' }).click()
-  await fillIdentity(host, HOST_NAME, /^Confirmar e criar sala$/)
+  await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   const roomUrl = host.url()
   const createdRoomId = roomIdFromUrl(roomUrl)
@@ -329,7 +320,7 @@ test('convidado reanexa por código a partir de um terceiro dispositivo', async 
 
   await host.goto('/')
   await host.getByRole('button', { name: 'Começar uma partida' }).click()
-  await fillIdentity(host, HOST_NAME, /^Confirmar e criar sala$/)
+  await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   const roomUrl = host.url()
 

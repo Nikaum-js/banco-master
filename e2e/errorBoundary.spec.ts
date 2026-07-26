@@ -17,9 +17,6 @@ const GUEST_NAME = 'Convidada'
 async function fillIdentity(page: Page, name: string, cta: RegExp): Promise<void> {
   await page.getByLabel('Seu nome').fill(name)
   await page.locator('button[aria-label^="Cor "]').first().click()
-  // Peça: qualquer botão de toggle que NÃO seja swatch de cor (as peças agora são SVG,
-  // sem texto — o filtro antigo por glifo de um caractere não as encontra mais).
-  await page.locator('button[aria-pressed]:not([aria-label^="Cor "])').first().click().catch(() => {})
   await page.getByRole('button', { name: cta }).click()
 }
 
@@ -34,7 +31,7 @@ test('a casca do convidado cai → o host vê pausa por desconexão → reabrir 
 
   await host.goto('/')
   await host.getByRole('button', { name: 'Começar uma partida' }).click()
-  await fillIdentity(host, HOST_NAME, /^Confirmar e criar sala$/)
+  await fillIdentity(host, HOST_NAME, /^Criar sala$/)
   await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
   const roomUrl = host.url()
 
