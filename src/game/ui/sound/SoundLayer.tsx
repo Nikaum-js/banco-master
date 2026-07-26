@@ -145,9 +145,9 @@ export function SoundLayer() {
     const fresh = countNewLogEntries(p.logKeys, next.logKeys)
     for (let i = log.length - fresh; i < log.length; i++) {
       const e = log[i]
-      // A rolagem vive no log ('rolou a+b') mas o cue precisa do Roll completo
+      // A rolagem vive no log (`kind: 'roll'`) mas o cue precisa do Roll completo
       // (dupla/Speed/Ônibus) — classifica pelo lastRoll corrente.
-      if (e.what.startsWith('rolou ')) {
+      if (e.kind === 'roll') {
         if (game.turn.lastRoll) fire(cueForRoll(game.turn.lastRoll))
         continue
       }

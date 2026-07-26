@@ -1,37 +1,91 @@
 import { describe, it, expect } from 'vitest'
-import { classifyLogEntry, countNewLogEntries, cueForRoll, cueForResolution, cueForNotice } from '@/game/ui/sound/classify'
+import { classifyLogEntry, countNewLogEntries, cueForRoll, cueForResolution, cueForNotice, logKey } from '@/game/ui/sound/classify'
 import type { LogEntry } from '@/game/economy/types'
+import type { SoundCue } from '@/game/ui/sound/cues'
 import type { Roll } from '@/game/turn/types'
 
-const log = (what: string): LogEntry => ({ who: 'p1', what })
 const roll = (over: Partial<Roll>): Roll => ({ white: [3, 4], speed: null, isDouble: false, move: 7, special: null, ...over })
 
-describe('classifyLogEntry (035 — tail do log → cue)', () => {
-  it('mapeia eventos só-logados pelos prefixos reais do motor (021)', () => {
-    expect(classifyLogEntry(log('pagou $200 de imposto'))).toBe('tax-paid')
-    expect(classifyLogEntry(log('pagou $120 de aluguel a p2'))).toBe('rent-paid')
-    expect(classifyLogEntry(log('passou pelo GO (+$300)'))).toBe('go-bonus')
-    expect(classifyLogEntry(log('parou no GO (+$400)'))).toBe('go-bonus')
-    expect(classifyLogEntry(log('pagou R$ 50 de juros a p3 (GO)'))).toBe('loan-interest')
-    expect(classifyLogEntry(log('não cobriu os juros de p3 — dívida de R$ 80'))).toBe('loan-interest')
-    expect(classifyLogEntry(log('parou no espaço Bus Ticket — ganhou 1 Bus Ticket'))).toBe('busticket-gain')
-    expect(classifyLogEntry(log('faliu'))).toBe('bankruptcy')
+// Oráculo pré-040 (contrato §3, T004), preservado como registro histórico: a tabela
+// ATUAL de `classifyLogEntry` por SUBSTRING, transcrita ANTES de o código trocar para
+// `kind` — cada par frase→cue documentado aqui tem um par `kind`→cue equivalente em
+// `PRE_040_KIND_CUE` logo abaixo (T032). Não executa mais contra `classifyLogEntry`
+// (que não lê `.what`); a prova de não-regressão (SC-009) agora roda pelo `kind`.
+const PRE_040_ORACLE: ReadonlyArray<{ what: string; cue: SoundCue | null }> = [
+  { what: 'comprou Paris por $200', cue: 'buy' },
+  { what: 'pagou $200 de imposto', cue: 'tax-paid' },
+  { what: 'pagou $120 de aluguel a p2', cue: 'rent-paid' },
+  { what: 'passou pelo GO (+$200)', cue: 'go-bonus' },
+  { what: 'parou no GO (+$400)', cue: 'go-bonus' },
+  { what: 'pagou R$ 50 de juros a p3 (GO)', cue: 'loan-interest' },
+  { what: 'não cobriu os juros de p3 e ficou devendo R$ 80', cue: 'loan-interest' }, // os dois kind de juros mapeiam pro mesmo cue
+  { what: 'parou no espaço Bus Ticket e ganhou uma passagem', cue: 'busticket-gain' },
+  { what: 'faliu', cue: 'bankruptcy' },
+  { what: 'sacou Acaso', cue: 'card-draw' },
+  { what: 'sacou Tesouro', cue: 'card-draw' },
+  { what: 'rolou 3+4', cue: null }, // canal tipado (dice) — log não re-toca
+  { what: 'pagou dívida $300', cue: null },
+  { what: 'p1 ↔ p2: troca aceita', cue: null },
+]
+void PRE_040_ORACLE // referenciado só em comentário/histórico — ver PRE_040_KIND_CUE
+
+// O mesmo oráculo, um par por `kind` real (T032) — a prova executável de SC-009.
+const PRE_040_KIND_CUE: ReadonlyArray<{ entry: LogEntry; cue: SoundCue | null }> = [
+  { entry: { kind: 'buy', who: 'p1', pos: 5, price: 200 }, cue: 'buy' },
+  { entry: { kind: 'tax', who: 'p1', amount: 200 }, cue: 'tax-paid' },
+  { entry: { kind: 'rent', who: 'p1', pos: 5, amount: 120, ownerId: 'p2' }, cue: 'rent-paid' },
+  { entry: { kind: 'go', who: 'p1', amount: 200, landed: false }, cue: 'go-bonus' },
+  { entry: { kind: 'go', who: 'p1', amount: 400, landed: true }, cue: 'go-bonus' },
+  { entry: { kind: 'loan-interest', who: 'p1', amount: 50, creditorId: 'p3' }, cue: 'loan-interest' },
+  { entry: { kind: 'loan-interest-short', who: 'p1', amount: 0, creditorId: 'p3', shortfall: 80 }, cue: 'loan-interest' },
+  { entry: { kind: 'bus-ticket-gain', who: 'p1' }, cue: 'busticket-gain' },
+  { entry: { kind: 'bankruptcy', who: 'p1' }, cue: 'bankruptcy' },
+  { entry: { kind: 'card-draw', who: 'p1', deck: 'acaso' }, cue: 'card-draw' },
+  { entry: { kind: 'card-draw', who: 'p1', deck: 'tesouro' }, cue: 'card-draw' },
+  { entry: { kind: 'roll', who: 'p1', white: [3, 4], isDouble: false, special: null, speed: null, attempt: false }, cue: null },
+  { entry: { kind: 'debt-paid', who: 'p1', amount: 300 }, cue: null },
+  { entry: { kind: 'trade', who: 'p1', toId: 'p2' }, cue: null },
+]
+
+describe('classifyLogEntry — oráculo pré-040 por kind (SC-009 — não-regressão)', () => {
+  it('preserva cada par kind→cue equivalente à tabela vigente antes da tipagem', () => {
+    for (const { entry, cue } of PRE_040_KIND_CUE) expect(classifyLogEntry(entry)).toBe(cue)
   })
 
-  it('saque é GENÉRICO — não vaza a raridade da carta privada (FR-016/SC-004)', () => {
-    expect(classifyLogEntry(log('sacou Acaso'))).toBe('card-draw')
-    expect(classifyLogEntry(log('sacou Tesouro'))).toBe('card-draw')
-    // O texto privado da carta na mão ("Acaso: Investidor Anjo") não deve soar pelo log.
+  it('saque é GENÉRICO — não vaza o deck além do necessário nem a raridade (FR-016/SC-004)', () => {
+    // O texto privado da carta na mão ("Acaso: Investidor Anjo") não soa — só o kind
+    // `card-draw` (sem campo de carta) chega ao classificador.
+    expect(classifyLogEntry({ kind: 'card-draw', who: 'p1', deck: 'acaso' })).toBe('card-draw')
+  })
+})
+
+// Cue dos 12 `kind` novos (040/Fase 5) — decidido EXPLICITAMENTE nesta fatia, não por
+// omissão (T031). `auction-won`/`auction-unsold` eram 100% silenciosos (`closeAuction`
+// nunca eram logados) — ganham `auction-close`, sem conflito com o pregão de terrenos
+// (que soa pelo Canal 1 do SoundLayer, por delta de estado, não pelo log). Os demais
+// já soam por OUTRO canal tipado do SoundLayer — `null` aqui evita o disparo duplo.
+const NEW_KIND_CUE: ReadonlyArray<{ entry: LogEntry; cue: SoundCue | null }> = [
+  { entry: { kind: 'build', who: 'p1', pos: 1, level: 1, cost: 100 }, cue: null },
+  { entry: { kind: 'build-hangar', who: 'p1', pos: 6, cost: 100 }, cue: null },
+  { entry: { kind: 'sell-building', who: 'p1', pos: 1, level: 0, amount: 50 }, cue: null },
+  { entry: { kind: 'sell-hangar', who: 'p1', pos: 6, amount: 50 }, cue: null },
+  { entry: { kind: 'mortgage', who: 'p1', pos: 1, amount: 30 }, cue: null },
+  { entry: { kind: 'unmortgage', who: 'p1', pos: 1, cost: 33 }, cue: null },
+  { entry: { kind: 'auction-won', who: 'bank', pos: 1, amount: 60, winnerId: 'p1' }, cue: 'auction-close' },
+  { entry: { kind: 'auction-unsold', who: 'bank', pos: 1 }, cue: 'auction-close' },
+  { entry: { kind: 'lot-won', who: 'bank', pos: 1, amount: 60, winnerId: 'p1', origin: 'scarcity' }, cue: null },
+  { entry: { kind: 'lot-unsold', who: 'bank', pos: 1, origin: 'scarcity' }, cue: null },
+  { entry: { kind: 'free-parking', who: 'p1', amount: 500 }, cue: null },
+  { entry: { kind: 'jail-fine', who: 'p1', amount: 50 }, cue: null },
+]
+
+describe('classifyLogEntry — os 12 kind novos (040, SC-002/SC-003)', () => {
+  it('cada kind novo tem cue decidido, inclusive onde a decisão é null', () => {
+    for (const { entry, cue } of NEW_KIND_CUE) expect(classifyLogEntry(entry)).toBe(cue)
   })
 
-  it('compra CONFIRMADA toca o buy — cair na casa (prompt) é silencioso', () => {
-    expect(classifyLogEntry(log('comprou Paris por $200'))).toBe('buy')
-  })
-
-  it('eventos já cobertos por canais tipados → null (evita disparo duplo, FR-007)', () => {
-    expect(classifyLogEntry(log('rolou 3+4'))).toBeNull()
-    expect(classifyLogEntry(log('pagou dívida $300'))).toBeNull()
-    expect(classifyLogEntry(log('p1 ↔ p2: troca aceita'))).toBeNull() // C1: trade fora desta fatia
+  it("'legacy' (dado velho, nunca emitido) também não soa", () => {
+    expect(classifyLogEntry({ kind: 'legacy', who: 'p1', what: 'evento antigo' })).toBeNull()
   })
 })
 
@@ -56,6 +110,27 @@ describe('countNewLogEntries (035 — diff do log POR VALOR)', () => {
   it('log inicial (prev vazio) toca tudo; log irreconhecível (reset) não re-toca nada', () => {
     expect(countNewLogEntries([], ['p1|a', 'p2|b'])).toBe(2)
     expect(countNewLogEntries(['p1|x', 'p2|y'], ['p3|q', 'p4|w'])).toBe(0) // FR-011
+  })
+})
+
+// T033 — logKey por campos em ordem fixa (D7 do plan), fim a fim com countNewLogEntries.
+describe('logKey (040) — chave de valor por kind, alimenta countNewLogEntries', () => {
+  it('duas entradas idênticas em VALOR contam como duas (FR-025)', () => {
+    const a: LogEntry = { kind: 'tax', who: 'p1', amount: 200 }
+    const keys = [logKey(a)]
+    expect(countNewLogEntries(keys, [...keys, logKey(a)])).toBe(1) // uma repetição = uma nova
+  })
+
+  it('log irreconhecível (reset/reconexão) não re-toca histórico (FR-025)', () => {
+    const before = [logKey({ kind: 'tax', who: 'p1', amount: 10 })]
+    const after = [logKey({ kind: 'bankruptcy', who: 'p2' })]
+    expect(countNewLogEntries(before, after)).toBe(0)
+  })
+
+  it('a chave depende de TODOS os campos do kind, não só who — 2 rolagens diferentes não colidem', () => {
+    const a: LogEntry = { kind: 'roll', who: 'p1', white: [3, 4], isDouble: false, special: null, speed: null, attempt: false }
+    const b: LogEntry = { kind: 'roll', who: 'p1', white: [5, 6], isDouble: false, special: null, speed: null, attempt: false }
+    expect(logKey(a)).not.toBe(logKey(b))
   })
 })
 

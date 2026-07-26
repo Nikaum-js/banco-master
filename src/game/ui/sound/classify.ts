@@ -38,11 +38,46 @@ export function cueForNotice(kind: Notice['kind']): SoundCue | null {
   }
 }
 
+function assertNever(x: never): never {
+  throw new Error(`LogKind não tratado por logKey: ${JSON.stringify(x)}`)
+}
+
 // Chave de VALOR de uma entrada de log. O motor clona o estado inteiro a cada
 // ação (structuredClone) — identidade de objeto nunca sobrevive; qualquer
-// comparação do log tem que ser por valor.
+// comparação do log tem que ser por valor. Concatenação em ORDEM FIXA por `kind`
+// (D7 do plan) — `JSON.stringify` não serve: a ordem das chaves depende da ordem
+// de construção do objeto, e uma chave instável quebraria `countNewLogEntries` de
+// forma intermitente (o pior modo de falha possível para áudio).
 export function logKey(e: LogEntry): string {
-  return `${e.who}|${e.what}`
+  switch (e.kind) {
+    case 'roll': return [e.kind, e.who, e.white[0], e.white[1], e.isDouble, e.special, e.speed, e.attempt].join('|')
+    case 'go': return [e.kind, e.who, e.amount, e.landed].join('|')
+    case 'buy': return [e.kind, e.who, e.pos, e.price].join('|')
+    case 'rent': return [e.kind, e.who, e.pos, e.amount, e.ownerId].join('|')
+    case 'tax': return [e.kind, e.who, e.amount].join('|')
+    case 'bus-ticket-gain': return [e.kind, e.who].join('|')
+    case 'card-draw': return [e.kind, e.who, e.deck].join('|')
+    case 'card-immediate': return [e.kind, e.who, e.deck, e.name, e.delta].join('|')
+    case 'build': return [e.kind, e.who, e.pos, e.level, e.cost].join('|')
+    case 'build-hangar': return [e.kind, e.who, e.pos, e.cost].join('|')
+    case 'sell-building': return [e.kind, e.who, e.pos, e.level, e.amount].join('|')
+    case 'sell-hangar': return [e.kind, e.who, e.pos, e.amount].join('|')
+    case 'mortgage': return [e.kind, e.who, e.pos, e.amount].join('|')
+    case 'unmortgage': return [e.kind, e.who, e.pos, e.cost].join('|')
+    case 'auction-won': return [e.kind, e.who, e.pos, e.amount, e.winnerId].join('|')
+    case 'auction-unsold': return [e.kind, e.who, e.pos].join('|')
+    case 'lot-won': return [e.kind, e.who, e.pos, e.amount, e.winnerId, e.origin].join('|')
+    case 'lot-unsold': return [e.kind, e.who, e.pos, e.origin].join('|')
+    case 'free-parking': return [e.kind, e.who, e.amount].join('|')
+    case 'jail-fine': return [e.kind, e.who, e.amount].join('|')
+    case 'debt-paid': return [e.kind, e.who, e.amount].join('|')
+    case 'bankruptcy': return [e.kind, e.who].join('|')
+    case 'trade': return [e.kind, e.who, e.toId].join('|')
+    case 'loan-interest': return [e.kind, e.who, e.amount, e.creditorId].join('|')
+    case 'loan-interest-short': return [e.kind, e.who, e.amount, e.creditorId, e.shortfall].join('|')
+    case 'legacy': return [e.kind, e.who, e.what].join('|')
+    default: return assertNever(e)
+  }
 }
 
 // Quantas entradas NOVAS existem no fim de `keys` em relação a `prevKeys`.
@@ -65,19 +100,53 @@ export function countNewLogEntries(prevKeys: string[], keys: string[]): number {
   return 0
 }
 
-// Classifica UMA entrada de log nova → cue (ou null). Por prefixo/substring estável
-// das emissões reais do motor (spec 021). Eventos já cobertos por canais tipados
-// (compra, rolagem, dívida) retornam null aqui para não tocar duas vezes (FR-007).
-// `card-draw` é GENÉRICO — nunca varia por raridade (privacidade, FR-016).
+// Classifica UMA entrada de log nova → cue (ou null). Ramifica por `kind`, nunca por
+// texto (FR-023, SC-004) — os 13 pares preservam exatamente o oráculo pré-040
+// (`classify.test.ts`, T004/SC-009). `card-draw` é GENÉRICO — nunca varia por deck
+// nem raridade (privacidade, FR-016): o tipo não carrega o campo, então virou
+// impossível ramificar por carta, não só indisciplina evitada.
 export function classifyLogEntry(e: LogEntry): SoundCue | null {
-  const w = e.what
-  if (w.startsWith('comprou ')) return 'buy' // compra CONFIRMADA (não o prompt)
-  if (w.includes('de imposto')) return 'tax-paid'
-  if (w.includes('de aluguel a')) return 'rent-paid'
-  if (w.includes('pelo GO') || w.includes('no GO')) return 'go-bonus'
-  if (w.includes('juros')) return 'loan-interest'
-  if (w.includes('Bus Ticket')) return 'busticket-gain'
-  if (w === 'faliu') return 'bankruptcy'
-  if (w.startsWith('sacou ')) return 'card-draw'
-  return null
+  switch (e.kind) {
+    case 'buy': return 'buy' // compra CONFIRMADA (não o prompt)
+    case 'tax': return 'tax-paid'
+    case 'rent': return 'rent-paid'
+    case 'go': return 'go-bonus'
+    case 'loan-interest':
+    case 'loan-interest-short': return 'loan-interest'
+    case 'bus-ticket-gain': return 'busticket-gain'
+    case 'bankruptcy': return 'bankruptcy'
+    case 'card-draw': return 'card-draw'
+    // Leilão comum: família muda (antes 100% silenciosa — closeAuction nunca soava,
+    // T023/040) — 'auction-close' já existe como cue e nunca tinha dono; sem conflito
+    // com o pregão de terrenos, que detecta o fecho pelo estado (Canal 1), não pelo log.
+    case 'auction-won':
+    case 'auction-unsold': return 'auction-close'
+    // Já cobertos por OUTRO canal tipado do SoundLayer (Canal 1) — devolver cue aqui
+    // tocaria duas vezes para o mesmo fato (FR-007):
+    //   build/build-hangar/sell-building/sell-hangar/mortgage/unmortgage → delta de
+    //     `buildLevel`/`mortgaged` por título (já soava 'build'/'sell'/'mortgage'/'unmortgage').
+    //   free-parking → borda de subida de `notice.kind` (cueForNotice já devolve 'free-parking').
+    //   jail-fine → borda de descida de `jail.inJail` (já soa 'jail-out', pago ou não).
+    //   lot-won/lot-unsold → fecho do PREGÃO inteiro já soa 'auction-close' uma vez
+    //     (Canal 1); soar por LOTE dobraria no lote que fecha o pregão.
+    // 'roll': cue vem de `cueForRoll(lastRoll)`, que sabe dupla/Speed/Ônibus; o log não.
+    // Os demais: sem cue apropriado nesta fatia — decisão explícita, não esquecimento (SC-009).
+    case 'build':
+    case 'build-hangar':
+    case 'sell-building':
+    case 'sell-hangar':
+    case 'mortgage':
+    case 'unmortgage':
+    case 'free-parking':
+    case 'jail-fine':
+    case 'lot-won':
+    case 'lot-unsold':
+    case 'roll':
+    case 'card-immediate':
+    case 'debt-paid':
+    case 'trade':
+    case 'legacy':
+      return null
+    default: return assertNever(e)
+  }
 }
