@@ -197,7 +197,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const t = f.make('t-host')
     await t.connect()
-    const room: Room = { id: 'sala1', status: 'lobby', seats: [{ token: 't-host', playerId: 'p1', name: 'Ana', color: '#fff', connected: true }] }
+    const room: Room = { id: 'sala1', status: 'lobby', seats: [{ token: 't-host', playerId: 'p1', name: 'Ana', color: '#fff', connected: true, isHost: true }] }
     await t.saveRoom(room)
     expect(await t.loadRoom()).toEqual(room)
   })

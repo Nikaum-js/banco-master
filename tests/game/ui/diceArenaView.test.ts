@@ -18,7 +18,7 @@ function seatedView(g: GameState, playerId: string): LocalView {
   const room = {
     id: 'r', status: 'playing' as const,
     seats: g.players.map((p, i) => ({
-      token: `tok-${p.id}`, playerId: p.id, name: `P${i + 1}`, color: '#fff', connected: true,
+      token: `tok-${p.id}`, playerId: p.id, name: `P${i + 1}`, color: '#fff', connected: true, isHost: i === 0,
     })),
   }
   return localView(g, room, `tok-${playerId}`)
@@ -69,7 +69,7 @@ describe('diceArenaView — dados e dupla', () => {
 
   it('reflete a última rolagem', () => {
     const g = base()
-    g.turn.lastRoll = { white: [4, 6], speed: null }
+    g.turn.lastRoll = { white: [4, 6], speed: null, isDouble: false, move: 10, special: null }
     expect(diceArenaView(g, soloView(g)).dice).toEqual([4, 6])
   })
 

@@ -34,8 +34,13 @@ jobs:
         run: bun run lint
 
       # `tsc -b` do build já checa tipos, mas rodar antes dá o erro de tipo sem esperar o bundle.
+      #
+      # Cobre os TRÊS projetos (app, node, test) via as `references` do `tsconfig.json`. Antes
+      # era só `-p tsconfig.app.json` e o passo dava confiança falsa: `tests/`, `e2e/` e
+      # `scripts/` não estavam em nenhum tsconfig, então fixture com campo inventado passava
+      # verde. Ao adicionar pasta nova, ela precisa entrar no `include` de algum dos três.
       - name: Tipos
-        run: bunx tsc --noEmit -p tsconfig.app.json
+        run: bun run typecheck
 
       - name: Testes
         run: bunx vitest run

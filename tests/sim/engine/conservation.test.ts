@@ -36,7 +36,6 @@ function ports(): TurnPorts {
       p.cash += s.centerPot
       s.centerPot = 500
     },
-    isEliminated: () => false,
   }
 }
 

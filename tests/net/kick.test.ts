@@ -26,7 +26,7 @@ async function lobbyCom(convidados: number): Promise<{ hub: LocalHub; host: Retu
   for (let i = 0; i < convidados; i++) {
     const c = createClient(localTransport(hub, `tok-${i}`))
     await c.join()
-    c.requestJoin({ name: `P${i + 1}`, color: SEAT_COLORS[i + 1], piece: ['navio', 'trem', 'taxi'][i] })
+    c.requestJoin({ name: `P${i + 1}`, color: SEAT_COLORS[i + 1], piece: (['navio', 'trem', 'taxi'] as const)[i] })
     await flush()
     guests.push(c)
   }

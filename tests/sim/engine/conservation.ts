@@ -267,7 +267,7 @@ function applyTaxMan(
 // Efeitos das 14 cartas imediatas (cards/effects.ts) + avance3/volte3 (podem cruzar o GO).
 // `deckPeek` é o id no TOPO do baralho ANTES do saque — determinístico (sem RNG neste ponto),
 // então dá pra saber qual carta vai sair e recomputar a fórmula esperada sobre `prev`.
-function applyImmediateCard(prev: GameState, next: GameState, actorId: string, effect: string, ledger: Ledger): void {
+function applyImmediateCard(prev: GameState, _next: GameState, actorId: string, effect: string, ledger: Ledger): void {
   mark(ledger, `card:${effect}`)
   switch (effect) {
     case 'boomEconomico':

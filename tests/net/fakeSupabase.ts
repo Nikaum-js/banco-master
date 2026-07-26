@@ -24,12 +24,18 @@ class FakeChannel implements SupabaseChannelLike {
   private subscribed = false
   private tracked = false
 
-  constructor(
-    private readonly broker: Broker,
-    private readonly key: string,
-    /** `broadcast.self` — o Realtime só ecoa o próprio envio quando ligado. */
-    private readonly selfEcho: boolean,
-  ) {}
+  private readonly broker: Broker
+  private readonly key: string
+  /** `broadcast.self` — o Realtime só ecoa o próprio envio quando ligado. */
+  private readonly selfEcho: boolean
+
+  // Campos declarados e atribuídos à mão: parameter properties não são sintaxe apagável
+  // (`erasableSyntaxOnly`), e este arquivo agora passa pelo typecheck junto do resto.
+  constructor(broker: Broker, key: string, selfEcho: boolean) {
+    this.broker = broker
+    this.key = key
+    this.selfEcho = selfEcho
+  }
 
   on(type: 'broadcast', filter: { event: string }, cb: (msg: { payload: unknown }) => void): SupabaseChannelLike
   on(type: 'presence', filter: { event: 'join' | 'leave' }, cb: PresenceCb): SupabaseChannelLike

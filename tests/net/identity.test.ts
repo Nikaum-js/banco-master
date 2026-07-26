@@ -5,10 +5,10 @@
 //   • a peça é única por sala e o catálogo cobre os 8 assentos (FR-022/023).
 import { describe, expect, it } from 'vitest'
 import { availablePieces, fallbackIdentity, identityOf, PIECES } from '@/net/identity'
-import { createRoom, joinRoom, MAX_SEATS, SEAT_COLORS, type Room } from '@/net/room'
+import { createRoom, joinRoom, MAX_SEATS, SEAT_COLORS, type PieceId, type Room } from '@/net/room'
 import { createSeedState } from '@/game/setup'
 
-function salaCom(nomes: { nome: string; cor: string; peca?: string }[]): Room {
+function salaCom(nomes: { nome: string; cor: string; peca?: PieceId }[]): Room {
   let room = createRoom('r1', { token: 'tok-0', name: nomes[0].nome, color: nomes[0].cor, piece: nomes[0].peca })
   for (const [i, n] of nomes.slice(1).entries()) {
     const r = joinRoom(room, { token: `tok-${i + 1}`, name: n.nome, color: n.cor, piece: n.peca })

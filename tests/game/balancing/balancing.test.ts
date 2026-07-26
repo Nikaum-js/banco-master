@@ -12,7 +12,6 @@ function realPorts(): TurnPorts {
     onPassGo: (s, id) => goBonus(s, id),
     onPayToCenter: (s, a) => payToCenter(s, a),
     onCollectCenter: (s, id) => collectCenter(s, id),
-    isEliminated: () => false,
   }
 }
 

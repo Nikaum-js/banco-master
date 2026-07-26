@@ -6,15 +6,18 @@
 // Playwright contra infra viva. Com o transporte entrando por parâmetro, tudo isso roda
 // sobre o `localTransport` — síncrono e determinístico.
 import { describe, expect, it } from 'vitest'
-import { createRoomSession, type RoomSession } from '@/net/roomSession'
+import { createRoomSession, type RoomSession, type SessionIdentity } from '@/net/roomSession'
 import { LocalHub, localTransport } from '@/net/localTransport'
 import { createRoom, joinRoom, startGame, SEAT_COLORS } from '@/net/room'
 import { createHost } from '@/net/host'
 import type { Client } from '@/net/client'
 import { mulberry32 } from '../sim/engine/rng'
 
-const ANA = { name: 'Ana', color: SEAT_COLORS[0], piece: 'cartola' }
-const BRUNO = { name: 'Bruno', color: SEAT_COLORS[1], piece: 'navio' }
+// Anotadas de propósito: sem o tipo, `piece` alarga para `string` e um id fora do catálogo
+// passa batido — era o caso de `'cartola'` aqui, que `pieceOf` silenciosamente servia como
+// avião. Com a anotação, peça inexistente é erro de compilação.
+const ANA: SessionIdentity = { name: 'Ana', color: SEAT_COLORS[0], piece: 'aviao' }
+const BRUNO: SessionIdentity = { name: 'Bruno', color: SEAT_COLORS[1], piece: 'navio' }
 
 // Uma sessão ligada ao hub in-memory. `connectStore` é um espião: o boot não deve depender
 // do Zustand para funcionar.

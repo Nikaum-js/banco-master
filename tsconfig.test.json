@@ -1,0 +1,39 @@
+{
+  /* Cobre `tests/`, `e2e/` e `scripts/` — as três pastas que nenhum outro tsconfig incluía.
+     Sem este arquivo o passo "Tipos" do CI dá confiança falsa: um fixture com campo inventado
+     (o caso real foi um `Loan` com `lapsElapsed` em vez de `ratePct`) passava verde.
+
+     Os flags espelham `tsconfig.app.json` de propósito. O código de produção é arrastado pra cá
+     por import transitivo, e checá-lo sob outra régua produziria erro que o gate principal não
+     vê — divergência é o defeito que este arquivo existe pra evitar. `strict` continua
+     desligado aqui porque está desligado lá; ligar é decisão separada, com outro volume. */
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    /* `vite/client` porque `src/net/supabaseClient.ts` lê `import.meta.env`; `node` porque os
+       scripts leem `process.argv`/`process.env`. */
+    "types": ["node", "vite/client"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["tests", "e2e", "scripts", "vitest.config.ts", "playwright.config.ts"]
+}
