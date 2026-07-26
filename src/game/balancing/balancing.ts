@@ -2,6 +2,7 @@
 // pote do Free Parking. Injetado nas portas do 002 pelo store (002 não importa daqui).
 import type { GameState } from '../turn/types'
 import { THEME } from '../theme'
+import { logEvent } from '../log'
 
 export const PARKING_SEED = THEME.PARKING_SEED
 
@@ -23,6 +24,7 @@ export function collectCenter(state: GameState, playerId: string): void {
   if (p) {
     p.cash += amount
     state.notice = { kind: 'free-parking', playerId, amount } // 030, §12.2
+    logEvent(state, { kind: 'free-parking', who: playerId, amount })
   }
   state.centerPot = PARKING_SEED
 }

@@ -6,8 +6,9 @@
 // e cada lote fecha sozinho quando o seu tempo expira (independente dos demais).
 import { BOARD } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
-import type { LandAuction, LandLot } from './types'
+import type { AuctionOrigin, LandAuction, LandLot } from './types'
 import { THEME } from '../theme'
+import { logEvent } from '../log'
 
 export const LAND_AUCTION_WINDOW = THEME.LAND_AUCTION_SECONDS * 1000 // ms por lote (8s)
 
@@ -152,18 +153,27 @@ export function placeLandBid(
 }
 
 // Resolve um lote: vencedor paga ao banco e vira dono; sem lance → fica livre.
-function settleLot(s: GameState, lot: LandLot): void {
+// `origin` vem da `LandAuction` (não do `LandLot`) — precisa ser passado porque
+// `state.landAuction` pode já ter sido esvaziado quando o evento é montado (D5 do plan).
+function settleLot(s: GameState, lot: LandLot, origin: AuctionOrigin): void {
   if (lot.highBidder) {
     const winner = s.players.find((p) => p.id === lot.highBidder)
     // O lote roda em PARALELO ao turno normal (evento autônomo) — entre o lance e o
     // fecho, o licitante pode ter falido (elimination). Sem herdeiro válido, o lote
     // permanece livre (sem dono) em vez de ir para um jogador eliminado (FR-004g, 036).
-    if (!winner || winner.eliminated) return
+    if (!winner || winner.eliminated) {
+      logEvent(s, { kind: 'lot-unsold', who: 'bank', pos: lot.pos, origin })
+      return
+    }
     // Solvência foi checada NO LANCE (placeLandBid); outra ação no meio-tempo pode ter
     // reduzido o caixa do licitante — paga o que houver em vez de ficar negativo (mesmo
     // padrão de audit()/pagamentos obrigatórios; FR-004a, 036).
-    winner.cash -= Math.min(lot.currentBid, winner.cash)
+    const paid = Math.min(lot.currentBid, winner.cash)
+    winner.cash -= paid
     s.titles[lot.pos].ownerId = lot.highBidder
+    logEvent(s, { kind: 'lot-won', who: 'bank', pos: lot.pos, amount: paid, winnerId: lot.highBidder, origin })
+  } else {
+    logEvent(s, { kind: 'lot-unsold', who: 'bank', pos: lot.pos, origin })
   }
 }
 
@@ -175,7 +185,7 @@ export function closeExpiredLandLots(state: GameState, now: number): GameState {
   if (!a.lots.some((l) => l.deadline <= now)) return state
   const s = clone(state)
   const sa = s.landAuction!
-  for (const lot of sa.lots) if (lot.deadline <= now) settleLot(s, lot)
+  for (const lot of sa.lots) if (lot.deadline <= now) settleLot(s, lot, sa.origin)
   sa.lots = sa.lots.filter((l) => l.deadline > now)
   if (sa.lots.length === 0) s.landAuction = null
   return s
@@ -185,7 +195,8 @@ export function closeExpiredLandLots(state: GameState, now: number): GameState {
 export function closeLandAuction(state: GameState): GameState {
   if (!state.landAuction) return state
   const s = clone(state)
-  for (const lot of s.landAuction!.lots) settleLot(s, lot)
+  const origin = s.landAuction!.origin
+  for (const lot of s.landAuction!.lots) settleLot(s, lot, origin)
   s.landAuction = null
   return s
 }

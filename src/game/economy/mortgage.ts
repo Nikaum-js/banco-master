@@ -5,6 +5,7 @@ import type { Square, GroupKey } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
 import { activePlayer } from '../turn/turnMachine'
 import { THEME } from '../theme'
+import { logEvent } from '../log'
 
 function clone(state: GameState): GameState {
   return structuredClone(state)
@@ -61,9 +62,12 @@ export function canUnmortgage(state: GameState, pos: number): boolean {
 export function mortgageProperty(state: GameState, pos: number): GameState {
   if (!canMortgage(state, pos)) return state
   const sq = BOARD[pos]
+  const amount = mortgageValue(sq)
   const s = clone(state)
-  activePlayer(s).cash += mortgageValue(sq)
+  const p = activePlayer(s)
+  p.cash += amount
   s.titles[pos].mortgaged = true
+  logEvent(s, { kind: 'mortgage', who: p.id, pos, amount })
   return s
 }
 
@@ -73,7 +77,9 @@ export function unmortgageProperty(state: GameState, pos: number): GameState {
   const sq = BOARD[pos]
   const cost = unmortgageCost(sq)
   const s = clone(state)
-  activePlayer(s).cash -= cost
+  const p = activePlayer(s)
+  p.cash -= cost
   s.titles[pos].mortgaged = false
+  logEvent(s, { kind: 'unmortgage', who: p.id, pos, cost })
   return s
 }

@@ -3,6 +3,7 @@ import type { GameState } from '../turn/types'
 import type { Auction } from './types'
 import { completeResolution } from '../turn/turnMachine'
 import { AUCTION_WINDOW } from './purchase'
+import { logEvent } from '../log'
 
 function clone(state: GameState): GameState {
   return structuredClone(state)
@@ -47,10 +48,14 @@ export function closeAuction(state: GameState): GameState {
     // Solvência foi checada NO LANCE (placeBid); entre o lance e o fecho, outra ação do
     // mesmo turno pode ter reduzido o caixa do licitante — paga o que houver em vez de
     // ficar negativo (mesmo padrão de audit()/pagamentos obrigatórios; FR-004a, 036).
-    if (winner) winner.cash -= Math.min(a.currentBid, winner.cash)
+    const paid = winner ? Math.min(a.currentBid, winner.cash) : 0
+    if (winner) winner.cash -= paid
     s.titles[a.pos].ownerId = a.highBidder
+    logEvent(s, { kind: 'auction-won', who: 'bank', pos: a.pos, amount: paid, winnerId: a.highBidder })
+  } else {
+    // sem highBidder → permanece com o banco (FR-015)
+    logEvent(s, { kind: 'auction-unsold', who: 'bank', pos: a.pos })
   }
-  // sem highBidder → permanece com o banco (FR-015)
   completeResolution(s)
   return s
 }

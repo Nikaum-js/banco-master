@@ -10,6 +10,7 @@ import type { GameState } from '../turn/types'
 import { activePlayer } from '../turn/turnMachine'
 import { groupSize } from './titles'
 import { THEME } from '../theme'
+import { logEvent } from '../log'
 
 function clone(state: GameState): GameState {
   return structuredClone(state)
@@ -88,7 +89,8 @@ export function buildHouse(state: GameState, pos: number): GameState {
   const s = clone(state)
   const p = activePlayer(s)
   const t = s.titles[pos]
-  p.cash -= buildCost(sq)
+  const cost = buildCost(sq)
+  p.cash -= cost
   if (cur === 4) {
     t.houses = 0
     t.hotel = true // 4 casas viram 1 hotel
@@ -99,6 +101,7 @@ export function buildHouse(state: GameState, pos: number): GameState {
   } else {
     t.houses += 1
   }
+  logEvent(s, { kind: 'build', who: p.id, pos, level: cityLevel(t), cost })
   return s
 }
 
@@ -126,8 +129,10 @@ export function buildHangar(state: GameState, pos: number): GameState {
   if (state.paused) return state
   if (!canBuildHangar(state, pos)) return state
   const s = clone(state)
-  activePlayer(s).cash -= HANGAR_COST
+  const p = activePlayer(s)
+  p.cash -= HANGAR_COST
   s.titles[pos].hangar = true
+  logEvent(s, { kind: 'build-hangar', who: p.id, pos, cost: HANGAR_COST })
   return s
 }
 
@@ -135,8 +140,11 @@ export function sellHangar(state: GameState, pos: number): GameState {
   if (state.paused) return state
   if (!canSellHangar(state, pos)) return state
   const s = clone(state)
-  activePlayer(s).cash += Math.round(HANGAR_COST / 2) // metade ($50)
+  const p = activePlayer(s)
+  const amount = Math.round(HANGAR_COST / 2) // metade ($50)
+  p.cash += amount
   s.titles[pos].hangar = false
+  logEvent(s, { kind: 'sell-hangar', who: p.id, pos, amount })
   return s
 }
 
@@ -165,7 +173,8 @@ export function sellBuilding(state: GameState, pos: number): GameState {
   const s = clone(state)
   const p = activePlayer(s)
   const t = s.titles[pos]
-  p.cash += Math.round(buildCost(sq as PropertySquare) / 2)
+  const amount = Math.round(buildCost(sq as PropertySquare) / 2)
+  p.cash += amount
 
   if (cur === 7) {
     t.skyscraper = false // arranha-céu → 2º hotel
@@ -177,5 +186,6 @@ export function sellBuilding(state: GameState, pos: number): GameState {
   } else {
     t.houses -= 1
   }
+  logEvent(s, { kind: 'sell-building', who: p.id, pos, level: cityLevel(t), amount })
   return s
 }
