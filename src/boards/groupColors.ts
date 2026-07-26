@@ -15,5 +15,5 @@ export const GROUP_COLOR: Record<string, string> = {
   green:   'var(--color-group-green)',
   navy:    'var(--color-group-navy)',
   purple:  'var(--color-group-purple)',
-  platinum: 'var(--color-group-platinum)', // Emirados (super-luxo) — ônix (033)
+  platinum: 'var(--color-group-platinum)', // Emirados (super-luxo) — prata/platina (033)
 }

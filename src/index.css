@@ -70,7 +70,7 @@
   --color-group-green:   #35d97b;
   --color-group-navy:    #4d8bf5;
   --color-group-purple:  #a76bf5;
-  --color-group-platinum: #232741; /* Alta Roda (super-luxo) — ônix azulado (033) */
+  --color-group-platinum: #c4c9d2; /* Alta Roda (super-luxo) — prata/platina (033; onyx original não destacava sobre a tinta escura) */
 
   /* ---------- Raridade de carta (SRS §10.2: laranja/azul/verde) ---------- */
   --color-rarity-lendaria: var(--color-group-orange);
@@ -211,7 +211,7 @@
   --color-group-green:   #22c55e;
   --color-group-navy:    #3b82f6;
   --color-group-purple:  #a855f7;
-  --color-group-platinum: #26233a;
+  --color-group-platinum: #c4c9d2; /* mesma prata/platina do Atlas — precisa destacar sobre a tinta escura em qualquer tema */
 
   /* sombras sépia (pretas), glow de ouro */
   --shadow-card:    0 1px 0 0 #0f0c09, 0 2px 8px -2px rgb(0 0 0 / 0.6);

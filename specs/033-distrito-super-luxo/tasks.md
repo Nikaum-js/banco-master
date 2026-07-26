@@ -80,7 +80,7 @@ description: "Task list — Distrito Super-Luxo 'Alta Roda' (033)"
 
 ### Implementation for User Story 3
 
-- [ ] T011 [US3] Validar no `bun run dev`: faixa de Mônaco/Dubai com a cor `bg-group-platinum` (ônix), distinta das 9; deed/popover mostra a cor + aluguel-topo. Ajustar o hex (`--color-group-platinum` + `GROUP_COLOR.platinum`) se não destacar.
+- [X] T011 [US3] Validado (Playwright): o ônix original (`#232741`/`#26233a`) **não destacava** sobre a tinta escura — comparado lado a lado com `navy`, a faixa de Abu Dhabi/Dubai era quase invisível. Corrigido em 2026-07-26 pra prata/platina (`#c4c9d2`, ambos os temas Atlas/Café); agora contrasta claramente no tabuleiro e no header do deed.
 
 **Checkpoint**: zona nobre reconhecível na tela.
 
