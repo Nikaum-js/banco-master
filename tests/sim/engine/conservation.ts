@@ -156,9 +156,16 @@ function rentDue(state: GameState, pos: number, ownerIdOverride?: string): { own
 // Um único dispatch pode empurrar até 3 entradas ("rolou X+Y" + "passou/parou no GO" + "pagou
 // juros") — alinha as duas listas PELO FIM e para na primeira dupla idêntica (o log só cresce
 // por push+shift, então uma vez achando uma entrada igual, tudo antes dela também é igual).
+// Igualdade por VALOR, não por referência — o motor clona o estado inteiro
+// (structuredClone) a cada dispatch, então campos de array (ex.: `white` de 'roll')
+// nunca sobrevivem por identidade mesmo quando a entrada é a MESMA logicamente.
+function sameEntry(a: GameState['log'][number], b: GameState['log'][number]): boolean {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
 function sameEntries(a: GameState['log'], b: GameState['log']): boolean {
   if (a.length !== b.length) return false
-  return a.every((e, i) => e.who === b[i].who && e.what === b[i].what)
+  return a.every((e, i) => sameEntry(e, b[i]))
 }
 
 // Acha as entradas realmente NOVAS deste dispatch testando hipóteses de k (0..3) empurradas:
@@ -182,9 +189,8 @@ function newLogEntries(prev: GameState, next: GameState): GameState['log'] {
 
 function detectGoCrossing(prev: GameState, next: GameState, actorId: string): { landedExactly: boolean } | null {
   for (const entry of newLogEntries(prev, next)) {
-    if (entry.who !== actorId) continue
-    if (entry.what.startsWith('parou no GO')) return { landedExactly: true }
-    if (entry.what.startsWith('passou pelo GO')) return { landedExactly: false }
+    if (entry.kind !== 'go' || entry.who !== actorId) continue
+    return { landedExactly: entry.landed }
   }
   return null
 }
