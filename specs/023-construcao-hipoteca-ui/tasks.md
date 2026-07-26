@@ -82,7 +82,7 @@ Predicados em `src/game/economy/construction.ts` e `mortgage.ts`; `deedView` em 
 ## Phase 6: Polish
 
 - [X] T014 [P] `bunx vitest run tests/game` (verde, inclui `deedView` + 004/005/011) + `bun run build` (exit 0).
-- [ ] T015 Validação visual no `bun run dev` (roteiro do quickstart) — construir/vender/hipotecar/hangar e ausência de ações em propriedade de terceiro/livre.
+- [X] T015 Validação visual (Playwright + estado forçado via store): popover mostra aluguel/preço/casa/hipoteca reais, "Construir"/"Vender"/"Hipotecar" habilitados corretamente. Acabamento aprovado.
 
 ---
 

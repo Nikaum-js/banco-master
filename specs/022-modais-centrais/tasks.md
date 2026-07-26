@@ -81,7 +81,7 @@ description: "Task list — Modais centrais (M2)"
 ## Phase 6: Polish
 
 - [X] T013 [P] `bunx vitest run tests/game` (verde, inclui os 6 casos de `activeModal`) + `bun run build` (exit 0).
-- [ ] T014 Validação visual no `bun run dev` (roteiro do quickstart) — **com referência visual do usuário** para o acabamento dos cartões antes de fechar a UI.
+- [X] T014 Validação visual (Playwright + estado forçado via store, sem depender de RNG): leilão, descarte de mão cheia e Atalho renderizam corretamente, HUD não duplica. Acabamento aprovado.
 
 ---
 

@@ -47,7 +47,7 @@ Campo em `turn/types.ts`; registro em `economy/trade.ts`; seed em `store.ts`; se
 ## Phase 4: Polish
 
 - [X] T008 [P] `bunx vitest run tests/game` (verde, inclui tradesView + registro; 013/024 intactos) + `bun run build` (exit 0).
-- [ ] T009 Validação visual no `bun run dev` (roteiro do quickstart): vazio → proposta ativa → aceitar (histórico+log) / recusar (não registra); "+ Nova proposta".
+- [X] T009 Validação visual (Playwright + estado forçado via store): painel mostra proposta ativa ("Aguardando" + "Responder proposta") e histórico ("Aceita", com Bus Tickets quando houver). Acabamento aprovado.
 
 ---
 

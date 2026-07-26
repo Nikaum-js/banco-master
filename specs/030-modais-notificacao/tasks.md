@@ -48,7 +48,7 @@ description: "Task list — Modais informativos: Free Parking & Aquisição Host
 ## Phase 7: Polish
 
 - [X] T009 [P] `bunx vitest run tests/game` (verde, inclui notice; 007/016 intactos) + `bun run build` (exit 0).
-- [ ] T010 Validação visual no `bun run dev` (roteiro do quickstart).
+- [X] T010 Validação visual (Playwright + estado forçado via store): loteria com confete + valor; Aquisição Hostil com o texto vítima/propriedade/atacante. Acabamento aprovado.
 
 ---
 

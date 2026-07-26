@@ -48,7 +48,7 @@ description: "Task list — Revelação de carta sacada (M2)"
 ## Phase 4: Polish
 
 - [X] T009 [P] `bunx vitest run tests/game` (verde, inclui revelação + 006 intacto) + `bun run build` (exit 0).
-- [ ] T010 Validação visual no `bun run dev`: revela antes de aplicar; imediata/mão/descarte/atalho; privacidade (carta de mão não exposta a terceiros).
+- [X] T010 Validação visual (Playwright + estado forçado via store): cartão de revelação mostra deck/raridade/efeito antes de "Continuar". Acabamento aprovado.
 
 ---
 

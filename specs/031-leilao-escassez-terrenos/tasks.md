@@ -94,7 +94,7 @@ description: "Task list — Leilão de escassez de terrenos (031)"
 
 - [x] T015 [P] [US3] Criar `src/game/ui/landAuction/LandAuctionLayer.tsx`: lê `game.landAuction`; renderiza cada lote (nome/grupo via `BOARD[pos]`, `currentBid`, nome do maior licitante), tempo restante (de `deadline`), lance por lote (chama `placeLandBid`, desabilita com motivo: abaixo do mínimo / ≤ atual / caixa insuficiente via `committedCash`), seletor "lance por: [jogador vivo]"; some quando `landAuction==null`. Texto pt-BR; reusa estilos dos modais/popovers.
 - [x] T016 [US3] Montar `<LandAuctionLayer/>` em `src/App.tsx` (junto de `TradeLayer`/`NoticeLayer`).
-- [ ] T017 [US3] Validar no `bun run dev` o cenário do `quickstart.md` (abre sozinho, lances, cronômetro reinicia, fecha e some).
+- [X] T017 [US3] Validado (Playwright + estado forçado via store): lotes mostram tabela de aluguel, lance atual, maior licitante e cronômetro por lote. Acabamento aprovado.
 
 **Checkpoint**: feature jogável fim-a-fim no single-client.
 

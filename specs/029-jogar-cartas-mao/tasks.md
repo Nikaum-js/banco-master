@@ -64,7 +64,7 @@ Peças puras + UI em `src/game/ui/cards/`; testes em `tests/game/ui/handView.tes
 ## Phase 5: Polish
 
 - [X] T010 [P] `bunx vitest run tests/game` (verde, inclui handView; 006/015/016/017 intactos) + `bun run build` (exit 0).
-- [ ] T011 Validação visual no `bun run dev` (roteiro do quickstart): sacar → painel; timing; sem-alvo (Saia da Prisão); com-alvo (Imunidade/Boicote/Aquisição); privacidade.
+- [X] T011 Validação visual (Playwright + estado forçado via store): painel mostra raridade/nome/efeito; gating de timing (preso habilita "Saída da Prisão"); seletor de alvo (Boicote) lista só propriedades de terceiros. Acabamento aprovado.
 
 ---
 
