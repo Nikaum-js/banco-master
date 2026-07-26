@@ -6,6 +6,7 @@ import type { GameState } from '../turn/types'
 import { buildCost, cityLevel, HANGAR_COST } from '../economy/construction'
 import { activePlayer, completeResolution, advanceSeat, type TurnCtx } from '../turn/turnMachine'
 import { activeLoanFor } from '../emprestimos/emprestimos'
+import { openEstateAuction } from '../economy/landAuction'
 import { logEvent } from '../log'
 
 function clone(state: GameState): GameState {
@@ -81,6 +82,11 @@ export function declareBankruptcy(state: GameState, ctx: TurnCtx): GameState {
   const loan = activeLoanFor(s, debtor.id)
   const heirId = loan ? loan.creditorId : debtCreditorId
 
+  // Sem herdeiro, as propriedades formam o ESPÓLIO e vão a pregão (039, §9.2 / D-031) em vez
+  // de voltarem de graça ao banco. Coletamos aqui e decidimos o destino depois de eliminar o
+  // devedor — a guarda de "≥2 vivos" do pregão conta sobre o estado JÁ eliminado.
+  const estate: number[] = []
+
   for (const sq of BOARD) {
     if (!('price' in sq)) continue
     const t = s.titles[sq.pos]
@@ -92,8 +98,10 @@ export function declareBankruptcy(state: GameState, ctx: TurnCtx): GameState {
       t.hotel = false
       t.houses = 0
     }
-    // Hangar de aeroporto NÃO é desfeito: segue o aeroporto ao herdeiro (§13.6).
-    t.ownerId = heirId // credor do empréstimo (§9.3) ou da dívida (§9.2); banco se null. Hipoteca/Hangar preservados.
+    // Hangar de aeroporto NÃO é desfeito: segue o aeroporto ao herdeiro (§13.6) ou ao
+    // vencedor do lote. Hipoteca idem.
+    t.ownerId = heirId // credor do empréstimo (§9.3) ou da dívida (§9.2); null = espólio/banco.
+    if (!heirId) estate.push(sq.pos)
   }
   if (heirId) {
     const heir = s.players.find((p) => p.id === heirId)
@@ -113,5 +121,14 @@ export function declareBankruptcy(state: GameState, ctx: TurnCtx): GameState {
   s.turn.pendingResolve = false
   checkEndGame(s)
   if (s.phase !== 'ended') advanceSeat(s, ctx)
+
+  // Espólio a pregão (039, §9.2 / D-031) — POR ÚLTIMO, e de propósito:
+  // • depois de `debtor.eliminated`, porque a guarda "≥2 vivos" do pregão conta sobre o
+  //   estado já eliminado (mesa de 2 → sobra 1 → §9.5 vence, nenhum pregão abre);
+  // • depois de `advanceSeat`, porque o pregão é evento AUTÔNOMO e não deve interferir na
+  //   passagem da vez (FR-014).
+  // O prazo vem de `ctx.now` (não de `Date.now()`): o `recorder` da 037 grava no host e
+  // reproduz no cliente, e é isso que faz os prazos convergirem byte a byte.
+  if (estate.length > 0) return openEstateAuction(s, estate, ctx.now?.() ?? 0, debtor.id)
   return s
 }

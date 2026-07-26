@@ -6,6 +6,7 @@ import {
   closeLandAuction,
   closeExpiredLandLots,
   committedCash,
+  openEstateAuction,
   LAND_AUCTION_WINDOW,
 } from '@/game/economy/landAuction'
 import { createSeedState } from '@/game/setup'
@@ -180,5 +181,134 @@ describe('freeLots', () => {
     expect(freeLots(seedFree(3))).toHaveLength(3)
     expect(freeLots(seedFree(0))).toHaveLength(0)
     expect(freeLots(createSeedState(['p1', 'p2']))).toHaveLength(COMPRAVEIS.length) // tudo livre no seed
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Espólio do falido (spec 039, §9.2 / D-031) — o pregão ganha ORIGEM e passa a
+// aceitar lotes DEPOIS de aberto. Nada aqui deve exigir mudança em placeLandBid,
+// settleLot, closeExpiredLandLots ou committedCash: um lote de espólio é
+// indistinguível de um lote de escassez para todas elas.
+// ---------------------------------------------------------------------------
+
+describe('Pregão — origem (039, FR-020)', () => {
+  it('o pregão de escassez nasce origin=scarcity e sem falido', () => {
+    const out = maybeOpenLandAuction(seedFree(3), 1000)
+    expect(out.landAuction!.origin).toBe('scarcity')
+    expect(out.landAuction!.bankruptId).toBeNull()
+  })
+})
+
+describe('openEstateAuction — abre com pregão FECHADO (039)', () => {
+  it('cria o pregão com origin=bankruptcy e o falido nomeado', () => {
+    const g = seedFree(0, ['p1', 'p2', 'p3']) // tudo de p1; ninguém eliminado
+    const out = openEstateAuction(g, [1, 3], 5000, 'p1')
+    expect(out.landAuction!.lots.map((l) => l.pos)).toEqual([1, 3])
+    expect(out.landAuction!.origin).toBe('bankruptcy')
+    expect(out.landAuction!.bankruptId).toBe('p1')
+    expect(out.landAuction!.lots.every((l) => l.deadline === 5000 + LAND_AUCTION_WINDOW)).toBe(true)
+  })
+
+  it('FR-005: espólio vazio é no-op referencial', () => {
+    const g = seedFree(0)
+    expect(openEstateAuction(g, [], 5000, 'p1')).toBe(g)
+  })
+
+  it('FR-006: menos de 2 não-eliminados é no-op referencial', () => {
+    const g = seedFree(0, ['p1', 'p2'])
+    g.players[0].eliminated = true // sobra 1 vivo
+    expect(openEstateAuction(g, [1, 3], 5000, 'p1')).toBe(g)
+  })
+
+  it('FR-018: não toca landAuctionArmed', () => {
+    const g = seedFree(0, ['p1', 'p2', 'p3'])
+    g.landAuctionArmed = true
+    expect(openEstateAuction(g, [1], 5000, 'p1').landAuctionArmed).toBe(true)
+    g.landAuctionArmed = false
+    expect(openEstateAuction(g, [1], 5000, 'p1').landAuctionArmed).toBe(false)
+  })
+
+  it('FR-012: bidders são os não-eliminados; o falido fica fora', () => {
+    const g = seedFree(0, ['p1', 'p2', 'p3'])
+    g.players[0].eliminated = true // p1 faliu
+    const out = openEstateAuction(g, [1, 3], 5000, 'p1')
+    expect(out.landAuction!.bidders).toEqual(['p2', 'p3'])
+  })
+})
+
+describe('openEstateAuction — INJETA em pregão ABERTO (039, US2)', () => {
+  // Pregão de escassez com 2 lotes já em curso (prazo em t=1000). CUIDADO com o fixture:
+  // `seedFree(2)` deixa livres COMPRAVEIS[0..1], que são exatamente os lotes de escassez —
+  // então o espólio tem de vir de posições que TINHAM dono (COMPRAVEIS[2..]), senão o filtro
+  // do FR-019 as descarta e o teste mede a coisa errada.
+  function comPregaoAberto(): GameState {
+    const g = maybeOpenLandAuction(seedFree(2, ['p1', 'p2', 'p3']), 1000)
+    expect(g.landAuction!.lots).toHaveLength(2)
+    return g
+  }
+  const ESPOLIO = COMPRAVEIS.slice(2, 5) // eram de p1 → nunca são lote de escassez
+
+  it('FR-015: os lotes do espólio somam aos que já existiam', () => {
+    const antes = comPregaoAberto()
+    const livres = antes.landAuction!.lots.map((l) => l.pos)
+    const out = openEstateAuction(antes, ESPOLIO, 9000, 'p1')
+    expect(out.landAuction!.lots).toHaveLength(5)
+    expect(out.landAuction!.lots.map((l) => l.pos)).toEqual([...livres, ...ESPOLIO])
+  })
+
+  it('FR-016: os prazos dos lotes preexistentes NÃO mudam', () => {
+    const antes = comPregaoAberto()
+    const prazosAntes = antes.landAuction!.lots.map((l) => l.deadline)
+    const out = openEstateAuction(antes, ESPOLIO, 9000, 'p1')
+    expect(out.landAuction!.lots.slice(0, 2).map((l) => l.deadline)).toEqual(prazosAntes)
+    // só os NOVOS recebem prazo a partir de agora
+    expect(out.landAuction!.lots.slice(2).every((l) => l.deadline === 9000 + LAND_AUCTION_WINDOW)).toBe(true)
+  })
+
+  it('FR-017: bidders são recalculados — o recém-falido sai até dos lotes antigos', () => {
+    const antes = comPregaoAberto()
+    expect(antes.landAuction!.bidders).toEqual(['p1', 'p2', 'p3'])
+    antes.players[0].eliminated = true // p1 acabou de falir
+    const out = openEstateAuction(antes, ESPOLIO, 9000, 'p1')
+    expect(out.landAuction!.bidders).toEqual(['p2', 'p3'])
+    // e o pregão inteiro passa a recusar lance dele, inclusive num lote de ESCASSEZ
+    const loteDeEscassez = out.landAuction!.lots[0].pos
+    expect(placeLandBid(out, 'p1', loteDeEscassez, 50, 9100)).toBe(out)
+  })
+
+  it('FR-020: escassez + espólio no mesmo pregão → origin=mixed', () => {
+    const out = openEstateAuction(comPregaoAberto(), ESPOLIO, 9000, 'p1')
+    expect(out.landAuction!.origin).toBe('mixed')
+    expect(out.landAuction!.bankruptId).toBe('p1')
+  })
+
+  it('segundo espólio no mesmo pregão: origin fica bankruptcy e o falido é o mais recente', () => {
+    const g = seedFree(0, ['p1', 'p2', 'p3'])
+    const primeiro = openEstateAuction(g, [ESPOLIO[0]], 5000, 'p1')
+    expect(primeiro.landAuction!.origin).toBe('bankruptcy')
+    const segundo = openEstateAuction(primeiro, [ESPOLIO[1]], 9000, 'p2')
+    expect(segundo.landAuction!.origin).toBe('bankruptcy') // não vira mixed: as duas são falência
+    expect(segundo.landAuction!.bankruptId).toBe('p2')
+    expect(segundo.landAuction!.lots).toHaveLength(2)
+  })
+
+  it('FR-019: posição que já é lote não entra duas vezes', () => {
+    const antes = comPregaoAberto()
+    const jaEmLote = antes.landAuction!.lots[0].pos
+    const out = openEstateAuction(antes, [jaEmLote, ESPOLIO[0]], 9000, 'p1')
+    expect(out.landAuction!.lots).toHaveLength(3) // 2 antigos + só a posição nova
+    expect(out.landAuction!.lots.filter((l) => l.pos === jaEmLote)).toHaveLength(1)
+  })
+
+  it('FR-019: quando TODAS as posições já são lote, é no-op referencial', () => {
+    const antes = comPregaoAberto()
+    const jaEmLote = antes.landAuction!.lots.map((l) => l.pos)
+    expect(openEstateAuction(antes, jaEmLote, 9000, 'p1')).toBe(antes)
+  })
+
+  it('posição repetida no próprio espólio gera um lote só', () => {
+    const g = seedFree(0, ['p1', 'p2'])
+    const out = openEstateAuction(g, [ESPOLIO[0], ESPOLIO[0], ESPOLIO[1]], 5000, 'p1')
+    expect(out.landAuction!.lots.map((l) => l.pos)).toEqual([ESPOLIO[0], ESPOLIO[1]])
   })
 })

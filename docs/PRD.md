@@ -99,7 +99,7 @@ Legenda: ✅ entregue · ❌ descontinuada · ⏳ pendente (sem spec ainda).
 ### E14 — QA / Simulação
 | 036 | Fuzzing seedado + invariantes + conservação de dinheiro + smoke E2E | ✅ |
 
-### E15 — Multiplayer, Sala & Sessão (Supabase) — **fundação entregue**
+### E15 — Multiplayer, Sala & Sessão (Supabase) — **FECHADO**
 
 > O plano original fatiava em 037 infra / 038 transporte / 039 lobby / 040 sessão. A **spec 037
 > absorveu as quatro**: transporte de comandos, sync host-autoritativo, resiliência de sessão e
@@ -110,7 +110,7 @@ Legenda: ✅ entregue · ❌ descontinuada · ⏳ pendente (sem spec ainda).
 |---|---|---|
 | 037 | Fundação host-autoritativa: `applyCommand` puro, difusão por comando com não-determinismo gravado/replicado, snapshot upsert, pausa por presença, reconexão/reload, anti-spoof, lobby mínimo (nome+cor+link+iniciar), migration + adapter Supabase | ✅ (infra viva pendente: aplicar a migration) |
 | 038 | Partida online de verdade: perspectiva de jogador local (mão privada de fato), identidade real (nomes/cores/peças no lugar de `p1..pN`), status de conexão/pausa visível, roteamento home → sala → partida → fim, kick no lobby, ordem inicial sorteada | ✅ |
-| 039 (próxima) | Leilão dos bens do falido-ao-banco (§9.2) — precisa de vários jogadores | ⏳ |
+| 039 | Leilão do **espólio** do falido-ao-banco (§9.2 / D-031): pregão simultâneo reusando a D-023, com discriminador de origem e injeção de lotes em pregão aberto | ✅ |
 
 ### E16 — Polimento & Lançamento (M4) — **NÃO COMEÇOU**
 | ⏳ | Tela de fim de jogo com resumo; acessibilidade/responsivo; telemetria mínima; deploy + CI | ⏳ |
@@ -132,7 +132,7 @@ O engine e a UI single-player estão fechados, e a **fundação multiplayer saiu
    medir SC-002/SC-006 numa partida real).
 2. **038 Partida online de verdade** — ✅ entregue (2026-07-25). Falta só o roteiro manual em
    dois browsers; o DoD #4 do §3 (lobby com nomes reais) está cumprido.
-3. **039 Leilão do falido-ao-banco** (§9.2) — regra que só existe com N jogadores, destravada pelo M3.
+3. **039 Leilão do espólio do falido-ao-banco** (§9.2) — ✅ entregue (2026-07-25). **O SRS não tem mais lacuna de regra**: era a última.
 4. **M4:** tela de fim de jogo, acessibilidade, telemetria, deploy + CI.
 
 > **Decisão travada antes de specificar 037 — resolvida:** a autoridade de estado (item 17 da

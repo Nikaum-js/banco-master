@@ -96,9 +96,15 @@ export type GameAction = PlayerAction | SystemAction
 // `place-bid` e `accept-trade`, que não mudam a contagem, enquanto a produção não
 // disparava em `declare-bankruptcy`, que muda.
 //
-// `declare-bankruptcy` entra porque a falência devolve terreno ao BANCO quando não há
-// herdeiro (`falencia.ts:98` → `ownerId = null`), subindo a contagem acima do limiar —
-// o caso de re-arme que `maybeOpenLandAuction` documenta na própria assinatura.
+// `declare-bankruptcy` entra pelo RE-ARME do episódio. O motivo original era que a falência
+// sem herdeiro devolvia terreno direto ao banco, subindo a contagem de livres acima do limiar.
+// Desde a 039 (§9.2 / D-031) essas propriedades vão a PREGÃO em vez de voltarem livres, e um
+// terreno em lote não conta como livre — então esse caminho já não sobe a contagem na hora.
+// A entrada continua necessária por dois outros: falência COM herdeiro pode zerar a contagem
+// de forma relevante ao limiar, e o `maybeOpenLandAuction` também é quem RE-ARMA o episódio
+// quando a contagem está acima do limiar — o que precisa ser reavaliado a cada mudança de
+// posse. Lote de espólio sem lance vira terreno livre no fecho, e aí quem dispara é
+// `close-land-lots`, que já está nesta tabela.
 // Troca NÃO entra: transferir entre dois donos deixa a contagem intacta.
 const LAND_TRIGGERING = new Set<GameAction['kind']>([
   'finalize',

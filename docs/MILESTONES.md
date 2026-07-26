@@ -47,7 +47,7 @@ Lógica de jogo **pura, serializável e testada** em `src/game/` (Zustand + Vite
 
 ### Pendente (engine)
 - ✅ **Transferência de imunidade existente** (§8.4 "transferíveis") — entregue no **028** (re-atribui beneficiário, preserva voltas/`granterId`).
-- ⤳ **Leilão dos bens do falido-ao-banco** (§9.2): hoje as propriedades voltam **direto** ao banco (grátis); o SRS pede **leilão**. Precisa de licitantes = vários jogadores → **movido ao M3**.
+- ✅ **Leilão dos bens do falido-ao-banco** (§9.2) — entregue na **spec 039** (2026-07-25): o espólio vai a pregão simultâneo reusando a D-023 ([D-031](adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md)). Era a última regra do SRS sem implementação.
 - ❌ **Leilão de casas em escassez** (§5.4): **removido** (2026-05-25, [D-022](adr/README.md)) — construção é ilimitada, não há escassez de casas. Spec 026 descontinuada.
 - [ ] **Rebalanceamento pós-playtest** (tuning dos knobs em `theme.ts`).
 

@@ -5,9 +5,10 @@
 
 ## Estado atual
 
+- **O SRS não tem mais lacuna de regra.** A spec 039 (2026-07-25) implementou o §9.2 — era a última. Daqui em diante, todo trabalho é polimento/lançamento (E16) ou dívida técnica, não regra faltando.
 - **Motor (M1): completo e sem gaps de regra conhecidos** — os 3 bugs achados pela auditoria de 2026-07-23 foram corrigidos (ver abaixo). **UI jogável (M2): fechada**. **Simulação (spec 036): entregue**.
-- **Multiplayer (M3): specs 037 e 038 COMPLETAS, infra viva** — fundação host-autoritativa (037) + **partida online jogável** (038: perspectiva de jogador local, identidade real, sessão visível, roteamento). Motor intacto (princípio I / SC-007).
-- **Gates:** `bunx vitest run` → **554 testes / 66 arquivos verdes**; `tsc` limpo; `bun run build` ok; **lint global ZERADO** (era 36); `bun audit` → 3 advisories restantes, todas em cópias transitivas de ferramenta de dev (nenhuma alcança o bundle). `bun run scripts/net-smoke.ts` verde contra o Supabase real.
+- **Multiplayer (M3): specs 037, 038 e 039 COMPLETAS, infra viva. E15 FECHADO.** Fundação host-autoritativa (037) + partida online jogável (038) + leilão do espólio do falido (039).
+- **Gates:** `bunx vitest run` → **585 testes / 68 arquivos verdes**; `tsc` limpo; `bun run build` ok; **lint global ZERADO** (era 36); `bun audit` → 3 advisories restantes, todas em cópias transitivas de ferramenta de dev (nenhuma alcança o bundle). `bun run scripts/net-smoke.ts` verde contra o Supabase real.
 - **CI VIVO** (`.github/workflows/ci.yml`, 2026-07-25): 3 jobs — `gates` (lint + tsc + vitest + build), `simulation` (30 partidas seedadas 2/3/6) e `e2e` (smoke single-player, traces no artifact em falha). O `multiplayer.spec.ts` fica fora do gate: depende de credencial Supabase.
 - **E2E:** `bunx playwright test` → **2, 3 e 6 jogadores passam** (2 execuções seguidas). A falha de 6 jogadores registrada aqui antes NÃO era timeout de performance: o roteiro procurava um botão `← Frente` que o commit `03cb1ef` extinguiu, e travava no modal de Atalho até o teto de 240s. Como os dados do browser são `Math.random()`, aparecia como flake. Corrigido em `e2e/script.ts`.
 - **Push agora é rotina:** remote `origin` = `github.com:Nikaum-js/banco-master` — commits desta e da sessão anterior foram pushados. Backdate de commits segue a regra do `~/.claude/rules/git-conventions.md` (hook injeta).
@@ -91,6 +92,26 @@ Duas decisões viraram ADR antes de entrar na spec (regra nunca nasce numa spec 
 
 **SRS bumpado para v1.5** (§10.3 e §11.3). O `docs/PRD.md` foi realinhado: o mapa E15 antigo (037 infra / 038 transporte / 039 lobby / 040 sessão) não valia mais — a 037 absorveu as quatro; sobrou 038 (experiência) e 039 (leilão do falido §9.2).
 
+## Spec 039 — leilão do espólio do falido-ao-banco (2026-07-25)
+
+**Entregue: US1–US3.** `specs/039-leilao-espolio-falido/`. Fecha o SRS §9.2, que dizia desde sempre que as propriedades de quem falisse devendo **ao banco** vão a leilão — a 008 implementou o resto do §9 e deixou isso como `ownerId = null`, ou seja, o patrimônio voltava **de graça**.
+
+**A chave do desenho foi não escrever mecânica nova.** O pregão simultâneo da 031 já resolve lotes independentes com prazo próprio, trava de solvência e fecho autônomo. A fatia acrescentou exatamente três coisas: `origin` em `LandAuction` (`'scarcity' | 'bankruptcy' | 'mixed'`), a função `openEstateAuction` (abre OU injeta lotes) e o ponto de chamada em `declareBankruptcy`. **`placeLandBid`, `committedCash`, `settleLot`, `closeExpiredLandLots` e `closeLandAuction` terminaram sem um caractere alterado** — era a promessa explícita do plan e o sinal de que o reuso estava certo.
+
+**Regra registrada ANTES da spec:** [D-031](docs/adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md) fixou o formato (pregão simultâneo, não fila de leilões comuns) e a colisão (lotes do espólio **entram** no pregão de escassez aberto, não enfileiram). SRS bumpado para **v1.6** (§7.1 + §9.2); `CONTEXT.md` ganhou "pregão" e "espólio".
+
+**Por que não a fila sequencial:** o leilão comum vive em `GameState.resolution`, que **bloqueia o turno**. O espólio de um jogador avançado tem facilmente 8 propriedades — a 8s cada, congelaria a mesa por mais de um minuto no meio do turno de outra pessoa. E `declareBankruptcy` acabou de esvaziar aquele slot.
+
+**Descoberta que simplificou o código:** o contrato previa `openEstateAuction` devolver `{ state, claimed }`, para o chamador dar às posições recusadas o destino antigo. Peso morto — **um lote em pregão e uma propriedade no banco têm o mesmo estado de título** (`ownerId: null`); só se distinguem por estar em `landAuction.lots`. Recusar já deixa tudo onde estava. Retorno simplificado; desvio registrado no contrato e no `tasks.md`.
+
+**Testes: 585** (era 554). `tests/game/falencia/espolio.test.ts` (18: gatilho, 6 guardas de não-abrir, fecho), `tests/game/economy/landAuction.test.ts` +13 (injeção, origem, FR-019), `tests/net/espolio.test.ts` (3: convergência).
+
+**O teste de convergência tem dentes** — verificado sabotando `ctx.now` para `Date.now()`: 2 dos 3 falham. É a proteção contra o modo de falha silencioso desta fatia (prazo de lote calculado por cliente → lotes fechando em momentos diferentes, sem nada estourar).
+
+**Simulação confirma o gatilho alcançado:** cobertura de `land-auction-close` subiu **69 → 87** no mesmo lote seedado, com os mesmos 8 `declare-bankruptcy-sink`. Se não tivesse subido, seria sinal de que o fuzzer não chega no caminho — medido, não suposto.
+
+**Atenção de balanceamento (não é bug):** o espólio favorece quem tem caixa, ou seja, empurra na direção **oposta** ao catch-up (princípio IV). É consequência da regra do SRS e nada na UI rotula, mas muda a curva de fim de jogo. Medir exige o item 3 do backlog (vencedor/curva de patrimônio no `report.ts`).
+
 ## Sessão de 2026-07-25 (parte 2) — CI + lint zerado
 
 Fecha o item de prioridade Alta do backlog da auditoria. O que mudou:
@@ -107,7 +128,12 @@ Fecha o item de prioridade Alta do backlog da auditoria. O que mudou:
 
 1. **Log tipado** (`LogEntry {kind, who, amount, what}`) — destrava explicação de aluguel na UI, som robusto (hoje classifica por substring em `classify.ts:72-83`), cor do histórico e i18n. Item de maior alavancagem estrutural, agora o de maior prioridade.
 2. **Pacote "mostrável"**: persistência do `GameState` em localStorage (F5 hoje mata a partida) + ErrorBoundary; leilão comum multi-licitante + botão "passar" (`passBid` existe no store sem UI — copiar o seletor do pregão em `LandAuctionLayer.tsx:217-230`); lobby mínimo com nomes (UI hoje celebra "p1" na vitória).
-3. **Sim: registrar vencedor/curva de patrimônio por rodada** (`tests/sim/engine/report.ts` só conta mecanismos) — pré-requisito para validar/refutar a hipótese de ROI desproporcional da construção parcial (D-026) em orange/red.
+3. **Sim: registrar vencedor/curva de patrimônio por rodada** (`tests/sim/engine/report.ts` só conta mecanismos) — pré-requisito para validar/refutar a hipótese de ROI desproporcional da construção parcial (D-026) em orange/red **e** o efeito do espólio da 039 na curva de fim de jogo.
+4. **Typecheck de `tests/`, `e2e/` e `scripts/`** — descoberto na 039: **nenhum tsconfig cobre essas pastas**, então o passo "Tipos" do CI dá confiança falsa. Um `Loan` com campo inventado (`lapsElapsed` em vez de `ratePct`) passou verde num teste novo. Medido: um tsconfig cobrindo as três acusa **29 erros**, quase todos tipagem de fixture (`piece: string` vs a união literal, `Seat` sem `isHost`, parameter properties vs `erasableSyntaxOnly` em `fakeSupabase.ts`). **Nenhum bug de produto entre eles** — inclusive o `phase === 'ended'` "inalcançável" em `runGame.ts:95` é falso positivo de narrowing (`session.game` é reatribuído dentro do laço), não dead code.
+
+## Próximo marco: E16 / M4 — polimento & lançamento
+
+Não há mais regra a implementar. O que separa do v1.0: tela de fim de jogo com resumo, acessibilidade/responsivo, telemetria mínima, deploy. Nenhuma spec aberta ainda.
 
 ## Sessões anteriores
 

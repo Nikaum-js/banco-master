@@ -131,7 +131,9 @@ Hoje o laço faz `t.ownerId = heirId` para toda propriedade do devedor, com `hei
 
 Detalhe que importa: as construções continuam sendo desfeitas **antes** (§9.2 pede "sem construções"), e Hangar/hipoteca continuam preservados — o espólio herda isso do código que já existe.
 
-Ponto delicado: se `openEstateAuction` **recusar** abrir (espólio não vazio mas menos de 2 vivos — FR-006, que é o caso de fim de jogo), as propriedades coletadas ficariam **sem dono definido**. A guarda é: coletar e zerar `ownerId` como hoje, e o `openEstateAuction` **reivindica** as posições que aceitou. Assim o caminho de recusa cai exatamente no comportamento atual, sem estado órfão.
+Ponto que parecia delicado e **se dissolveu na implementação**: se `openEstateAuction` recusar abrir (espólio não vazio mas menos de 2 vivos — FR-006, o caso de fim de jogo), o que acontece com as propriedades coletadas? O plan original previa devolver a lista de posições aceitas para o chamador corrigir as recusadas.
+
+Não é necessário: **um lote em pregão e uma propriedade no banco têm o mesmo estado de título** (`ownerId: null`) — o que os distingue é só estar em `landAuction.lots`. O laço já zera `ownerId`, então recusar deixa tudo exatamente onde o comportamento pré-039 deixava. A função devolve `GameState` puro e a recusa é no-op referencial. Registrado no [contrato](./contracts/estate-auction.md).
 
 ### D5 — `LAND_TRIGGERING` continua com `declare-bankruptcy`, por outro motivo
 

@@ -66,9 +66,63 @@ export function maybeOpenLandAuction(state: GameState, now: number): GameState {
 
   const s = clone(state)
   const lots: LandLot[] = free.map((pos) => ({ pos, currentBid: 0, highBidder: null, deadline: now + LAND_AUCTION_WINDOW }))
-  const auction: LandAuction = { lots, bidders: s.players.filter((p) => !p.eliminated).map((p) => p.id) }
+  const auction: LandAuction = {
+    lots,
+    bidders: s.players.filter((p) => !p.eliminated).map((p) => p.id),
+    origin: 'scarcity',
+    bankruptId: null,
+  }
   s.landAuction = auction
   s.landAuctionArmed = false // dispara 1×/episódio
+  return s
+}
+
+// Abre OU injeta o pregão do ESPÓLIO de um falido (039, SRS §9.2 / D-031).
+//
+// Um só ponto de entrada para os dois casos porque o chamador não deveria precisar saber em
+// qual está: se não há pregão, cria; se há, acrescenta lotes ao que está em curso (o formato
+// simultâneo já é indiferente a lotes com prazos distintos).
+//
+// Recusar é SEGURO e não precisa ser comunicado ao chamador: um lote em pregão e uma
+// propriedade no banco têm o MESMO estado de título (`ownerId: null`) — o que os distingue é
+// só estar ou não em `landAuction.lots`. Então quando uma guarda recusa, as propriedades já
+// estão exatamente onde o comportamento anterior à 039 as deixava, sem limbo possível.
+//
+// PRÉ-CONDIÇÃO: `state` já deve ter o falido marcado `eliminated` — a guarda de "≥2 vivos"
+// conta sobre este estado, e é assim que um espólio numa mesa de 2 corretamente não abre
+// pregão (sobrou 1 vivo → §9.5, fim de jogo tem precedência).
+export function openEstateAuction(
+  state: GameState,
+  positions: number[],
+  now: number,
+  bankruptId: string,
+): GameState {
+  const none = state
+  if (positions.length === 0) return none // FR-005
+  if (aliveCount(state) < 2) return none // FR-006 — sem disputa possível
+
+  // FR-019: posição que já é lote no pregão em curso não entra de novo. A interseção deveria
+  // ser vazia (lote de escassez é propriedade SEM dono; o espólio só produz propriedades que
+  // TINHAM dono), mas "deveria" é o tipo de invariante que um dia deixa de valer em silêncio.
+  const open = new Set(state.landAuction?.lots.map((l) => l.pos) ?? [])
+  const fresh = [...new Set(positions)].filter((pos) => !open.has(pos))
+  if (fresh.length === 0) return none
+
+  const s = clone(state)
+  const lots: LandLot[] = fresh.map((pos) => ({ pos, currentBid: 0, highBidder: null, deadline: now + LAND_AUCTION_WINDOW }))
+  const bidders = s.players.filter((p) => !p.eliminated).map((p) => p.id)
+
+  if (!s.landAuction) {
+    s.landAuction = { lots, bidders, origin: 'bankruptcy', bankruptId }
+  } else {
+    const a = s.landAuction
+    a.lots.push(...lots) // prazos dos lotes preexistentes ficam INTACTOS (FR-016)
+    a.bidders = bidders // FR-017 — o recém-falido sai inclusive dos lotes que já estavam lá
+    a.origin = a.origin === 'scarcity' ? 'mixed' : a.origin // FR-020
+    a.bankruptId = bankruptId
+  }
+  // FR-018: `landAuctionArmed` NÃO é tocado — um pregão de falência não pode desarmar o
+  // pregão de escassez que ainda não aconteceu.
   return s
 }
 

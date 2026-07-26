@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useGameStore } from '@/game/store'
-import { useLocalView } from '@/net/roomStore'
+import { useLocalView, useName } from '@/net/roomStore'
 import { PlayerName } from '@/net/ui/PlayerName'
 import { committedCash, LAND_AUCTION_WINDOW } from '@/game/economy/landAuction'
 import { rentLadder } from '@/game/economy/rent'
@@ -174,6 +174,13 @@ export function LandAuctionLayer() {
   // Online, o licitante é o ASSENTO LOCAL (spec 038, FR-002) — o seletor de licitante do
   // 031 existia porque o cliente único jogava por todos. Sem sala, ele continua.
   const local = useLocalView()
+  // Título pela ORIGEM dos lotes (039 / FR-020): o mecanismo é o mesmo, o que muda é o
+  // que está sendo leiloado. Nome do falido vem da SALA (FR-021), nunca do GameState (D-019).
+  const bankruptName = useName(auction?.bankruptId)
+  const title =
+    auction?.origin === 'bankruptcy' ? `Espólio de ${bankruptName}`
+    : auction?.origin === 'mixed' ? `Espólio de ${bankruptName} + terrenos livres`
+    : 'Leilão de Escassez'
   // O licitante válido é DERIVADO, não sincronizado por efeito: a escolha só vale enquanto
   // estiver na lista de licitantes do pregão em curso (ela muda quando um pregão fecha e
   // outro abre), senão cai no primeiro. Guardar isso em estado exigia um efeito que
@@ -207,7 +214,7 @@ export function LandAuctionLayer() {
     <AnimatePresence>
       <Overlay key="land-auction" z={68}>
         <ModalShell className="w-[860px] max-w-[97vw] max-h-[92vh] overflow-auto">
-          <ModalHeader center title="Leilão de Escassez" className="sticky top-0 z-10 [&_h3]:text-xl" />
+          <ModalHeader center title={title} className="sticky top-0 z-10 [&_h3]:text-xl" />
 
           {/* Licitante (fixo no assento local quando online) + caixa disponível */}
           <div className="px-5 py-3 border-b border-coffee-700 flex items-center gap-2 flex-wrap">

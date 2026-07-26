@@ -30,9 +30,19 @@ export interface LandLot {
   deadline: number // epoch ms — prazo PRÓPRIO deste lote; reinicia só com lance NELE; fecha sozinho
 }
 
+// Origem dos lotes de um pregão (039 / D-031). O MECANISMO é um só — pregão simultâneo —
+// e o que distingue escassez de terrenos (§7.3) de espólio de falido (§9.2) é só de onde os
+// lotes vieram. Nenhuma regra de lance ou de fecho lê este campo: ele existe para a UI poder
+// contar ao jogador o que aconteceu. `mixed` = pregão que recebeu lotes de outra origem
+// depois de aberto (sem ele, o título mentiria sobre ser de uma só).
+export type AuctionOrigin = 'scarcity' | 'bankruptcy' | 'mixed'
+
 export interface LandAuction {
-  lots: LandLot[] // 1..3 terrenos sem dono em disputa; cada lote fecha no seu próprio prazo
-  bidders: string[] // jogadores não-eliminados participantes (snapshot na abertura)
+  lots: LandLot[] // terrenos sem dono em disputa; cada lote fecha no seu próprio prazo
+  bidders: string[] // jogadores não-eliminados participantes; RECALCULADO se um espólio entrar (039)
+  origin: AuctionOrigin // 039 — de onde vieram os lotes
+  bankruptId: string | null // 039 — quem faliu; null em pregão de escassez puro. ID, não nome:
+  // nome de jogador vive na SALA, fora do GameState (D-019) — a UI resolve via identityOf (038).
 }
 
 export interface Loan {

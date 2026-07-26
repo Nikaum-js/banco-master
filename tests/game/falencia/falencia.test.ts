@@ -50,7 +50,7 @@ describe('Falência (US1)', () => {
     expect(after.resolution).toBeNull()
   })
 
-  it('SC-002: falir devendo ao banco → propriedades voltam ao banco; construção desfeita', () => {
+  it('SC-002: falir devendo ao banco → propriedade sai do nome do falido; construção desfeita', () => {
     const g = withDebt(null, 500)
     g.players[0].cash = 0 // insolvente (liquidação < dívida) → pode falir
     g.titles[1].ownerId = 'p1'
@@ -59,6 +59,9 @@ describe('Falência (US1)', () => {
     expect(after.players[0].eliminated).toBe(true)
     expect(after.titles[1].ownerId).toBeNull()
     expect(after.titles[1].hotel).toBe(false)
+    // Desde a 039 (§9.2 / D-031) ela não fica DE GRAÇA com o banco: vira lote de espólio.
+    // O estado de título é o mesmo (`ownerId: null`) — o que mudou é estar no pregão.
+    expect(after.landAuction?.lots.map((l) => l.pos)).toEqual([1])
   })
 
   it('SC-003: turno pula o eliminado', () => {
