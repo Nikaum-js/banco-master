@@ -35,7 +35,7 @@ export function OnlineGate({ children }: { children: ReactNode }) {
     return q.has('local') || q.has('players')
   })
 
-  if (local) return <>{children}</>
+  if (local) return <MatchErrorBoundary roomId={null}>{children}</MatchErrorBoundary>
   if (!link.roomId && !link.createHost) {
     // Porta de entrada de verdade (FR-021): ninguém precisa saber o que é `?host=1`.
     return (
@@ -105,7 +105,7 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
   if (phase === 'playing') {
     return (
       <>
-        {children}
+        <MatchErrorBoundary roomId={room?.id ?? null}>{children}</MatchErrorBoundary>
         {room && <SessionBadge link={roomLink(room.id, window.location.origin)} />}
       </>
     )
