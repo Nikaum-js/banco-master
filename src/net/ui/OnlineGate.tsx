@@ -13,6 +13,8 @@ import { connectMultiplayer } from '@/net/connectStore'
 import { hostSeat, type PieceId } from '@/net/room'
 import { getSessionToken, parseRoomLink, roomLink } from '@/net/session'
 import { createRoomSession, type RoomSession } from '@/net/roomSession'
+import { setActiveSession } from '@/net/activeSession'
+import { MatchErrorBoundary } from '@/app/MatchErrorBoundary'
 import { createSupabaseTransport, describeInfraError, isSupabaseConfigured } from '@/net/supabaseClient'
 import { IdentityForm, LobbyMessage, ReentryForm, RoomLobby, TurnOrderReveal } from './LobbyScreen'
 import { HomeScreen } from './HomeScreen'
@@ -67,6 +69,12 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
   )
   const state = useSyncExternalStore(session.subscribe, session.getState)
   const entered = useRef(false)
+
+  // Fronteira de último recurso (042): acha a sessão sem prop-drilling por três componentes.
+  useEffect(() => {
+    setActiveSession(session)
+    return () => setActiveSession(null)
+  }, [session])
 
   // Entrada por link (convidado OU host reabrindo). O guard sobrevive ao StrictMode.
   useEffect(() => {

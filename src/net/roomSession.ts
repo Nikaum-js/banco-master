@@ -59,6 +59,11 @@ export interface RoomSession {
   tick(): void
   /** Solta assinaturas e o store. NÃO derruba a conexão (ver `OnlineGate`). */
   dispose(): void
+  /** Fronteira de último recurso (042, D-035): ao contrário de `dispose()`, ESTE encerra a
+   * presença — chama antes de exibir a tela de falha, pra ausência chegar à mesa como
+   * desconexão (§11.3), sem causa de pausa nova. Seguro chamar sem sessão iniciada, e seguro
+   * chamar mais de uma vez. */
+  leaveOnFatalError(): void
 }
 
 export interface RoomSessionOptions {
@@ -241,6 +246,18 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
     tick: () => host?.tick(),
 
     dispose(): void {
+      for (const un of subs) un()
+      subs.length = 0
+      listeners.length = 0
+      disconnectStore?.()
+      disconnectStore = null
+    },
+
+    leaveOnFatalError(): void {
+      host?.stop()
+      client?.leave()
+      client = null
+      host = null
       for (const un of subs) un()
       subs.length = 0
       listeners.length = 0
