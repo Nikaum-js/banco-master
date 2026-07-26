@@ -1,6 +1,6 @@
 # HANDOVER — Banco Master
 
-> Última atualização: 2026-07-25 · branch `main` (fluxo sem branch por feature)
+> Última atualização: 2026-07-26 · branch `main` (fluxo sem branch por feature)
 > Leitura de partida: este arquivo → `CLAUDE.md` → `docs/AUDITORIA-2026-07-23.md` → a spec ativa.
 
 ## Estado atual
@@ -8,8 +8,8 @@
 - **O SRS não tem mais lacuna de regra.** A spec 039 (2026-07-25) implementou o §9.2 — era a última. Daqui em diante, todo trabalho é polimento/lançamento (E16) ou dívida técnica, não regra faltando.
 - **Motor (M1): completo e sem gaps de regra conhecidos** — os 3 bugs achados pela auditoria de 2026-07-23 foram corrigidos (ver abaixo). **UI jogável (M2): fechada**. **Simulação (spec 036): entregue**.
 - **Multiplayer (M3): specs 037, 038 e 039 COMPLETAS, infra viva. E15 FECHADO.** Fundação host-autoritativa (037) + partida online jogável (038) + leilão do espólio do falido (039).
-- **Gates:** `bunx vitest run` → **585 testes / 68 arquivos verdes**; `tsc` limpo; `bun run build` ok; **lint global ZERADO** (era 36); `bun audit` → 3 advisories restantes, todas em cópias transitivas de ferramenta de dev (nenhuma alcança o bundle). `bun run scripts/net-smoke.ts` verde contra o Supabase real.
-- **CI VIVO** (`.github/workflows/ci.yml`, 2026-07-25): 3 jobs — `gates` (lint + tsc + vitest + build), `simulation` (30 partidas seedadas 2/3/6) e `e2e` (smoke single-player, traces no artifact em falha). O `multiplayer.spec.ts` fica fora do gate: depende de credencial Supabase.
+- **Gates:** `bunx vitest run` → **603 testes / 69 arquivos verdes**; **`bun run typecheck` limpo e agora cobrindo `tests/`+`e2e/`+`scripts/` também** (era só `src/` — ver a sessão de 2026-07-26); `bun run build` ok; **lint global ZERADO** (era 36); `bun audit` → 3 advisories restantes, todas em cópias transitivas de ferramenta de dev (nenhuma alcança o bundle). `bun run scripts/net-smoke.ts` verde contra o Supabase real.
+- **CI VIVO** (`.github/workflows/ci.yml`, 2026-07-25): 3 jobs — `gates` (lint + tipos + vitest + build), `simulation` (30 partidas seedadas 2/3/6) e `e2e` (smoke single-player, traces no artifact em falha). O `multiplayer.spec.ts` fica fora do gate: depende de credencial Supabase.
 - **E2E:** `bunx playwright test` → **2, 3 e 6 jogadores passam** (2 execuções seguidas). A falha de 6 jogadores registrada aqui antes NÃO era timeout de performance: o roteiro procurava um botão `← Frente` que o commit `03cb1ef` extinguiu, e travava no modal de Atalho até o teto de 240s. Como os dados do browser são `Math.random()`, aparecia como flake. Corrigido em `e2e/script.ts`.
 - **Push agora é rotina:** remote `origin` = `github.com:Nikaum-js/banco-master` — commits desta e da sessão anterior foram pushados. Backdate de commits segue a regra do `~/.claude/rules/git-conventions.md` (hook injeta).
 - **Auditoria completa em `docs/AUDITORIA-2026-07-23.md`** — 17 itens priorizados por impacto×esforço; é o backlog técnico vigente (itens 1, 2, 7 e 14 já resolvidos).
@@ -110,7 +110,7 @@ Duas decisões viraram ADR antes de entrar na spec (regra nunca nasce numa spec 
 
 **Simulação confirma o gatilho alcançado:** cobertura de `land-auction-close` subiu **69 → 87** no mesmo lote seedado, com os mesmos 8 `declare-bankruptcy-sink`. Se não tivesse subido, seria sinal de que o fuzzer não chega no caminho — medido, não suposto.
 
-**Atenção de balanceamento (não é bug):** o espólio favorece quem tem caixa, ou seja, empurra na direção **oposta** ao catch-up (princípio IV). É consequência da regra do SRS e nada na UI rotula, mas muda a curva de fim de jogo. Medir exige o item 3 do backlog (vencedor/curva de patrimônio no `report.ts`).
+**Atenção de balanceamento — MEDIDA em 2026-07-26 e NÃO confirmada.** A suspeita era que o espólio, favorecendo quem tem caixa, agravasse a bola de neve de fim de jogo. O A/B nas mesmas seeds (ver a sessão de 2026-07-26) mostra curva de patrimônio **indistinguível** com e sem a regra. Registrado em [D-031](docs/adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md).
 
 ## Sessão de 2026-07-25 (parte 2) — CI + lint zerado
 
@@ -124,12 +124,46 @@ Fecha o item de prioridade Alta do backlog da auditoria. O que mudou:
 
 **Achado que vale mais que o CI:** o E2E de 6 jogadores não estava lento, estava **travado** — e 2/3 jogadores estavam a um sorteio de azar do mesmo destino. Ver "Estado atual → E2E". Lição: `driveTurns` falha por TIMEOUT quando um matcher morre, o que mascara o motivo real; ao mexer em rótulo de botão, o roteiro do smoke é consumidor.
 
+## Sessão de 2026-07-26 — typecheck de verdade + curva de patrimônio + A/B do espólio
+
+Fecha os itens **3 e 4** da lista de próximos passos. Nenhuma regra tocada; nenhum arquivo de `src/` alterado.
+
+**1. `tests/`, `e2e/` e `scripts/` agora passam pelo typecheck (item 4).** `tsconfig.test.json` novo cobre as três pastas + `vitest.config.ts` + `playwright.config.ts`, entra como `reference` do `tsconfig.json` raiz (então `bun run build` cobre tudo) e ganhou o atalho `bun run typecheck`. O passo "Tipos" do CI trocou `-p tsconfig.app.json` por `bun run typecheck`. **Cobertura verificada por contagem:** os 7 diretórios/arquivos `.ts`/`.tsx` do `git ls-files` estão todos em algum dos três projetos.
+
+Os flags espelham `tsconfig.app.json` de propósito — inclusive `strict` DESLIGADO, que é o estado do app. Checar os testes sob régua mais dura que o produto produziria erro que o gate principal não vê. **Nota:** `strict` não está ligado em nenhum tsconfig do repo; ligar é decisão separada, com outro volume de erros, e não foi feito aqui.
+
+**Gate com dentes, verificado:** replantei o caso original (`Loan` com `lapsElapsed` em vez de `ratePct` em `espolio.test.ts`) e `bun run typecheck` sai com exit 2 apontando o campo. Antes passava verde.
+
+**Os 29 erros, todos corrigidos.** Quase todos tipagem de fixture, mas dois eram resto real:
+- **`isEliminated: () => false`** em `balancing.test.ts` e `conservation.test.ts` — porta **removida** do `TurnPorts` no review de arquitetura (`resolution.ts:34` documenta a remoção). Os testes seguiam injetando uma porta inexistente havia semanas.
+- **`piece: 'cartola'`** em `boot.test.ts` — peça fora do catálogo `PIECES`. `pieceOf` cai no fallback silencioso, então a fixture "funcionava" servindo avião. `ANA`/`BRUNO` agora são anotadas `SessionIdentity`: sem a anotação `piece` alarga para `string` e o id inválido volta a passar.
+- O resto: `Seat` sem `isHost`, `Roll` sem `isDouble/move/special`, `peca?: string` em vez de `PieceId`, e parameter properties do `fakeSupabase.ts` vs `erasableSyntaxOnly` (viraram campos declarados à mão).
+- O `phase === 'ended'` "inalcançável" de `runGame.ts` era mesmo falso positivo, como registrado — narrowing preso pela condição do `while` (o TS não acompanha `dispatch` reatribuindo `session.game`). Resolvido extraindo `gameEnded(session)`: chamada de função não estreita, então o narrowing some em vez de ser silenciado por cast.
+
+**Bug que a correção acima quase introduziu, e que vale como lição:** ao trocar a condição do laço por uma função chamada `ended`, a linha `if (!ended && rounds >= roundCap)` passou a testar a *função* — sempre truthy, então `!ended` virou constante `false` e **o teto de rodadas ficou morto**. O `tsc` não viu (função em contexto booleano é válida) e os 585 testes seguiram verdes. Renomear para `gameEnded` transformou o ponto cego em erro de compilação (`Cannot find name 'ended'`). Lição: ao substituir um booleano local por função, o nome NÃO pode colidir — a colisão troca um erro de compilação por um bug silencioso.
+
+**2. Curva de patrimônio na simulação (item 3).** `tests/sim/engine/wealth.ts` (novo) + campos no `SimResult`/`SimReport` + agregação e formatação no `report.ts`. `runGame` amostra o patrimônio de todos os jogadores **a cada rodada fechada** — no fecho todos jogaram o mesmo número de turnos, então a comparação entre jogadores é justa. Patrimônio é o `netWorth` de `@/game/cards/effects`, o MESMO que a Auditoria Fiscal cobra em jogo (fórmula paralela mediria uma economia que não é a do produto).
+
+O relatório (texto e markdown) ganhou **vitórias por assento** e a curva por **decil de progresso** — não por rodada absoluta, senão a média de fim de jogo seria dominada pelas partidas longas. Três métricas por decil: **Gini** (concentração), **fatia do líder** e **"quem liderava aqui venceu"** — esta última é a leitura direta de persistência de liderança. Eliminado entra como patrimônio 0 de propósito: tirá-lo faria o Gini CAIR justamente quando a mesa ficou mais desigual.
+
+**Leia o decil 10 com cuidado:** a amostra é por rodada FECHADA e a partida termina no meio da rodada final, então o decil 10 é a última rodada **completa**, não o estado de vitória (que seria fatia 1,00 trivial). Um teste fixa isso — se a coleta passar a incluir o estado terminal, ele cai.
+
+**18 testes novos** (`wealth.test.ts`), com o Gini conferido contra **oráculo independente** (fórmula por ranks, derivação diferente da soma de diferenças absolutas usada na implementação).
+
+**3. A/B do espólio (fecha a atenção de balanceamento da 039).** Comparar "partidas com espólio" vs "sem" DENTRO do mesmo lote é observacional e não conclui nada: partida onde alguém faliu ao banco já é mais desigual por outros motivos. O teste causal foi um A/B nas **mesmas seeds** — worktree com a instrumentação e `src/` revertido para a revisão anterior à 039, único delta = a regra. ~1000 partidas por lado, em 3 e em 6 jogadores.
+
+**Resultado: nenhum efeito detectável.** Gini e fatia do líder iguais até a 3ª casa decimal em todos os decis; "líder venceu" difere ≤2pp contra ruído de ±3pp (2σ). E o tratamento não foi fraco: **+292 (3p) e +768 (6p)** propriedades a mais efetivamente vendidas em pregão (`land-auction-close` só marca lote com licitante vivo, isto é, venda com dinheiro movido). Em **2 jogadores o A/B sai idêntico byte a byte** — e isso valida o método: ali o espólio nunca abre (elimina → sobra 1 → §9.5 encerra antes da guarda "≥2 vivos").
+
+**O que a curva mostra de verdade** (e precede a 039 — igual nos dois lados): liderar decide bastante. Líder do decil 5 vence **58% em 3p** e **53% em 6p**, contra base de 33% e 17%; no decil 8, 71% e 69%. É característica do gênero, não efeito do espólio — mas agora é uma série medida, e é o baseline contra o qual qualquer mexida futura de balanceamento (D-026 em orange/red) se compara.
+
+**Achado lateral do N grande:** em 6 jogadores, **1 seed em 1000** (`20861217`) estoura o teto de 1500 rodadas. Não é travamento — com `--rounds=4000` a partida fecha em **1773 rodadas** e p4 vence. O teto documentado como "100/100 seeds" simplesmente não tinha visto a cauda. Não afeta o CI (lote de 10 seeds por contagem, nenhuma é essa). E, no N=120 que rodei antes, `p1` parecia ter vantagem de assento em 6p (24% das vitórias); em N=1000 vira 16,6% — era ruído, e serve de aviso sobre concluir balanceamento com lote pequeno.
+
 ## Próximos passos (do backlog da auditoria, em ordem)
 
 1. **Log tipado** (`LogEntry {kind, who, amount, what}`) — destrava explicação de aluguel na UI, som robusto (hoje classifica por substring em `classify.ts:72-83`), cor do histórico e i18n. Item de maior alavancagem estrutural, agora o de maior prioridade.
 2. **Pacote "mostrável"**: persistência do `GameState` em localStorage (F5 hoje mata a partida) + ErrorBoundary; leilão comum multi-licitante + botão "passar" (`passBid` existe no store sem UI — copiar o seletor do pregão em `LandAuctionLayer.tsx:217-230`); lobby mínimo com nomes (UI hoje celebra "p1" na vitória).
-3. **Sim: registrar vencedor/curva de patrimônio por rodada** (`tests/sim/engine/report.ts` só conta mecanismos) — pré-requisito para validar/refutar a hipótese de ROI desproporcional da construção parcial (D-026) em orange/red **e** o efeito do espólio da 039 na curva de fim de jogo.
-4. **Typecheck de `tests/`, `e2e/` e `scripts/`** — descoberto na 039: **nenhum tsconfig cobre essas pastas**, então o passo "Tipos" do CI dá confiança falsa. Um `Loan` com campo inventado (`lapsElapsed` em vez de `ratePct`) passou verde num teste novo. Medido: um tsconfig cobrindo as três acusa **29 erros**, quase todos tipagem de fixture (`piece: string` vs a união literal, `Seat` sem `isHost`, parameter properties vs `erasableSyntaxOnly` em `fakeSupabase.ts`). **Nenhum bug de produto entre eles** — inclusive o `phase === 'ended'` "inalcançável" em `runGame.ts:95` é falso positivo de narrowing (`session.game` é reatribuído dentro do laço), não dead code.
+3. ~~**Sim: registrar vencedor/curva de patrimônio por rodada**~~ — **FEITO** em 2026-07-26 (`tests/sim/engine/wealth.ts` + curva por decil no `report.ts`). O consumidor que **falta** é a hipótese de ROI desproporcional da construção parcial (**D-026**) em orange/red: o instrumento existe, a medição não foi feita. O efeito do espólio da 039 já foi medido e refutado.
+4. ~~**Typecheck de `tests/`, `e2e/` e `scripts/`**~~ — **FEITO** em 2026-07-26 (`tsconfig.test.json`, no `tsc -b` e no CI; 29 erros zerados). Fica pendente a decisão separada de **ligar `strict`**, que não está ativo em nenhum tsconfig do repo.
 
 ## Próximo marco: E16 / M4 — polimento & lançamento
 
