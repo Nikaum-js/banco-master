@@ -7,14 +7,14 @@
 // (validade) vem de validateTrade. Troca-se propriedade + dinheiro + Bus Tickets (D-028).
 import { useState, useEffect, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Bus } from 'lucide-react'
+import { Bus, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
 import { useTradeUI } from './tradeUI'
 import { useLocalView } from '@/net/roomStore'
 import { WaitingBar } from '@/net/ui/WaitingBar'
 import { validateTrade, tradableProps } from '@/game/economy/trade'
-import type { Trade } from '@/game/economy/types'
+import type { Trade, Immunity } from '@/game/economy/types'
 import { BOARD, type PropertySquare, type Square } from '@/lib/boardData'
 import { PlayerFace } from '@/boards/shared'
 import { GROUP_COLOR } from '@/boards/groupColors'
@@ -29,6 +29,12 @@ const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(ma
 const colorOf = (players: { id: string }[], id: string) => {
   const i = players.findIndex((p) => p.id === id)
   return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : 'var(--color-brass)'
+}
+
+// Tudo que o dono possui (sem o filtro "sem construção" de `tradableProps` — imunidade
+// não move o título, então uma cidade construída pode receber isenção normalmente). §8.4
+function ownedProps(game: { titles: Record<number, { ownerId: string | null }> }, ownerId: string): number[] {
+  return BOARD.filter((sq) => 'price' in sq && game.titles[sq.pos]?.ownerId === ownerId).map((sq) => sq.pos)
 }
 
 function CheckGlyph() {
@@ -108,6 +114,116 @@ function DeedChip({ pos, on, onToggle, readOnly }: { pos: number; on?: boolean; 
     <button type="button" onClick={onToggle} className={cn(base, 'transition-colors', on ? 'border-gold bg-gold/15' : 'border-coffee-500 bg-coffee-900 hover:border-gold/60')}>
       {inner}
     </button>
+  )
+}
+
+// Presets de duração — cobre o uso real (2 = duração padrão das cartas de imunidade
+// temporária; 5 = "por um tempo"; permanente = até o fim de jogo). Input livre não
+// compensa a complexidade extra numa troca que já tem propriedade + dinheiro + tickets.
+const LAPS_PRESETS = [2, 5] as const
+
+// voltas selecionadas (número) ou permanente (null); `undefined` = ainda não concedida.
+type GrantMap = Record<number, number | null>
+
+function ToggleDot({ on }: { on: boolean }) {
+  return (
+    <span className={cn('shrink-0 w-[18px] h-[18px] rounded-full flex items-center justify-center transition-colors', on ? 'bg-gold' : 'border border-coffee-500/70')}>
+      {on && <CheckGlyph />}
+    </span>
+  )
+}
+
+// Transferir uma imunidade que JÁ se possui (028, §8.4) — re-atribui o beneficiário,
+// preserva as voltas restantes. Read-only quanto à duração (não é uma concessão nova).
+function TransferRow({ pos, laps, on, onToggle }: { pos: number; laps: number | null; on: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={cn(
+        'flex items-center gap-2 w-full px-2 py-1.5 rounded-[var(--radius-sharp)] border text-left transition-colors',
+        on ? 'border-gold bg-gold/15' : 'border-coffee-500 bg-coffee-900 hover:border-gold/60',
+      )}
+    >
+      <ToggleDot on={on} />
+      <span className="flex-1 min-w-0 truncate text-cream text-xs">Transferir {BOARD[pos].name}</span>
+      <span className="text-cream-muted text-nano shrink-0">{laps === null ? 'permanente' : `${laps}v restantes`}</span>
+    </button>
+  )
+}
+
+// Conceder imunidade NOVA sobre uma propriedade própria mantida (não cedida na troca).
+// Ao marcar, abre os presets de duração — sem seleção prévia, permanente é a leitura
+// errada por padrão (o concedente quase sempre quer prazo, não "pra sempre").
+function GrantRow({ pos, laps, onToggle, onSetLaps }: { pos: number; laps: number | null | undefined; onToggle: () => void; onSetLaps: (laps: number | null) => void }) {
+  const on = laps !== undefined
+  return (
+    <div className={cn('flex flex-col gap-1.5 px-2 py-1.5 rounded-[var(--radius-sharp)] border transition-colors', on ? 'border-gold bg-gold/15' : 'border-coffee-500 bg-coffee-900')}>
+      <button type="button" onClick={onToggle} className="flex items-center gap-2 w-full text-left">
+        <ToggleDot on={on} />
+        <span className="flex-1 min-w-0 truncate text-cream text-xs">Conceder em {BOARD[pos].name}</span>
+      </button>
+      {on && (
+        <div className="flex items-center gap-1 pl-[26px]">
+          {LAPS_PRESETS.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onSetLaps(n)}
+              className={cn(
+                'label text-micro px-2 py-1 rounded-[var(--radius-sharp)] border transition-colors',
+                laps === n ? 'bg-gold text-coffee-900 border-gold' : 'bg-coffee-700 text-cream-muted border-coffee-500 hover:border-gold/60',
+              )}
+            >
+              {n}v
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => onSetLaps(null)}
+            className={cn(
+              'label text-micro px-2 py-1 rounded-[var(--radius-sharp)] border transition-colors',
+              laps === null ? 'bg-gold text-coffee-900 border-gold' : 'bg-coffee-700 text-cream-muted border-coffee-500 hover:border-gold/60',
+            )}
+          >
+            Permanente
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Bloco de imunidade de um lado da troca (024 US3 + 028) — some quando não há nada
+// pra transferir nem conceder (a maioria das trocas não mexe em imunidade).
+function ImmunitySide({
+  transferable,
+  transfers,
+  onToggleTransfer,
+  grantable,
+  grants,
+  onToggleGrant,
+  onSetLaps,
+}: {
+  transferable: Immunity[]
+  transfers: Set<number>
+  onToggleTransfer: (pos: number) => void
+  grantable: number[]
+  grants: GrantMap
+  onToggleGrant: (pos: number) => void
+  onSetLaps: (pos: number, laps: number | null) => void
+}) {
+  if (transferable.length === 0 && grantable.length === 0) return null
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="label text-cream-muted text-micro flex items-center gap-1"><Shield size={11} /> Imunidade</p>
+      {transferable.map((im) => (
+        <TransferRow key={`t${im.pos}`} pos={im.pos} laps={im.lapsRemaining} on={transfers.has(im.pos)} onToggle={() => onToggleTransfer(im.pos)} />
+      ))}
+      {grantable.map((pos) => (
+        <GrantRow key={`g${pos}`} pos={pos} laps={grants[pos]} onToggle={() => onToggleGrant(pos)} onSetLaps={(laps) => onSetLaps(pos, laps)} />
+      ))}
+    </div>
   )
 }
 
@@ -353,6 +469,7 @@ function Side({
   onCash,
   tickets,
   onTickets,
+  immunity,
 }: {
   title: string
   color: string
@@ -365,6 +482,7 @@ function Side({
   onCash: (n: number) => void
   tickets: number
   onTickets: (n: number) => void
+  immunity?: ReactNode
 }) {
   const summary = [
     selected.size > 0 ? `${selected.size} ${selected.size === 1 ? 'título' : 'títulos'}` : '',
@@ -393,6 +511,7 @@ function Side({
 
         <CashField value={cash} max={ownerCash} onChange={onCash} />
         {ownerTickets > 0 && <TicketField value={tickets} max={ownerTickets} onChange={onTickets} />}
+        {immunity}
       </div>
     </div>
   )
@@ -416,6 +535,12 @@ function Composer({ onClose }: { onClose: () => void }) {
   const [toCash, setToCash] = useState(0)
   const [fromTickets, setFromTickets] = useState(0)
   const [toTickets, setToTickets] = useState(0)
+  // Imunidade (024 US3 concede nova; 028 transfere existente) — pos → voltas (null =
+  // permanente) para concessões; Set de pos para transferências.
+  const [fromGrants, setFromGrants] = useState<GrantMap>({})
+  const [toGrants, setToGrants] = useState<GrantMap>({})
+  const [fromTransfers, setFromTransfers] = useState<Set<number>>(new Set())
+  const [toTransfers, setToTransfers] = useState<Set<number>>(new Set())
 
   // Trocar de destinatário reseta o que dependia dele. Feito no próprio handler
   // (`pickRecipient`), não num efeito sobre `toId`: só o clique muda o destinatário, e
@@ -424,17 +549,35 @@ function Composer({ onClose }: { onClose: () => void }) {
     setToId(id)
     setRequested(new Set())
     setToTickets(0)
+    setToGrants({})
+    setToTransfers(new Set())
   }
 
   const recipient = others.find((p) => p.id === toId)
   const myProps = tradableProps(game, me.id)
   const theirProps = recipient ? tradableProps(game, recipient.id) : []
+  // Concedível = propriedade própria MANTIDA (não pode estar sendo cedida na troca, §8.4).
+  const myGrantable = ownedProps(game, me.id).filter((pos) => !offered.has(pos))
+  const theirGrantable = recipient ? ownedProps(game, recipient.id).filter((pos) => !requested.has(pos)) : []
+  const myImmunities = game.immunities.filter((i) => i.beneficiaryId === me.id)
+  const theirImmunities = recipient ? game.immunities.filter((i) => i.beneficiaryId === recipient.id) : []
 
   const toggle = (set: Set<number>, setter: (s: Set<number>) => void, pos: number) => {
     const next = new Set(set)
     if (next.has(pos)) next.delete(pos)
     else next.add(pos)
     setter(next)
+  }
+
+  const toggleGrant = (setter: (fn: (prev: GrantMap) => GrantMap) => void, pos: number): void => {
+    setter((prev) => {
+      if (pos in prev) {
+        const next = { ...prev }
+        delete next[pos]
+        return next
+      }
+      return { ...prev, [pos]: LAPS_PRESETS[0] }
+    })
   }
 
   const trade: Trade = {
@@ -446,8 +589,16 @@ function Composer({ onClose }: { onClose: () => void }) {
     toCash,
     fromBusTickets: fromTickets,
     toBusTickets: toTickets,
+    // Defensivo: se uma propriedade concedida acabou marcada pra ceder depois, ela sai
+    // daqui (não do estado do formulário) — não precisa de efeito pra manter em sincronia.
+    fromImmunities: Object.entries(fromGrants).filter(([pos]) => !offered.has(Number(pos))).map(([pos, laps]) => ({ pos: Number(pos), laps })),
+    toImmunities: Object.entries(toGrants).filter(([pos]) => !requested.has(Number(pos))).map(([pos, laps]) => ({ pos: Number(pos), laps })),
+    fromImmunityTransfers: [...fromTransfers],
+    toImmunityTransfers: [...toTransfers],
   }
-  const nonEmpty = offered.size || requested.size || fromCash > 0 || toCash > 0 || fromTickets > 0 || toTickets > 0
+  const nonEmpty =
+    offered.size || requested.size || fromCash > 0 || toCash > 0 || fromTickets > 0 || toTickets > 0 ||
+    Object.keys(fromGrants).length > 0 || Object.keys(toGrants).length > 0 || fromTransfers.size > 0 || toTransfers.size > 0
   const canPropose = !!recipient && !!nonEmpty && validateTrade(game, trade)
 
   const meColor = colorOf(game.players, me.id)
@@ -503,6 +654,17 @@ function Composer({ onClose }: { onClose: () => void }) {
           onCash={setFromCash}
           tickets={fromTickets}
           onTickets={setFromTickets}
+          immunity={
+            <ImmunitySide
+              transferable={myImmunities}
+              transfers={fromTransfers}
+              onToggleTransfer={(pos) => toggle(fromTransfers, setFromTransfers, pos)}
+              grantable={myGrantable}
+              grants={fromGrants}
+              onToggleGrant={(pos) => toggleGrant(setFromGrants, pos)}
+              onSetLaps={(pos, laps) => setFromGrants((prev) => ({ ...prev, [pos]: laps }))}
+            />
+          }
         />
         <Side
           title={`${recipient?.id ?? '—'} oferece`}
@@ -516,6 +678,17 @@ function Composer({ onClose }: { onClose: () => void }) {
           onCash={setToCash}
           tickets={toTickets}
           onTickets={setToTickets}
+          immunity={
+            <ImmunitySide
+              transferable={theirImmunities}
+              transfers={toTransfers}
+              onToggleTransfer={(pos) => toggle(toTransfers, setToTransfers, pos)}
+              grantable={theirGrantable}
+              grants={toGrants}
+              onToggleGrant={(pos) => toggleGrant(setToGrants, pos)}
+              onSetLaps={(pos, laps) => setToGrants((prev) => ({ ...prev, [pos]: laps }))}
+            />
+          }
         />
       </div>
 
@@ -531,8 +704,24 @@ function Composer({ onClose }: { onClose: () => void }) {
 // ---------------------------------------------------------------------
 // Recebido — resumo read-only da proposta + aceitar/recusar.
 // ---------------------------------------------------------------------
-function ReadSide({ title, color, props, cash, tickets = 0 }: { title: string; color: string; props: number[]; cash: number; tickets?: number }) {
-  const empty = props.length === 0 && cash === 0 && tickets === 0
+function ReadSide({
+  title,
+  color,
+  props,
+  cash,
+  tickets = 0,
+  immunityGrants = [],
+  immunityTransfers = [],
+}: {
+  title: string
+  color: string
+  props: number[]
+  cash: number
+  tickets?: number
+  immunityGrants?: { pos: number; laps: number | null }[]
+  immunityTransfers?: number[]
+}) {
+  const empty = props.length === 0 && cash === 0 && tickets === 0 && immunityGrants.length === 0 && immunityTransfers.length === 0
   return (
     <div className="flex-1 min-w-0 flex flex-col">
       <div className="px-3 pt-3 pb-2 flex items-center gap-2 shrink-0 border-b border-coffee-700/40">
@@ -556,6 +745,18 @@ function ReadSide({ title, color, props, cash, tickets = 0 }: { title: string; c
             {tickets} Bus Ticket{tickets > 1 ? 's' : ''}
           </span>
         )}
+        {immunityTransfers.map((pos) => (
+          <span key={`t${pos}`} className="bill self-start">
+            <Shield size={13} className="text-gold" />
+            Imunidade de {BOARD[pos].name} transferida
+          </span>
+        ))}
+        {immunityGrants.map((g) => (
+          <span key={`g${g.pos}`} className="bill self-start">
+            <Shield size={13} className="text-gold" />
+            Imunidade em {BOARD[g.pos].name} ({g.laps === null ? 'permanente' : `${g.laps} voltas`})
+          </span>
+        ))}
       </div>
     </div>
   )
@@ -593,8 +794,24 @@ function Received({ trade }: { trade: Trade }) {
 
       <div className="flex-1 min-h-0 overflow-hidden flex divide-x divide-coffee-500/40">
         {/* Do ponto de vista do destinatário (toId): recebe o que `from` dá; dá o que `from` pede. */}
-        <ReadSide title={`${trade.toId} recebe`} color={fromColor} props={trade.fromProps} cash={trade.fromCash} tickets={trade.fromBusTickets ?? 0} />
-        <ReadSide title={`${trade.toId} dá`} color={toColor} props={trade.toProps} cash={trade.toCash} tickets={trade.toBusTickets ?? 0} />
+        <ReadSide
+          title={`${trade.toId} recebe`}
+          color={fromColor}
+          props={trade.fromProps}
+          cash={trade.fromCash}
+          tickets={trade.fromBusTickets ?? 0}
+          immunityGrants={trade.fromImmunities}
+          immunityTransfers={trade.fromImmunityTransfers}
+        />
+        <ReadSide
+          title={`${trade.toId} dá`}
+          color={toColor}
+          props={trade.toProps}
+          cash={trade.toCash}
+          tickets={trade.toBusTickets ?? 0}
+          immunityGrants={trade.toImmunities}
+          immunityTransfers={trade.toImmunityTransfers}
+        />
       </div>
 
       {!stillValid && (

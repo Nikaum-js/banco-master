@@ -52,7 +52,7 @@ Tipos em `economy/types.ts`; regra em `economy/trade.ts`; UI em `ui/trade/TradeL
 ## Phase 5: Polish
 
 - [X] T006 [P] `bunx vitest run tests/game` (verde, inclui transferência; 013/014/024 intactos) + `bun run build` (exit 0).
-- [ ] T007 Validação visual no `bun run dev` (roteiro do quickstart): transferir imunidade própria → outro fica isento, eu volto a pagar; conceder novas segue OK.
+- [X] T007 Validação visual (Playwright + estado forçado via store). **T005 corrigido em 2026-07-26** — o compositor não tinha, de fato, a seção "Transferir imunidade" (código divergia do checklist); implementada agora (`TransferRow` em `TradeLayer.tsx`, ao lado da concessão de 024) e validada visualmente.
 
 ---
 

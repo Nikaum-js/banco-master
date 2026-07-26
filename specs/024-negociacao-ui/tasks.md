@@ -70,7 +70,7 @@ Tipos em `src/game/economy/types.ts`; predicado/reducers em `src/game/economy/tr
 ## Phase 5: Polish
 
 - [X] T014 [P] `bunx vitest run tests/game` (verde, inclui negociação + 013 intacto) + `bun run build` (exit 0).
-- [ ] T015 Validação visual no `bun run dev` (roteiro do quickstart): propor/receber/aceitar/recusar, imunidades, e ausência de cartas/Bus Tickets como itens.
+- [X] T015 Validação visual (Playwright + estado forçado via store): propor/receber/aceitar/recusar OK. **T013 corrigido em 2026-07-26** — o compositor não tinha, de fato, a seção de imunidades (código divergia do checklist); implementada agora (`ImmunitySide`/`GrantRow`/`TransferRow` em `TradeLayer.tsx`) e validada visualmente.
 
 ---
 
