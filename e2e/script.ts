@@ -25,7 +25,7 @@ export function trackRuntimeErrors(page: Page): string[] {
 // Retorna o texto do botão clicado, ou null se nada estava pronto (turno "livre" —
 // dado rolando, peão andando etc.) e o caller deve só esperar um pouco.
 async function clickOneStep(page: Page): Promise<{ clicked: string | null; rolled: boolean }> {
-  return page.evaluate(() => {
+  return page.evaluate(async () => {
     const buttons = Array.from(document.querySelectorAll('button')) as HTMLButtonElement[]
     const visibleEnabled = (b: HTMLButtonElement) => b.offsetParent !== null && !b.disabled
     const visible = (b: HTMLButtonElement) => b.offsetParent !== null
@@ -61,6 +61,49 @@ async function clickOneStep(page: Page): Promise<{ clicked: string | null; rolle
         return { clicked: text, rolled: text === 'Rolar dados' }
       }
     }
+
+    // Dívida presa: "Pagar" e "Declarar falência" existem mas os DOIS desabilitados —
+    // caixa não cobre (canPay=false) mas o patrimônio cobre (canFalir=false), então o
+    // motor espera o jogador hipotecar/vender no tabuleiro antes (GameHUD.tsx: "Hipoteque
+    // ou venda no tabuleiro: ainda dá pra pagar."). Sem isso nenhum candidato acima bate
+    // e o loop trava até o timeout — mais provável com 6 jogadores (mais turnos, caixa
+    // por cabeça menor) do que com 2-3.
+    const payBtn = find((t) => t.startsWith('Pagar') && !t.startsWith('Pagar $50'), false)
+    const falirBtn = find((t) => t === 'Declarar falência', false)
+    if (payBtn?.disabled && falirBtn?.disabled) {
+      const popover = document.querySelector('[class*="w-[270px]"]')
+      if (popover) {
+        const act = (label: string) =>
+          Array.from(popover.querySelectorAll('button')).find(
+            (b) => (b.textContent ?? '').trim().startsWith(label) && !(b as HTMLButtonElement).disabled,
+          ) as HTMLButtonElement | undefined
+        // Hipoteca primeiro (reversível); vender construção/hangar como último recurso.
+        const manageBtn = act('Hipotecar') ?? act('Vender Hangar') ?? act('Vender')
+        if (manageBtn) {
+          const text = (manageBtn.textContent ?? '').trim()
+          manageBtn.click()
+          await new Promise((r) => setTimeout(r, 200)) // acomoda a animação do popover
+          return { clicked: text, rolled: false }
+        }
+        // Propriedade sem nada a fazer (não é do jogador ativo, ou já esgotada) — fecha
+        // e a próxima chamada abre a casa seguinte via __e2eSquareIdx.
+        const closeBtn = popover.querySelector('[aria-label="Fechar"]') as HTMLButtonElement | null
+        closeBtn?.click()
+        await new Promise((r) => setTimeout(r, 200))
+        return { clicked: 'Fechar propriedade', rolled: false }
+      }
+      const cells = Array.from(document.querySelectorAll('.board-frame .cursor-pointer')) as HTMLElement[]
+      const w = window as unknown as { __e2eSquareIdx?: number }
+      const idx = (w.__e2eSquareIdx ?? 0) % (cells.length || 1)
+      w.__e2eSquareIdx = idx + 1
+      const cell = cells[idx]
+      if (cell) {
+        cell.click()
+        await new Promise((r) => setTimeout(r, 200))
+        return { clicked: 'Abrir propriedade', rolled: false }
+      }
+    }
+
     return { clicked: null, rolled: false }
   })
 }
