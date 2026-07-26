@@ -40,11 +40,14 @@
 - [D-027](D-027-bus-ticket-usavel-tambem-no-fim-do-turno.md) — Bus Ticket usável também no fim do turno (não só antes de rolar)
 - [D-028](D-028-bus-tickets-negociaveis.md) — Bus Tickets negociáveis em propostas de troca (revisa §8.2/§10.7 do SRS)
 - [D-029](D-029-desconexao-de-jogador-eliminado-nao-pausa-a-partida.md) — Desconexão de jogador eliminado NÃO pausa a partida (refina §11.3)
-- [D-030](D-030-privacidade-de-cartas-e-garantia-de-apresentacao-no-v1.md) — Privacidade de cartas é garantia de apresentação no v1 (não de dados)
+- [D-030](D-030-privacidade-de-cartas-e-garantia-de-apresentacao-no-v1.md) — ~~Privacidade de cartas é garantia de apresentação no v1~~ **revogada** pela D-037
 - [D-031](D-031-espolio-do-falido-vai-a-pregao-simultaneo.md) — Espólio do falido-ao-banco vai a pregão simultâneo, reusando a D-023 (implementa §9.2)
 - [D-032](D-032-log-de-eventos-tipado-narrativa-e-da-ui.md) — Log de eventos tipado: o motor emite fatos, a narrativa (e a identidade) é da UI
 - [D-033](D-033-codigo-de-reentrada-por-assento.md) — Código de reentrada por assento: reconexão de outro dispositivo (refina §11.3/§11.4 e D-019)
 - [D-034](D-034-persistencia-indisponivel-pausa-a-partida.md) — Persistência indisponível pausa a partida (refina §11.4; pausa ganha causa explícita)
+- [D-035](D-035-identidade-de-transporte-atestada-pelo-servidor.md) — Identidade de transporte atestada pelo servidor (sessão anônima; refina D-019/D-020/D-033)
+- [D-036](D-036-acesso-a-sala-autorizado-no-servidor.md) — Acesso à sala autorizado no servidor; o link entra, não lê (refina D-019)
+- [D-037](D-037-estado-por-perspectiva-a-mao-nao-trafega.md) — Estado por perspectiva: a mão não trafega para quem não é o dono (revoga D-030; refina §10.3)
 
 ### Rejeitadas
 - [D-R01](D-R01-sistema-de-draft-rejeitada.md) — Sistema de draft de propriedades no início

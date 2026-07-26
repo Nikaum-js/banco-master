@@ -1,6 +1,6 @@
 # Banco Master — Software Requirements Specification (SRS)
 
-**Versão:** 1.7
+**Versão:** 1.8
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -477,7 +477,7 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 **Privacidade:**
 - Cartas em mão são **privadas** — outros jogadores NÃO veem quais cartas você tem.
 - Outros jogadores VEEM apenas a **quantidade** total de cartas na sua mão ("Pedro tem 2 cartas").
-- **Alcance da garantia no v1** (D-030, v1.5): a privacidade é assegurada **na apresentação** — nenhuma interface exibe a mão alheia. O estado da partida, porém, trafega completo para todos os clientes (exigência do modelo de sincronização, D-020), então inspecionar o próprio cliente permite ver a mão dos outros. Endurecer isso exige autoridade de servidor real e entra junto do endurecimento de identidade de transporte.
+- **Alcance da garantia** (v1.8, [D-037](adr/D-037-estado-por-perspectiva-a-mao-nao-trafega.md), que revoga a D-030): a privacidade é assegurada **na distribuição**, não só na apresentação — o conteúdo da mão de um jogador **não trafega** para os demais clientes, nem no comando difundido nem no estado lido ao entrar ou reconectar. Cada jogador recebe a mão alheia como **contagem** (§12.3) e o baralho como contagem; inspecionar o próprio cliente não revela carta de ninguém. **Exceção conhecida:** o navegador do **anfitrião** roda a autoridade da partida ([D-020](adr/D-020-modelo-de-autoridade-sincronizacao-host-autoritativo-realtim.md)) e por isso conhece o baralho e todas as mãos — é o que lhe permite validar uma jogada de carta. Fechar também esse caso exige baralho selado sob autoridade de servidor, registrado como caminho e fora do v1. **Segunda exceção:** a janela de reação (§12.2 — Diplomacia, Bunker Fiscal) só abre para quem possui a carta, então a mesa fica sabendo que aquele jogador tem **uma carta de reação** — no instante em que ela está a um clique de ser revelada. A existência daquela reação vaza; o resto da mão, não.
 
 **Negociação:**
 - Cartas em mão **NÃO podem ser negociadas**, em nenhuma raridade, incluindo "Saia da Prisão" e "Aquisição Hostil".
@@ -717,6 +717,16 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 - Em caso de reload acidental, o cliente recupera o estado atual da partida e sincroniza.
 - **Reentrada de outro dispositivo** (v1.7, [D-033](adr/D-033-codigo-de-reentrada-por-assento.md)): cada assento tem um **código de reentrada** curto, visível para o dono ao lado do link da sala. Quem apresentar **link + código** reanexa ao assento de qualquer aparelho ou navegador, mesmo tendo perdido o token de sessão do dispositivo original (celular sem bateria, dados do navegador limpos, aba anônima encerrada). O código não expira e não é revogável; o token anterior deixa de valer para aquele assento. Sem isso, um assento irrecuperável travaria a mesa indefinidamente — não há timeout de desconexão (§11.3) e ninguém, nem o anfitrião, pode remover jogador depois do início.
 - **Durabilidade antes do avanço** (v1.7, [D-034](adr/D-034-persistencia-indisponivel-pausa-a-partida.md)): nenhum comando aceito avança a partida sem estar gravado. Se a gravação falhar de forma persistente, a partida **pausa** (§11.3) até a persistência voltar, em vez de seguir sobre um estado que um reload faria regredir.
+
+### 11.5 Integridade da Sessão
+
+Regras de v1.8, introduzidas por [D-035](adr/D-035-identidade-de-transporte-atestada-pelo-servidor.md) e [D-036](adr/D-036-acesso-a-sala-autorizado-no-servidor.md).
+
+- **Ninguém age em nome de outro.** A identidade de quem envia um comando é **atestada pelo servidor**, não declarada pelo cliente. Comando enviado em nome de assento alheio não é aceito — e a recusa não depende de o programa do jogador se comportar bem.
+- **Só a autoridade fala pela mesa.** Estado de partida e estado de sala são publicados exclusivamente pela autoridade (o anfitrião, §11.3). Mensagem que se apresente como vinda dela sem vir dela é recusada **no servidor**.
+- **Presença é do próprio.** Conexão e desconexão de um assento só podem ser anunciadas por aquele assento — ninguém provoca a pausa da mesa (§11.3) fingindo a queda de outro.
+- **O código de reentrada é segredo do dono** (§11.4). Não é exibido nem transmitido a outros jogadores: é a credencial que reanexa um assento, e quem o tivesse poderia tomar o assento alheio.
+- **O link entra, não lê.** O link da sala continua sendo a credencial de **entrada** (§11.2, D-019): quem o apresenta vê a **prévia** da sala — que ela existe, seu status e quem já sentou — e pode pedir assento. O **estado da partida** só é legível por quem tem assento nela.
 
 ---
 
