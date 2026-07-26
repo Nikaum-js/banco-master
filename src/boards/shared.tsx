@@ -32,6 +32,7 @@ import type { TempEffect, Trade } from '@/game/economy/types'
 import { money } from '@/lib/money'
 import { describeLogEntry } from '@/game/ui/log/describeLog'
 import { logIcon } from '@/game/ui/log/logIcon'
+import { AccessoryErrorBoundary } from '@/app/AccessoryErrorBoundary'
 import { identityOf } from '@/net/identity'
 
 // Este módulo exporta SÓ componentes — cada consumidor importa constante e seletor da
@@ -1553,6 +1554,7 @@ function CenterLog() {
           hint="Role os dados pra começar. Cada jogada aparece aqui."
         />
       ) : (
+        <AccessoryErrorBoundary label="Histórico">
         <ol className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-2">
           {/* trilho da linha do tempo, atravessando os avatares */}
           <span aria-hidden className="absolute top-2 bottom-2 w-px bg-coffee-500/45" style={{ left: 23 }} />
@@ -1604,6 +1606,7 @@ function CenterLog() {
             )
           })}
         </ol>
+        </AccessoryErrorBoundary>
       )}
     </div>
   )
