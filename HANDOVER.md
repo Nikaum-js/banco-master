@@ -8,7 +8,8 @@
 - **O SRS não tem mais lacuna de regra.** A spec 039 (2026-07-25) implementou o §9.2 — era a última. Daqui em diante, todo trabalho é polimento/lançamento (E16) ou dívida técnica, não regra faltando.
 - **Motor (M1): completo e sem gaps de regra conhecidos** — os 3 bugs achados pela auditoria de 2026-07-23 foram corrigidos (ver abaixo). **UI jogável (M2): fechada**. **Simulação (spec 036): entregue**.
 - **Multiplayer (M3): specs 037, 038 e 039 COMPLETAS, infra viva. E15 FECHADO.** Fundação host-autoritativa (037) + partida online jogável (038) + leilão do espólio do falido (039).
-- **Gates:** `bunx vitest run` → **603 testes / 69 arquivos verdes**; **`bun run typecheck` limpo e agora cobrindo `tests/`+`e2e/`+`scripts/` também** (era só `src/` — ver a sessão de 2026-07-26); `bun run build` ok; **lint global ZERADO** (era 36); `bun audit` → 3 advisories restantes, todas em cópias transitivas de ferramenta de dev (nenhuma alcança o bundle). `bun run scripts/net-smoke.ts` verde contra o Supabase real.
+- **Item 1 do backlog de dívida técnica FECHADO: log de eventos tipado (spec 040, 2026-07-26)** — ver seção própria abaixo.
+- **Gates:** `bunx vitest run` → **633 testes / 73 arquivos verdes**; **`bun run typecheck` limpo** (`src/`+`tests/`+`e2e/`+`scripts/`); `bun run build` ok; **lint global ZERADO**; `bun audit` → 3 advisories restantes, todas em cópias transitivas de ferramenta de dev (nenhuma alcança o bundle). `bun run scripts/net-smoke.ts` verde contra o Supabase real.
 - **CI VIVO** (`.github/workflows/ci.yml`, 2026-07-25): 3 jobs — `gates` (lint + tipos + vitest + build), `simulation` (30 partidas seedadas 2/3/6) e `e2e` (smoke single-player, traces no artifact em falha). O `multiplayer.spec.ts` fica fora do gate: depende de credencial Supabase.
 - **E2E:** `bunx playwright test` → **2, 3 e 6 jogadores passam** (2 execuções seguidas). A falha de 6 jogadores registrada aqui antes NÃO era timeout de performance: o roteiro procurava um botão `← Frente` que o commit `03cb1ef` extinguiu, e travava no modal de Atalho até o teto de 240s. Como os dados do browser são `Math.random()`, aparecia como flake. Corrigido em `e2e/script.ts`.
 - **Push agora é rotina:** remote `origin` = `github.com:Nikaum-js/banco-master` — commits desta e da sessão anterior foram pushados. Backdate de commits segue a regra do `~/.claude/rules/git-conventions.md` (hook injeta).
@@ -112,6 +113,28 @@ Duas decisões viraram ADR antes de entrar na spec (regra nunca nasce numa spec 
 
 **Atenção de balanceamento — MEDIDA em 2026-07-26 e NÃO confirmada.** A suspeita era que o espólio, favorecendo quem tem caixa, agravasse a bola de neve de fim de jogo. O A/B nas mesmas seeds (ver a sessão de 2026-07-26) mostra curva de patrimônio **indistinguível** com e sem a regra. Registrado em [D-031](docs/adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md).
 
+## Spec 040 — log de eventos tipado (2026-07-26)
+
+**Entregue: US1–US3.** `specs/040-log-eventos-tipado/`. Fecha o item 1 do backlog técnico (maior alavancagem estrutural): `GameState.log` deixa de ser `{ who, what }` (prosa em português, ids interpolados) e passa a ser uma **união discriminada por `kind`** — 26 variantes (`ALL_LOG_KINDS`), o motor emite o FATO, a apresentação (frase, ícone, som) é decidida fora do motor.
+
+**Desenho em 3 movimentos, cada um verde antes do próximo** (D10 do plan): (1) migrar os 14 pontos de emissão já existentes para o tipo novo, sem UI nova; (2) `describeLogEntry(entry, room) → LogSentence` mata `p1` do histórico — cor e nome vêm da identidade da SALA (038), nunca do id; (3) as 8 famílias antes silenciosas (construir, vender construção, hangar, hipoteca/deshipoteca, leilão comum, pregão, Free Parking, fiança) passam a logar, e som/ícone migram de regex sobre texto para `switch` exaustivo sobre `kind` (`assertNever` + teste de exaustividade — os dois gates, não um só).
+
+**Achado real ao aplicar (não estava no plan):** durante a implementação, uma sessão paralela no mesmo repo (fora desta conversa) fez `git checkout` para uma branch e voltou, deixando a Fase 1 (tipo, `logEvent`, `money()`, oráculo de som) num `git stash` em vez do working tree. Recuperado com `git stash apply` antes de prosseguir — sem perda, mas é o tipo de estado que vale conferir (`git stash list`) antes de assumir "a Fase 1 já está pronta" só porque o `git status` inicial mostrava os arquivos modificados.
+
+**Bug real achado pela suíte de simulação (não pela suíte unitária):** `tests/sim/engine/conservation.ts` comparava entradas de log por `===` campo a campo — quebrou para `kind: 'roll'` porque `white: [number, number]` é array, e o motor clona o estado inteiro (`structuredClone`) a cada dispatch. Duas entradas iguais em VALOR viravam "diferentes" por identidade de array, e os 3 sims headless (2p/3p/6p) davam falso-positivo de vazamento de dinheiro em toda passagem pelo GO. Corrigido para comparação por valor (`JSON.stringify`, seguro aqui porque as duas entradas comparadas nascem sempre do mesmo código, logo mesma ordem de chaves — diferente do `logKey` de produção, que combina entradas de proveniências distintas e por isso usa concatenação em ordem fixa, não `JSON.stringify`).
+
+**`card-immediate` perdeu granularidade do `effect`, de propósito.** O evento tipado carrega só `name` (nome da carta, pública) + `delta` (variação de caixa) — não mais o id do efeito (`voltaGo`, `vaPrisao`, etc.). `describeLog.ts` reconstrói a frase casando por `name`; funciona porque nome de carta é 1:1 com efeito hoje, mas é acoplamento por STRING, registrado como risco aceito (ver `tasks.md`) caso uma carta futura repita nome com efeito diferente.
+
+**T027/T029/T030 (Fase 4/5) saíram na Fase 3, não por antecipação de escopo — por necessidade de compilação.** `ALL_LOG_KINDS`/`LogEntry` (Fase 1) já tinham as 26 variantes; um `switch` total com `assertNever` sobre `entry.kind` não compila tratando só 13 delas. `describeLogEntry` e `logIcon` nasceram exaustivos desde o início.
+
+**Sabotagem verificada (T036), não só suposta:** acrescentar um `kind` falso à união quebra `describeLog.ts`, `logIcon.tsx` **e** `classify.ts` (duas vezes — `classifyLogEntry` e `logKey`) — os gates de exaustividade não são decorativos. Testado e revertido.
+
+**Testes: 633** (era 603). Novos: `tests/game/log/describeLog.test.ts` (11), `tests/game/ui/logIcon.test.ts` (3), `tests/net/logConverge.test.ts` (1, SC-007 — log idêntico byte a byte entre 3 clientes, medido no LOG, não na frase renderizada — a frase diverge por sala e isso é o desenho). `tests/game/log/logEntry.test.ts` e `tests/game/ui/sound/classify.test.ts` ganharam blocos novos (famílias silenciosas, oráculo de som migrado para `kind`).
+
+**Simulação confirma as 8 famílias exercitadas** (`bun run sim:batch --games=300 --counts=2,3,6`, 900 partidas, 0 falhas): `build-house` 354688, `mortgage` 468889, `unmortgage` 441326, `sell-building` 345009, `build-hangar`/`sell-hangar` ~77 mil cada, `auction-close` 16900, `land-auction-close` 2302, `free-parking-collect` 13103, `jail-fine-pay` 6585 — medido, não suposto (mesmo método da 039).
+
+**Desvio de UX registrado, não escondido:** a cor verde/vermelho por ganho/perda no histórico (`LogWhat` antiga, por regex de texto) foi trocada por uma cor neutra única para valores monetários — o fragmento `{t:'money', amount}` do contrato não carrega sinal, e estender o contrato para isso não foi pedido por nenhuma FR. Perda visual pequena, não uma regra do motor.
+
 ## Sessão de 2026-07-25 (parte 2) — CI + lint zerado
 
 Fecha o item de prioridade Alta do backlog da auditoria. O que mudou:
@@ -160,7 +183,7 @@ O relatório (texto e markdown) ganhou **vitórias por assento** e a curva por *
 
 ## Próximos passos (do backlog da auditoria, em ordem)
 
-1. **Log tipado** (`LogEntry {kind, who, amount, what}`) — destrava explicação de aluguel na UI, som robusto (hoje classifica por substring em `classify.ts:72-83`), cor do histórico e i18n. Item de maior alavancagem estrutural, agora o de maior prioridade.
+1. ~~**Log tipado** (`LogEntry {kind, who, amount, what}`)~~ — **FEITO** em 2026-07-26 (spec 040, ver seção própria). Destravou explicação de aluguel na UI (campos separados, não mais prosa), som por `kind` (não mais substring), cor do histórico pela identidade da sala, e deixou i18n possível (não implementado, mas a frase agora nasce num arquivo só).
 2. **Pacote "mostrável"**: persistência do `GameState` em localStorage (F5 hoje mata a partida) + ErrorBoundary; leilão comum multi-licitante + botão "passar" (`passBid` existe no store sem UI — copiar o seletor do pregão em `LandAuctionLayer.tsx:217-230`); lobby mínimo com nomes (UI hoje celebra "p1" na vitória).
 3. ~~**Sim: registrar vencedor/curva de patrimônio por rodada**~~ — **FEITO** em 2026-07-26 (`tests/sim/engine/wealth.ts` + curva por decil no `report.ts`). O consumidor que **falta** é a hipótese de ROI desproporcional da construção parcial (**D-026**) em orange/red: o instrumento existe, a medição não foi feita. O efeito do espólio da 039 já foi medido e refutado.
 4. ~~**Typecheck de `tests/`, `e2e/` e `scripts/`**~~ — **FEITO** em 2026-07-26 (`tsconfig.test.json`, no `tsc -b` e no CI; 29 erros zerados). Fica pendente a decisão separada de **ligar `strict`**, que não está ativo em nenhum tsconfig do repo.
