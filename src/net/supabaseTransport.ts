@@ -1,4 +1,4 @@
-// Adapter Supabase da porta `Transport` (spec 037, T020) — CONNECT-READY. Não importa
+// Adapter Supabase da porta `Transport` (spec 037/043, T020). Não importa
 // `@supabase/supabase-js` (recebe o cliente por interface estrutural) para o build ficar verde
 // sem a dependência: quando for conectar de verdade, faça `bun add @supabase/supabase-js`, crie
 // o cliente com `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` e passe-o aqui. A migration
@@ -10,13 +10,13 @@
 //   • estado da sala host→todos → broadcast, evento 'room'
 //   • pedido de assento guest→host → broadcast, evento 'join'    (FR-002)
 //   • recusa de assento host→guest → broadcast, evento 'rejected' (FR-005)
-//   • (des)conexão → Realtime Presence (chave = token)          (FR-016/006a)
+//   • (des)conexão → Realtime Presence (chave = uid)             (FR-016/006a)
 //   • snapshot → upsert/select em `rooms` (1 linha/sala)         (FR-013/014)
 //
-// Limitação de MVP (documentada): o broadcast carrega o token auto-declarado do remetente; a
-// paridade PLENA de anti-spoof (FR-007) do transporte real exige amarrar identidade à conexão
-// (ex.: Edge Function validando um segredo de sessão). A LÓGICA do host já rejeita spoof
-// (provado headless, SC-005); resta o endurecimento da identidade de transporte.
+// 043 (D-035): o `uid` que este adapter carrega é a identidade ATESTADA pela sessão anônima do
+// Supabase (`ensureSession()`, em `supabaseClient.ts`), não mais um token auto-declarado. Este
+// adapter ainda roda sobre UM canal por sala — a topologia de três tópicos (lobby/play/assento),
+// que faz o remetente vir do ENDEREÇO em vez do payload, é a Fase 2 (D2/D3 do plan da 043).
 import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import type { JoinError, Room } from './room'
 import { normalizeLog } from '@/game/log'
@@ -72,36 +72,36 @@ interface RoomRow {
 
 const EVENT = { submit: 'submit', accepted: 'accepted', room: 'room', join: 'join', rejected: 'rejected' } as const
 
-export function supabaseTransport(supabase: SupabaseLike, roomId: string, token: string): Transport {
+export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: string): Transport {
   // `broadcast.self: true` é OBRIGATÓRIO: no modelo uniforme da spec todo participante —
   // inclusive o host — submete comandos pelo canal e aplica só o que volta difundido (UI
   // pessimista). Sem eco do próprio envio, o host nunca veria os próprios comandos.
   const channel = supabase.channel(`room:${roomId}`, {
-    config: { presence: { key: token }, broadcast: { self: true } },
+    config: { presence: { key: uid }, broadcast: { self: true } },
   })
-  const submitCbs: ((cmd: CommandEnvelope, fromToken: string) => void)[] = []
+  const submitCbs: ((cmd: CommandEnvelope, fromUid: string) => void)[] = []
   const broadcastCbs: ((cmd: AcceptedCommand) => void)[] = []
   const roomCbs: ((room: Room) => void)[] = []
   const presenceCbs: ((change: PresenceChange) => void)[] = []
-  const joinReqCbs: ((who: JoinRequest, fromToken: string) => void)[] = []
+  const joinReqCbs: ((who: JoinRequest, fromUid: string) => void)[] = []
   const joinRejCbs: ((target: string, reason: JoinError) => void)[] = []
   const statusCbs: ((status: ConnStatus) => void)[] = []
-  const presenceSyncCbs: ((tokens: ReadonlySet<string>) => void)[] = []
-  const live = new Map<string, number>() // presenças vivas por token — base do takeover
+  const presenceSyncCbs: ((uids: ReadonlySet<string>) => void)[] = []
+  const live = new Map<string, number>() // presenças vivas por uid — base do takeover
   let resolved = false // guarda SEPARADA de `track()` (041, D6) — resolve() roda uma vez; track(), a cada reassinatura
 
   channel
     .on('broadcast', { event: EVENT.submit }, ({ payload }) => {
-      const p = payload as { cmd: CommandEnvelope; token: string }
-      for (const cb of submitCbs) cb(p.cmd, p.token)
+      const p = payload as { cmd: CommandEnvelope; uid: string }
+      for (const cb of submitCbs) cb(p.cmd, p.uid)
     })
     .on('broadcast', { event: EVENT.join }, ({ payload }) => {
-      const p = payload as { who: JoinRequest; token: string }
-      for (const cb of joinReqCbs) cb(p.who, p.token)
+      const p = payload as { who: JoinRequest; uid: string }
+      for (const cb of joinReqCbs) cb(p.who, p.uid)
     })
     .on('broadcast', { event: EVENT.rejected }, ({ payload }) => {
-      const p = payload as { token: string; reason: JoinError }
-      for (const cb of joinRejCbs) cb(p.token, p.reason)
+      const p = payload as { uid: string; reason: JoinError }
+      for (const cb of joinRejCbs) cb(p.uid, p.reason)
     })
     .on('broadcast', { event: EVENT.accepted }, ({ payload }) => {
       for (const cb of broadcastCbs) cb(payload as AcceptedCommand)
@@ -109,7 +109,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
     .on('broadcast', { event: EVENT.room }, ({ payload }) => {
       for (const cb of roomCbs) cb(payload as Room)
     })
-    // TAKEOVER (FR-006a) por CONTAGEM de presenças vivas por token. Antes este adapter
+    // TAKEOVER (FR-006a) por CONTAGEM de presenças vivas por uid. Antes este adapter
     // emitia `takeover: false` fixo, então o `if (change.takeover) return` do host
     // (`host.ts:110`) nunca disparava em produção: um F5 do convidado gera um `join` e um
     // `leave` com a MESMA chave, e o `leave` derrubava o assento → pausa espúria. O
@@ -118,25 +118,25 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
     .on('presence', { event: 'join' }, ({ key, newPresences }) => {
       const before = live.get(key) ?? 0
       live.set(key, before + (newPresences?.length ?? 1))
-      for (const cb of presenceCbs) cb({ token: key, connected: true, takeover: before > 0 })
+      for (const cb of presenceCbs) cb({ uid: key, connected: true, takeover: before > 0 })
     })
     .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
       const after = (live.get(key) ?? 0) - (leftPresences?.length ?? 1)
       if (after > 0) {
         live.set(key, after)
-        // Sobrou conexão viva com este token: é a ponta antiga de um takeover, não uma queda.
-        for (const cb of presenceCbs) cb({ token: key, connected: false, takeover: true })
+        // Sobrou conexão viva com este uid: é a ponta antiga de um takeover, não uma queda.
+        for (const cb of presenceCbs) cb({ uid: key, connected: false, takeover: true })
         return
       }
       live.delete(key)
-      for (const cb of presenceCbs) cb({ token: key, connected: false, takeover: false })
+      for (const cb of presenceCbs) cb({ uid: key, connected: false, takeover: false })
     })
     // Conjunto COMPLETO de presença (041, contrato §2) — fonte de verdade para a autoridade
     // que reassume reconciliar `seats[].connected` (FR-021). Push, não pull: um `presenceState()`
     // logo após `SUBSCRIBED` perderia a corrida do estado ainda chegando (D7 do plan).
     .on('presence', { event: 'sync' }, () => {
-      const tokens = new Set(Object.keys(channel.presenceState()))
-      for (const cb of presenceSyncCbs) cb(tokens)
+      const uids = new Set(Object.keys(channel.presenceState()))
+      for (const cb of presenceSyncCbs) cb(uids)
     })
 
   const off = <T>(arr: T[], cb: T): Unsubscribe => () => {
@@ -145,7 +145,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
   }
 
   return {
-    token,
+    uid,
 
     // O conserto do defeito 1 (041, D6): `resolve()` da promessa e `track()` de presença são
     // DUAS garantias, não uma. `resolve()` roda uma vez; `track()` roda em TODA reassinatura —
@@ -154,7 +154,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
       await new Promise<void>((resolve) => {
         channel.subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-            void channel.track({ token }) // toda vez: reassinatura reanuncia presença (FR-001)
+            void channel.track({ uid }) // toda vez: reassinatura reanuncia presença (FR-001)
             for (const cb of statusCbs) cb('connected')
             if (!resolved) { resolved = true; resolve() }
             return
@@ -180,7 +180,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
     },
 
     submit(cmd: CommandEnvelope): void {
-      void channel.send({ type: 'broadcast', event: EVENT.submit, payload: { cmd, token } })
+      void channel.send({ type: 'broadcast', event: EVENT.submit, payload: { cmd, uid } })
     },
     onSubmit(cb): Unsubscribe {
       submitCbs.push(cb)
@@ -196,7 +196,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
     },
 
     requestJoin(who: JoinRequest): void {
-      void channel.send({ type: 'broadcast', event: EVENT.join, payload: { who, token } })
+      void channel.send({ type: 'broadcast', event: EVENT.join, payload: { who, uid } })
     },
     onJoinRequest(cb): Unsubscribe {
       joinReqCbs.push(cb)
@@ -204,7 +204,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
     },
 
     rejectJoin(target: string, reason: JoinError): void {
-      void channel.send({ type: 'broadcast', event: EVENT.rejected, payload: { token: target, reason } })
+      void channel.send({ type: 'broadcast', event: EVENT.rejected, payload: { uid: target, reason } })
     },
     onJoinRejected(cb): Unsubscribe {
       joinRejCbs.push(cb)

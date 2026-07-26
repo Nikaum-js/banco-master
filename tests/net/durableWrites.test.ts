@@ -14,7 +14,7 @@ function stubTransport() {
   const saveSnapshot = vi.fn<(snap: PersistedSnapshot) => Promise<void>>()
   const saveRoom = vi.fn<(room: Room) => Promise<void>>()
   const inner: Transport = {
-    token: 't',
+    uid: 't',
     connect: () => Promise.resolve(),
     disconnect: () => {},
     submit: () => {},

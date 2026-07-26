@@ -15,23 +15,23 @@ import type { Room } from './room'
 
 interface RoomState {
   room: Room | null
-  myToken: string | null
+  myUid: string | null
   /** Conexão da PRÓPRIA sessão (041, data-model §4) — espelhada do `client`, não do jogo. */
   connection: ConnectionState
   setRoom(room: Room | null): void
-  setSession(token: string | null): void
+  setSession(uid: string | null): void
   setConnection(connection: ConnectionState): void
   reset(): void
 }
 
 export const useRoomStore = create<RoomState>((set) => ({
   room: null,
-  myToken: null,
+  myUid: null,
   connection: 'connected',
   setRoom: (room) => set({ room }),
-  setSession: (myToken) => set({ myToken }),
+  setSession: (myUid) => set({ myUid }),
   setConnection: (connection) => set({ connection }),
-  reset: () => set({ room: null, myToken: null, connection: 'connected' }),
+  reset: () => set({ room: null, myUid: null, connection: 'connected' }),
 }))
 
 // Perspectiva local viva. Sem sala → modo 'local' (nada bloqueado), preservando o
@@ -39,9 +39,9 @@ export const useRoomStore = create<RoomState>((set) => ({
 export function useLocalView(): LocalView {
   const game = useGameStore((s) => s.game)
   const room = useRoomStore((s) => s.room)
-  const myToken = useRoomStore((s) => s.myToken)
+  const myUid = useRoomStore((s) => s.myUid)
   const connection = useRoomStore((s) => s.connection)
-  return useMemo(() => localView(game, room, myToken, connection), [game, room, myToken, connection])
+  return useMemo(() => localView(game, room, myUid, connection), [game, room, myUid, connection])
 }
 
 // Identidade de exibição de um jogador (nome/cor/peça). Nunca devolve id técnico.

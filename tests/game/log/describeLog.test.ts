@@ -35,7 +35,7 @@ function sampleFor(kind: LogKind): LogEntry {
 }
 
 function seat(playerId: string, name: string, color: string): Seat {
-  return { playerId, token: `tok-${playerId}`, name, color, isHost: playerId === 'p1', connected: true, reentryCode: '' }
+  return { playerId, uid: `tok-${playerId}`, name, color, isHost: playerId === 'p1', connected: true, reentryCode: '' }
 }
 
 const ROOM: Room = {

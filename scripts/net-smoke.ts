@@ -42,7 +42,7 @@ async function main(): Promise<void> {
   const hostTransport = supabaseTransport(conn(), roomId, HOST_TOKEN)
   const hostClient = createClient(hostTransport)
   await hostClient.join()
-  const host = createHost(hostTransport, createRoom(roomId, { token: HOST_TOKEN, name: 'Host', color: SEAT_COLORS[0] }))
+  const host = createHost(hostTransport, createRoom(roomId, { uid: HOST_TOKEN, name: 'Host', color: SEAT_COLORS[0] }))
   await host.open()
   ok('host abriu a sala (canal Realtime + linha em `rooms`)')
 
@@ -68,8 +68,8 @@ async function main(): Promise<void> {
   const activeId = g0.players[g0.turnOrder[g0.activeSeat]].id
   const ator = [hostClient, guest].find((c) => c.playerId() === activeId)!
   const naoAtor = [hostClient, guest].find((c) => c.playerId() !== activeId)!
-  const vistaAtor = localView(g0, ator.room(), ator.token)
-  const vistaOutro = localView(g0, naoAtor.room(), naoAtor.token)
+  const vistaAtor = localView(g0, ator.room(), ator.uid)
+  const vistaOutro = localView(g0, naoAtor.room(), naoAtor.uid)
   if (!vistaAtor.mayAct('roll') || vistaOutro.mayAct('roll')) {
     throw new Error('perspectiva local divergiu do estado da partida')
   }

@@ -11,7 +11,7 @@
 // Aqui o transporte entra por PARÂMETRO. `OnlineGate` vira uma assinatura.
 import { createClient, type Client } from './client'
 import { createHost, type Host, type HostOptions } from './host'
-import { createRoom, hostSeat, newReentryCode, seatByToken, type JoinError, type PieceId, type Room } from './room'
+import { createRoom, hostSeat, newReentryCode, seatByUid, type JoinError, type PieceId, type Room } from './room'
 import { newRoomId } from './session'
 import type { Transport, Unsubscribe } from './transport'
 
@@ -36,10 +36,11 @@ export interface RoomSessionState {
   readonly isHost: boolean
   /** Id da sala, quando já existe. */
   readonly roomId: string | null
+  /** Identidade atestada desta sessão (043, D-035) — `null` até o transporte conectar. */
+  readonly uid: string | null
 }
 
 export interface RoomSession {
-  readonly token: string
   getState(): RoomSessionState
   subscribe(cb: () => void): Unsubscribe
 
@@ -48,7 +49,7 @@ export interface RoomSession {
   /** Cria a sala e assume a autoridade. Devolve o id, ou `null` se falhou. */
   create(who: SessionIdentity): Promise<string | null>
   requestSeat(who: SessionIdentity): void
-  /** Reanexa ao próprio assento por CÓDIGO (041, D-033) — quando o link + token não bastam. */
+  /** Reanexa ao próprio assento por CÓDIGO (041, D-033) — quando o link + uid não bastam. */
   requestReentry(code: string): void
   startMatch(): Promise<void>
   kick(target: string): void
@@ -62,9 +63,10 @@ export interface RoomSession {
 }
 
 export interface RoomSessionOptions {
-  token: string
-  /** A seam: qual adapter sobe. Produção passa o Supabase; os testes, o hub in-memory. */
-  createTransport(roomId: string, token: string): Transport
+  /** A seam: qual adapter sobe. Produção passa o Supabase — assíncrona: obtém a sessão
+   * atestada (`ensureSession()`) antes de conectar (043, D1). Os testes passam o hub
+   * in-memory, síncrono; `await` funciona igual nos dois. */
+  createTransport(roomId: string): Transport | Promise<Transport>
   /** Liga o `useGameStore` ao client quando a partida existe. Devolve o desligador. */
   connectStore(client: Client): () => void
   /** Traduz falha de infra em mensagem acionável — específico do adapter. */
@@ -79,7 +81,7 @@ export interface RoomSessionOptions {
 }
 
 export function createRoomSession(opts: RoomSessionOptions): RoomSession {
-  const { token, createTransport, connectStore } = opts
+  const { createTransport, connectStore } = opts
   const describeError = opts.describeError ?? ((e: unknown) => String(e))
   const mintRoomId = opts.newRoomId ?? newRoomId
   const mintReentryCode = opts.mintReentryCode ?? (() => newReentryCode(Math.random))
@@ -91,7 +93,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
   const subs: Unsubscribe[] = []
   const listeners: (() => void)[] = []
 
-  let state: RoomSessionState = { phase: 'identity', room: null, error: null, busy: false, isHost: false, roomId: null }
+  let state: RoomSessionState = { phase: 'identity', room: null, error: null, busy: false, isHost: false, roomId: null, uid: null }
 
   function emit(patch: Partial<RoomSessionState>): void {
     state = { ...state, ...patch }
@@ -142,8 +144,9 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
   }
 
   async function openSession(id: string): Promise<Client> {
-    const t = createTransport(id, token)
+    const t = await createTransport(id)
     transport = t
+    emit({ uid: t.uid }) // 043, D1: a identidade só existe depois do transporte resolver
     const c = createClient(t)
     client = c
     subs.push(c.subscribe(() => syncFromClient(c)))
@@ -162,7 +165,6 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
   }
 
   return {
-    token,
     getState: () => state,
     subscribe(cb) {
       listeners.push(cb)
@@ -179,9 +181,10 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
         if (!current) return fail('Sala não encontrada — confira o link.')
         if (c.game()?.phase === 'ended') return fail('ended') // FR-028: o link não reabre a mesa
 
-        const mine = seatByToken(current, token)
-        if (mine && hostSeat(current).token === token) await takeAuthority(current)
-        // Token desconhecido depois do início (041, D-033): não é mais beco — oferece o
+        const myUid = transport!.uid
+        const mine = seatByUid(current, myUid)
+        if (mine && hostSeat(current).uid === myUid) await takeAuthority(current)
+        // Uid desconhecido depois do início (041, D-033): não é mais beco — oferece o
         // formulário de reentrada por código, em vez de recusar com 'already-started'.
         if (!mine && current.status !== 'lobby') {
           emit({ room: current, phase: 'reentry', error: null })
@@ -200,7 +203,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
       try {
         const id = mintRoomId()
         await openSession(id)
-        await takeAuthority(createRoom(id, { token, ...who, reentryCode: mintReentryCode() }))
+        await takeAuthority(createRoom(id, { uid: transport!.uid, ...who, reentryCode: mintReentryCode() }))
         emit({ phase: 'lobby', busy: false })
         return id
       } catch (e) {

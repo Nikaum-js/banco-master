@@ -27,7 +27,7 @@ async function setup(): Promise<Setup> {
   const hostTransport = localTransport(hub, 'tok-host')
   const hostClient = createClient(hostTransport)
   await hostClient.join()
-  const host = createHost(hostTransport, createRoom('r1', { token: 'tok-host', name: 'Host', color: SEAT_COLORS[0] }), {
+  const host = createHost(hostTransport, createRoom('r1', { uid: 'tok-host', name: 'Host', color: SEAT_COLORS[0] }), {
     rng: mulberry32(9),
     now: () => 1_000,
   })
@@ -56,7 +56,7 @@ function hostGoesAway(s: Setup): void {
   s.hostClient.leave()
 }
 
-// Reassume com um transporte NOVO (mesmo token) — o que uma aba recarregada faz de verdade.
+// Reassume com um transporte NOVO (mesmo uid) — o que uma aba recarregada faz de verdade.
 // Conecta o CLIENT do próprio host primeiro (mesma ordem de `roomSession.ts`: o `join()`
 // sempre roda antes do `host.open()`) — senão o próprio host apareceria "ausente" na
 // reconciliação de presença.

@@ -11,9 +11,9 @@ import { createRoom, SEAT_COLORS } from '@/net/room'
 function stubTransport() {
   const statusCbs: ((s: 'connected' | 'reconnecting') => void)[] = []
   const loadSnapshot = vi.fn<() => Promise<PersistedSnapshot | null>>()
-  const room = createRoom('r1', { token: 't-a', name: 'Ana', color: SEAT_COLORS[0] })
+  const room = createRoom('r1', { uid: 't-a', name: 'Ana', color: SEAT_COLORS[0] })
   const inner: Transport = {
-    token: 't-a',
+    uid: 't-a',
     connect: () => Promise.resolve(),
     disconnect: () => {},
     submit: () => {},
@@ -41,7 +41,7 @@ function stubTransport() {
 
 function snapOf(seq: number): PersistedSnapshot {
   const game: GameState = createSeedState(['p1', 'p2'])
-  const room = createRoom('r1', { token: 't-a', name: 'Ana', color: SEAT_COLORS[0] })
+  const room = createRoom('r1', { uid: 't-a', name: 'Ana', color: SEAT_COLORS[0] })
   return { seq, game, room }
 }
 

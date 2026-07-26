@@ -5,7 +5,7 @@
 // `PlayersPanel`; seus irmãos (`deedView`, `handView`, `tradesView`, `activeModal`) já
 // moravam em `game/ui/`. Agora mora junto deles.
 import { identityOf } from '@/net/identity'
-import { seatByToken, type Room } from '@/net/room'
+import { seatByUid, type Room } from '@/net/room'
 import type { GameState } from '@/game/turn/types'
 
 // ---------------------------------------------------------------------
@@ -38,9 +38,9 @@ export const PLAYER_COLORS = ['#d9a650', '#a76bf5', '#06b6d4', '#14b8a6', '#d946
 // Mapeia o GameState real → view-model `Player` dos painéis. PURO (testável).
 // A identidade (nome/cor) vem da SALA quando há uma (spec 038); sem sala, do fallback —
 // nunca do `GameState`, que segue sem PII (D-019). É aqui que `p1..pN` some da UI.
-export function playersView(game: GameState, room: Room | null = null, myToken: string | null = null): Player[] {
+export function playersView(game: GameState, room: Room | null = null, myUid: string | null = null): Player[] {
   const activeId = game.players[game.turnOrder[game.activeSeat]]?.id
-  const mySeat = room && myToken ? seatByToken(room, myToken) : undefined
+  const mySeat = room && myUid ? seatByUid(room, myUid) : undefined
   return game.players.map((p) => ({
     id: p.id,
     name: identityOf(room, p.id).name,

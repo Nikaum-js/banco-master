@@ -3,16 +3,16 @@
 // antes de precisar dele; o lobby já mostra os dois (`RoomLobby`), este é o equivalente para
 // quando o jogo já está em curso.
 import { useState } from 'react'
-import { seatByToken } from '@/net/room'
+import { seatByUid } from '@/net/room'
 import { useRoomStore } from '@/net/roomStore'
 
 export function SessionBadge({ link }: { link: string }) {
   const room = useRoomStore((s) => s.room)
-  const myToken = useRoomStore((s) => s.myToken)
+  const myUid = useRoomStore((s) => s.myUid)
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState<'link' | 'code' | null>(null)
 
-  const seat = room && myToken ? seatByToken(room, myToken) : undefined
+  const seat = room && myUid ? seatByUid(room, myUid) : undefined
   if (!seat) return null
 
   function copy(what: 'link' | 'code', value: string): void {

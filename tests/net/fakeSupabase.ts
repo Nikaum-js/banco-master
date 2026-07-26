@@ -68,7 +68,7 @@ class FakeChannel implements SupabaseChannelLike {
   presenceState(): Record<string, unknown[]> {
     const state: Record<string, unknown[]> = {}
     for (const ch of this.broker.channels) {
-      if (ch.tracked) state[ch.key] = [{ token: ch.key }]
+      if (ch.tracked) state[ch.key] = [{ uid: ch.key }]
     }
     return state
   }
@@ -95,7 +95,7 @@ class FakeChannel implements SupabaseChannelLike {
     this.tracked = true
     for (const ch of this.broker.channels) {
       if (!ch.subscribed) continue
-      for (const cb of ch.joinCbs) cb({ key: this.key, newPresences: [{ token: this.key }] })
+      for (const cb of ch.joinCbs) cb({ key: this.key, newPresences: [{ uid: this.key }] })
     }
     this.emitSyncAll()
     return Promise.resolve({})
@@ -117,7 +117,7 @@ class FakeChannel implements SupabaseChannelLike {
     if (wasTracked) {
       for (const ch of this.broker.channels) {
         if (!ch.subscribed) continue
-        for (const cb of ch.leaveCbs) cb({ key: this.key, leftPresences: [{ token: this.key }] })
+        for (const cb of ch.leaveCbs) cb({ key: this.key, leftPresences: [{ uid: this.key }] })
       }
       this.emitSyncAll()
     }
@@ -136,7 +136,7 @@ class FakeChannel implements SupabaseChannelLike {
     if (wasTracked) {
       for (const ch of this.broker.channels) {
         if (ch === this || !ch.subscribed) continue
-        for (const cb of ch.leaveCbs) cb({ key: this.key, leftPresences: [{ token: this.key }] })
+        for (const cb of ch.leaveCbs) cb({ key: this.key, leftPresences: [{ uid: this.key }] })
       }
       this.emitSyncAll()
     }
@@ -151,11 +151,11 @@ class FakeChannel implements SupabaseChannelLike {
 }
 
 export interface FakeSupabase {
-  client(token: string): SupabaseLike
+  client(uid: string): SupabaseLike
   /** Linhas da tabela `rooms` — para asserir upsert parcial. */
   rows: Map<string, Record<string, unknown>>
-  /** O canal MAIS RECENTE assinado com este token — para simular queda/restauração (041, D14). */
-  channelByToken(token: string): { simulateDrop(): void; simulateResubscribe(): void } | undefined
+  /** O canal MAIS RECENTE assinado com este uid — para simular queda/restauração (041, D14). */
+  channelByUid(uid: string): { simulateDrop(): void; simulateResubscribe(): void } | undefined
   /** Recusa a próxima gravação `n` vezes (ou sempre, com `'always'`) — FR-012/013, SC-003. */
   failWrites(n: number | 'always'): void
   /** Recusa a próxima leitura de snapshot/sala — FR-004/005. */
@@ -176,8 +176,8 @@ export function fakeSupabase(): FakeSupabase {
 
   return {
     rows: broker.rows,
-    channelByToken(token: string) {
-      return [...broker.channels].findLast((ch) => ch.key === token)
+    channelByUid(uid: string) {
+      return [...broker.channels].findLast((ch) => ch.key === uid)
     },
     failWrites(n: number | 'always'): void {
       broker.writeFailures = n
@@ -185,11 +185,11 @@ export function fakeSupabase(): FakeSupabase {
     failRead(fail: boolean): void {
       broker.readFails = fail
     },
-    client(token: string): SupabaseLike {
+    client(uid: string): SupabaseLike {
       return {
         channel(_name: string, opts?: unknown): SupabaseChannelLike {
           const cfg = opts as { config?: { broadcast?: { self?: boolean } } } | undefined
-          return new FakeChannel(broker, token, cfg?.config?.broadcast?.self === true)
+          return new FakeChannel(broker, uid, cfg?.config?.broadcast?.self === true)
         },
         from(table: string) {
           return {

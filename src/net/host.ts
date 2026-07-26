@@ -19,7 +19,7 @@ import {
   markConnected,
   markDisconnected,
   playerIdsInOrder,
-  seatByToken,
+  seatByUid,
   startGame as startGameRoom,
   type Room,
 } from './room'
@@ -34,7 +34,7 @@ export interface Host {
   open(): Promise<void> // abre o LOBBY: escuta pedidos de assento/presença e publica a sala (FR-001/002)
   start(): Promise<void> // cria o estado inicial, persiste como 1º snapshot e publica a sala em 'playing'
   startMatch(): Promise<{ ok: true } | { ok: false; reason: 'too-few' | 'already-started' | 'not-host' }> // lobby → partida (FR-006)
-  kick(token: string): { ok: true } | { ok: false; reason: 'not-in-lobby' | 'is-host' | 'unknown-token' } // remoção no lobby (FR-024)
+  kick(uid: string): { ok: true } | { ok: false; reason: 'not-in-lobby' | 'is-host' | 'unknown-uid' } // remoção no lobby (FR-024)
   stop(): void
   tick(): void // fecha leilões/lotes vencidos pelo prazo (emite comandos de sistema) — browser agenda; testes chamam
   room(): Room
@@ -84,9 +84,9 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     return true
   }
 
-  function handleSubmit(env: CommandEnvelope, fromToken: string): void {
+  function handleSubmit(env: CommandEnvelope, fromUid: string): void {
     if (!game) return
-    const seat = seatByToken(room, fromToken)
+    const seat = seatByUid(room, fromUid)
     if (!seat) return // sessão sem assento na sala → descarta (US4-2)
     if (env.senderId !== seat.playerId) return // identidade declarada ≠ assento → anti-spoof (FR-007, US4-1)
     if (game.paused) return // durante a pausa, comando de jogo é rejeitado (FR-017, US3-2)
@@ -95,7 +95,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     accept(env.action)
   }
 
-  // Pedido de assento no lobby (FR-002/005). A identidade do assento é o token da CONEXÃO —
+  // Pedido de assento no lobby (FR-002/005). A identidade do assento é o uid da CONEXÃO —
   // o pedinte só escolhe nome e cor. Recusa (cheia/cor tomada/já iniciada) volta ao pedinte.
   //
   // Com `reentryCode` (041, D-033/contrato §3): é REANEXAÇÃO, não assento novo — o gate de
@@ -103,11 +103,11 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   // início). `name`/`color`/`piece` são ignorados nesse caminho; a identidade visual
   // pertence ao assento, não a quem está reabrindo. `syncPause` depois de republicar é o que
   // retoma a partida se esta era a última ausência (FR-028).
-  function handleJoinRequest(who: JoinRequest, fromToken: string): void {
+  function handleJoinRequest(who: JoinRequest, fromUid: string): void {
     if (who.reentryCode) {
-      const result = reattachByCode(room, who.reentryCode, fromToken)
+      const result = reattachByCode(room, who.reentryCode, fromUid)
       if (!result.ok) {
-        transport.rejectJoin(fromToken, result.reason)
+        transport.rejectJoin(fromUid, result.reason)
         return
       }
       room = result.room
@@ -117,11 +117,11 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     }
     const taken = new Set(room.seats.map((s) => s.reentryCode))
     const result = joinRoom(room, {
-      token: fromToken, name: who.name, color: who.color, piece: who.piece,
+      uid: fromUid, name: who.name, color: who.color, piece: who.piece,
       reentryCode: newReentryCode(rng, taken), // room.ts não tem RNG (D12) — o host minta
     })
     if (!result.ok) {
-      transport.rejectJoin(fromToken, result.reason)
+      transport.rejectJoin(fromUid, result.reason)
       return
     }
     room = result.room
@@ -131,11 +131,11 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   function handlePresence(change: PresenceChange): void {
     if (change.takeover) return // mesma sessão reabrindo → não é desconexão (FR-006a); segue conectado
     // No lobby, entrar/sair do canal só atualiza o estado de conexão (nada pausa).
-    if (!seatByToken(room, change.token)) {
+    if (!seatByUid(room, change.uid)) {
       if (change.connected) publishAndPersistRoom() // recém-chegado ainda sem assento: precisa ver a sala
       return
     }
-    room = change.connected ? markConnected(room, change.token) : markDisconnected(room, change.token)
+    room = change.connected ? markConnected(room, change.uid) : markDisconnected(room, change.uid)
     publishAndPersistRoom()
     syncPause()
   }
@@ -151,11 +151,11 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   // um retrato de antes da queda/reload. Chamar ANTES de `syncPause` é o que evita emitir
   // `pause` seguido de `resume` a cada reassunção (a pausa só é decidida depois de a mesa
   // já refletir quem está de verdade presente).
-  function reconcilePresence(tokens: ReadonlySet<string>): void {
+  function reconcilePresence(uids: ReadonlySet<string>): void {
     for (const seat of room.seats) {
-      const connected = tokens.has(seat.token)
+      const connected = uids.has(seat.uid)
       if (seat.connected === connected) continue
-      room = connected ? markConnected(room, seat.token) : markDisconnected(room, seat.token)
+      room = connected ? markConnected(room, seat.uid) : markDisconnected(room, seat.uid)
     }
   }
 
@@ -183,8 +183,8 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     subs.push(transport.onPresence(handlePresence))
     subs.push(transport.onJoinRequest(handleJoinRequest))
     // FR-021/022: reconcilia presença ANTES de decidir pausa — nunca o contrário.
-    subs.push(transport.onPresenceSync((tokens) => {
-      reconcilePresence(tokens)
+    subs.push(transport.onPresenceSync((uids) => {
+      reconcilePresence(uids)
       publishAndPersistRoom()
       syncPause()
     }))
@@ -237,11 +237,11 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
 
     // Remoção de jogador pelo host, só no lobby (§11.1 / FR-024). O removido é avisado pelo
     // mesmo canal de recusa de entrada (research D6) e a sala republicada sem o assento.
-    kick(token: string) {
-      const result = kickSeat(room, token)
+    kick(uid: string) {
+      const result = kickSeat(room, uid)
       if (!result.ok) return result
       room = result.room
-      transport.rejectJoin(token, 'kicked')
+      transport.rejectJoin(uid, 'kicked')
       publishAndPersistRoom()
       return { ok: true as const }
     },

@@ -14,12 +14,12 @@ import { pausedBy } from '../../net/harness'
 // Sem sala: cliente único, todos os assentos são deste dispositivo (FR-029).
 const soloView = (g: GameState): LocalView => localView(g, null, null)
 
-// Com sala: `token` decide de quem é a perspectiva.
+// Com sala: `uid` decide de quem é a perspectiva.
 function seatedView(g: GameState, playerId: string): LocalView {
   const room = {
     id: 'r', status: 'playing' as const,
     seats: g.players.map((p, i) => ({
-      token: `tok-${p.id}`, playerId: p.id, name: `P${i + 1}`, color: '#fff', connected: true, isHost: i === 0, reentryCode: '',
+      uid: `tok-${p.id}`, playerId: p.id, name: `P${i + 1}`, color: '#fff', connected: true, isHost: i === 0, reentryCode: '',
     })),
   }
   return localView(g, room, `tok-${playerId}`)

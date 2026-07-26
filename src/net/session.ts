@@ -1,23 +1,12 @@
-// Sessão anônima por link (spec 037, FR-003, D-019). A identidade é um token de sessão (UUID)
-// guardado no `localStorage`; a credencial de acesso é o próprio link da sala. Nada aqui entra
-// no `GameState` (sem PII) — o token vive só no dispositivo e na associação assento↔token da sala.
-const TOKEN_KEY = 'banco:session-token'
+// Sessão anônima por link (spec 037/043, FR-003, D-035). A identidade é o `uid` emitido pela
+// sessão anônima do Supabase (src/net/supabaseClient.ts), não mais um UUID de `localStorage`:
+// quem persiste a sessão entre reloads agora é o próprio supabase-js, e é essa persistência que
+// sobrevive ao F5. O que sobra aqui é só o link — a credencial de *entrada*, não a identidade.
 
 function newToken(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
-  // Fallback (ambientes sem WebCrypto): suficiente p/ unicidade de sessão.
+  // Fallback (ambientes sem WebCrypto): suficiente p/ unicidade de sala.
   return `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
-}
-
-// Token persistente do dispositivo — gerado na 1ª entrada e reusado para reconexão (FR-004).
-export function getSessionToken(): string {
-  if (typeof localStorage === 'undefined') return newToken()
-  let t = localStorage.getItem(TOKEN_KEY)
-  if (!t) {
-    t = newToken()
-    localStorage.setItem(TOKEN_KEY, t)
-  }
-  return t
 }
 
 export interface RoomLink {

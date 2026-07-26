@@ -16,7 +16,7 @@ async function lobbyCom(convidados: number): Promise<{ hub: LocalHub; host: Retu
   const transport = localTransport(hub, 'tok-host')
   const hostClient = createClient(transport)
   await hostClient.join()
-  const host = createHost(transport, createRoom('r1', { token: 'tok-host', name: 'Host', color: SEAT_COLORS[0], piece: 'aviao' }), {
+  const host = createHost(transport, createRoom('r1', { uid: 'tok-host', name: 'Host', color: SEAT_COLORS[0], piece: 'aviao' }), {
     rng: mulberry32(4),
     now: () => 1_000,
   })
@@ -65,9 +65,9 @@ describe('kick no lobby (FR-024/025)', () => {
     expect(host.room().seats).toHaveLength(2)
   })
 
-  it('token desconhecido não derruba ninguém', async () => {
+  it('uid desconhecido não derruba ninguém', async () => {
     const { host } = await lobbyCom(1)
-    expect(host.kick('tok-fantasma')).toEqual({ ok: false, reason: 'unknown-token' })
+    expect(host.kick('tok-fantasma')).toEqual({ ok: false, reason: 'unknown-uid' })
     expect(host.room().seats).toHaveLength(2)
   })
 
@@ -82,16 +82,16 @@ describe('kick no lobby (FR-024/025)', () => {
 
   it('assentos restantes são reindexados sem buracos', () => {
     // 3 convidados; sai o do meio → os ids seguem 'p1','p2','p3' (o motor conta com isso).
-    let room = createRoom('r', { token: 'h', name: 'H', color: SEAT_COLORS[0] })
+    let room = createRoom('r', { uid: 'h', name: 'H', color: SEAT_COLORS[0] })
     for (const [i, t] of ['a', 'b', 'c'].entries()) {
-      const r = { ...room, seats: [...room.seats, { playerId: `p${i + 2}`, token: t, name: t, color: SEAT_COLORS[i + 1], isHost: false, connected: true, reentryCode: '' }] }
+      const r = { ...room, seats: [...room.seats, { playerId: `p${i + 2}`, uid: t, name: t, color: SEAT_COLORS[i + 1], isHost: false, connected: true, reentryCode: '' }] }
       room = r
     }
     const out = kickSeat(room, 'b')
     expect(out.ok).toBe(true)
     if (out.ok) {
       expect(out.room.seats.map((s) => s.playerId)).toEqual(['p1', 'p2', 'p3'])
-      expect(out.room.seats.map((s) => s.token)).toEqual(['h', 'a', 'c'])
+      expect(out.room.seats.map((s) => s.uid)).toEqual(['h', 'a', 'c'])
     }
   })
 

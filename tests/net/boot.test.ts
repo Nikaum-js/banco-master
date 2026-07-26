@@ -21,12 +21,11 @@ const BRUNO: SessionIdentity = { name: 'Bruno', color: SEAT_COLORS[1], piece: 'n
 
 // Uma sessão ligada ao hub in-memory. `connectStore` é um espião: o boot não deve depender
 // do Zustand para funcionar.
-function makeSession(hub: LocalHub, token: string): { session: RoomSession; connected: () => number; client: () => Client | null } {
+function makeSession(hub: LocalHub, uid: string): { session: RoomSession; connected: () => number; client: () => Client | null } {
   let connects = 0
   let client: Client | null = null
   const session = createRoomSession({
-    token,
-    createTransport: (_roomId, tok) => localTransport(hub, tok),
+    createTransport: () => localTransport(hub, uid),
     connectStore: (c) => {
       connects += 1
       client = c
@@ -56,7 +55,6 @@ describe('createRoomSession — criar sala', () => {
 
   it('falha de infra vira fase de erro, com a mensagem traduzida', async () => {
     const session = createRoomSession({
-      token: 'tok-host',
       createTransport: () => { throw new Error('relation "rooms" does not exist') },
       connectStore: () => () => {},
       describeError: (e) => `traduzido: ${(e as Error).message}`,
@@ -70,7 +68,7 @@ describe('createRoomSession — criar sala', () => {
 })
 
 describe('createRoomSession — entrar por link', () => {
-  it('token sem assento cai na tela de identidade', async () => {
+  it('uid sem assento cai na tela de identidade', async () => {
     const hub = new LocalHub()
     const anfitriao = makeSession(hub, 'tok-host')
     await anfitriao.session.create(ANA)
@@ -106,11 +104,11 @@ describe('createRoomSession — entrar por link', () => {
     expect(String(session.getState().error)).toContain('Sala não encontrada')
   })
 
-  it('041/D-033: token desconhecido depois do início oferece reentrada por código, não erro', async () => {
+  it('041/D-033: uid desconhecido depois do início oferece reentrada por código, não erro', async () => {
     const hub = new LocalHub()
     // Sala já em partida, montada direto pelo host.
-    let room = createRoom('sala-fixa', { token: 'tok-host', ...ANA })
-    const j = joinRoom(room, { token: 'tok-b', ...BRUNO })
+    let room = createRoom('sala-fixa', { uid: 'tok-host', ...ANA })
+    const j = joinRoom(room, { uid: 'tok-b', ...BRUNO })
     if (!j.ok) throw new Error(j.reason)
     const st = startGame(j.room)
     if (!st.ok) throw new Error(st.reason)
@@ -131,7 +129,7 @@ describe('createRoomSession — entrar por link', () => {
     const anfitriao = makeSession(hub, 'tok-host')
     await anfitriao.session.create(ANA)
 
-    // Nova aba, MESMO token (F5 do anfitrião).
+    // Nova aba, MESMO uid (F5 do anfitrião).
     const reaberto = makeSession(hub, 'tok-host')
     await reaberto.session.enter('sala-fixa')
 

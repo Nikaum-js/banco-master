@@ -11,7 +11,7 @@ const JOIN_ERROR_TEXT: Record<JoinError, string> = {
   'color-taken': 'Essa cor já foi escolhida por outro jogador.',
   'piece-taken': 'Essa peça já foi escolhida por outro jogador.',
   'already-started': 'A partida já começou — não é possível entrar agora.',
-  'unknown-token': 'Sessão não reconhecida nesta sala.',
+  'unknown-uid': 'Sessão não reconhecida nesta sala.',
   kicked: 'O anfitrião removeu você desta sala.',
   'bad-code': 'Código de reentrada inválido.',
 }
@@ -124,7 +124,7 @@ export function IdentityForm({
 // compartilhável e o botão de iniciar (só o host, com 2+ jogadores).
 export function RoomLobby({
   room,
-  myToken,
+  myUid,
   isHost,
   link,
   starting,
@@ -132,12 +132,12 @@ export function RoomLobby({
   onKick,
 }: {
   room: Room
-  myToken: string
+  myUid: string
   isHost: boolean
   link: string
   starting?: boolean
   onStart: () => void
-  onKick?: (token: string) => void
+  onKick?: (uid: string) => void
 }) {
   const [copied, setCopied] = useState(false)
 
@@ -153,7 +153,7 @@ export function RoomLobby({
       <div className="flex flex-col gap-2">
         {room.seats.map((s, i) => (
           <div
-            key={s.token}
+            key={s.uid}
             className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-card)] bg-coffee-800/60 border border-coffee-500"
           >
             <span
@@ -164,14 +164,14 @@ export function RoomLobby({
               {pieceGlyph(s.piece)}
             </span>
             <span className="text-cream truncate flex-1">{s.name}</span>
-            {s.token === myToken && <Chip tone="gold">você</Chip>}
+            {s.uid === myUid && <Chip tone="gold">você</Chip>}
             {s.isHost && <Chip>anfitrião</Chip>}
             {!s.connected && <Chip tone="alert">offline</Chip>}
             <span className="label text-cream-muted/60 tabular-nums">{i + 1}º</span>
             {isHost && !s.isHost && onKick && (
               <button
                 type="button"
-                onClick={() => onKick(s.token)}
+                onClick={() => onKick(s.uid)}
                 title={`Remover ${s.name} da sala`}
                 aria-label={`Remover ${s.name} da sala`}
                 className="shrink-0 w-6 h-6 rounded-full grid place-items-center text-cream-muted/60 hover:text-signal-glow hover:bg-signal/15 transition-colors"
@@ -201,10 +201,10 @@ export function RoomLobby({
         </div>
         {/* Código de reentrada do PRÓPRIO assento (041, D-033/FR-030): visível desde o lobby,
             para quem nunca anotou conseguir ler antes de precisar. */}
-        {room.seats.find((s) => s.token === myToken)?.reentryCode && (
+        {room.seats.find((s) => s.uid === myUid)?.reentryCode && (
           <p className="label text-cream-muted/60">
             Seu código de reentrada:{' '}
-            <span className="text-cream tracking-[0.2em] font-mono">{room.seats.find((s) => s.token === myToken)!.reentryCode}</span>
+            <span className="text-cream tracking-[0.2em] font-mono">{room.seats.find((s) => s.uid === myUid)!.reentryCode}</span>
           </p>
         )}
       </div>
@@ -233,7 +233,7 @@ export function TurnOrderReveal({ room, onDone }: { room: Room; onDone: () => vo
       <ol className="flex flex-col gap-2">
         {room.seats.map((s, i) => (
           <li
-            key={s.token}
+            key={s.uid}
             className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-card)] bg-coffee-800/60 border border-coffee-500"
           >
             <span className="display text-gold w-6 text-center tabular-nums">{i + 1}º</span>

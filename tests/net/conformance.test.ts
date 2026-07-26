@@ -22,9 +22,9 @@ import type { Room } from '@/net/room'
 // takeover (o cenário do defeito 1) — e `failWrites`/`failRead`, as faltas de persistência
 // que §4 do contrato cobra nos dois adapters.
 type Fixture = {
-  make(token: string): Transport
-  dropChannel(token: string): void
-  restoreChannel(token: string): void
+  make(uid: string): Transport
+  dropChannel(uid: string): void
+  restoreChannel(uid: string): void
   failWrites(n: number | 'always'): void
   failRead(fail: boolean): void
 }
@@ -33,9 +33,9 @@ const ADAPTERS: [string, () => Fixture][] = [
   ['localTransport', () => {
     const hub = new LocalHub()
     return {
-      make: (token) => localTransport(hub, token),
-      dropChannel: (token) => hub.dropChannel(token),
-      restoreChannel: (token) => hub.restoreChannel(token),
+      make: (uid) => localTransport(hub, uid),
+      dropChannel: (uid) => hub.dropChannel(uid),
+      restoreChannel: (uid) => hub.restoreChannel(uid),
       failWrites: (n) => hub.failWrites(n),
       failRead: (fail) => hub.failReadSnapshot(fail),
     }
@@ -43,9 +43,9 @@ const ADAPTERS: [string, () => Fixture][] = [
   ['supabaseTransport', () => {
     const fake = fakeSupabase()
     return {
-      make: (token) => supabaseTransport(fake.client(token), 'sala1', token),
-      dropChannel: (token) => fake.channelByToken(token)?.simulateDrop(),
-      restoreChannel: (token) => fake.channelByToken(token)?.simulateResubscribe(),
+      make: (uid) => supabaseTransport(fake.client(uid), 'sala1', uid),
+      dropChannel: (uid) => fake.channelByUid(uid)?.simulateDrop(),
+      restoreChannel: (uid) => fake.channelByUid(uid)?.simulateResubscribe(),
       failWrites: (n) => fake.failWrites(n),
       failRead: (fail) => fake.failRead(fail),
     }
@@ -56,7 +56,7 @@ const ROOM: Room = { id: 'sala1', status: 'lobby', seats: [] }
 const ACCEPTED: AcceptedCommand = { seq: 1, action: { kind: 'roll' }, resolved: { rng: [], now: [] } }
 
 describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
-  it('submit chega ao host com o token da CONEXÃO', async () => {
+  it('submit chega ao host com o uid da CONEXÃO', async () => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
@@ -64,7 +64,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     await guest.connect()
 
     const seen: { senderId: string; from: string }[] = []
-    host.onSubmit((cmd, fromToken) => seen.push({ senderId: cmd.senderId, from: fromToken }))
+    host.onSubmit((cmd, fromUid) => seen.push({ senderId: cmd.senderId, from: fromUid }))
     guest.submit({ senderId: 'p2', action: { kind: 'roll' } })
 
     expect(seen).toEqual([{ senderId: 'p2', from: 't-guest' }])
@@ -137,7 +137,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     expect(seen.at(-1)?.status).toBe('playing')
   })
 
-  it('requestJoin chega com o token da conexão; rejectJoin volta ao pedinte', async () => {
+  it('requestJoin chega com o uid da conexão; rejectJoin volta ao pedinte', async () => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
@@ -145,9 +145,9 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     await guest.connect()
 
     const pedidos: string[] = []
-    host.onJoinRequest((_who, fromToken) => pedidos.push(fromToken))
+    host.onJoinRequest((_who, fromUid) => pedidos.push(fromUid))
     const recusas: string[] = []
-    guest.onJoinRejected((token, reason) => recusas.push(`${token}:${reason}`))
+    guest.onJoinRejected((uid, reason) => recusas.push(`${uid}:${reason}`))
 
     guest.requestJoin({ name: 'Ana', color: '#fff' })
     expect(pedidos).toEqual(['t-guest'])
@@ -158,18 +158,18 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
 
   // 041 — contrato §3: reentrada por código não é uma mensagem nova na porta, é o MESMO
   // `JoinRequest` com `reentryCode` presente.
-  it('§3: pedido com reentryCode chega ao host com o token da CONEXÃO', async () => {
+  it('§3: pedido com reentryCode chega ao host com o uid da CONEXÃO', async () => {
     const f = fixture()
     const host = f.make('t-host')
     const guest = f.make('t-guest')
     await host.connect()
     await guest.connect()
 
-    const pedidos: { fromToken: string; reentryCode?: string }[] = []
-    host.onJoinRequest((who, fromToken) => pedidos.push({ fromToken, reentryCode: who.reentryCode }))
+    const pedidos: { fromUid: string; reentryCode?: string }[] = []
+    host.onJoinRequest((who, fromUid) => pedidos.push({ fromUid, reentryCode: who.reentryCode }))
 
     guest.requestJoin({ name: '', color: '', reentryCode: 'ABC123' })
-    expect(pedidos).toEqual([{ fromToken: 't-guest', reentryCode: 'ABC123' }])
+    expect(pedidos).toEqual([{ fromUid: 't-guest', reentryCode: 'ABC123' }])
   })
 
   it('§3: recusa por código inválido ("bad-code") chega, e o pedinte a reconhece como sua', async () => {
@@ -179,11 +179,11 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     await host.connect()
     await guest.connect()
 
-    const recusas: { token: string; reason: string }[] = []
-    guest.onJoinRejected((token, reason) => recusas.push({ token, reason }))
+    const recusas: { uid: string; reason: string }[] = []
+    guest.onJoinRejected((uid, reason) => recusas.push({ uid, reason }))
 
     host.rejectJoin('t-a', 'bad-code')
-    expect(recusas).toEqual([{ token: 't-a', reason: 'bad-code' }])
+    expect(recusas).toEqual([{ uid: 't-a', reason: 'bad-code' }])
   })
 
   // — PRESENÇA: onde os adapters divergiam —
@@ -198,7 +198,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const guest = f.make('t-guest')
     await guest.connect()
 
-    expect(seen).toContainEqual({ token: 't-guest', connected: true, takeover: false })
+    expect(seen).toContainEqual({ uid: 't-guest', connected: true, takeover: false })
   })
 
   it('desconectar de verdade emite queda sem takeover', async () => {
@@ -212,7 +212,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     host.onPresence((c) => seen.push(c))
     guest.disconnect()
 
-    expect(seen).toContainEqual({ token: 't-guest', connected: false, takeover: false })
+    expect(seen).toContainEqual({ uid: 't-guest', connected: false, takeover: false })
   })
 
   it('FR-006a: reabrir a MESMA sessão é takeover, e não vira desconexão', async () => {
@@ -232,7 +232,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
 
     // O host ignora tudo que vem com `takeover` (host.ts:110). Nenhum evento pode
     // apresentar-se como queda limpa da sessão — senão a partida pausa sozinha.
-    const quedaLimpa = seen.filter((c) => c.token === 't-guest' && !c.connected && !c.takeover)
+    const quedaLimpa = seen.filter((c) => c.uid === 't-guest' && !c.connected && !c.takeover)
     expect(quedaLimpa).toEqual([])
   })
 
@@ -249,7 +249,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const t = f.make('t-host')
     await t.connect()
-    const room: Room = { id: 'sala1', status: 'lobby', seats: [{ token: 't-host', playerId: 'p1', name: 'Ana', color: '#fff', connected: true, isHost: true, reentryCode: '' }] }
+    const room: Room = { id: 'sala1', status: 'lobby', seats: [{ uid: 't-host', playerId: 'p1', name: 'Ana', color: '#fff', connected: true, isHost: true, reentryCode: '' }] }
     await t.saveRoom(room)
     expect(await t.loadRoom()).toEqual(room)
   })
@@ -314,7 +314,7 @@ describe.each(ADAPTERS)('contrato de Transport (041) — %s', (_name, fixture) =
   })
 
   describe('§2 onPresenceSync — quem está no canal, em conjunto', () => {
-    it('após connect(), chega um conjunto contendo o próprio token', async () => {
+    it('após connect(), chega um conjunto contendo o próprio uid', async () => {
       const f = fixture()
       const t = f.make('t-host')
       await t.connect()

@@ -10,7 +10,7 @@ describe('recuperação por lacuna de sequência (FR-012)', () => {
   it('cliente que perde difusões recupera via snapshot e converge', async () => {
     const net = await setupGame(2, 2718)
     const pick = mulberry32(9001)
-    const guestToken = net.players[1].token
+    const guestUid = net.players[1].uid
     const guest = net.players[1].client
 
     for (let i = 0; i < 15; i++) stepOnce(net, pick) // aquecimento — ambos convergidos
@@ -18,14 +18,14 @@ describe('recuperação por lacuna de sequência (FR-012)', () => {
     const seqAtDrop = guest.seq()
 
     // Rede instável: o convidado para de receber difusões.
-    net.hub.setDropBroadcast(guestToken, true)
+    net.hub.setDropBroadcast(guestUid, true)
     let guard = 0
     while (net.host.seq() < seqAtDrop + 3 && guard++ < 200) stepOnce(net, pick)
     expect(guest.seq()).toBe(seqAtDrop) // ficou para trás (perdeu ≥3 comandos)
     expect(net.host.seq()).toBeGreaterThanOrEqual(seqAtDrop + 3)
 
     // Rede volta: a próxima difusão chega com um "buraco" na sequência → dispara recuperação.
-    net.hub.setDropBroadcast(guestToken, false)
+    net.hub.setDropBroadcast(guestUid, false)
     guard = 0
     const target = net.host.seq()
     while (net.host.seq() <= target && guard++ < 200) stepOnce(net, pick)

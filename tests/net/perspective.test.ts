@@ -13,7 +13,7 @@ import { setupGame, type NetGame } from './harness'
 const KINDS: PlayerAction['kind'][] = ['roll', 'finalize', 'resolve-pending', 'buy-property', 'build-house']
 
 function viewOf(net: NetGame, i: number) {
-  return localView(net.host.game(), net.host.room(), net.players[i].token)
+  return localView(net.host.game(), net.host.room(), net.players[i].uid)
 }
 
 describe('perspectiva local numa partida em rede', () => {
@@ -65,13 +65,13 @@ describe('perspectiva local numa partida em rede', () => {
     const g = net.host.game()
     g.players[2].eliminated = true
 
-    const viewEliminado = localView(g, net.host.room(), net.players[2].token)
+    const viewEliminado = localView(g, net.host.room(), net.players[2].uid)
     expect(viewEliminado.role).toBe('eliminated')
     expect(viewEliminado.mayAct('roll')).toBe(false)
     expect(viewEliminado.mayAct('place-bid')).toBe(false)
 
     // E quem está vivo segue jogando normalmente.
-    const vivos = net.players.slice(0, 2).map((_, i) => localView(g, net.host.room(), net.players[i].token))
+    const vivos = net.players.slice(0, 2).map((_, i) => localView(g, net.host.room(), net.players[i].uid))
     expect(vivos.some((v) => v.mayAct('roll'))).toBe(true)
   })
 

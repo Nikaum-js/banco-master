@@ -21,7 +21,7 @@ export function pausedBy(cause: PauseCause, at = 0): PauseState {
 }
 
 export interface NetPlayer {
-  token: string
+  uid: string
   playerId: string
   client: Client
   transport: Transport
@@ -50,7 +50,7 @@ export async function setupGame(playerCount: number, seed = 1): Promise<NetGame>
   const rng = mulberry32(seed)
 
   const idents = Array.from({ length: playerCount }, (_, i) => ({
-    token: `tok-${i}`,
+    uid: `tok-${i}`,
     name: `P${i + 1}`,
     color: SEAT_COLORS[i],
   }))
@@ -68,16 +68,16 @@ export async function setupGame(playerCount: number, seed = 1): Promise<NetGame>
 
   // Host: autoridade + client próprio, sobre a MESMA conexão. Autoridade inicia ANTES dos
   // clientes entrarem (snapshot precisa existir p/ a leitura de entrada).
-  const hostTransport = localTransport(hub, idents[0].token)
+  const hostTransport = localTransport(hub, idents[0].uid)
   const host = createHost(hostTransport, room, { rng, now: () => clock.t })
   await host.start()
 
   const players: NetPlayer[] = []
   for (let i = 0; i < playerCount; i++) {
-    const transport = i === 0 ? hostTransport : localTransport(hub, idents[i].token)
+    const transport = i === 0 ? hostTransport : localTransport(hub, idents[i].uid)
     const client = createClient(transport)
     await client.join()
-    players.push({ token: idents[i].token, playerId: `p${i + 1}`, client, transport })
+    players.push({ uid: idents[i].uid, playerId: `p${i + 1}`, client, transport })
   }
 
   return {
@@ -93,10 +93,10 @@ export async function setupGame(playerCount: number, seed = 1): Promise<NetGame>
       return [JSON.stringify(host.game()), ...players.map((p) => JSON.stringify(p.client.game()))]
     },
     dropChannel(playerId: string): void {
-      hub.dropChannel(players.find((p) => p.playerId === playerId)!.token)
+      hub.dropChannel(players.find((p) => p.playerId === playerId)!.uid)
     },
     restoreChannel(playerId: string): void {
-      hub.restoreChannel(players.find((p) => p.playerId === playerId)!.token)
+      hub.restoreChannel(players.find((p) => p.playerId === playerId)!.uid)
     },
     failWrites(n: number | 'always'): void {
       hub.failWrites(n)

@@ -1,4 +1,4 @@
-// US2 / SC-003 — reload/reconexão sem perda. Reabrir o MESMO link (mesmo token) re-anexa ao
+// US2 / SC-003 — reload/reconexão sem perda. Reabrir o MESMO link (mesmo uid) re-anexa ao
 // assento e restaura o estado exato via snapshot (FR-004/014/015). Vale para convidado e host.
 import { describe, expect, it } from 'vitest'
 import { createClient } from '@/net/client'
@@ -14,11 +14,11 @@ describe('reconexão sem perda (SC-003)', () => {
     const expected = JSON.stringify(net.host.game())
     const guest = net.players[1]
 
-    // "Reload": a conexão antiga cai (dispara pausa) e o dispositivo reabre com o MESMO token.
+    // "Reload": a conexão antiga cai (dispara pausa) e o dispositivo reabre com o MESMO uid.
     guest.client.leave()
     expect(net.host.game().paused).not.toBeNull() // desconexão pausou (US3)
 
-    const fresh = createClient(localTransport(net.hub, guest.token))
+    const fresh = createClient(localTransport(net.hub, guest.uid))
     await fresh.join()
 
     expect(net.host.game().paused).toBeNull() // reconexão retomou automaticamente (FR-018)
@@ -38,8 +38,8 @@ describe('reconexão sem perda (SC-003)', () => {
     hostP.client.leave()
     expect(net.host.game().paused).not.toBeNull()
 
-    // O host reabre o link (mesmo token): a autoridade persiste no processo; o client re-anexa.
-    const fresh = createClient(localTransport(net.hub, hostP.token))
+    // O host reabre o link (mesmo uid): a autoridade persiste no processo; o client re-anexa.
+    const fresh = createClient(localTransport(net.hub, hostP.uid))
     await fresh.join()
 
     expect(fresh.playerId()).toBe('p1')

@@ -35,7 +35,7 @@ export function PauseBanner() {
               <p className="label text-cream-muted mt-1.5 leading-snug">
                 Aguardando{' '}
                 {view.ausentes.map((s, i) => (
-                  <span key={s.token}>
+                  <span key={s.uid}>
                     {i > 0 && (i === view.ausentes.length - 1 ? ' e ' : ', ')}
                     <PlayerName playerId={s.playerId} dot className="text-cream" />
                     {i === view.ausentes.length - 1 && ' '}

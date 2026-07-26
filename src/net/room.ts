@@ -1,7 +1,7 @@
-// Estado da sala e identidade (spec 037, FR-001..006a, 019).
+// Estado da sala e identidade (spec 037/043, FR-001..006a, 019).
 //
-// A sala é o estado LADO-SERVIDOR que amarra assentos↔tokens de sessão. Ela vive fora do
-// `GameState` (que nunca ganha PII nem token — D-019): o `GameState` só conhece `playerId`s
+// A sala é o estado LADO-SERVIDOR que amarra assentos↔identidade de sessão. Ela vive fora do
+// `GameState` (que nunca ganha PII nem uid — D-019): o `GameState` só conhece `playerId`s
 // serializáveis ('p1'..'p8'). Todos os reducers aqui são PUROS (não mutam o argumento).
 //
 // Identidade visual: a COR é única por sala (§12.5); o NOME é livre (duplicata permitida,
@@ -48,14 +48,14 @@ export type RoomStatus = 'lobby' | 'playing' | 'paused' | 'ended'
 
 export interface Seat {
   playerId: string // id serializável usado pelo GameState ('p1'..'p8')
-  token: string // token de sessão (NUNCA entra no GameState) — chave de reconexão
+  uid: string // ERA `token` (043, D-035) — identidade atestada pelo servidor, chave de reconexão
   name: string // nome exibido (livre)
   color: string // cor (única por sala)
   piece?: PieceId // peça visual (única por sala, §12.5/spec 038); ausente em salas da 037
   isHost: boolean
   connected: boolean
   /** Código de reentrada (041, D-033) — estável pela vida do assento; sobrevive à perda do
-   * token (celular sem bateria, dados do navegador limpos). `kickSeat`/`shuffleSeatOrder`
+   * uid (celular sem bateria, dados do navegador limpos). `kickSeat`/`shuffleSeatOrder`
    * preservam por construção (nunca reescrevem o campo). */
   reentryCode: string
 }
@@ -67,10 +67,10 @@ export interface Room {
 }
 
 export type JoinResult = { ok: true; room: Room; seat: Seat } | { ok: false; reason: JoinError }
-export type JoinError = 'room-full' | 'color-taken' | 'piece-taken' | 'already-started' | 'unknown-token' | 'kicked' | 'bad-code'
+export type JoinError = 'room-full' | 'color-taken' | 'piece-taken' | 'already-started' | 'unknown-uid' | 'kicked' | 'bad-code'
 
 export interface Identity {
-  token: string
+  uid: string // ERA `token` (043, D-035) — emitido pelo servidor, nunca escolhido pelo participante
   name: string
   color: string
   piece?: PieceId // escolhida no lobby (spec 038); opcional para compatibilidade com a 037
@@ -84,8 +84,8 @@ function seatIdFor(index: number): string {
   return `p${index + 1}`
 }
 
-export function seatByToken(room: Room, token: string): Seat | undefined {
-  return room.seats.find((s) => s.token === token)
+export function seatByUid(room: Room, uid: string): Seat | undefined {
+  return room.seats.find((s) => s.uid === uid)
 }
 
 export function hostSeat(room: Room): Seat {
@@ -98,24 +98,24 @@ export function createRoom(id: string, host: Identity): Room {
     id,
     status: 'lobby',
     seats: [{
-      playerId: seatIdFor(0), token: host.token, name: host.name, color: host.color, piece: host.piece,
+      playerId: seatIdFor(0), uid: host.uid, name: host.name, color: host.color, piece: host.piece,
       isHost: true, connected: true, reentryCode: host.reentryCode ?? '',
     }],
   }
 }
 
-// Entrada por link (FR-002/005). Token já assentado → reconexão (use `reattach`), não join.
-// Regras: sala cheia recusa; cor duplicada recusa; após o início, token novo é recusado.
+// Entrada por link (FR-002/005). Uid já assentado → reconexão (use `reattach`), não join.
+// Regras: sala cheia recusa; cor duplicada recusa; após o início, uid novo é recusado.
 export function joinRoom(room: Room, who: Identity): JoinResult {
-  const existing = seatByToken(room, who.token)
-  if (existing) return { ok: true, room: markConnected(room, who.token), seat: seatByToken(markConnected(room, who.token), who.token)! }
+  const existing = seatByUid(room, who.uid)
+  if (existing) return { ok: true, room: markConnected(room, who.uid), seat: seatByUid(markConnected(room, who.uid), who.uid)! }
   if (room.status !== 'lobby') return { ok: false, reason: 'already-started' } // sem novos assentos após o início (FR-005, §11.2)
   if (room.seats.length >= MAX_SEATS) return { ok: false, reason: 'room-full' } // §11.1
   if (room.seats.some((s) => s.color === who.color)) return { ok: false, reason: 'color-taken' } // cor única (§12.5)
   if (who.piece && room.seats.some((s) => s.piece === who.piece)) return { ok: false, reason: 'piece-taken' } // peça única (§12.5 / FR-022)
   const seat: Seat = {
     playerId: seatIdFor(room.seats.length),
-    token: who.token,
+    uid: who.uid,
     name: who.name,
     color: who.color,
     piece: who.piece,
@@ -138,13 +138,13 @@ export function availableColors(room: Room): string[] {
   return SEAT_COLORS.filter((c) => !taken.has(c))
 }
 
-// Reabrir o link com token JÁ assentado re-anexa ao MESMO assento — antes ou depois do início
+// Reabrir o link com uid JÁ assentado re-anexa ao MESMO assento — antes ou depois do início
 // (FR-004). Marca conectado; a leitura do snapshot é responsabilidade do cliente/host.
-export function reattach(room: Room, token: string): { ok: true; room: Room; seat: Seat } | { ok: false; reason: 'unknown-token' } {
-  const seat = seatByToken(room, token)
-  if (!seat) return { ok: false, reason: 'unknown-token' }
-  const next = markConnected(room, token)
-  return { ok: true, room: next, seat: seatByToken(next, token)! }
+export function reattach(room: Room, uid: string): { ok: true; room: Room; seat: Seat } | { ok: false; reason: 'unknown-uid' } {
+  const seat = seatByUid(room, uid)
+  if (!seat) return { ok: false, reason: 'unknown-uid' }
+  const next = markConnected(room, uid)
+  return { ok: true, room: next, seat: seatByUid(next, uid)! }
 }
 
 // Host remove um jogador ANTES do início (§11.1 / spec 038 FR-024). Libera cor e peça. O
@@ -152,16 +152,16 @@ export function reattach(room: Room, token: string): { ok: true; room: Room; sea
 // colidiria com D-016/princípio VII e exigiria ADR próprio.
 export function kickSeat(
   room: Room,
-  token: string,
-): { ok: true; room: Room } | { ok: false; reason: 'not-in-lobby' | 'is-host' | 'unknown-token' } {
+  uid: string,
+): { ok: true; room: Room } | { ok: false; reason: 'not-in-lobby' | 'is-host' | 'unknown-uid' } {
   if (room.status !== 'lobby') return { ok: false, reason: 'not-in-lobby' }
-  const seat = seatByToken(room, token)
-  if (!seat) return { ok: false, reason: 'unknown-token' }
+  const seat = seatByUid(room, uid)
+  if (!seat) return { ok: false, reason: 'unknown-uid' }
   if (seat.isHost) return { ok: false, reason: 'is-host' }
   // Reindexa os assentos restantes: `playerId` é posicional ('p1'..'p8') e o motor conta com
   // uma sequência sem buracos. Como isto só roda no LOBBY, nenhuma partida está em curso.
   const seats = room.seats
-    .filter((s) => s.token !== token)
+    .filter((s) => s.uid !== uid)
     .map((s, i) => ({ ...s, playerId: seatIdFor(i), isHost: i === 0 }))
   return { ok: true, room: { ...room, seats } }
 }
@@ -193,16 +193,16 @@ export function playerIdsInOrder(room: Room): string[] {
   return room.seats.map((s) => s.playerId)
 }
 
-function setConnected(room: Room, token: string, connected: boolean): Room {
-  return { ...room, seats: room.seats.map((s) => (s.token === token ? { ...s, connected } : s)) }
+function setConnected(room: Room, uid: string, connected: boolean): Room {
+  return { ...room, seats: room.seats.map((s) => (s.uid === uid ? { ...s, connected } : s)) }
 }
 
-export function markDisconnected(room: Room, token: string): Room {
-  return setConnected(room, token, false)
+export function markDisconnected(room: Room, uid: string): Room {
+  return setConnected(room, uid, false)
 }
 
-export function markConnected(room: Room, token: string): Room {
-  return setConnected(room, token, true)
+export function markConnected(room: Room, uid: string): Room {
+  return setConnected(room, uid, true)
 }
 
 // True se algum assento que AINDA JOGA está desconectado — gatilho da pausa global (FR-016).
@@ -245,19 +245,23 @@ function normalizeCode(code: string): string {
   return code.replace(/\s+/g, '').toUpperCase()
 }
 
-// Reanexa pelo CÓDIGO (041, D-033) em vez do token — recupera um assento cujo token se
-// perdeu (celular sem bateria, dados do navegador limpos, aba anônima encerrada). Comparação
-// sem caixa e sem espaços: quem digita um código ditado erra o caixa alta. Puro: troca só o
-// `token` e marca conectado; o anterior deixa de ter assento por construção (FR-027).
+// Reanexa pelo CÓDIGO (041, D-033) em vez do uid — recupera um assento cujo uid se perdeu
+// (celular sem bateria, dados do navegador limpos, aba anônima encerrada). Comparação sem
+// caixa e sem espaços: quem digita um código ditado erra o caixa alta. Puro: troca só o
+// `uid` e marca conectado; o anterior deixa de ter assento por construção (FR-027).
+//
+// Espelho de teste da RPC `reattach_by_code` (043, D4/D-036) — a partir da Fase 3 quem decide
+// de verdade é o servidor; esta função continua existindo porque é o que o adapter local
+// exercita, e é o que mantém a conformidade honesta dos dois lados.
 export function reattachByCode(
   room: Room,
   code: string,
-  token: string,
+  uid: string,
 ): { ok: true; room: Room; seat: Seat } | { ok: false; reason: 'bad-code' } {
   const normalized = normalizeCode(code)
   const target = room.seats.find((s) => normalizeCode(s.reentryCode) === normalized)
   if (!target) return { ok: false, reason: 'bad-code' }
-  const seats = room.seats.map((s) => (s.playerId === target.playerId ? { ...s, token, connected: true } : s))
+  const seats = room.seats.map((s) => (s.playerId === target.playerId ? { ...s, uid, connected: true } : s))
   const next = { ...room, seats }
   return { ok: true, room: next, seat: next.seats.find((s) => s.playerId === target.playerId)! }
 }

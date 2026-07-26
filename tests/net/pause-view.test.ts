@@ -10,8 +10,8 @@ import type { GameState } from '@/game/turn/types'
 import { pausedBy } from './harness'
 
 function sala(): Room {
-  let room = createRoom('r1', { token: 'tok-1', name: 'Ana', color: SEAT_COLORS[0] })
-  const r2 = joinRoom(room, { token: 'tok-2', name: 'Bob', color: SEAT_COLORS[1] })
+  let room = createRoom('r1', { uid: 'tok-1', name: 'Ana', color: SEAT_COLORS[0] })
+  const r2 = joinRoom(room, { uid: 'tok-2', name: 'Bob', color: SEAT_COLORS[1] })
   if (!r2.ok) throw new Error(r2.reason)
   room = r2.room
   return room

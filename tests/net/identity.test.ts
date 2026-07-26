@@ -9,9 +9,9 @@ import { createRoom, joinRoom, MAX_SEATS, SEAT_COLORS, type PieceId, type Room }
 import { createSeedState } from '@/game/setup'
 
 function salaCom(nomes: { nome: string; cor: string; peca?: PieceId }[]): Room {
-  let room = createRoom('r1', { token: 'tok-0', name: nomes[0].nome, color: nomes[0].cor, piece: nomes[0].peca })
+  let room = createRoom('r1', { uid: 'tok-0', name: nomes[0].nome, color: nomes[0].cor, piece: nomes[0].peca })
   for (const [i, n] of nomes.slice(1).entries()) {
-    const r = joinRoom(room, { token: `tok-${i + 1}`, name: n.nome, color: n.cor, piece: n.peca })
+    const r = joinRoom(room, { uid: `tok-${i + 1}`, name: n.nome, color: n.cor, piece: n.peca })
     if (!r.ok) throw new Error(r.reason)
     room = r.room
   }
@@ -90,13 +90,13 @@ describe('peças (§12.5 / FR-022/023)', () => {
 
   it('pedir uma peça já tomada é recusado', () => {
     const room = salaCom([{ nome: 'Nik', cor: SEAT_COLORS[0], peca: 'aviao' }])
-    const r = joinRoom(room, { token: 'tok-x', name: 'Ana', color: SEAT_COLORS[1], piece: 'aviao' })
+    const r = joinRoom(room, { uid: 'tok-x', name: 'Ana', color: SEAT_COLORS[1], piece: 'aviao' })
     expect(r).toEqual({ ok: false, reason: 'piece-taken' })
   })
 })
 
 describe('fronteira com o GameState (D-019)', () => {
-  it('o estado de jogo serializado não carrega nome, cor, peça nem token', () => {
+  it('o estado de jogo serializado não carrega nome, cor, peça nem uid', () => {
     const room = salaCom([
       { nome: 'Nikolas', cor: SEAT_COLORS[0], peca: 'aviao' },
       { nome: 'Ana', cor: SEAT_COLORS[1], peca: 'navio' },
@@ -106,7 +106,7 @@ describe('fronteira com o GameState (D-019)', () => {
 
     for (const seat of room.seats) {
       expect(json).not.toContain(seat.name)
-      expect(json).not.toContain(seat.token)
+      expect(json).not.toContain(seat.uid)
       expect(json).not.toContain(seat.piece!)
     }
     // O que o jogo conhece são apenas os ids posicionais.

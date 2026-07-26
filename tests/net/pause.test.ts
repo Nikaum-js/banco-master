@@ -45,7 +45,7 @@ describe('pausa global por desconexão (SC-004)', () => {
     guest.client.leave()
     expect(net.host.game().paused).not.toBeNull()
 
-    const fresh = createClient(localTransport(net.hub, guest.token))
+    const fresh = createClient(localTransport(net.hub, guest.uid))
     await fresh.join()
 
     expect(net.host.game().paused).toBeNull() // retomou sozinho, sem ação manual

@@ -14,11 +14,11 @@ import { LocalHub, localTransport } from '@/net/localTransport'
 const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0))
 
 function salaComTres() {
-  let room = createRoom('r1', { token: 'tok-h', name: 'Host', color: SEAT_COLORS[0], reentryCode: 'AAAAAA' })
-  const a = joinRoom(room, { token: 'tok-a', name: 'Ana', color: SEAT_COLORS[1], reentryCode: 'BBBBBB' })
+  let room = createRoom('r1', { uid: 'tok-h', name: 'Host', color: SEAT_COLORS[0], reentryCode: 'AAAAAA' })
+  const a = joinRoom(room, { uid: 'tok-a', name: 'Ana', color: SEAT_COLORS[1], reentryCode: 'BBBBBB' })
   if (!a.ok) throw new Error(a.reason)
   room = a.room
-  const b = joinRoom(room, { token: 'tok-b', name: 'Bob', color: SEAT_COLORS[2], reentryCode: 'CCCCCC' })
+  const b = joinRoom(room, { uid: 'tok-b', name: 'Bob', color: SEAT_COLORS[2], reentryCode: 'CCCCCC' })
   if (!b.ok) throw new Error(b.reason)
   room = b.room
   return room
@@ -61,24 +61,24 @@ describe('preservação do código (041, D-033)', () => {
 })
 
 describe('reattachByCode — reducer puro (041, D-033)', () => {
-  it('troca o token do assento e mantém tudo o mais; marca conectado', () => {
+  it('troca o uid do assento e mantém tudo o mais; marca conectado', () => {
     const room = salaComTres()
     const out = reattachByCode(room, 'BBBBBB', 'tok-a-NOVO')
     expect(out.ok).toBe(true)
     if (!out.ok) return
-    expect(out.seat.token).toBe('tok-a-NOVO')
+    expect(out.seat.uid).toBe('tok-a-NOVO')
     expect(out.seat.playerId).toBe('p2')
     expect(out.seat.name).toBe('Ana')
     expect(out.seat.connected).toBe(true)
     expect(out.seat.reentryCode).toBe('BBBBBB') // o código sobrevive à própria reentrada
   })
 
-  it('o token ANTERIOR deixa de ter assento (FR-027)', () => {
+  it('o uid ANTERIOR deixa de ter assento (FR-027)', () => {
     const room = salaComTres()
     const out = reattachByCode(room, 'BBBBBB', 'tok-a-NOVO')
     expect(out.ok).toBe(true)
     if (!out.ok) return
-    expect(out.room.seats.some((s) => s.token === 'tok-a')).toBe(false)
+    expect(out.room.seats.some((s) => s.uid === 'tok-a')).toBe(false)
   })
 
   it('comparação sem caixa e sem espaços — quem digita um código ditado erra o caixa alta', () => {
@@ -101,7 +101,7 @@ async function setup() {
   const hostTransport = localTransport(hub, 'tok-host')
   const hostClient = createClient(hostTransport)
   await hostClient.join()
-  const host = createHost(hostTransport, createRoom('r1', { token: 'tok-host', name: 'Host', color: SEAT_COLORS[0] }), {
+  const host = createHost(hostTransport, createRoom('r1', { uid: 'tok-host', name: 'Host', color: SEAT_COLORS[0] }), {
     rng: mulberry32(9),
     now: () => 1_000,
   })
@@ -119,14 +119,14 @@ async function setup() {
 }
 
 describe('reentrada por código — sessão (041, D-033, T036/T039)', () => {
-  it('SC-007: reentrada por OUTRO token no meio da partida devolve o assento com estado íntegro', async () => {
+  it('SC-007: reentrada por OUTRO uid no meio da partida devolve o assento com estado íntegro', async () => {
     const { hub, host, bob } = await setup()
     const bobId = bob.playerId()!
     const code = host.room().seats.find((s) => s.playerId === bobId)!.reentryCode
     expect(code).not.toBe('') // o host mintou de verdade (T036), não o vazio de fallback dos testes
 
     const before = JSON.stringify(host.game())
-    bob.leave() // perde o token — simula aparelho sem bateria
+    bob.leave() // perde o uid — simula aparelho sem bateria
 
     const fresh = createClient(localTransport(hub, 'tok-b-novo'))
     await fresh.join() // ainda sem assento: só observa o jogo em curso
@@ -137,7 +137,7 @@ describe('reentrada por código — sessão (041, D-033, T036/T039)', () => {
     expect(JSON.stringify(host.game())).toBe(before) // saldo/propriedades/cartas intactos
   })
 
-  it('FR-027: o token ANTERIOR perde o assento na reentrada', async () => {
+  it('FR-027: o uid ANTERIOR perde o assento na reentrada', async () => {
     const { hub, host, bob } = await setup()
     const bobId = bob.playerId()!
     const code = host.room().seats.find((s) => s.playerId === bobId)!.reentryCode
@@ -148,7 +148,7 @@ describe('reentrada por código — sessão (041, D-033, T036/T039)', () => {
     fresh.requestJoin({ name: '', color: '', reentryCode: code })
     await flush()
 
-    expect(host.room().seats.some((s) => s.token === 'tok-b')).toBe(false)
+    expect(host.room().seats.some((s) => s.uid === 'tok-b')).toBe(false)
   })
 
   it('a reanexação retoma a partida se era a última ausência', async () => {
@@ -193,6 +193,6 @@ describe('reentrada por código — sessão (041, D-033, T036/T039)', () => {
 
     expect(stranger.joinError()).toBe('bad-code')
     expect(stranger.playerId()).toBeNull()
-    expect(host.room().seats.some((s) => s.token === 'tok-estranho')).toBe(false)
+    expect(host.room().seats.some((s) => s.uid === 'tok-estranho')).toBe(false)
   })
 })

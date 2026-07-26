@@ -9,7 +9,7 @@ import type { TurnCtx } from '@/game/turn/turnMachine'
 import { applyCommand, type PlayerAction } from '@/game/commands'
 import { buildGameCtx } from '@/game/setup'
 import { replayCtx } from './recorder'
-import { seatByToken, type JoinError, type Room } from './room'
+import { seatByUid, type JoinError, type Room } from './room'
 import type { AcceptedCommand, JoinRequest, Transport, Unsubscribe } from './transport'
 
 // Conexão da PRÓPRIA sessão (041, data-model §4) — não é regra de jogo (difere por cliente,
@@ -25,7 +25,7 @@ export interface ClientOptions {
 }
 
 export interface Client {
-  readonly token: string // token de sessão desta aba — a UI usa para achar o próprio assento
+  readonly uid: string // ERA `token` (043, D-035) — identidade atestada desta aba, usada p/ achar o próprio assento
   join(): Promise<void> // conecta, lê o snapshot (entrada/reconexão) e passa a aplicar a difusão
   requestJoin(who: JoinRequest): void // pede assento no lobby (FR-002) — host aceita e publica a sala
   leave(): void
@@ -67,7 +67,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
 
   function resolvePlayerId(): void {
     if (!room) return
-    const seat = seatByToken(room, transport.token)
+    const seat = seatByUid(room, transport.uid)
     if (seat) {
       playerId = seat.playerId
       joinError = null // assento concedido (ou reanexado) → limpa recusa anterior
@@ -130,7 +130,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
   }
 
   return {
-    token: transport.token,
+    uid: transport.uid,
 
     async join(): Promise<void> {
       await transport.connect()
@@ -144,7 +144,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
         notify()
       }))
       subs.push(transport.onJoinRejected((target, reason) => {
-        if (target !== transport.token) return // recusa dirigida a outro pedinte
+        if (target !== transport.uid) return // recusa dirigida a outro pedinte
         joinError = reason
         notify()
       }))
@@ -179,7 +179,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
     },
 
     requestJoin(who: JoinRequest): void {
-      if (playerId) return // já assentado (reanexo por token) — nada a pedir (FR-004)
+      if (playerId) return // já assentado (reanexo por uid) — nada a pedir (FR-004)
       transport.requestJoin(who)
     },
 

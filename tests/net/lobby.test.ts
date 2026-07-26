@@ -22,7 +22,7 @@ async function openLobby(): Promise<Lobby> {
   const transport = localTransport(hub, 'tok-host')
   const hostClient = createClient(transport)
   await hostClient.join()
-  const host = createHost(transport, createRoom('r1', { token: 'tok-host', name: 'Host', color: SEAT_COLORS[0] }), {
+  const host = createHost(transport, createRoom('r1', { uid: 'tok-host', name: 'Host', color: SEAT_COLORS[0] }), {
     rng: mulberry32(7),
     now: () => 1_000,
   })
@@ -31,8 +31,8 @@ async function openLobby(): Promise<Lobby> {
 }
 
 // Convidado entra no canal e pede assento (nome + cor).
-async function guestJoins(hub: LocalHub, token: string, name: string, color: string): Promise<Client> {
-  const client = createClient(localTransport(hub, token))
+async function guestJoins(hub: LocalHub, uid: string, name: string, color: string): Promise<Client> {
+  const client = createClient(localTransport(hub, uid))
   await client.join()
   client.requestJoin({ name, color })
   await flush()
@@ -51,11 +51,11 @@ describe('lobby sobre a rede (FR-001..006)', () => {
     expect(hostClient.room()?.seats).toHaveLength(2)
   })
 
-  it('a identidade do assento é o token da CONEXÃO, não algo declarado pelo pedinte', async () => {
+  it('a identidade do assento é o uid da CONEXÃO, não algo declarado pelo pedinte', async () => {
     const { hub, host } = await openLobby()
     await guestJoins(hub, 'tok-a', 'Ana', SEAT_COLORS[1])
 
-    expect(host.room().seats[1].token).toBe('tok-a')
+    expect(host.room().seats[1].uid).toBe('tok-a')
   })
 
   it('cor já ocupada é recusada com motivo, sem criar assento (§12.5)', async () => {
@@ -117,7 +117,7 @@ describe('lobby sobre a rede (FR-001..006)', () => {
     expect(host.room().status).toBe('lobby')
   })
 
-  it('depois do início, token desconhecido é recusado (FR-005)', async () => {
+  it('depois do início, uid desconhecido é recusado (FR-005)', async () => {
     const { hub, host } = await openLobby()
     await guestJoins(hub, 'tok-a', 'Ana', SEAT_COLORS[1])
     await host.startMatch()
@@ -130,7 +130,7 @@ describe('lobby sobre a rede (FR-001..006)', () => {
     expect(host.room().seats).toHaveLength(2)
   })
 
-  it('reabrir o link com token já assentado re-anexa ao mesmo assento (FR-004)', async () => {
+  it('reabrir o link com uid já assentado re-anexa ao mesmo assento (FR-004)', async () => {
     const { hub, host } = await openLobby()
     const ana = await guestJoins(hub, 'tok-a', 'Ana', SEAT_COLORS[1])
     await host.startMatch()
@@ -140,7 +140,7 @@ describe('lobby sobre a rede (FR-001..006)', () => {
     const meuAssento = ana.playerId()
     expect(meuAssento).not.toBeNull()
 
-    const again = createClient(localTransport(hub, 'tok-a')) // nova aba, mesmo token
+    const again = createClient(localTransport(hub, 'tok-a')) // nova aba, mesmo uid
     await again.join()
     await flush()
 
@@ -160,7 +160,7 @@ describe('lobby sobre a rede (FR-001..006)', () => {
     const before = JSON.stringify(host.game())
     host.stop()
 
-    // F5 do host: transporte novo, mesmo token, sala vinda do armazenamento.
+    // F5 do host: transporte novo, mesmo uid, sala vinda do armazenamento.
     const revived = createHost(localTransport(hub, 'tok-host'), { id: 'r1', status: 'lobby', seats: [] }, {
       rng: mulberry32(7),
       now: () => 2_000,
@@ -189,7 +189,7 @@ describe('lobby sobre a rede (FR-001..006)', () => {
       const transport = localTransport(hub, 'tok-host')
       const hostClient = createClient(transport)
       await hostClient.join()
-      const host = createHost(transport, createRoom('r', { token: 'tok-host', name: 'Host', color: SEAT_COLORS[0] }), {
+      const host = createHost(transport, createRoom('r', { uid: 'tok-host', name: 'Host', color: SEAT_COLORS[0] }), {
         rng: mulberry32(seed),
         now: () => 1_000,
       })

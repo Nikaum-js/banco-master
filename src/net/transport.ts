@@ -25,9 +25,10 @@ import type { Resolved } from './recorder'
 import type { JoinError, PieceId, Room } from './room'
 
 // Comando em trânsito guest→host: carrega o `playerId` DECLARADO pelo remetente. O host
-// confere contra a identidade real da conexão (FR-007).
+// confere contra a identidade real da conexão — o `uid` da conexão que entregou o comando,
+// nunca de um campo do payload (FR-007, D-035).
 export interface CommandEnvelope {
-  senderId: string // playerId declarado (o host valida contra o token da conexão)
+  senderId: string // playerId declarado (o host valida contra o uid da conexão)
   action: PlayerAction
 }
 
@@ -46,17 +47,17 @@ export interface PersistedSnapshot {
   room: Room
 }
 
-// Mudança de presença observada pelo host (por token de sessão).
+// Mudança de presença observada pelo host (por identidade de sessão).
 export interface PresenceChange {
-  token: string
+  uid: string
   connected: boolean
   // Mesma sessão reabrindo nova conexão com a antiga ainda viva: a última assume, a anterior
   // cai — NÃO conta como desconexão para fins de pausa (FR-006a).
   takeover: boolean
 }
 
-// Pedido de assento no lobby (FR-002). NÃO carrega token: o host usa o token da CONEXÃO
-// (`fromToken`) como identidade do assento — quem pede não escolhe quem é.
+// Pedido de assento no lobby (FR-002). NÃO carrega identidade: o host usa o `uid` da CONEXÃO
+// (`fromUid`) como identidade do assento — quem pede não escolhe quem é.
 export interface JoinRequest {
   name: string
   color: string
@@ -71,14 +72,14 @@ export type ConnStatus = 'connected' | 'reconnecting'
 export type Unsubscribe = () => void
 
 export interface Transport {
-  readonly token: string
+  readonly uid: string // ERA `token` (043, D-035) — emitido pelo servidor, nunca escolhido
 
   connect(): Promise<void>
   disconnect(): void
 
   // guest/host → host
   submit(cmd: CommandEnvelope): void
-  onSubmit(cb: (cmd: CommandEnvelope, fromToken: string) => void): Unsubscribe
+  onSubmit(cb: (cmd: CommandEnvelope, fromUid: string) => void): Unsubscribe
 
   // host → todos
   broadcast(cmd: AcceptedCommand): void
@@ -86,9 +87,9 @@ export interface Transport {
 
   // lobby: convidado pede assento → host responde publicando a sala (aceito) ou rejeitando
   requestJoin(who: JoinRequest): void
-  onJoinRequest(cb: (who: JoinRequest, fromToken: string) => void): Unsubscribe
-  rejectJoin(token: string, reason: JoinError): void
-  onJoinRejected(cb: (token: string, reason: JoinError) => void): Unsubscribe
+  onJoinRequest(cb: (who: JoinRequest, fromUid: string) => void): Unsubscribe
+  rejectJoin(uid: string, reason: JoinError): void
+  onJoinRejected(cb: (uid: string, reason: JoinError) => void): Unsubscribe
 
   // estado da sala (host publica; todos observam)
   publishRoom(room: Room): void
@@ -108,9 +109,9 @@ export interface Transport {
   // 'connected'.
   onStatus(cb: (status: ConnStatus) => void): Unsubscribe
 
-  // conjunto COMPLETO de tokens presentes no canal (041, contrato §2) — não um delta. É a
+  // conjunto COMPLETO de uids presentes no canal (041, contrato §2) — não um delta. É a
   // fonte de verdade para a autoridade que reassume reconciliar presença (FR-021).
-  onPresenceSync(cb: (tokens: ReadonlySet<string>) => void): Unsubscribe
+  onPresenceSync(cb: (uids: ReadonlySet<string>) => void): Unsubscribe
 
   // snapshot (host escreve; qualquer um lê ao entrar/reconectar)
   saveSnapshot(snap: PersistedSnapshot): Promise<void>

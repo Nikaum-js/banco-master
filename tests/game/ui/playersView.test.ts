@@ -44,10 +44,10 @@ describe('playersView — GameState → painel (020)', () => {
   })
 
   // 038: com sala, a identidade vem do lobby — é a única fonte de nome/cor (D-019).
-  it('FR-009: nome e cor vêm da sala; `you` marca o assento do token local', () => {
+  it('FR-009: nome e cor vêm da sala; `you` marca o assento do uid local', () => {
     const g = createSeedState(['p1', 'p2'])
-    let room = createRoom('r1', { token: 'tok-nik', name: 'Nik', color: SEAT_COLORS[0], piece: 'aviao' })
-    const r = joinRoom(room, { token: 'tok-ana', name: 'Ana', color: SEAT_COLORS[1], piece: 'navio' })
+    let room = createRoom('r1', { uid: 'tok-nik', name: 'Nik', color: SEAT_COLORS[0], piece: 'aviao' })
+    const r = joinRoom(room, { uid: 'tok-ana', name: 'Ana', color: SEAT_COLORS[1], piece: 'navio' })
     if (!r.ok) throw new Error(r.reason)
     room = r.room
 

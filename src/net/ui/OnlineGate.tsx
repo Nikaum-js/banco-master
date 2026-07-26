@@ -11,7 +11,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { connectMultiplayer } from '@/net/connectStore'
 import { hostSeat, type PieceId } from '@/net/room'
-import { getSessionToken, parseRoomLink, roomLink } from '@/net/session'
+import { parseRoomLink, roomLink } from '@/net/session'
 import { createRoomSession, type RoomSession } from '@/net/roomSession'
 import { createSupabaseTransport, describeInfraError, isSupabaseConfigured } from '@/net/supabaseClient'
 import { IdentityForm, LobbyMessage, ReentryForm, RoomLobby, TurnOrderReveal } from './LobbyScreen'
@@ -56,10 +56,8 @@ export function OnlineGate({ children }: { children: ReactNode }) {
 }
 
 function OnlineRoom({ roomId, children }: { roomId: string | null; children: ReactNode }) {
-  const [token] = useState(getSessionToken) // token de sessão do dispositivo (FR-003), estável na aba
   const [session] = useState<RoomSession>(() =>
     createRoomSession({
-      token,
       createTransport: createSupabaseTransport, // a seam: em teste, entra o hub in-memory
       connectStore: connectMultiplayer,
       describeError: describeInfraError,
@@ -103,7 +101,7 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
     )
   }
 
-  // Partida em curso, sem assento (041, D-033) — token/dispositivo perdido não é mais beco.
+  // Partida em curso, sem assento (041, D-033) — sessão/dispositivo perdido não é mais beco.
   if (phase === 'reentry') {
     return <ReentryForm busy={busy} error={error} onSubmit={(code) => session.requestReentry(code)} />
   }
@@ -160,8 +158,8 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
   return (
     <RoomLobby
       room={room}
-      myToken={token}
-      isHost={hostSeat(room).token === token}
+      myUid={state.uid ?? ''}
+      isHost={hostSeat(room).uid === state.uid}
       link={roomLink(room.id, window.location.origin)}
       starting={busy}
       onStart={() => void session.startMatch()}

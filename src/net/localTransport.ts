@@ -6,14 +6,14 @@
 import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import type { JoinError, Room } from './room'
 
-type SubmitCb = (cmd: CommandEnvelope, fromToken: string) => void
+type SubmitCb = (cmd: CommandEnvelope, fromUid: string) => void
 type BroadcastCb = (cmd: AcceptedCommand) => void
 type RoomCb = (room: Room) => void
 type PresenceCb = (change: PresenceChange) => void
-type JoinReqCb = (who: JoinRequest, fromToken: string) => void
-type JoinRejCb = (token: string, reason: JoinError) => void
+type JoinReqCb = (who: JoinRequest, fromUid: string) => void
+type JoinRejCb = (uid: string, reason: JoinError) => void
 type StatusCb = (status: ConnStatus) => void
-type PresenceSyncCb = (tokens: ReadonlySet<string>) => void
+type PresenceSyncCb = (uids: ReadonlySet<string>) => void
 
 // LISTAS, não slots. Antes cada callback era um campo único (`conn.onBroadcast = cb`),
 // então um segundo assinante silenciosamente derrubava o primeiro — enquanto o adapter
@@ -21,7 +21,7 @@ type PresenceSyncCb = (tokens: ReadonlySet<string>) => void
 // cliente hoje assinam conjuntos disjuntos. A suíte de conformidade cobre os dois.
 interface Connection {
   id: number
-  token: string
+  uid: string
   onBroadcast: BroadcastCb[]
   onRoom: RoomCb[]
   onJoinRejected: JoinRejCb[]
@@ -38,7 +38,7 @@ function detach<T>(arr: T[], cb: T): Unsubscribe {
 }
 
 // Backend compartilhado de UMA sala. Guarda o snapshot persistido, o último `room` publicado
-// e as conexões vivas (por token). O host é a única conexão que registra `onSubmit`/`onPresence`.
+// e as conexões vivas (por uid). O host é a única conexão que registra `onSubmit`/`onPresence`.
 export class LocalHub {
   private nextId = 1
   private conns = new Map<number, Connection>()
@@ -48,7 +48,7 @@ export class LocalHub {
   private snapshot: PersistedSnapshot | null = null
   private storedRoom: Room | null = null // sala persistida (existe já no lobby, sem GameState)
   private lastRoom: Room | null = null
-  private dropped = new Set<string>() // tokens com difusão suprimida (fault-injection de teste: perda de pacote)
+  private dropped = new Set<string>() // uids com difusão suprimida (fault-injection de teste: perda de pacote)
 
   // — faltas injetáveis de escrita/leitura (041, D14) — só testes; produção não usa isto.
   private writeFailures: number | 'always' = 0
@@ -63,19 +63,19 @@ export class LocalHub {
   // chamar `connect()` — mesma ordem que o supabase-js exige: `.on()` antes de `.subscribe()`).
   // O facade (abaixo) cria os arrays e os passa aqui, para a conexão nova escrever nos MESMOS
   // arrays que o chamador já pode ter assinado.
-  register(token: string, preAttached?: { onStatus: StatusCb[]; onPresenceSync: PresenceSyncCb[] }): Connection {
-    // Takeover (FR-006a): já existe conexão viva com este token → a última assume, a antiga cai.
-    const prior = [...this.conns.values()].find((c) => c.token === token)
+  register(uid: string, preAttached?: { onStatus: StatusCb[]; onPresenceSync: PresenceSyncCb[] }): Connection {
+    // Takeover (FR-006a): já existe conexão viva com este uid → a última assume, a antiga cai.
+    const prior = [...this.conns.values()].find((c) => c.uid === uid)
     const takeover = prior !== undefined
     if (prior) this.conns.delete(prior.id)
     const conn: Connection = {
-      id: this.nextId++, token, onBroadcast: [], onRoom: [], onJoinRejected: [],
+      id: this.nextId++, uid, onBroadcast: [], onRoom: [], onJoinRejected: [],
       onStatus: preAttached?.onStatus ?? [], onPresenceSync: preAttached?.onPresenceSync ?? [], channelUp: true,
     }
     this.conns.set(conn.id, conn)
     // Presença: conexão nova. `takeover` NÃO é desconexão (não pausa) — mas ainda sinaliza que
-    // o token está conectado (reconexão após queda também entra por aqui, com takeover=false).
-    this.emitPresence({ token, connected: true, takeover })
+    // o uid está conectado (reconexão após queda também entra por aqui, com takeover=false).
+    this.emitPresence({ uid, connected: true, takeover })
     if (this.lastRoom) for (const cb of conn.onRoom) cb(this.lastRoom)
     this.emitPresenceSyncAll()
     return conn
@@ -84,38 +84,38 @@ export class LocalHub {
   drop(conn: Connection): void {
     if (!this.conns.has(conn.id)) return // já substituída por takeover — não reemite desconexão
     this.conns.delete(conn.id)
-    this.emitPresence({ token: conn.token, connected: false, takeover: false })
+    this.emitPresence({ uid: conn.uid, connected: false, takeover: false })
     this.emitPresenceSyncAll()
   }
 
   // Queda/restauração de CANAL (041, contrato §1) — a MESMA conexão reassina, sem contar
-  // como takeover (diferente de `register` com um token já vivo). É o cenário do defeito 1:
+  // como takeover (diferente de `register` com um uid já vivo). É o cenário do defeito 1:
   // reassinatura precisa reanunciar presença e emitir 'connected'.
-  dropChannel(token: string): void {
+  dropChannel(uid: string): void {
     for (const conn of this.conns.values()) {
-      if (conn.token !== token || !conn.channelUp) continue
+      if (conn.uid !== uid || !conn.channelUp) continue
       conn.channelUp = false
       for (const cb of conn.onStatus) cb('reconnecting')
     }
     this.emitPresenceSyncAll()
   }
 
-  restoreChannel(token: string): void {
+  restoreChannel(uid: string): void {
     for (const conn of this.conns.values()) {
-      if (conn.token !== token || conn.channelUp) continue
+      if (conn.uid !== uid || conn.channelUp) continue
       conn.channelUp = true
       for (const cb of conn.onStatus) cb('connected')
     }
     this.emitPresenceSyncAll()
   }
 
-  presentTokens(): ReadonlySet<string> {
-    return new Set([...this.conns.values()].filter((c) => c.channelUp).map((c) => c.token))
+  presentUids(): ReadonlySet<string> {
+    return new Set([...this.conns.values()].filter((c) => c.channelUp).map((c) => c.uid))
   }
 
   private emitPresenceSyncAll(): void {
-    const tokens = this.presentTokens()
-    for (const conn of this.conns.values()) for (const cb of conn.onPresenceSync) cb(tokens)
+    const uids = this.presentUids()
+    for (const conn of this.conns.values()) for (const cb of conn.onPresenceSync) cb(uids)
   }
 
   // Recusa gravação `n` vezes (ou sempre, com `'always'`) — o próximo `saveSnapshot`/`saveRoom`
@@ -162,8 +162,8 @@ export class LocalHub {
     return () => { this.presenceCbs = this.presenceCbs.filter((c) => c !== cb) }
   }
 
-  submit(cmd: CommandEnvelope, fromToken: string): void {
-    for (const cb of this.submitCbs) cb(cmd, fromToken)
+  submit(cmd: CommandEnvelope, fromUid: string): void {
+    for (const cb of this.submitCbs) cb(cmd, fromUid)
   }
 
   addJoinRequest(cb: JoinReqCb): Unsubscribe {
@@ -171,28 +171,28 @@ export class LocalHub {
     return () => { this.joinReqCbs = this.joinReqCbs.filter((c) => c !== cb) }
   }
 
-  requestJoin(who: JoinRequest, fromToken: string): void {
-    for (const cb of this.joinReqCbs) cb(who, fromToken)
+  requestJoin(who: JoinRequest, fromUid: string): void {
+    for (const cb of this.joinReqCbs) cb(who, fromUid)
   }
 
-  // Rejeição é dirigida ao token pedinte, mas trafega no mesmo canal (todos podem ver; nada
+  // Rejeição é dirigida ao uid pedinte, mas trafega no mesmo canal (todos podem ver; nada
   // sensível). Cada conexão filtra o que é seu.
-  rejectJoin(token: string, reason: JoinError): void {
-    for (const conn of this.conns.values()) for (const cb of conn.onJoinRejected) cb(token, reason)
+  rejectJoin(uid: string, reason: JoinError): void {
+    for (const conn of this.conns.values()) for (const cb of conn.onJoinRejected) cb(uid, reason)
   }
 
   broadcast(cmd: AcceptedCommand): void {
     for (const conn of this.conns.values()) {
-      if (this.dropped.has(conn.token)) continue // simula lacuna na sequência (FR-012)
+      if (this.dropped.has(conn.uid)) continue // simula lacuna na sequência (FR-012)
       for (const cb of conn.onBroadcast) cb(cmd)
     }
   }
 
-  // Fault-injection (só testes): suprime/retoma a difusão para um token, simulando rede
+  // Fault-injection (só testes): suprime/retoma a difusão para um uid, simulando rede
   // instável. O caminho de produção (Supabase) não usa isto.
-  setDropBroadcast(token: string, drop: boolean): void {
-    if (drop) this.dropped.add(token)
-    else this.dropped.delete(token)
+  setDropBroadcast(uid: string, drop: boolean): void {
+    if (drop) this.dropped.add(uid)
+    else this.dropped.delete(uid)
   }
 
   publishRoom(room: Room): void {
@@ -240,18 +240,18 @@ export class LocalHub {
 }
 
 // Facade por-conexão. Cada chamada representa UMA aba/dispositivo. `disconnect()` derruba só
-// esta conexão; reconectar = novo `localTransport(...).connect()` com o mesmo token.
-export function localTransport(hub: LocalHub, token: string): Transport {
+// esta conexão; reconectar = novo `localTransport(...).connect()` com o mesmo uid.
+export function localTransport(hub: LocalHub, uid: string): Transport {
   let conn: Connection | null = null
   // Vivem no facade, não na `Connection` — assináveis ANTES de `connect()` (ver `register`).
   const statusCbs: StatusCb[] = []
   const presenceSyncCbs: PresenceSyncCb[] = []
 
   return {
-    token,
+    uid,
 
     connect(): Promise<void> {
-      conn = hub.register(token, { onStatus: statusCbs, onPresenceSync: presenceSyncCbs })
+      conn = hub.register(uid, { onStatus: statusCbs, onPresenceSync: presenceSyncCbs })
       return Promise.resolve()
     },
 
@@ -261,7 +261,7 @@ export function localTransport(hub: LocalHub, token: string): Transport {
     },
 
     submit(cmd: CommandEnvelope): void {
-      hub.submit(cmd, token)
+      hub.submit(cmd, uid)
     },
 
     onSubmit(cb): Unsubscribe {
@@ -279,7 +279,7 @@ export function localTransport(hub: LocalHub, token: string): Transport {
     },
 
     requestJoin(who): void {
-      hub.requestJoin(who, token)
+      hub.requestJoin(who, uid)
     },
 
     onJoinRequest(cb): Unsubscribe {
@@ -329,7 +329,7 @@ export function localTransport(hub: LocalHub, token: string): Transport {
 
     onPresenceSync(cb): Unsubscribe {
       presenceSyncCbs.push(cb)
-      cb(hub.presentTokens()) // conveniência local: estado inicial logo após assinar (contrato §2.2)
+      cb(hub.presentUids()) // conveniência local: estado inicial logo após assinar (contrato §2.2)
       return detach(presenceSyncCbs, cb)
     },
 

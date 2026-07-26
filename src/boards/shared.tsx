@@ -734,8 +734,8 @@ function TradeLeg({ label, props, cash, tickets = 0 }: { label: string; props: n
 function useLivePlayers(): Player[] {
   const game = useGameStore((s) => s.game)
   const room = useRoomStore((s) => s.room)
-  const myToken = useRoomStore((s) => s.myToken)
-  return playersView(game, room, myToken)
+  const myUid = useRoomStore((s) => s.myUid)
+  return playersView(game, room, myUid)
 }
 
 export function PlayersPanel() {

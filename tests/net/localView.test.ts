@@ -23,9 +23,9 @@ const ALL_KINDS: PlayerAction['kind'][] = [
 ]
 
 function sala(): Room {
-  let room = createRoom('r1', { token: 'tok-1', name: 'Um', color: SEAT_COLORS[0] })
+  let room = createRoom('r1', { uid: 'tok-1', name: 'Um', color: SEAT_COLORS[0] })
   for (const [i, tok] of ['tok-2', 'tok-3'].entries()) {
-    const r = joinRoom(room, { token: tok, name: `P${i + 2}`, color: SEAT_COLORS[i + 1] })
+    const r = joinRoom(room, { uid: tok, name: `P${i + 2}`, color: SEAT_COLORS[i + 1] })
     if (!r.ok) throw new Error(r.reason)
     room = r.room
   }
@@ -162,7 +162,7 @@ describe('sem sala (cliente único) — SC-007', () => {
     for (const kind of ALL_KINDS) expect(view.mayAct(kind)).toBe(true)
   })
 
-  it('token sem assento na sala também não trava o cliente único', () => {
+  it('uid sem assento na sala também não trava o cliente único', () => {
     const view = localView(jogo(), sala(), 'tok-desconhecido')
     expect(view.seatId).toBeNull()
     expect(view.mayAct('roll')).toBe(true)
