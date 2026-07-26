@@ -25,6 +25,18 @@ export interface DiceArenaView {
   /** Face do Speed Die, quando houver (D-003: suspenso hoje). */
   readonly speed: number | 'mr-banco' | 'onibus' | null
 
+  /**
+   * Esta tela é a de quem DECIDE agora? É o portão da zona de ação inteira (FR-003): na tela
+   * dos demais fica o estado ("Vez de Ana"), nunca um botão morto.
+   *
+   * Existe separado de `canRoll`/`canJailDecide` porque nem toda ação da zona era filtrada por
+   * ele — `canFinalize` e `purchase` saíam só do `GameState`, então quem observava via
+   * "Finalizar turno" e "Comprar R$ X" ACIONÁVEIS, e o clique virava um comando que o
+   * anfitrião descartava em silêncio. Com um flag só, a zona toda passa a responder à mesma
+   * pergunta, e um botão novo não nasce fora da regra por esquecimento.
+   */
+  readonly isActor: boolean
+
   readonly canRoll: boolean
   readonly canFinalize: boolean
   readonly canBus: boolean
@@ -97,6 +109,7 @@ export function diceArenaView(game: GameState, local: LocalView, gates: DiceAren
     isDoubleReroll,
     dice: [lastRoll?.white[0] ?? 1, lastRoll?.white[1] ?? 1],
     speed: lastRoll?.speed ?? null,
+    isActor: iAct && live,
     canRoll: iAct && live && turnState === 'aguardando-rolagem' && !rolling,
     canFinalize: live && turnState === 'aguardando-finalizacao',
     canBus: !rolling && canUseBusTicket(game),

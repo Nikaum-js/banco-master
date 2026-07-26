@@ -1041,7 +1041,13 @@ export function DiceArena() {
         {THEME.SPEED_DIE_ENABLED && active.speedDieReady && <SpeedDie face={sd} rollKey={rollKey} />}
       </div>
       {/* Zona de ação contextual — embaixo dos dados (sem modal de compra). Só para quem
-          decide: na tela dos demais fica o estado, sem botão morto (FR-003). */}
+          decide: na tela dos demais fica o estado, sem botão morto (FR-003).
+          O `isActor` fechando a zona inteira NÃO é redundância: `canRoll`/`canJailDecide` já
+          filtravam por ator, mas `canFinalize` e `purchase` vinham direto do `GameState`, e a
+          tela de quem observava mostrava "Finalizar turno"/"Comprar" acionáveis — mais o
+          "Rolar dados" desabilitado, o botão morto que este comentário sempre disse não
+          existir. Um portão só, na entrada, em vez de um gate por botão. */}
+      {v.isActor && (
       <div className="flex flex-col items-center gap-2 w-full max-w-[280px]">
         {purchase ? (
             <div className="flex gap-2 w-full">
@@ -1104,6 +1110,7 @@ export function DiceArena() {
         )}
         {canBus && <BusTicketStub count={activeBusTickets} onClick={() => useBusTicketUI.getState().arm()} />}
       </div>
+      )}
     </div>
   )
 }

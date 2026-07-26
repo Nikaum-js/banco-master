@@ -157,3 +157,36 @@ describe('diceArenaView — finalizar e Bus Ticket', () => {
     expect(diceArenaView(g, soloView(g), { rolling: true }).canBus).toBe(false)
   })
 })
+
+// FR-003 — o portão da zona de ação inteira. `canRoll`/`canJailDecide` já filtravam por ator,
+// mas `canFinalize` e `purchase` saíam só do `GameState`: a tela de quem observa mostrava
+// "Finalizar turno" e "Comprar R$ X" ACIONÁVEIS, e o clique virava comando que o anfitrião
+// descartava calado. Além do "Rolar dados" desabilitado — o botão morto que o comentário da
+// própria zona sempre disse não existir. Com `isActor` a zona toda responde à mesma pergunta.
+describe('diceArenaView — isActor: a zona de ação é de quem decide (FR-003)', () => {
+  it('o ator da vez é o ator; quem observa não é', () => {
+    const g = base()
+    expect(diceArenaView(g, seatedView(g, 'p1')).isActor).toBe(true)
+    expect(diceArenaView(g, seatedView(g, 'p2')).isActor).toBe(false)
+  })
+
+  it('quem observa não recebe NENHUMA ação da zona — nem as que só olhavam o GameState', () => {
+    const g = base()
+    g.turn.state = 'aguardando-finalizacao'
+    const observador = diceArenaView(g, seatedView(g, 'p2'))
+    expect(observador.isActor).toBe(false)
+    // `canFinalize` continua descrevendo o ESTADO da mesa (é o que a barra "Aguardando…" lê);
+    // quem decide se vira botão é `isActor`, e é por isso que ele existe separado.
+    expect(observador.status).toBe('Vez de p1')
+  })
+
+  it('pausado ninguém é ator — nem o dono da vez (FR-011)', () => {
+    const g = { ...base(), paused: pausedBy('disconnect') }
+    expect(diceArenaView(g, seatedView(g, 'p1')).isActor).toBe(false)
+  })
+
+  it('single-player: o dispositivo joga por todos, então é sempre o ator (FR-029)', () => {
+    const g = base()
+    expect(diceArenaView(g, soloView(g)).isActor).toBe(true)
+  })
+})
