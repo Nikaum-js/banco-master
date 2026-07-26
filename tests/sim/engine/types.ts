@@ -1,5 +1,6 @@
 // Tipos do harness de simulação (036) — dev-only. Nada aqui é importado por `src/`.
 import type { Trade } from '@/game/economy/trade'
+import type { WealthSample } from './wealth'
 
 export type SimAction =
   // Turno (turnMachine.ts) — sempre o jogador ativo.
@@ -78,6 +79,21 @@ export interface SimResult {
   // Mecanismos de dinheiro exercitados nesta partida → contagem de ocorrências (extensão de
   // conservação/cobertura). Chaves ex.: 'rent', 'card:boomEconomico', 'taxman-sink', 'mortgage'.
   coverage: Record<string, number>
+  // Patrimônio de todos os jogadores ao fim de cada rodada (item 3 do backlog). Fica só em
+  // memória — `buildReport` agrega em decis de progresso e o bruto não vai para `reports/`.
+  wealth: WealthSample[]
+}
+
+// Um ponto da curva de patrimônio, em decil de PROGRESSO da partida (1 = começo, 10 = fim).
+// Médias sobre as partidas `ok` do lote — partidas que falharam não têm formato para medir.
+export interface WealthCurvePoint {
+  decile: number
+  games: number
+  gini: number // concentração média do patrimônio (0 = mesa igual)
+  leaderShare: number // fatia média do líder no patrimônio total
+  // Fração das partidas em que quem liderava NESTE ponto terminou vencendo. É a medida direta
+  // de catch-up: perto de 1 no meio da partida = liderar já decide, catch-up ausente.
+  leaderWinRate: number
 }
 
 export interface SimReport {
@@ -87,6 +103,14 @@ export interface SimReport {
   durationMs: number
   roundsHistogram: Record<number, number>
   failures: SimFailure[]
+  // Vitórias por assento (p1..pN). Assimetria forte aqui é viés de ordem de turno, não sorte.
+  winnersBySeat: Record<string, number>
+  // Curva de patrimônio do lote inteiro, e a mesma curva separada pelas partidas que
+  // dispararam o espólio da 039 (`declare-bankruptcy-sink` > 0) e pelas que não. A separação
+  // é o que permite atribuir efeito ao espólio em vez de supor.
+  wealthCurve: WealthCurvePoint[]
+  wealthCurveWithEstate: WealthCurvePoint[]
+  wealthCurveWithoutEstate: WealthCurvePoint[]
   // Soma do coverage de todas as partidas do lote — mecanismos com 0 ocorrências no lote são
   // um gap real de cobertura (não suposição), reportado por formatReport.
   coverage: Record<string, number>

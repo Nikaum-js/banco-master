@@ -1,13 +1,14 @@
 // Orquestra 1 partida completa: enumerar → escolher → aplicar → checar conservação de
 // dinheiro (todo dispatch) → sondar/invariantes estruturais (1x/turno) → checar fim de
 // jogo/teto de rodadas (036 + extensão de conservação/cobertura).
-import { createSimSession, dispatch, closeExhaustedAuctions } from './driver'
+import { createSimSession, dispatch, closeExhaustedAuctions, type SimSession } from './driver'
 import { enumerateActions } from './actions'
 import { pickAction } from './agent'
 import { pickProbe, applyProbe } from './invalidProbe'
 import { checkInvariants } from './invariants'
 import { checkConservation, checkAuctionClose } from './conservation'
 import type { SimAction, SimFailure, SimResult } from './types'
+import { sampleWealth, type WealthSample } from './wealth'
 
 function addCoverage(coverage: Record<string, number>, mechanisms: string[]): void {
   for (const m of mechanisms) coverage[m] = (coverage[m] ?? 0) + 1
@@ -42,8 +43,18 @@ function fail(
     actionsExecuted,
     durationMs,
     coverage,
+    // Partida que falhou não tem formato para medir: `buildReport` agrega curva só das `ok`.
+    wealth: [],
     failure: { reason, seed, playerCount, round, action, detail },
   }
+}
+
+// A partida terminou? Existe como FUNÇÃO por causa do narrowing: escrita direto na condição
+// do `while`, a comparação estreitava `session.game.phase` para `'lobby' | 'playing'` pelo
+// corpo inteiro do laço — e `dispatch` reatribui `session.game`, o que o TS não acompanha.
+// O sintoma era o `phase === 'ended'` mais abaixo acusado como comparação impossível.
+function gameEnded(session: SimSession): boolean {
+  return session.game.phase === 'ended'
 }
 
 export function runGame(seed: number, playerCount: number, roundCap: number = DEFAULT_ROUND_CAP): SimResult {
@@ -56,9 +67,10 @@ export function runGame(seed: number, playerCount: number, roundCap: number = DE
   const maxTicks = roundCap * playerCount * SAFETY_TICK_FACTOR
   let ticks = 0
   const coverage: Record<string, number> = {}
+  const wealth: WealthSample[] = []
 
   try {
-    while (session.game.phase !== 'ended') {
+    while (!gameEnded(session)) {
       ticks++
       if (ticks > maxTicks) {
         return fail('round-cap-exceeded', seed, playerCount, rounds, undefined, `excedeu a salvaguarda de ${maxTicks} ticks sem terminar`, rounds, actionsExecuted, Date.now() - t0, coverage)
@@ -92,8 +104,7 @@ export function runGame(seed: number, playerCount: number, roundCap: number = DE
       }
 
       const seatChanged = session.game.activeSeat !== lastActiveSeat
-      const ended = session.game.phase === 'ended'
-      if (seatChanged || ended) {
+      if (seatChanged || gameEnded(session)) {
         const probe = pickProbe(session.ctx.rng, session.game)
         if (probe) {
           const probeResult = applyProbe(session, probe)
@@ -108,10 +119,16 @@ export function runGame(seed: number, playerCount: number, roundCap: number = DE
           return fail('invariant', seed, playerCount, rounds, action, detail, rounds, actionsExecuted, Date.now() - t0, coverage)
         }
 
-        if (seatChanged && session.game.activeSeat <= lastActiveSeat) rounds++
+        if (seatChanged && session.game.activeSeat <= lastActiveSeat) {
+          rounds++
+          // Uma amostra por rodada FECHADA (item 3 do backlog). No fecho da rodada todos
+          // jogaram o mesmo número de turnos, então a comparação entre jogadores é justa —
+          // amostrar por dispatch daria vantagem a quem acabou de agir.
+          wealth.push(sampleWealth(session.game, rounds))
+        }
         lastActiveSeat = session.game.activeSeat
 
-        if (!ended && rounds >= roundCap) {
+        if (!gameEnded(session) && rounds >= roundCap) {
           return fail('round-cap-exceeded', seed, playerCount, rounds, action, `estourou o teto de ${roundCap} rodadas`, rounds, actionsExecuted, Date.now() - t0, coverage)
         }
       }
@@ -125,5 +142,5 @@ export function runGame(seed: number, playerCount: number, roundCap: number = DE
   if (alive !== 1) {
     return fail('invariant', seed, playerCount, rounds, undefined, `fim de jogo com ${alive} jogadores vivos (esperado 1)`, rounds, actionsExecuted, Date.now() - t0, coverage)
   }
-  return { seed, playerCount, outcome: 'ok', rounds, actionsExecuted, durationMs: Date.now() - t0, winnerId: winner?.id, coverage }
+  return { seed, playerCount, outcome: 'ok', rounds, actionsExecuted, durationMs: Date.now() - t0, winnerId: winner?.id, coverage, wealth }
 }
