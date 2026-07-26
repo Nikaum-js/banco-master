@@ -106,7 +106,7 @@ describe('createRoomSession — entrar por link', () => {
     expect(String(session.getState().error)).toContain('Sala não encontrada')
   })
 
-  it('FR-005: token desconhecido não entra depois do início', async () => {
+  it('041/D-033: token desconhecido depois do início oferece reentrada por código, não erro', async () => {
     const hub = new LocalHub()
     // Sala já em partida, montada direto pelo host.
     let room = createRoom('sala-fixa', { token: 'tok-host', ...ANA })
@@ -121,8 +121,9 @@ describe('createRoomSession — entrar por link', () => {
     const intruso = makeSession(hub, 'tok-intruso')
     await intruso.session.enter('sala-fixa')
 
-    expect(intruso.session.getState().phase).toBe('error')
-    expect(intruso.session.getState().error).toBe('already-started')
+    // Antes disto era beco (`fail('already-started')`) — D-033 troca por um formulário: quem
+    // perdeu o aparelho não fica travado, apresenta link + código do próprio assento.
+    expect(intruso.session.getState().phase).toBe('reentry')
   })
 
   it('FR-015: o host reabrindo o link reassume a autoridade', async () => {

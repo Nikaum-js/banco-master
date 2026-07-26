@@ -156,6 +156,36 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     expect(recusas).toEqual(['t-guest:already-started'])
   })
 
+  // 041 — contrato §3: reentrada por código não é uma mensagem nova na porta, é o MESMO
+  // `JoinRequest` com `reentryCode` presente.
+  it('§3: pedido com reentryCode chega ao host com o token da CONEXÃO', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    const guest = f.make('t-guest')
+    await host.connect()
+    await guest.connect()
+
+    const pedidos: { fromToken: string; reentryCode?: string }[] = []
+    host.onJoinRequest((who, fromToken) => pedidos.push({ fromToken, reentryCode: who.reentryCode }))
+
+    guest.requestJoin({ name: '', color: '', reentryCode: 'ABC123' })
+    expect(pedidos).toEqual([{ fromToken: 't-guest', reentryCode: 'ABC123' }])
+  })
+
+  it('§3: recusa por código inválido ("bad-code") chega, e o pedinte a reconhece como sua', async () => {
+    const f = fixture()
+    const host = f.make('t-host')
+    const guest = f.make('t-a')
+    await host.connect()
+    await guest.connect()
+
+    const recusas: { token: string; reason: string }[] = []
+    guest.onJoinRejected((token, reason) => recusas.push({ token, reason }))
+
+    host.rejectJoin('t-a', 'bad-code')
+    expect(recusas).toEqual([{ token: 't-a', reason: 'bad-code' }])
+  })
+
   // — PRESENÇA: onde os adapters divergiam —
 
   it('conectar emite presença sem takeover', async () => {
@@ -219,7 +249,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const t = f.make('t-host')
     await t.connect()
-    const room: Room = { id: 'sala1', status: 'lobby', seats: [{ token: 't-host', playerId: 'p1', name: 'Ana', color: '#fff', connected: true, isHost: true }] }
+    const room: Room = { id: 'sala1', status: 'lobby', seats: [{ token: 't-host', playerId: 'p1', name: 'Ana', color: '#fff', connected: true, isHost: true, reentryCode: '' }] }
     await t.saveRoom(room)
     expect(await t.loadRoom()).toEqual(room)
   })

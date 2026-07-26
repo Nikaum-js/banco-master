@@ -19,7 +19,7 @@ function seatedView(g: GameState, playerId: string): LocalView {
   const room = {
     id: 'r', status: 'playing' as const,
     seats: g.players.map((p, i) => ({
-      token: `tok-${p.id}`, playerId: p.id, name: `P${i + 1}`, color: '#fff', connected: true, isHost: i === 0,
+      token: `tok-${p.id}`, playerId: p.id, name: `P${i + 1}`, color: '#fff', connected: true, isHost: i === 0, reentryCode: '',
     })),
   }
   return localView(g, room, `tok-${playerId}`)

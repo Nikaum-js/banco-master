@@ -199,6 +199,14 @@ export function RoomLobby({
             {copied ? 'Copiado' : 'Copiar'}
           </Button>
         </div>
+        {/* Código de reentrada do PRÓPRIO assento (041, D-033/FR-030): visível desde o lobby,
+            para quem nunca anotou conseguir ler antes de precisar. */}
+        {room.seats.find((s) => s.token === myToken)?.reentryCode && (
+          <p className="label text-cream-muted/60">
+            Seu código de reentrada:{' '}
+            <span className="text-cream tracking-[0.2em] font-mono">{room.seats.find((s) => s.token === myToken)!.reentryCode}</span>
+          </p>
+        )}
       </div>
 
       {isHost ? (
@@ -240,6 +248,45 @@ export function TurnOrderReveal({ room, onDone }: { room: Room; onDone: () => vo
         ))}
       </ol>
       <Button onClick={onDone}>Começar</Button>
+    </Frame>
+  )
+}
+
+// Reentrada por código (041, D-033) — perder o aparelho deixava a mesa refém; com link +
+// código, qualquer aparelho reanexa ao assento. Recusa por 'bad-code' volta AQUI, legível,
+// sem sair da tela (roomSession mantém a fase 'reentry').
+export function ReentryForm({
+  busy,
+  error,
+  onSubmit,
+}: {
+  busy?: boolean
+  error?: JoinError | string | null
+  onSubmit: (code: string) => void
+}) {
+  const [code, setCode] = useState('')
+  const message = error && (error in JOIN_ERROR_TEXT ? JOIN_ERROR_TEXT[error as JoinError] : String(error))
+
+  return (
+    <Frame title="Reentrar na sala" subtitle="A partida já começou — informe o código do seu assento">
+      <label className="flex flex-col gap-1.5">
+        <span className="label text-gold">Código de reentrada</span>
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder="Ex.: 7F3K9M"
+          maxLength={6}
+          autoFocus
+          className="px-3 py-2 rounded-[var(--radius-sharp)] bg-coffee-900 border border-coffee-500 text-cream placeholder:text-cream-muted/50 tracking-[0.3em] uppercase focus:outline-none focus:border-gold/60"
+        />
+      </label>
+      <p className="label text-cream-muted/70 leading-snug">
+        O código fica ao lado do link da sala, no seu próprio assento — visível durante toda a partida.
+      </p>
+      {message && <p className="text-signal-glow text-sm leading-snug">{message}</p>}
+      <Button disabled={code.trim().length === 0 || busy} onClick={() => onSubmit(code.trim())}>
+        {busy ? 'Reanexando…' : 'Reanexar'}
+      </Button>
     </Frame>
   )
 }

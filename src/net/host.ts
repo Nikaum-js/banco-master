@@ -13,6 +13,8 @@ import {
   anyDisconnected,
   joinRoom,
   kickSeat,
+  newReentryCode,
+  reattachByCode,
   shuffleSeatOrder,
   markConnected,
   markDisconnected,
@@ -95,8 +97,29 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
 
   // Pedido de assento no lobby (FR-002/005). A identidade do assento é o token da CONEXÃO —
   // o pedinte só escolhe nome e cor. Recusa (cheia/cor tomada/já iniciada) volta ao pedinte.
+  //
+  // Com `reentryCode` (041, D-033/contrato §3): é REANEXAÇÃO, não assento novo — o gate de
+  // `already-started` não se aplica (perder o aparelho não pode travar a mesa depois do
+  // início). `name`/`color`/`piece` são ignorados nesse caminho; a identidade visual
+  // pertence ao assento, não a quem está reabrindo. `syncPause` depois de republicar é o que
+  // retoma a partida se esta era a última ausência (FR-028).
   function handleJoinRequest(who: JoinRequest, fromToken: string): void {
-    const result = joinRoom(room, { token: fromToken, name: who.name, color: who.color, piece: who.piece })
+    if (who.reentryCode) {
+      const result = reattachByCode(room, who.reentryCode, fromToken)
+      if (!result.ok) {
+        transport.rejectJoin(fromToken, result.reason)
+        return
+      }
+      room = result.room
+      publishAndPersistRoom()
+      syncPause()
+      return
+    }
+    const taken = new Set(room.seats.map((s) => s.reentryCode))
+    const result = joinRoom(room, {
+      token: fromToken, name: who.name, color: who.color, piece: who.piece,
+      reentryCode: newReentryCode(rng, taken), // room.ts não tem RNG (D12) — o host minta
+    })
     if (!result.ok) {
       transport.rejectJoin(fromToken, result.reason)
       return
