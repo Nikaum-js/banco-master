@@ -19,6 +19,7 @@
 // (provado headless, SC-005); resta o endurecimento da identidade de transporte.
 import type { AcceptedCommand, CommandEnvelope, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import type { JoinError, Room } from './room'
+import { normalizeLog } from '@/game/log'
 
 // Subconjunto estrutural do supabase-js efetivamente usado (evita depender do pacote no build).
 export interface SupabaseChannelLike {
@@ -207,7 +208,8 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
       if (error) throw error
       if (!data || data.game == null || data.seq < 0) return null
       const room: Room = { id: data.id, status: data.status as Room['status'], seats: data.seats }
-      return { seq: data.seq, game: data.game, room }
+      const game = { ...data.game, log: normalizeLog(data.game.log ?? []) }
+      return { seq: data.seq, game, room }
     },
   }
 }

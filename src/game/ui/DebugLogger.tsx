@@ -1,7 +1,7 @@
 // DebugLogger (dev) — joga o estado no console do browser a cada mudança, em vez
 // de um painel na tela. Abra o DevTools (F12 → Console): cada transição loga um
 // resumo técnico + o objeto `game` inteiro (expansível/inspecionável), e cada
-// nova entrada do log de eventos aparece como `[log] who: what`. Headless.
+// nova entrada do log de eventos aparece como `[log] kind (who)` + o objeto (040). Headless.
 import { useEffect, useRef } from 'react'
 import { useGameStore } from '@/game/store'
 import { BOARD } from '@/lib/boardData'
@@ -43,7 +43,7 @@ export function DebugLogger() {
     // Novas entradas do log de eventos do jogo.
     if (game.log.length > lastLen.current) {
       for (const e of game.log.slice(lastLen.current)) {
-        console.log(`%c[log] ${e.who}: ${e.what}`, 'color:#d4af37')
+        console.log(`%c[log] ${e.kind} (${e.who})`, 'color:#d4af37', e)
       }
     }
     lastLen.current = game.log.length

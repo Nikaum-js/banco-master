@@ -206,7 +206,7 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const f = fixture()
     const t = f.make('t-host')
     await t.connect()
-    const game = { marcador: 'estado-da-partida' } as never
+    const game = { marcador: 'estado-da-partida', log: [] } as never // log: [] — supabaseTransport normaliza no load (040)
     await t.saveSnapshot({ seq: 7, game, room: { ...ROOM, status: 'playing' } })
 
     // Uma mudança de ASSENTOS no meio da partida não pode zerar `game`/`seq`.

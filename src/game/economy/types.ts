@@ -67,10 +67,59 @@ export interface Immunity {
   granterId?: string // quem concedeu (setado na troca) — limpeza da eliminação §9.4 (019)
 }
 
-export interface LogEntry {
-  who: string // id do jogador (ou "Banco") — sem timestamp; recência = ordem no log (021)
-  what: string
-}
+// Log de eventos tipado (040/D-032) — união discriminada por `kind`. O motor emite fatos
+// estruturados; a frase em português é composta pela apresentação (`describeLogEntry`,
+// src/game/ui/log/describeLog.ts), nunca aqui. `who` é sempre o id do AUTOR do fato (ou
+// o literal 'bank'), nunca "Banco" em português dentro do estado.
+//
+// `ALL_LOG_KINDS` é a FONTE; `LogKind` deriva dela (não o contrário) — o teste de
+// exaustividade (FR-026) itera sobre a lista em runtime, e uma lista escrita à mão ao lado
+// da união poderia ficar desatualizada sem que o teste percebesse.
+export const ALL_LOG_KINDS = [
+  'roll', 'go', 'buy', 'rent', 'tax', 'bus-ticket-gain',
+  'card-draw', 'card-immediate',
+  'build', 'build-hangar', 'sell-building', 'sell-hangar',
+  'mortgage', 'unmortgage',
+  'auction-won', 'auction-unsold', 'lot-won', 'lot-unsold',
+  'free-parking', 'jail-fine',
+  'debt-paid', 'bankruptcy', 'trade',
+  'loan-interest', 'loan-interest-short',
+  'legacy',
+] as const
+
+export type LogKind = (typeof ALL_LOG_KINDS)[number]
+
+// Faces especiais do dado (espelha `SpecialMove`/`SpeedFace` de `turn/types.ts`, sem
+// importar de lá — este arquivo é autocontido para evitar ciclo de imports).
+type LogRollSpecial = 'mr-banco' | 'onibus' | 'triple' | null
+
+export type LogEntry =
+  | { kind: 'roll'; who: string; white: [number, number]; isDouble: boolean; special: LogRollSpecial; speed: number | null; attempt: boolean }
+  | { kind: 'go'; who: string; amount: number; landed: boolean }
+  | { kind: 'buy'; who: string; pos: number; price: number }
+  | { kind: 'rent'; who: string; pos: number; amount: number; ownerId: string }
+  | { kind: 'tax'; who: string; amount: number }
+  | { kind: 'bus-ticket-gain'; who: string }
+  | { kind: 'card-draw'; who: string; deck: DeckId } // genérico por construção — sem carta nem raridade (FR-015, princípio VI)
+  | { kind: 'card-immediate'; who: string; deck: DeckId; name: string; delta: number }
+  | { kind: 'build'; who: string; pos: number; level: number; cost: number } // level = nível RESULTANTE (1-7)
+  | { kind: 'build-hangar'; who: string; pos: number; cost: number }
+  | { kind: 'sell-building'; who: string; pos: number; level: number; amount: number } // level = nível resultante
+  | { kind: 'sell-hangar'; who: string; pos: number; amount: number }
+  | { kind: 'mortgage'; who: string; pos: number; amount: number }
+  | { kind: 'unmortgage'; who: string; pos: number; cost: number } // `cost`, não `amount`: o dinheiro SAI
+  | { kind: 'auction-won'; who: string; pos: number; amount: number; winnerId: string } // who = 'bank'
+  | { kind: 'auction-unsold'; who: string; pos: number } // who = 'bank'
+  | { kind: 'lot-won'; who: string; pos: number; amount: number; winnerId: string; origin: AuctionOrigin } // who = 'bank'
+  | { kind: 'lot-unsold'; who: string; pos: number; origin: AuctionOrigin } // who = 'bank'
+  | { kind: 'free-parking'; who: string; amount: number } // princípio IV: só o valor, nada de catch-up
+  | { kind: 'jail-fine'; who: string; amount: number }
+  | { kind: 'debt-paid'; who: string; amount: number }
+  | { kind: 'bankruptcy'; who: string }
+  | { kind: 'trade'; who: string; toId: string } // who = fromId (o proponente é o autor)
+  | { kind: 'loan-interest'; who: string; amount: number; creditorId: string }
+  | { kind: 'loan-interest-short'; who: string; amount: number; creditorId: string; shortfall: number }
+  | { kind: 'legacy'; who: string; what: string } // NUNCA emitida por reducer — só normalização de snapshot velho (FR-022)
 
 export interface TempEffect {
   kind: 'apagao' | 'greve' | 'boicote' | 'imunidade-temp' // efeitos temporários de carta (015, §10.6)
