@@ -7,8 +7,9 @@
 
 - **Motor (M1): completo e sem gaps de regra conhecidos** — os 3 bugs achados pela auditoria de 2026-07-23 foram corrigidos (ver abaixo). **UI jogável (M2): fechada**. **Simulação (spec 036): entregue**.
 - **Multiplayer (M3): specs 037 e 038 COMPLETAS, infra viva** — fundação host-autoritativa (037) + **partida online jogável** (038: perspectiva de jogador local, identidade real, sessão visível, roteamento). Motor intacto (princípio I / SC-007).
-- **Gates:** `bunx vitest run` → **436 testes / 60 arquivos verdes** (363 motor + 73 rede em `tests/net/`); `tsc` limpo; `bun run build` ok; **lint de `src/net` zerado** e os arquivos de UI tocados mantêm exatamente os erros pré-existentes (medido contra o baseline). `bun run scripts/net-smoke.ts` verde contra o Supabase real. **Lint global: 36 erros pré-existentes** inalterados. **Sem CI**.
-- **E2E:** `bunx playwright test` → 2 e 3 jogadores passam; **6 jogadores estoura o timeout de 150s — falha PRÉ-EXISTENTE** (reproduzida no commit anterior à 038, ver "Sessão 2026-07-25").
+- **Gates:** `bunx vitest run` → **554 testes / 66 arquivos verdes**; `tsc` limpo; `bun run build` ok; **lint global ZERADO** (era 36); `bun audit` → 3 advisories restantes, todas em cópias transitivas de ferramenta de dev (nenhuma alcança o bundle). `bun run scripts/net-smoke.ts` verde contra o Supabase real.
+- **CI VIVO** (`.github/workflows/ci.yml`, 2026-07-25): 3 jobs — `gates` (lint + tsc + vitest + build), `simulation` (30 partidas seedadas 2/3/6) e `e2e` (smoke single-player, traces no artifact em falha). O `multiplayer.spec.ts` fica fora do gate: depende de credencial Supabase.
+- **E2E:** `bunx playwright test` → **2, 3 e 6 jogadores passam** (2 execuções seguidas). A falha de 6 jogadores registrada aqui antes NÃO era timeout de performance: o roteiro procurava um botão `← Frente` que o commit `03cb1ef` extinguiu, e travava no modal de Atalho até o teto de 240s. Como os dados do browser são `Math.random()`, aparecia como flake. Corrigido em `e2e/script.ts`.
 - **Push agora é rotina:** remote `origin` = `github.com:Nikaum-js/banco-master` — commits desta e da sessão anterior foram pushados. Backdate de commits segue a regra do `~/.claude/rules/git-conventions.md` (hook injeta).
 - **Auditoria completa em `docs/AUDITORIA-2026-07-23.md`** — 17 itens priorizados por impacto×esforço; é o backlog técnico vigente (itens 1, 2, 7 e 14 já resolvidos).
 
@@ -90,14 +91,23 @@ Duas decisões viraram ADR antes de entrar na spec (regra nunca nasce numa spec 
 
 **SRS bumpado para v1.5** (§10.3 e §11.3). O `docs/PRD.md` foi realinhado: o mapa E15 antigo (037 infra / 038 transporte / 039 lobby / 040 sessão) não valia mais — a 037 absorveu as quatro; sobrou 038 (experiência) e 039 (leilão do falido §9.2).
 
+## Sessão de 2026-07-25 (parte 2) — CI + lint zerado
+
+Fecha o item de prioridade Alta do backlog da auditoria. O que mudou:
+
+- **CI** em 3 jobs (ver "Estado atual"). `.bun-version` fixa o toolchain para setup-bun e shell concordarem.
+- **Lint 36 → 0.** Boa parte não era sujeira solta, era desenho: `react-refresh` acusava `shared.tsx`, `TradeLayer` e `HandCardLayer` por exportarem coisa que não é componente. Saíram para módulos irmãos — `boards/groupColors.ts`, `ui/deed/deedRents.ts`, `ui/trade/tradeUI.ts`, `ui/cards/handCardUI.ts` — e as reexportações de compatibilidade do `shared.tsx` morreram (cada consumidor importa da fonte real agora).
+- **3 setState-em-efeito viraram derivação:** licitante do pregão (`LandAuctionLayer`), reset do destinatário da troca (`TradeLayer`, foi pro handler) e o "plop" de chegada do peão (`LiveTokens` — o pop agora anda no mesmo commit que avança a posição, some o ref `prevWalking`). Confete do `NoticeLayer` sorteado no import, não em render.
+- **`useBusTicket` → `spendBusTicket`** no motor, com o alias `applyBusTicket` de `commands.ts` aposentado.
+- **`bun update`**: 6 → 3 advisories; Playwright 1.61 → 1.62 (exige `bunx playwright install chromium`).
+
+**Achado que vale mais que o CI:** o E2E de 6 jogadores não estava lento, estava **travado** — e 2/3 jogadores estavam a um sorteio de azar do mesmo destino. Ver "Estado atual → E2E". Lição: `driveTurns` falha por TIMEOUT quando um matcher morre, o que mascara o motivo real; ao mexer em rótulo de botão, o roteiro do smoke é consumidor.
+
 ## Próximos passos (do backlog da auditoria, em ordem)
 
-1. **CI GitHub Actions** (lint + tsc + vitest + sim curto) e **zerar os 36 erros de lint** — inclui renomear `useBusTicket` → `spendBusTicket` no engine (mata o falso positivo react-hooks em `driver.ts:110`); `bun update @babel/core` (advisory low GHSA-4x5r-pxfx-6jf8).
-2. **Deletar dead code de `boards/shared.tsx`**: `HOUSE_COST` (diverge do `theme.ts`!), `MOCK_PLAYERS`/`LOCAL_PLAYER_NAME`, `PlayerTokens`, `LotteryCard`, `CenterPlate`, `GROUP_BG`.
-3. **Log tipado** (`LogEntry {kind, who, amount, what}`) — destrava explicação de aluguel na UI, som robusto (hoje classifica por substring em `classify.ts:72-83`), cor do histórico e i18n. Item de maior alavancagem estrutural.
-4. **Pacote "mostrável"**: persistência do `GameState` em localStorage (F5 hoje mata a partida) + ErrorBoundary; leilão comum multi-licitante + botão "passar" (`passBid` existe no store sem UI — copiar o seletor do pregão em `LandAuctionLayer.tsx:217-230`); lobby mínimo com nomes (UI hoje celebra "p1" na vitória).
-5. **Sim: registrar vencedor/curva de patrimônio por rodada** (`tests/sim/engine/report.ts` só conta mecanismos) — pré-requisito para validar/refutar a hipótese de ROI desproporcional da construção parcial (D-026) em orange/red.
-6. **M3 (Supabase)**: antes da spec, decidir a autoridade de estado — hoje os comandos aceitam `playerId` de quem chamar (`store.ts:262`); D-020 (host-autoritativo) precisa disso resolvido no desenho do transporte.
+1. **Log tipado** (`LogEntry {kind, who, amount, what}`) — destrava explicação de aluguel na UI, som robusto (hoje classifica por substring em `classify.ts:72-83`), cor do histórico e i18n. Item de maior alavancagem estrutural, agora o de maior prioridade.
+2. **Pacote "mostrável"**: persistência do `GameState` em localStorage (F5 hoje mata a partida) + ErrorBoundary; leilão comum multi-licitante + botão "passar" (`passBid` existe no store sem UI — copiar o seletor do pregão em `LandAuctionLayer.tsx:217-230`); lobby mínimo com nomes (UI hoje celebra "p1" na vitória).
+3. **Sim: registrar vencedor/curva de patrimônio por rodada** (`tests/sim/engine/report.ts` só conta mecanismos) — pré-requisito para validar/refutar a hipótese de ROI desproporcional da construção parcial (D-026) em orange/red.
 
 ## Sessões anteriores
 
