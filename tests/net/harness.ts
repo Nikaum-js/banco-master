@@ -34,6 +34,12 @@ export interface NetGame {
   players: NetPlayer[]
   advance(ms: number): void // avança o relógio lógico e fecha prazos vencidos
   serialized(): string[] // JSON de cada visão (host + clientes) — comparação de convergência
+
+  // Faltas injetáveis (041, D14) — para as suítes escreverem CENÁRIO, não encanamento.
+  dropChannel(playerId: string): void // queda de canal SEM contar como takeover (defeito 1)
+  restoreChannel(playerId: string): void
+  failWrites(n: number | 'always'): void // recusa a(s) próxima(s) gravação(ões) de snapshot
+  reorderWrites(): void // a próxima gravação chega DEPOIS da seguinte (fora de ordem)
 }
 
 // Monta e inicia uma partida em rede com `playerCount` assentos. Ordem = entrada
@@ -85,6 +91,18 @@ export async function setupGame(playerCount: number, seed = 1): Promise<NetGame>
     },
     serialized(): string[] {
       return [JSON.stringify(host.game()), ...players.map((p) => JSON.stringify(p.client.game()))]
+    },
+    dropChannel(playerId: string): void {
+      hub.dropChannel(players.find((p) => p.playerId === playerId)!.token)
+    },
+    restoreChannel(playerId: string): void {
+      hub.restoreChannel(players.find((p) => p.playerId === playerId)!.token)
+    },
+    failWrites(n: number | 'always'): void {
+      hub.failWrites(n)
+    },
+    reorderWrites(): void {
+      hub.reorderWrites()
     },
   }
 }

@@ -17,16 +17,30 @@ import { fakeSupabase } from './fakeSupabase'
 import type { Room } from '@/net/room'
 
 // Fábrica de N transportes ligados na MESMA sala — a única coisa que difere entre adapters.
-type Fixture = { make(token: string): Transport }
+// 041: ganhou `dropChannel`/`restoreChannel` — a queda/restauração de CANAL sem contar como
+// takeover (o cenário do defeito 1), uma por adapter, para §1/§2 do contrato novo.
+type Fixture = {
+  make(token: string): Transport
+  dropChannel(token: string): void
+  restoreChannel(token: string): void
+}
 
 const ADAPTERS: [string, () => Fixture][] = [
   ['localTransport', () => {
     const hub = new LocalHub()
-    return { make: (token) => localTransport(hub, token) }
+    return {
+      make: (token) => localTransport(hub, token),
+      dropChannel: (token) => hub.dropChannel(token),
+      restoreChannel: (token) => hub.restoreChannel(token),
+    }
   }],
   ['supabaseTransport', () => {
     const fake = fakeSupabase()
-    return { make: (token) => supabaseTransport(fake.client(token), 'sala1', token) }
+    return {
+      make: (token) => supabaseTransport(fake.client(token), 'sala1', token),
+      dropChannel: (token) => fake.channelByToken(token)?.simulateDrop(),
+      restoreChannel: (token) => fake.channelByToken(token)?.simulateResubscribe(),
+    }
   }],
 ]
 
@@ -215,5 +229,102 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     const snap = await t.loadSnapshot()
     expect(snap?.seq).toBe(7)
     expect(snap?.game).toEqual(game)
+  })
+})
+
+// 041 — contrato §1/§2: conexão da PRÓPRIA sessão e presença em conjunto. O contrato exige
+// que os DOIS adapters cumpram exatamente a mesma semântica; é aqui que o defeito 1 (queda
+// reassinada não reanunciava presença em produção) fica provado nos dois, não só no local.
+describe.each(ADAPTERS)('contrato de Transport (041) — %s', (_name, fixture) => {
+  describe('§1 onStatus — a conexão desta sessão', () => {
+    it('queda de canal emite "reconnecting"', async () => {
+      const f = fixture()
+      const t = f.make('t-host')
+      await t.connect()
+      const seen: string[] = []
+      t.onStatus((s) => seen.push(s))
+      f.dropChannel('t-host')
+      expect(seen).toContain('reconnecting')
+    })
+
+    it('restabelecimento emite "connected" — inclusive numa REASSINATURA', async () => {
+      const f = fixture()
+      const t = f.make('t-host')
+      await t.connect()
+      const seen: string[] = []
+      t.onStatus((s) => seen.push(s))
+      f.dropChannel('t-host')
+      f.restoreChannel('t-host')
+      expect(seen).toEqual(['reconnecting', 'connected'])
+    })
+
+    it('dois assinantes recebem; desassinar um não derruba o outro', async () => {
+      const f = fixture()
+      const t = f.make('t-host')
+      await t.connect()
+      const a: string[] = []
+      const b: string[] = []
+      const offA = t.onStatus((s) => a.push(s))
+      t.onStatus((s) => b.push(s))
+      f.dropChannel('t-host')
+      offA()
+      f.restoreChannel('t-host')
+      expect(a).toEqual(['reconnecting'])
+      expect(b).toEqual(['reconnecting', 'connected'])
+    })
+  })
+
+  describe('§2 onPresenceSync — quem está no canal, em conjunto', () => {
+    it('após connect(), chega um conjunto contendo o próprio token', async () => {
+      const f = fixture()
+      const t = f.make('t-host')
+      await t.connect()
+      let latest: ReadonlySet<string> = new Set()
+      t.onPresenceSync((tokens) => { latest = tokens })
+      expect(latest.has('t-host')).toBe(true)
+    })
+
+    it('com dois participantes, ambos os tokens aparecem para os dois', async () => {
+      const f = fixture()
+      const ta = f.make('t-host')
+      const tb = f.make('t-guest')
+      await ta.connect()
+      await tb.connect()
+      let seenByA: ReadonlySet<string> = new Set()
+      let seenByB: ReadonlySet<string> = new Set()
+      ta.onPresenceSync((tokens) => { seenByA = tokens })
+      tb.onPresenceSync((tokens) => { seenByB = tokens })
+      expect([...seenByA].sort()).toEqual(['t-guest', 't-host'])
+      expect([...seenByB].sort()).toEqual(['t-guest', 't-host'])
+    })
+
+    it('após a saída de um, o conjunto vem sem ele', async () => {
+      const f = fixture()
+      const ta = f.make('t-host')
+      const tb = f.make('t-guest')
+      await ta.connect()
+      await tb.connect()
+      let seenByA: ReadonlySet<string> = new Set()
+      ta.onPresenceSync((tokens) => { seenByA = tokens })
+      tb.disconnect()
+      expect([...seenByA]).toEqual(['t-host'])
+    })
+
+    it('reassinatura REANUNCIA presença — a queda tira do conjunto, a volta repõe (defeito 1)', async () => {
+      const f = fixture()
+      const ta = f.make('t-host')
+      const tb = f.make('t-guest')
+      await ta.connect()
+      await tb.connect()
+      let seenByB: ReadonlySet<string> = new Set()
+      tb.onPresenceSync((tokens) => { seenByB = tokens })
+      expect(seenByB.has('t-host')).toBe(true)
+
+      f.dropChannel('t-host')
+      expect(seenByB.has('t-host')).toBe(false)
+
+      f.restoreChannel('t-host')
+      expect(seenByB.has('t-host')).toBe(true)
+    })
   })
 })

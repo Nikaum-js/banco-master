@@ -63,7 +63,7 @@ export interface Room {
 }
 
 export type JoinResult = { ok: true; room: Room; seat: Seat } | { ok: false; reason: JoinError }
-export type JoinError = 'room-full' | 'color-taken' | 'piece-taken' | 'already-started' | 'unknown-token' | 'kicked'
+export type JoinError = 'room-full' | 'color-taken' | 'piece-taken' | 'already-started' | 'unknown-token' | 'kicked' | 'bad-code'
 
 export interface Identity {
   token: string

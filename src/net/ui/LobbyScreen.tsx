@@ -13,6 +13,7 @@ const JOIN_ERROR_TEXT: Record<JoinError, string> = {
   'already-started': 'A partida já começou — não é possível entrar agora.',
   'unknown-token': 'Sessão não reconhecida nesta sala.',
   kicked: 'O anfitrião removeu você desta sala.',
+  'bad-code': 'Código de reentrada inválido.',
 }
 
 // Moldura comum das telas de sala (fundo do jogo + cartão central).

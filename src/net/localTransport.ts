@@ -3,7 +3,7 @@
 // na mesma pilha, tornando os testes headless determinísticos. É o transporte da suíte
 // `tests/net/` e prova SC-001/003/004/005 sem infra. O `supabaseTransport` implementa a mesma
 // porta sobre Realtime/Postgres.
-import type { AcceptedCommand, CommandEnvelope, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
+import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import type { JoinError, Room } from './room'
 
 type SubmitCb = (cmd: CommandEnvelope, fromToken: string) => void
@@ -12,6 +12,8 @@ type RoomCb = (room: Room) => void
 type PresenceCb = (change: PresenceChange) => void
 type JoinReqCb = (who: JoinRequest, fromToken: string) => void
 type JoinRejCb = (token: string, reason: JoinError) => void
+type StatusCb = (status: ConnStatus) => void
+type PresenceSyncCb = (tokens: ReadonlySet<string>) => void
 
 // LISTAS, não slots. Antes cada callback era um campo único (`conn.onBroadcast = cb`),
 // então um segundo assinante silenciosamente derrubava o primeiro — enquanto o adapter
@@ -23,6 +25,9 @@ interface Connection {
   onBroadcast: BroadcastCb[]
   onRoom: RoomCb[]
   onJoinRejected: JoinRejCb[]
+  onStatus: StatusCb[]
+  onPresenceSync: PresenceSyncCb[]
+  channelUp: boolean // falta injetável (041, D14): canal caído sem contar como takeover
 }
 
 function detach<T>(arr: T[], cb: T): Unsubscribe {
@@ -45,6 +50,12 @@ export class LocalHub {
   private lastRoom: Room | null = null
   private dropped = new Set<string>() // tokens com difusão suprimida (fault-injection de teste: perda de pacote)
 
+  // — faltas injetáveis de escrita/leitura (041, D14) — só testes; produção não usa isto.
+  private writeFailures: number | 'always' = 0
+  private readSnapshotFails = false
+  private reorderArmed = false // arma a PRÓXIMA gravação para ficar retida
+  private held: PersistedSnapshot | null = null // gravação retida — aplicada DEPOIS da seguinte
+
   // — usado pelo transporte (abaixo) —
 
   register(token: string): Connection {
@@ -52,12 +63,16 @@ export class LocalHub {
     const prior = [...this.conns.values()].find((c) => c.token === token)
     const takeover = prior !== undefined
     if (prior) this.conns.delete(prior.id)
-    const conn: Connection = { id: this.nextId++, token, onBroadcast: [], onRoom: [], onJoinRejected: [] }
+    const conn: Connection = {
+      id: this.nextId++, token, onBroadcast: [], onRoom: [], onJoinRejected: [],
+      onStatus: [], onPresenceSync: [], channelUp: true,
+    }
     this.conns.set(conn.id, conn)
     // Presença: conexão nova. `takeover` NÃO é desconexão (não pausa) — mas ainda sinaliza que
     // o token está conectado (reconexão após queda também entra por aqui, com takeover=false).
     this.emitPresence({ token, connected: true, takeover })
     if (this.lastRoom) for (const cb of conn.onRoom) cb(this.lastRoom)
+    this.emitPresenceSyncAll()
     return conn
   }
 
@@ -65,6 +80,71 @@ export class LocalHub {
     if (!this.conns.has(conn.id)) return // já substituída por takeover — não reemite desconexão
     this.conns.delete(conn.id)
     this.emitPresence({ token: conn.token, connected: false, takeover: false })
+    this.emitPresenceSyncAll()
+  }
+
+  // Queda/restauração de CANAL (041, contrato §1) — a MESMA conexão reassina, sem contar
+  // como takeover (diferente de `register` com um token já vivo). É o cenário do defeito 1:
+  // reassinatura precisa reanunciar presença e emitir 'connected'.
+  dropChannel(token: string): void {
+    for (const conn of this.conns.values()) {
+      if (conn.token !== token || !conn.channelUp) continue
+      conn.channelUp = false
+      for (const cb of conn.onStatus) cb('reconnecting')
+    }
+    this.emitPresenceSyncAll()
+  }
+
+  restoreChannel(token: string): void {
+    for (const conn of this.conns.values()) {
+      if (conn.token !== token || conn.channelUp) continue
+      conn.channelUp = true
+      for (const cb of conn.onStatus) cb('connected')
+    }
+    this.emitPresenceSyncAll()
+  }
+
+  presentTokens(): ReadonlySet<string> {
+    return new Set([...this.conns.values()].filter((c) => c.channelUp).map((c) => c.token))
+  }
+
+  private emitPresenceSyncAll(): void {
+    const tokens = this.presentTokens()
+    for (const conn of this.conns.values()) for (const cb of conn.onPresenceSync) cb(tokens)
+  }
+
+  // Recusa gravação `n` vezes (ou sempre, com `'always'`) — o próximo `saveSnapshot`/`saveRoom`
+  // rejeita a promessa em vez de aplicar (FR-012/013, SC-003).
+  failWrites(n: number | 'always'): void {
+    this.writeFailures = n
+  }
+
+  failReadSnapshot(fail: boolean): void {
+    this.readSnapshotFails = fail
+  }
+
+  // Arma a PRÓXIMA gravação de snapshot para ficar retida (simula o pacote atrasado de rede);
+  // a gravação SEGUINTE a ela é aplicada primeiro, e só depois a retida — entregues fora de
+  // ordem (FR-011, SC-004). A guarda monotônica de `applySnapshot` decide quem sobrevive.
+  reorderWrites(): void {
+    this.reorderArmed = true
+  }
+
+  private consumeWriteFailure(): boolean {
+    if (this.writeFailures === 'always') return true
+    if (this.writeFailures > 0) {
+      this.writeFailures -= 1
+      return true
+    }
+    return false
+  }
+
+  // Guarda monotônica (041, D9) — espelha o trigger SQL: escrita com `seq` menor que o já
+  // aplicado é NO-OP silencioso. `saveRoom` (que não envia `seq`) não é afetado por esta guarda.
+  private applySnapshot(snap: PersistedSnapshot): void {
+    if (this.snapshot && snap.seq < this.snapshot.seq) return
+    this.snapshot = snap
+    this.storedRoom = snap.room
   }
 
   addSubmit(cb: SubmitCb): Unsubscribe {
@@ -115,21 +195,33 @@ export class LocalHub {
     for (const conn of this.conns.values()) for (const cb of conn.onRoom) cb(room)
   }
 
-  saveSnapshot(snap: PersistedSnapshot): void {
-    this.snapshot = snap
-    this.storedRoom = snap.room
+  async saveSnapshot(snap: PersistedSnapshot): Promise<void> {
+    if (this.consumeWriteFailure()) throw new Error('injected write failure (saveSnapshot)')
+    if (this.reorderArmed) {
+      this.reorderArmed = false
+      this.held = snap
+      return
+    }
+    this.applySnapshot(snap)
+    if (this.held) {
+      const late = this.held
+      this.held = null
+      this.applySnapshot(late) // chega DEPOIS da mais nova — a guarda monotônica descarta
+    }
   }
 
-  loadSnapshot(): PersistedSnapshot | null {
+  async loadSnapshot(): Promise<PersistedSnapshot | null> {
+    if (this.readSnapshotFails) throw new Error('injected read failure (loadSnapshot)')
     return this.snapshot
   }
 
-  saveRoom(room: Room): void {
+  async saveRoom(room: Room): Promise<void> {
+    if (this.consumeWriteFailure()) throw new Error('injected write failure (saveRoom)')
     this.storedRoom = room
     if (this.snapshot) this.snapshot = { ...this.snapshot, room }
   }
 
-  loadRoom(): Room | null {
+  async loadRoom(): Promise<Room | null> {
     return this.storedRoom
   }
 
@@ -201,12 +293,11 @@ export function localTransport(hub: LocalHub, token: string): Transport {
     },
 
     saveRoom(room: Room): Promise<void> {
-      hub.saveRoom(room)
-      return Promise.resolve()
+      return hub.saveRoom(room)
     },
 
     loadRoom(): Promise<Room | null> {
-      return Promise.resolve(hub.loadRoom())
+      return hub.loadRoom()
     },
 
     onRoom(cb): Unsubscribe {
@@ -221,13 +312,26 @@ export function localTransport(hub: LocalHub, token: string): Transport {
       return hub.addPresence(cb)
     },
 
+    onStatus(cb): Unsubscribe {
+      // NÃO faz replay (contrato §1.4) — só o valor corrente a partir de agora.
+      if (!conn) return () => {}
+      conn.onStatus.push(cb)
+      return detach(conn.onStatus, cb)
+    },
+
+    onPresenceSync(cb): Unsubscribe {
+      if (!conn) return () => {}
+      conn.onPresenceSync.push(cb)
+      cb(hub.presentTokens()) // conveniência local: estado inicial logo após assinar (contrato §2.2)
+      return detach(conn.onPresenceSync, cb)
+    },
+
     saveSnapshot(snap: PersistedSnapshot): Promise<void> {
-      hub.saveSnapshot(snap)
-      return Promise.resolve()
+      return hub.saveSnapshot(snap)
     },
 
     loadSnapshot(): Promise<PersistedSnapshot | null> {
-      return Promise.resolve(hub.loadSnapshot())
+      return hub.loadSnapshot()
     },
   }
 }

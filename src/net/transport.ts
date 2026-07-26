@@ -61,7 +61,12 @@ export interface JoinRequest {
   name: string
   color: string
   piece?: PieceId // peça visual escolhida no lobby (spec 038); única por sala
+  reentryCode?: string // NOVO (041, D-033) — presente = reanexação, não assento novo
 }
+
+// Status de conexão da PRÓPRIA sessão (041, contrato §1). Só dois valores: "conectado
+// agora" ou não — mapear os cinco status do Realtime para dois é trabalho do adapter.
+export type ConnStatus = 'connected' | 'reconnecting'
 
 export type Unsubscribe = () => void
 
@@ -97,6 +102,15 @@ export interface Transport {
 
   // presença (host observa (des)conexões)
   onPresence(cb: (change: PresenceChange) => void): Unsubscribe
+
+  // conexão da PRÓPRIA sessão (041, contrato §1) — reassinatura reanuncia 'connected',
+  // não só a primeira. Não faz replay do último valor; após `connect()` resolvido, assuma
+  // 'connected'.
+  onStatus(cb: (status: ConnStatus) => void): Unsubscribe
+
+  // conjunto COMPLETO de tokens presentes no canal (041, contrato §2) — não um delta. É a
+  // fonte de verdade para a autoridade que reassume reconciliar presença (FR-021).
+  onPresenceSync(cb: (tokens: ReadonlySet<string>) => void): Unsubscribe
 
   // snapshot (host escreve; qualquer um lê ao entrar/reconectar)
   saveSnapshot(snap: PersistedSnapshot): Promise<void>

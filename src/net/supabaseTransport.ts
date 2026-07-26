@@ -17,7 +17,7 @@
 // paridade PLENA de anti-spoof (FR-007) do transporte real exige amarrar identidade à conexão
 // (ex.: Edge Function validando um segredo de sessão). A LÓGICA do host já rejeita spoof
 // (provado headless, SC-005); resta o endurecimento da identidade de transporte.
-import type { AcceptedCommand, CommandEnvelope, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
+import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import type { JoinError, Room } from './room'
 import { normalizeLog } from '@/game/log'
 
@@ -25,6 +25,8 @@ import { normalizeLog } from '@/game/log'
 export interface SupabaseChannelLike {
   on(type: 'broadcast', filter: { event: string }, cb: (msg: { payload: unknown }) => void): SupabaseChannelLike
   on(type: 'presence', filter: { event: 'join' | 'leave' }, cb: (payload: { key: string; newPresences?: unknown[]; leftPresences?: unknown[] }) => void): SupabaseChannelLike
+  on(type: 'presence', filter: { event: 'sync' }, cb: () => void): SupabaseChannelLike
+  presenceState(): Record<string, unknown[]>
   send(msg: { type: 'broadcast'; event: string; payload: unknown }): Promise<unknown>
   track(state: Record<string, unknown>): Promise<unknown>
   subscribe(cb?: (status: string) => void): SupabaseChannelLike
@@ -62,8 +64,10 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
   const presenceCbs: ((change: PresenceChange) => void)[] = []
   const joinReqCbs: ((who: JoinRequest, fromToken: string) => void)[] = []
   const joinRejCbs: ((target: string, reason: JoinError) => void)[] = []
+  const statusCbs: ((status: ConnStatus) => void)[] = []
+  const presenceSyncCbs: ((tokens: ReadonlySet<string>) => void)[] = []
   const live = new Map<string, number>() // presenças vivas por token — base do takeover
-  let subscribed = false
+  let resolved = false // guarda SEPARADA de `track()` (041, D6) — resolve() roda uma vez; track(), a cada reassinatura
 
   channel
     .on('broadcast', { event: EVENT.submit }, ({ payload }) => {
@@ -106,6 +110,13 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
       live.delete(key)
       for (const cb of presenceCbs) cb({ token: key, connected: false, takeover: false })
     })
+    // Conjunto COMPLETO de presença (041, contrato §2) — fonte de verdade para a autoridade
+    // que reassume reconciliar `seats[].connected` (FR-021). Push, não pull: um `presenceState()`
+    // logo após `SUBSCRIBED` perderia a corrida do estado ainda chegando (D7 do plan).
+    .on('presence', { event: 'sync' }, () => {
+      const tokens = new Set(Object.keys(channel.presenceState()))
+      for (const cb of presenceSyncCbs) cb(tokens)
+    })
 
   const off = <T>(arr: T[], cb: T): Unsubscribe => () => {
     const i = arr.indexOf(cb)
@@ -115,21 +126,36 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
   return {
     token,
 
+    // O conserto do defeito 1 (041, D6): `resolve()` da promessa e `track()` de presença são
+    // DUAS garantias, não uma. `resolve()` roda uma vez; `track()` roda em TODA reassinatura —
+    // é o que faz uma queda de rede reanunciar presença ao voltar, em vez de ficar invisível.
     async connect(): Promise<void> {
       await new Promise<void>((resolve) => {
         channel.subscribe((status) => {
-          if (status === 'SUBSCRIBED' && !subscribed) {
-            subscribed = true
-            void channel.track({ token })
-            resolve()
+          if (status === 'SUBSCRIBED') {
+            void channel.track({ token }) // toda vez: reassinatura reanuncia presença (FR-001)
+            for (const cb of statusCbs) cb('connected')
+            if (!resolved) { resolved = true; resolve() }
+            return
           }
+          for (const cb of statusCbs) cb('reconnecting')
         })
       })
     },
 
     disconnect(): void {
       void channel.unsubscribe()
-      subscribed = false
+    },
+
+    onStatus(cb): Unsubscribe {
+      statusCbs.push(cb)
+      return off(statusCbs, cb)
+    },
+
+    onPresenceSync(cb): Unsubscribe {
+      presenceSyncCbs.push(cb)
+      cb(new Set(Object.keys(channel.presenceState()))) // estado inicial (contrato §2.2)
+      return off(presenceSyncCbs, cb)
     },
 
     submit(cmd: CommandEnvelope): void {
