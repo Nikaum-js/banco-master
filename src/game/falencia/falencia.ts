@@ -55,7 +55,7 @@ export function payDebt(state: GameState): GameState {
   } else {
     s.centerPot += amount // dívida ao banco (imposto) → pote do Free Parking
   }
-  logEvent(s, activePlayer(s).id, `pagou dívida $${amount}`) // 021
+  logEvent(s, { kind: 'debt-paid', who: activePlayer(s).id, amount }) // 021/040
   if (origin === 'loan-interest' && s.turn.state === 'casa-a-resolver') {
     // Dívida nascida no MOVIMENTO (juros do GO, §15.4), não da casa: quitar só limpa o slot —
     // a casa onde o jogador pousou segue pendente e resolve na sequência (GameDriver/resolvePending).
@@ -109,7 +109,7 @@ export function declareBankruptcy(state: GameState, ctx: TurnCtx): GameState {
   }
   debtor.cash = 0
   debtor.eliminated = true // token sai do tabuleiro (LiveTokens pula eliminados)
-  logEvent(s, debtor.id, 'faliu') // 021
+  logEvent(s, { kind: 'bankruptcy', who: debtor.id }) // 021/040
 
   // Empréstimos liquidados: o do devedor (herdado via §9.3) e os em que ele era CREDOR (R8).
   s.loans = s.loans.filter((l) => l.debtorId !== debtor.id && l.creditorId !== debtor.id)

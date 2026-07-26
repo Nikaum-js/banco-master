@@ -178,7 +178,7 @@ export function acceptTrade(state: GameState): GameState {
   if (!validateTrade(state, trade)) return state // obsoleta → no-op (pode recusar)
   const s = executeTrade(state, trade)
   s.tradeHistory = [...s.tradeHistory, trade].slice(-12) // 027 — registro (bounded)
-  logEvent(s, trade.fromId, `${trade.fromId} ↔ ${trade.toId}: troca aceita`) // 027
+  logEvent(s, { kind: 'trade', who: trade.fromId, toId: trade.toId }) // 027/040
   s.pendingTrade = null
   return s
 }

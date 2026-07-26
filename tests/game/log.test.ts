@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest'
-import { logEvent } from '@/game/log'
 import { createSeedState, defaultPorts } from '@/game/setup'
 import { rollDice } from '@/game/turn/turnMachine'
 import { resolveSquare } from '@/game/turn/resolution'
@@ -13,85 +12,72 @@ import { ctxWith } from './turn/_helpers'
 
 const ctx: TurnCtx = { rng: () => 0, ports: defaultPorts }
 
-describe('Log de eventos — helper (021)', () => {
-  it('logEvent acrescenta {who, what} ao fim do log', () => {
-    const g = createSeedState(['p1', 'p2'])
-    logEvent(g, 'p1', 'fez algo')
-    expect(g.log).toEqual([{ who: 'p1', what: 'fez algo' }])
-  })
-
-  it('SC-003: log é limitado a 50 — descarta os mais antigos', () => {
-    const g = createSeedState(['p1', 'p2'])
-    for (let i = 0; i < 60; i++) logEvent(g, 'p1', `evento ${i}`)
-    expect(g.log).toHaveLength(50)
-    expect(g.log[0].what).toBe('evento 10') // os 10 primeiros saíram
-    expect(g.log[49].what).toBe('evento 59') // o mais recente fica no fim
-  })
-})
-
-describe('Log de eventos — emissões do núcleo (021)', () => {
-  it('SC-001: rollDice loga "rolou a+b"', () => {
+// Forma do LogEntry ({who, what}, o helper logEvent, e o teto de 50) é testada em
+// tests/game/log/logEntry.test.ts (040). Aqui só as emissões dos reducers reais —
+// integração, não a forma do dado.
+describe('Log de eventos — emissões do núcleo (021/040)', () => {
+  it('SC-001: rollDice loga kind "roll"', () => {
     let g = createSeedState(['p1', 'p2'])
     g = rollDice(g, ctxWith([3, 2]))
-    expect(g.log[0]).toEqual({ who: 'p1', what: 'rolou 3+2' })
+    expect(g.log[0]).toEqual({ kind: 'roll', who: 'p1', white: [3, 2], isDouble: false, special: null, speed: null, attempt: false })
   })
 
-  it('SC-001: advance ao cruzar o GO loga "passou pelo GO (+$bônus)"', () => {
+  it('SC-001: advance ao cruzar o GO loga kind "go"', () => {
     let g = createSeedState(['p1', 'p2'])
     g.players[0].pos = 44 // 44 + 5 = 49 → cruza o GO (BOARD_SIZE 48), cai em Roma (livre)
     g = rollDice(g, ctxWith([3, 2])) // mockPorts.onPassGo = 200
-    expect(g.log.some((l) => l.who === 'p1' && l.what === 'passou pelo GO (+$200)')).toBe(true)
+    expect(g.log.some((l) => l.kind === 'go' && l.who === 'p1' && l.amount === 200 && !l.landed)).toBe(true)
   })
 
-  it('SC-001: buyProperty loga "comprou {nome} por ${preço}"', () => {
+  it('SC-001: buyProperty loga kind "buy"', () => {
     const g = createSeedState(['p1', 'p2'])
     g.players[0].pos = 1
     g.turn.state = 'casa-a-resolver'
     g.turn.pendingResolve = true
     g.resolution = { kind: 'purchase', pos: 1 }
     const r = buyProperty(g)
-    expect(r.log.at(-1)).toEqual({ who: 'p1', what: 'comprou Roma por $60' })
+    expect(r.log.at(-1)).toEqual({ kind: 'buy', who: 'p1', pos: 1, price: 60 })
   })
 
-  it('SC-001: aluguel pago loga "pagou ${valor} de aluguel a {dono}"', () => {
+  it('SC-001: aluguel pago loga kind "rent"', () => {
     const g = createSeedState(['p1', 'p2'])
     g.titles[1].ownerId = 'p2' // Roma base = 2
     economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports: defaultPorts, state: g })
-    expect(g.log.at(-1)).toEqual({ who: 'p1', what: 'pagou $2 de aluguel a p2' })
+    expect(g.log.at(-1)).toEqual({ kind: 'rent', who: 'p1', pos: 1, amount: 2, ownerId: 'p2' })
   })
 
-  it('SC-001: imposto pago loga "pagou ${valor} de imposto"', () => {
+  it('SC-001: imposto pago loga kind "tax"', () => {
     const g = createSeedState(['p1', 'p2'])
     resolveSquare({ playerId: 'p1', square: BOARD[4], roll: null, ports: defaultPorts, state: g }) // Imposto de Renda 200
-    expect(g.log.at(-1)).toEqual({ who: 'p1', what: 'pagou $200 de imposto' })
+    expect(g.log.at(-1)).toEqual({ kind: 'tax', who: 'p1', amount: 200 })
   })
 
-  it('SC-001: payDebt loga "pagou dívida ${valor}"', () => {
+  it('SC-001: payDebt loga kind "debt-paid"', () => {
     const g = createSeedState(['p1', 'p2'])
     g.turn.state = 'casa-a-resolver'
     g.turn.pendingResolve = true
     g.resolution = { kind: 'debt', amount: 50, creditorId: 'p2' }
     const r = payDebt(g)
-    expect(r.log.at(-1)).toEqual({ who: 'p1', what: 'pagou dívida $50' })
+    expect(r.log.at(-1)).toEqual({ kind: 'debt-paid', who: 'p1', amount: 50 })
   })
 
-  it('SC-001: declareBankruptcy loga "faliu"', () => {
+  it('SC-001: declareBankruptcy loga kind "bankruptcy"', () => {
     const g = createSeedState(['p1', 'p2', 'p3'])
     g.players[0].cash = 10
     g.turn.state = 'casa-a-resolver'
     g.turn.pendingResolve = true
     g.resolution = { kind: 'debt', amount: 500, creditorId: 'p2' }
     const r = declareBankruptcy(g, ctx)
-    expect(r.log.some((l) => l.who === 'p1' && l.what === 'faliu')).toBe(true)
+    expect(r.log.some((l) => l.kind === 'bankruptcy' && l.who === 'p1')).toBe(true)
   })
 
-  it('SC-002: saque loga só o deck (privacidade) — "sacou Acaso"/"sacou Tesouro"', () => {
+  it('SC-002: saque loga só o deck (privacidade) — kind "card-draw"', () => {
     const ga = createSeedState(['p1', 'p2'])
     cardResolve({ playerId: 'p1', square: BOARD[8], roll: null, ports: defaultPorts, state: ga }) // pos 8 = Acaso
-    expect(ga.log.at(-1)).toEqual({ who: 'p1', what: 'sacou Acaso' })
+    expect(ga.log.at(-1)).toEqual({ kind: 'card-draw', who: 'p1', deck: 'acaso' })
 
     const gt = createSeedState(['p1', 'p2'])
     cardResolve({ playerId: 'p1', square: BOARD[2], roll: null, ports: defaultPorts, state: gt }) // pos 2 = Tesouro
-    expect(gt.log.at(-1)).toEqual({ who: 'p1', what: 'sacou Tesouro' })
+    expect(gt.log.at(-1)).toEqual({ kind: 'card-draw', who: 'p1', deck: 'tesouro' })
   })
 })

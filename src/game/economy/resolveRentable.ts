@@ -33,6 +33,6 @@ export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
   if (payer) payer.cash -= amount
   const ownerP = state.players.find((p) => p.id === owner)
   if (ownerP) ownerP.cash += amount
-  logEvent(state, playerId, `pagou $${amount} de aluguel a ${owner}`) // 021
+  logEvent(state, { kind: 'rent', who: playerId, pos, amount, ownerId: owner }) // 021/040
   return { done: true }
 }

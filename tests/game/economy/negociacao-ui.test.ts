@@ -111,11 +111,11 @@ describe('proposeTrade / acceptTrade / rejectTrade (US1+US2)', () => {
     const acc = acceptTrade(proposeTrade(setup(), baseTrade()))
     expect(acc.tradeHistory).toHaveLength(1)
     expect(acc.tradeHistory[0]).toMatchObject({ fromId: 'p1', toId: 'p2' })
-    expect(acc.log.some((e) => e.what.includes('p1 ↔ p2'))).toBe(true)
+    expect(acc.log.some((e) => e.kind === 'trade' && e.who === 'p1' && e.toId === 'p2')).toBe(true)
 
     const rej = rejectTrade(proposeTrade(setup(), baseTrade()))
     expect(rej.tradeHistory).toHaveLength(0)
-    expect(rej.log.some((e) => e.what.includes('↔'))).toBe(false)
+    expect(rej.log.some((e) => e.kind === 'trade')).toBe(false)
   })
 
   it('SC-005: histórico é bounded em 12', () => {

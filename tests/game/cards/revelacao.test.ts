@@ -40,7 +40,7 @@ describe('cardRevealResolve — peek + pausa (US1)', () => {
     expect(out).toEqual({ done: true })
     expect(g.resolution).toBeNull() // não abre modal
     expect(g.players[0].cash).toBe(cashBefore + 200) // efeito aplicado já
-    expect(g.log.at(-1)?.what).toContain('recebeu') // só vai pro log
+    expect(g.log.at(-1)).toEqual({ kind: 'card-immediate', who: 'p1', deck: 'tesouro', name: 'Erro Banco', delta: 200 }) // só vai pro log
   })
 })
 

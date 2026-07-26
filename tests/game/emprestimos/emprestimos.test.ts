@@ -141,7 +141,7 @@ describe('Empréstimos — juros no GO e quitação (US2)', () => {
     chargeLoanInterest(g, 'p1') // 20% de 500 = 100
     expect(g.players[0].cash).toBe(200)
     expect(g.players[1].cash).toBe(1100)
-    expect(g.log.some((e) => e.who === 'p1' && /juros/.test(e.what))).toBe(true) // feedback do débito (021)
+    expect(g.log.some((e) => e.kind === 'loan-interest' && e.who === 'p1' && e.amount === 100 && e.creditorId === 'p2')).toBe(true) // feedback do débito (021/040)
   })
 
   it('SC-002: juros sem caixa pós-bônus → abre dívida ao credor', () => {

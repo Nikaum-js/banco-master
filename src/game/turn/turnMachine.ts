@@ -54,7 +54,7 @@ export function advance(state: GameState, player: Player, steps: number, ports: 
     const bonus = ports.onPassGo(state, player.id) * (landedOnGo ? 2 : 1)
     player.cash += bonus
     player.completouPrimeiraVolta = true // Speed Die a partir da próxima rolagem (clarify Q2)
-    logEvent(state, player.id, landedOnGo ? `parou no GO (+$${bonus})` : `passou pelo GO (+$${bonus})`) // 021
+    logEvent(state, { kind: 'go', who: player.id, amount: bonus, landed: landedOnGo }) // 021/040
     ports.afterPassGo?.(state, player.id) // juros de empréstimo cobrados após o bônus (010)
   }
 }
@@ -162,7 +162,7 @@ export function rollDice(state: GameState, ctx: TurnCtx): GameState {
   // suspenso pós-playtest). Testes omitem ctx.speedDie → mantém o comportamento padrão.
   const roll = rollDiceFn(ctx.rng, { speedDie: (ctx.speedDie ?? true) && player.completouPrimeiraVolta })
   turn.lastRoll = roll
-  logEvent(s, player.id, `rolou ${roll.white[0]}+${roll.white[1]}`) // 021
+  logEvent(s, { kind: 'roll', who: player.id, white: roll.white, isDouble: roll.isDouble, special: roll.special, speed: typeof roll.speed === 'number' ? roll.speed : null, attempt: false }) // 021/040
 
   // 3ª dupla consecutiva → prisão; o 3º movimento NÃO é executado (FR-015).
   if (countsAsDouble(roll)) {
@@ -317,6 +317,7 @@ export function jailDecision(state: GameState, decision: 'pay' | 'card' | 'try',
     ctx.ports.onPayToCenter(s, JAIL_FINE) // $50 → pote
     player.jail = { inJail: false, attempts: 0 }
     turn.state = 'aguardando-rolagem'
+    logEvent(s, { kind: 'jail-fine', who: player.id, amount: JAIL_FINE })
     return s
   }
   if (decision === 'card') {
@@ -328,7 +329,7 @@ export function jailDecision(state: GameState, decision: 'pay' | 'card' | 'try',
   // try: rola 2 brancos — Speed Die NÃO é usado na tentativa de sair (SRS §13.2).
   const roll = rollDiceFn(ctx.rng, { speedDie: false })
   turn.lastRoll = roll
-  logEvent(s, player.id, `rolou ${roll.white[0]}+${roll.white[1]}`) // 021 — tentativa também soa/registra
+  logEvent(s, { kind: 'roll', who: player.id, white: roll.white, isDouble: roll.isDouble, special: roll.special, speed: typeof roll.speed === 'number' ? roll.speed : null, attempt: true }) // 021/040 — tentativa também soa/registra
   if (roll.isDouble) {
     player.jail = { inJail: false, attempts: 0 }
     advance(s, player,roll.move, ctx.ports)
@@ -345,6 +346,7 @@ export function jailDecision(state: GameState, decision: 'pay' | 'card' | 'try',
     player.cash -= paid
     ctx.ports.onPayToCenter(s, paid) // 3ª tentativa: paga obrigatoriamente e move (FR-018)
     player.jail = { inJail: false, attempts: 0 }
+    logEvent(s, { kind: 'jail-fine', who: player.id, amount: paid })
     advance(s, player,roll.move, ctx.ports)
     land(turn, player, null)
     return finishIfEnded(s, ctx)

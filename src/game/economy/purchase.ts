@@ -41,7 +41,7 @@ export function buyProperty(state: GameState): GameState {
   player.cash -= price
   player.nextPurchaseDiscount = 0 // consome o desconto
   s.titles[pos].ownerId = player.id // propriedade livre → sem construção; preserva o shape do título
-  logEvent(s, player.id, `comprou ${BOARD[pos].name} por $${price}`) // 021
+  logEvent(s, { kind: 'buy', who: player.id, pos, price }) // 021/040
   completeResolution(s)
   return s
 }

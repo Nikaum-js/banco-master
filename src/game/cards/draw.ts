@@ -31,12 +31,11 @@ export function cardResolve(rctx: ResolveCtx): ResolutionOutcome | null {
   const card = cardById(id)
   // 021/022.1 — carta de mão: privada, só o deck (§10.3). Carta imediata: efeito
   // público, anuncia o nome (§12.2 "anúncio público").
-  const deckLabel = deckId === 'acaso' ? 'Acaso' : 'Tesouro'
   const name = cardNameFromId(id)
 
   // Carta de mão: privada (§10.3) — loga só o deck, sem revelar a carta.
   if (card.mode === 'mao') {
-    logEvent(state, playerId, `sacou ${deckLabel}`)
+    logEvent(state, { kind: 'card-draw', who: playerId, deck: deckId }) // FR-015: sem carta nem raridade
     const player = state.players.find((p) => p.id === playerId)!
     player.hand.push(id) // sai do deck, entra na mão
     if (player.hand.length > 3) {
@@ -48,7 +47,7 @@ export function cardResolve(rctx: ResolveCtx): ResolutionOutcome | null {
 
   // imediato (público, §12.2). Atalho ainda vai escolher a direção:
   if (card.effect === 'atalho') {
-    logEvent(state, playerId, `${deckLabel}: ${name}`)
+    logEvent(state, { kind: 'card-immediate', who: playerId, deck: deckId, name, delta: 0 })
     state.resolution = { kind: 'card-shortcut', deckId, cardId: id } // escolha ±3
     return { done: false }
   }
@@ -57,7 +56,7 @@ export function cardResolve(rctx: ResolveCtx): ResolutionOutcome | null {
   const cashBefore = player.cash
   applyEffect(card.effect, state, playerId, ports)
   state.decks[deckId].push(id) // volta ao fundo
-  logEvent(state, playerId, describeImmediate(card.effect, player.cash - cashBefore))
+  logEvent(state, { kind: 'card-immediate', who: playerId, deck: deckId, name, delta: player.cash - cashBefore })
   // Cartas de MOVIMENTO (Avance/Volte 3) resolvem a casa de destino como um pouso
   // normal (comprar/pagar aluguel/etc.). gotojail no destino → 'encerrado' (resolvePending trata).
   if (card.effect === 'avance3' || card.effect === 'volte3') {
@@ -65,38 +64,6 @@ export function cardResolve(rctx: ResolveCtx): ResolutionOutcome | null {
     return { done: false }
   }
   return { done: true }
-}
-
-// Descrição do que um evento imediato CAUSOU (vai pro log). `dCash` = variação de
-// caixa do jogador (negativo = pagou; positivo = recebeu). Sem "nome do evento" seco.
-function describeImmediate(effect: string, dCash: number): string {
-  switch (effect) {
-    case 'voltaGo': return `foi para o GO (+$${dCash})`
-    case 'vaPrisao': return 'foi para a Prisão'
-    case 'avance3': return dCash > 0 ? `avançou 3 casas e passou no GO (+$${dCash})` : 'avançou 3 casas'
-    case 'volte3': return 'voltou 3 casas'
-    case 'apagao': return 'Apagão: hangares ficam inativos por 1 volta'
-    case 'greveUtilidades': return 'Greve: utilidades sem aluguel por 1 volta'
-    case 'investidorAnjo': return 'Investidor Anjo: 20% de desconto na próxima compra'
-    case 'passagemOnibus': return 'ganhou 1 Bus Ticket'
-    case 'refinanciamento': return dCash < 0
-      ? `desipotecou uma propriedade pagando só 5% de juros ($${-dCash})`
-      : 'Refinanciamento desipotecaria uma propriedade a juros de só 5%, mas você não tem nada hipotecado'
-    case 'consertoImoveis': return dCash < 0
-      ? `pagou $${-dCash} de conserto dos imóveis ($25/casa, $100/hotel)`
-      : 'Conserto de Imóveis cobraria $25/casa e $100/hotel, mas você não tem construções'
-    case 'criseImobiliaria': return dCash < 0
-      ? `pagou $${-dCash} na crise (5% do patrimônio)`
-      : 'Crise imobiliária cobraria 5% do seu patrimônio, mas você está sem propriedades e caixa a perder'
-    case 'aniversario': return dCash > 0
-      ? `recebeu $${dCash} de aniversário (cada adversário te paga $10)`
-      : 'Aniversário: cada adversário te pagaria $10, mas não há outro jogador para cobrar'
-    case 'honorarios': return `pagou $${-dCash} de honorários`
-    default: // erroBanco, boomEconomico e quaisquer outros baseados em caixa
-      if (dCash < 0) return `pagou $${-dCash}`
-      if (dCash > 0) return `recebeu $${dCash}`
-      return 'nenhum efeito'
-  }
 }
 
 // 025 — Revelação: substitui cardResolve no ctx.resolve. SÓ carta de MÃO abre a tela
