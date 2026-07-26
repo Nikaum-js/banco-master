@@ -1,6 +1,6 @@
 # Banco Master — Software Requirements Specification (SRS)
 
-**Versão:** 1.7
+**Versão:** 1.8
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -718,6 +718,8 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 - **Reentrada de outro dispositivo** (v1.7, [D-033](adr/D-033-codigo-de-reentrada-por-assento.md)): cada assento tem um **código de reentrada** curto, visível para o dono ao lado do link da sala. Quem apresentar **link + código** reanexa ao assento de qualquer aparelho ou navegador, mesmo tendo perdido o token de sessão do dispositivo original (celular sem bateria, dados do navegador limpos, aba anônima encerrada). O código não expira e não é revogável; o token anterior deixa de valer para aquele assento. Sem isso, um assento irrecuperável travaria a mesa indefinidamente — não há timeout de desconexão (§11.3) e ninguém, nem o anfitrião, pode remover jogador depois do início.
 - **Durabilidade antes do avanço** (v1.7, [D-034](adr/D-034-persistencia-indisponivel-pausa-a-partida.md)): nenhum comando aceito avança a partida sem estar gravado. Se a gravação falhar de forma persistente, a partida **pausa** (§11.3) até a persistência voltar, em vez de seguir sobre um estado que um reload faria regredir.
 
+> 📌 **Falha de interface não é perda de partida** (v1.8, [D-035](adr/D-035-falha-de-interface-nao-derruba-a-partida.md)): um erro inesperado na interface de um jogador **não** encerra a partida dele nem a dos outros. A tela quebrada é substituída por uma tela que diz o que aconteceu, o que está preservado e como voltar — pelo mesmo link, ou pelo código de reentrada do assento (§11.4). Enquanto a sessão daquele jogador continuar de pé, a mesa não sente nada; se ela cair junto, a ausência é comunicada como **desconexão** (§11.3), sem causa de pausa nova. Em partida local (sem sala), não há estado durável a recuperar, e a tela diz isso em vez de prometer recuperação.
+
 ---
 
 ## 12. Interface e Experiência do Usuário
@@ -1000,4 +1002,4 @@ sendo a fonte de verdade da **regra**, o `CONTEXT.md` é a fonte dos **nomes**.
 
 ---
 
-**Banco Master — SRS v1.7 | Julho 2026 | Documento de fonte de verdade absoluta**
+**Banco Master — SRS v1.8 | Julho 2026 | Documento de fonte de verdade absoluta**
