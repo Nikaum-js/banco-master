@@ -29,6 +29,10 @@ import { useTokenAnim } from '@/game/ui/tokenAnim'
 import { ShopIcon, GavelIcon, DiceIcon, CoinIcon, HouseIcon } from '@/game/ui/icons'
 import { Button, SectionHeader, Chip, EmptyState } from '@/game/ui/primitives'
 import type { TempEffect, Trade } from '@/game/economy/types'
+import { money } from '@/lib/money'
+import { describeLogEntry } from '@/game/ui/log/describeLog'
+import { logIcon } from '@/game/ui/log/logIcon'
+import { identityOf } from '@/net/identity'
 
 // Este módulo exporta SÓ componentes — cada consumidor importa constante e seletor da
 // própria fonte (`./groupColors`, `./topology`, `./glyphs/squares`, `@/game/ui/panels/playersView`).
@@ -713,7 +717,7 @@ function TradeLeg({ label, props, cash, tickets = 0 }: { label: string; props: n
         {cash > 0 && (
           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sharp)] bg-coffee-800 border border-coffee-500/70 border-l-2 border-l-gold">
             <CoinIcon size={12} className="text-gold" />
-            <span className="currency text-gold-glow text-xs leading-none tabular-nums">R$ {cash.toLocaleString('pt-BR')}</span>
+            <span className="currency text-gold-glow text-xs leading-none tabular-nums">{money(cash)}</span>
           </span>
         )}
         {tickets > 0 && (
@@ -1127,11 +1131,11 @@ function LoanPanel() {
       </div>
       <div className="flex items-center justify-between text-sm">
         <span className="text-cream-muted">Principal</span>
-        <span className="currency text-cream tabular-nums">R$ {loan.principal.toLocaleString('pt-BR')}</span>
+        <span className="currency text-cream tabular-nums">{money(loan.principal)}</span>
       </div>
       <div className="flex items-center justify-between text-sm mt-1">
         <span className="text-cream-muted">Juros ao passar pelo GO</span>
-        <span className="currency text-logo tabular-nums">− R$ {interest.toLocaleString('pt-BR')}</span>
+        <span className="currency text-logo tabular-nums">− {money(interest)}</span>
       </div>
       <Button
         disabled={!canPay}
@@ -1139,7 +1143,7 @@ function LoanPanel() {
         title={canPay ? 'Pagar o principal e encerrar o empréstimo' : 'Caixa insuficiente para o principal'}
         className="w-full mt-3"
       >
-        {canPay ? `Quitar · R$ ${loan.principal.toLocaleString('pt-BR')}` : `Falta R$ ${(loan.principal - active.cash).toLocaleString('pt-BR')} para quitar`}
+        {canPay ? `Quitar · ${money(loan.principal)}` : `Falta ${money(loan.principal - active.cash)} para quitar`}
       </Button>
     </div>
   )
@@ -1494,48 +1498,41 @@ function SpeedDie({ face, rollKey }: { face: SpeedFace; rollKey: number }) {
 // Layout simétrico: dados centralizados pra arremesso, decks nos cantos
 // inferiores, padrão de estrelas no fundo.
 // ---------------------------------------------------------------------
-// Pinta o texto do histórico: ganho = verde, perda = vermelho, neutro (compra/etc.) = dourado.
-const LOG_GAIN = /recebeu|ganhou|coletou|\+\$/i
-const LOG_LOSS = /\bpagou\b|perdeu/i
-function LogWhat({ what }: { what: string }) {
-  const color = LOG_GAIN.test(what) ? 'var(--color-group-green)' : LOG_LOSS.test(what) ? 'var(--color-signal-glow)' : 'var(--color-brass-glow)'
+// Renderiza a LogSentence (fragmentos tipados de describeLogEntry, 040) — cada tipo de
+// fragmento tem seu próprio estilo, em vez de re-parsear uma frase pronta com regex.
+function LogSentenceView({ sentence }: { sentence: ReturnType<typeof describeLogEntry> }) {
   return (
     <>
-      {what.split(/(\+?\$\s?\d[\d.]*)/g).map((p, i) =>
-        /\$/.test(p)
-          ? <span key={i} className="currency font-bold" style={{ color }}>{p}</span>
-          : <span key={i}>{p}</span>,
-      )}
+      {sentence.map((f, i) => {
+        switch (f.t) {
+          case 'money':
+            return <span key={i} className="currency font-bold" style={{ color: 'var(--color-brass-glow)' }}>{money(f.amount)}</span>
+          case 'player':
+            return <span key={i} className="font-semibold" style={{ color: f.identity.color }}>{f.identity.name}</span>
+          case 'place':
+            return <span key={i}>{BOARD[f.pos]?.name ?? `#${f.pos}`}</span>
+          case 'text':
+            return <span key={i}>{f.text}</span>
+          default:
+            return null
+        }
+      })}
     </>
   )
-}
-
-// Glifo do tipo de evento — classificado pelo texto do lançamento. Dá
-// leitura de relance (o que aconteceu) sem depender só da cor do dinheiro.
-function logEventIcon(what: string): ReactNode {
-  if (/rolou|dupla/i.test(what)) return <DiceIcon size={11} />
-  if (/leil/i.test(what)) return <GavelIcon size={11} />
-  if (/comprou/i.test(what)) return <ShopIcon size={11} />
-  if (/constru|hangar|hotel|arranha|vendeu/i.test(what)) return <HouseIcon size={11} />
-  if (/carta|acaso|tesouro/i.test(what)) return <CardGlyph size={11} />
-  if (/pagou|recebeu|coletou|juros|imposto|taxa|pote|hipotec|fian/i.test(what)) return <CoinIcon size={11} />
-  return null
 }
 
 // Diário de bordo ao vivo no CENTRO do tabuleiro — linha do tempo com
 // trilho, avatar do autor (PlayerFace piscando, sem bob), glifo do tipo de
 // evento e o lançamento mais RECENTE destacado na cor de quem jogou.
 // Seletor estável (`s.game.log`) + reverse no corpo — recência ao topo (021).
+// A frase e a cor vêm da identidade da SALA (040/FR-019) — nunca de `PLAYER_COLORS[i]`
+// nem do id cru: é o que mata `p1` desta tela em definitivo (SC-001).
 function CenterLog() {
   const log = useGameStore((s) => s.game.log)
-  const players = useGameStore((s) => s.game.players)
+  const room = useRoomStore((s) => s.room)
   const reduced = useReducedMotion()
   const history = [...log].reverse()
-  const colorOf = (who: string): string => {
-    if (who === 'Banco') return 'var(--color-signal)'
-    const i = players.findIndex((p) => p.id === who)
-    return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : 'var(--color-signal)'
-  }
+  const colorOf = (who: string): string => (who === 'bank' ? 'var(--color-signal)' : identityOf(room, who).color)
   return (
     <div className="flex-1 min-h-0 w-full max-w-[88%] flex flex-col rounded-[var(--radius-card)] border border-coffee-500/60 bg-coffee-900/55 backdrop-blur-[1px] overflow-hidden">
       {/* Cabeçalho: título + contador de lançamentos (primitivo padrão) */}
@@ -1580,7 +1577,7 @@ function CenterLog() {
               >
                 {/* avatar do autor sobre o trilho — Banco tem selo próprio */}
                 <span className="relative z-10 shrink-0 mt-px" style={{ marginLeft: 1 }}>
-                  {l.who === 'Banco' ? (
+                  {l.who === 'bank' ? (
                     <span
                       className="grid place-items-center rounded-full border"
                       style={{
@@ -1596,13 +1593,12 @@ function CenterLog() {
                     <PlayerFace color={c} size={20} className="!animate-none" />
                   )}
                 </span>
-                <span className="flex-1 min-w-0 leading-snug" style={{ fontSize: latest ? '13.5px' : '13px' }}>
-                  <span className="display mr-1.5" style={{ color: c }}>{l.who}</span>
-                  <span className="text-cream-muted"><LogWhat what={l.what} /></span>
+                <span className="flex-1 min-w-0 leading-snug text-cream-muted" style={{ fontSize: latest ? '13.5px' : '13px' }}>
+                  <LogSentenceView sentence={describeLogEntry(l, room)} />
                 </span>
                 {/* glifo do tipo de evento — dourado no lançamento fresco */}
                 <span className={cn('shrink-0 mt-0.5', latest ? 'text-gold' : 'text-cream-muted/50')}>
-                  {logEventIcon(l.what)}
+                  {logIcon(l.kind)}
                 </span>
               </motion.li>
             )

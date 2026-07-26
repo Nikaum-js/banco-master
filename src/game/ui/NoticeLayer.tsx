@@ -7,6 +7,7 @@ import { useGameStore } from '@/game/store'
 import { BOARD } from '@/lib/boardData'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
+import { money } from '@/lib/money'
 
 const propName = (pos: number) => BOARD[pos]?.name ?? `#${pos}`
 
@@ -103,7 +104,7 @@ export function NoticeLayer() {
                 filter: 'drop-shadow(0 3px 12px color-mix(in srgb, var(--color-brass) 60%, transparent))',
               }}
             >
-              R$ {notice.amount.toLocaleString('pt-BR')}
+              {money(notice.amount)}
             </motion.p>
             <p className="label text-cream-muted mt-6">clique para continuar</p>
           </motion.div>

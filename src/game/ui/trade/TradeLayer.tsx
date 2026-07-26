@@ -23,8 +23,8 @@ import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
 import { CoinIcon } from '@/game/ui/icons'
 import { Button, EmptyState } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
+import { money } from '@/lib/money'
 
-const money = (v: number) => `R$ ${v.toLocaleString('pt-BR')}`
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n))
 const colorOf = (players: { id: string }[], id: string) => {
   const i = players.findIndex((p) => p.id === id)

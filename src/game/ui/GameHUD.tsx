@@ -26,6 +26,7 @@ import { activeHudView } from '@/game/ui/panels/activeHudView'
 import { Confetti } from '@/game/ui/NoticeLayer'
 import { Button, Chip } from '@/game/ui/primitives'
 import type { LoanRequest } from '@/game/economy/types'
+import { money as fmt } from '@/lib/money'
 
 const GOLD_TEXT: React.CSSProperties = {
   backgroundImage: 'var(--gradient-brass-shine)',
@@ -45,7 +46,6 @@ const SIGNAL_TEXT: React.CSSProperties = {
   filter: 'drop-shadow(0 3px 14px color-mix(in srgb, var(--color-signal) 55%, transparent))',
 }
 
-const fmt = (n: number) => `R$ ${n.toLocaleString('pt-BR')}`
 
 // Cor do jogador por id (mesma paleta de assento do tabuleiro/tokens). Mantém o
 // credor visualmente ligado à sua carinha no board.

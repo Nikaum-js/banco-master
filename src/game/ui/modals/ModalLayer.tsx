@@ -23,6 +23,7 @@ import { buildCost } from '@/game/economy/construction'
 import { GavelIcon, CoinIcon, HouseIcon, HotelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
+import { money } from '@/lib/money'
 
 // Botão de ação do modal — casca fina sobre o primitivo Button (flex-1).
 function ActionBtn({
@@ -636,7 +637,7 @@ function AuctionCard({
                 filter: 'drop-shadow(0 2px 10px color-mix(in srgb, var(--color-brass) 45%, transparent))',
               }}
             >
-              R$ {view.currentBid.toLocaleString('pt-BR')}
+              {money(view.currentBid)}
             </motion.p>
             <div className="flex items-center gap-1.5 mt-2 text-xs text-cream-muted">
               <span>Maior:</span>

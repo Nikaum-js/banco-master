@@ -19,10 +19,10 @@ import { CoinIcon, HouseIcon, HotelIcon, GavelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 import { THEME } from '@/game/theme'
+import { money } from '@/lib/money'
 
 const INCREMENTS = [10, 50, 100] as const
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
-const money = (v: number) => `R$ ${v.toLocaleString('pt-BR')}`
 
 // Avatar da propriedade (igual ao leilão comum): flag circular do país; aeroporto/utilidade = ícone.
 function LandDeedIcon({ sq, size = 40 }: { sq: Square; size?: number }) {
