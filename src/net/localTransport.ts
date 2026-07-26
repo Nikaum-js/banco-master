@@ -3,7 +3,7 @@
 // na mesma pilha, tornando os testes headless determinísticos. É o transporte da suíte
 // `tests/net/` e prova SC-001/003/004/005 sem infra. O `supabaseTransport` implementa a mesma
 // porta sobre Realtime/Postgres.
-import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
+import type { AcceptedCommand, CommandEnvelope, CommandFailure, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import type { JoinError, Room } from './room'
 
 type SubmitCb = (cmd: CommandEnvelope, fromToken: string) => void
@@ -12,6 +12,7 @@ type RoomCb = (room: Room) => void
 type PresenceCb = (change: PresenceChange) => void
 type JoinReqCb = (who: JoinRequest, fromToken: string) => void
 type JoinRejCb = (token: string, reason: JoinError) => void
+type CommandRejCb = (toToken: string, info: CommandFailure) => void
 type StatusCb = (status: ConnStatus) => void
 type PresenceSyncCb = (tokens: ReadonlySet<string>) => void
 
@@ -25,6 +26,7 @@ interface Connection {
   onBroadcast: BroadcastCb[]
   onRoom: RoomCb[]
   onJoinRejected: JoinRejCb[]
+  onCommandRejected: CommandRejCb[]
   onStatus: StatusCb[]
   onPresenceSync: PresenceSyncCb[]
   channelUp: boolean // falta injetável (041, D14): canal caído sem contar como takeover
@@ -69,7 +71,7 @@ export class LocalHub {
     const takeover = prior !== undefined
     if (prior) this.conns.delete(prior.id)
     const conn: Connection = {
-      id: this.nextId++, token, onBroadcast: [], onRoom: [], onJoinRejected: [],
+      id: this.nextId++, token, onBroadcast: [], onRoom: [], onJoinRejected: [], onCommandRejected: [],
       onStatus: preAttached?.onStatus ?? [], onPresenceSync: preAttached?.onPresenceSync ?? [], channelUp: true,
     }
     this.conns.set(conn.id, conn)
@@ -179,6 +181,12 @@ export class LocalHub {
   // sensível). Cada conexão filtra o que é seu.
   rejectJoin(token: string, reason: JoinError): void {
     for (const conn of this.conns.values()) for (const cb of conn.onJoinRejected) cb(token, reason)
+  }
+
+  // Recusa por falha (042) — mesmo desenho de `rejectJoin`: trafega a todos, cada conexão
+  // filtra o que é seu pelo token-alvo.
+  rejectCommand(toToken: string, info: CommandFailure): void {
+    for (const conn of this.conns.values()) for (const cb of conn.onCommandRejected) cb(toToken, info)
   }
 
   broadcast(cmd: AcceptedCommand): void {
@@ -294,6 +302,16 @@ export function localTransport(hub: LocalHub, token: string): Transport {
       if (!conn) return () => {}
       conn.onJoinRejected.push(cb)
       return detach(conn.onJoinRejected, cb)
+    },
+
+    rejectCommand(toToken, info): void {
+      hub.rejectCommand(toToken, info)
+    },
+
+    onCommandRejected(cb): Unsubscribe {
+      if (!conn) return () => {}
+      conn.onCommandRejected.push(cb)
+      return detach(conn.onCommandRejected, cb)
     },
 
     publishRoom(room: Room): void {

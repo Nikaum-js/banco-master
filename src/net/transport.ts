@@ -55,6 +55,13 @@ export interface PresenceChange {
   takeover: boolean
 }
 
+// Recusa por FALHA no caminho de autoridade (042, FR-020/022) — nunca por regra. Como
+// `rejectJoin`, trafega no canal compartilhado (nada sensível nela, só o `occurrenceId`);
+// quem filtra pelo próprio token é o assinante (`client.ts`), não a porta.
+export interface CommandFailure {
+  occurrenceId: string
+}
+
 // Pedido de assento no lobby (FR-002). NÃO carrega token: o host usa o token da CONEXÃO
 // (`fromToken`) como identidade do assento — quem pede não escolhe quem é.
 export interface JoinRequest {
@@ -79,6 +86,10 @@ export interface Transport {
   // guest/host → host
   submit(cmd: CommandEnvelope): void
   onSubmit(cb: (cmd: CommandEnvelope, fromToken: string) => void): Unsubscribe
+
+  // host → remetente: recusa por FALHA ao aplicar um comando (042, contracts/transport-delta.md)
+  rejectCommand(toToken: string, info: CommandFailure): void
+  onCommandRejected(cb: (toToken: string, info: CommandFailure) => void): Unsubscribe
 
   // host → todos
   broadcast(cmd: AcceptedCommand): void

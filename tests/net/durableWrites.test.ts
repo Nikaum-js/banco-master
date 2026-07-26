@@ -25,6 +25,8 @@ function stubTransport() {
     onJoinRequest: () => () => {},
     rejectJoin: () => {},
     onJoinRejected: () => () => {},
+    rejectCommand: () => {},
+    onCommandRejected: () => () => {},
     publishRoom: () => {},
     onRoom: () => () => {},
     saveRoom,

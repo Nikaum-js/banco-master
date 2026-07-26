@@ -24,6 +24,7 @@ import {
   type Room,
 } from './room'
 import type { AcceptedCommand, CommandEnvelope, JoinRequest, PresenceChange, Transport, Unsubscribe } from './transport'
+import { registerFailure } from '@/app/failureRegistry'
 
 export interface HostOptions {
   rng?: RNG // padrão Math.random; injetável nos testes (seed)
@@ -70,11 +71,21 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
 
   // Aplica um comando (de jogador OU de sistema) pelo caminho de autoridade: grava o
   // não-determinismo, checa no-op (FR-009), incrementa seq, persiste e difunde. Retorna se
-  // foi aceito.
-  function accept(action: GameAction): boolean {
+  // foi aceito. `fromToken` (042, FR-020/022) só existe pra comando DE JOGADOR — comando de
+  // sistema (tick, pausa) não tem um remetente único a quem recusar, só registra a falha.
+  function accept(action: GameAction, fromToken?: string): boolean {
     if (!game) return false
     const { ctx, drain } = recordingCtx(baseCtx)
-    const next = applyCommand(game, action, ctx)
+    let next: GameState
+    try {
+      next = applyCommand(game, action, ctx)
+    } catch (error) {
+      // 042, D5 do plan: `game`/`seq` só são reatribuídos DEPOIS daqui — uma exceção nunca
+      // avança o estado pela metade (FR-021 por construção, não por asserção extra).
+      const occurrenceId = registerFailure({ where: 'host.accept', phase: room.status, seq, error })
+      if (fromToken) transport.rejectCommand(fromToken, { occurrenceId })
+      return false
+    }
     if (next === game) return false // no-op / inválido → descarta (FR-009)
     game = next
     seq += 1
@@ -92,7 +103,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     if (game.paused) return // durante a pausa, comando de jogo é rejeitado (FR-017, US3-2)
     const actor = actorOf(game, env.action)
     if (actor === null || actor !== seat.playerId) return // remetente não é o ator do comando (FR-007)
-    accept(env.action)
+    accept(env.action, fromToken)
   }
 
   // Pedido de assento no lobby (FR-002/005). A identidade do assento é o token da CONEXÃO —

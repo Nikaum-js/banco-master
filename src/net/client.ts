@@ -37,6 +37,10 @@ export interface Client {
   paused(): boolean
   seq(): number
   connection(): ConnectionState
+  /** Último comando MEU recusado por FALHA na autoridade (042, FR-020/022) — distinto de
+   * recusa por regra, que continua silenciosa. `null` quando não há nenhuma pendente de
+   * mostrar; limpo no próximo `send()` ou reconexão. */
+  lastCommandFailure(): { occurrenceId: string } | null
   subscribe(cb: () => void): Unsubscribe // notifica a cada mudança de estado (liga a UI/store)
 }
 
@@ -60,6 +64,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
   const subs: Unsubscribe[] = []
   let connection: ConnectionState = 'connected'
   let resyncing = false // no máximo UMA ressincronização em voo por vez (D11 do plan)
+  let commandFailure: { occurrenceId: string } | null = null
 
   function notify(): void {
     for (const cb of listeners) cb()
@@ -148,6 +153,11 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
         joinError = reason
         notify()
       }))
+      subs.push(transport.onCommandRejected((toToken, info) => {
+        if (toToken !== transport.token) return // recusa dirigida a outro remetente
+        commandFailure = info
+        notify()
+      }))
       // Conexão da PRÓPRIA sessão (041, D5/D11): queda vira `'reconnecting'` na hora;
       // restabelecimento — inclusive numa REASSINATURA — ressincroniza para recuperar as
       // difusões perdidas durante a queda (FR-003), e só então volta a `'connected'`.
@@ -191,6 +201,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
 
     send(action: PlayerAction): void {
       if (!playerId) return
+      commandFailure = null // nova tentativa — a recusa anterior não é mais a última palavra
       transport.submit({ senderId: playerId, action }) // pessimista: não aplica local; espera a difusão
     },
 
@@ -201,6 +212,7 @@ export function createClient(transport: Transport, opts: ClientOptions = {}): Cl
     paused: () => Boolean(game?.paused),
     seq: () => seq,
     connection: () => connection,
+    lastCommandFailure: () => commandFailure,
 
     subscribe(cb): Unsubscribe {
       listeners.add(cb)

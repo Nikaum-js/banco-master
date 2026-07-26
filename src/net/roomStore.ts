@@ -18,6 +18,9 @@ interface RoomState {
   myToken: string | null
   /** Conexão da PRÓPRIA sessão (041, data-model §4) — espelhada do `client`, não do jogo. */
   connection: ConnectionState
+  /** Último comando MEU recusado por FALHA na autoridade (042, FR-020/022) — espelhado do
+   * `client`, sinal de sessão, nunca de partida. */
+  commandFailure: { occurrenceId: string } | null
   setRoom(room: Room | null): void
   setSession(token: string | null): void
   setConnection(connection: ConnectionState): void
@@ -28,10 +31,11 @@ export const useRoomStore = create<RoomState>((set) => ({
   room: null,
   myToken: null,
   connection: 'connected',
+  commandFailure: null,
   setRoom: (room) => set({ room }),
   setSession: (myToken) => set({ myToken }),
   setConnection: (connection) => set({ connection }),
-  reset: () => set({ room: null, myToken: null, connection: 'connected' }),
+  reset: () => set({ room: null, myToken: null, connection: 'connected', commandFailure: null }),
 }))
 
 // Perspectiva local viva. Sem sala → modo 'local' (nada bloqueado), preservando o
