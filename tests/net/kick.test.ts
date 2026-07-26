@@ -84,7 +84,7 @@ describe('kick no lobby (FR-024/025)', () => {
     // 3 convidados; sai o do meio → os ids seguem 'p1','p2','p3' (o motor conta com isso).
     let room = createRoom('r', { token: 'h', name: 'H', color: SEAT_COLORS[0] })
     for (const [i, t] of ['a', 'b', 'c'].entries()) {
-      const r = { ...room, seats: [...room.seats, { playerId: `p${i + 2}`, token: t, name: t, color: SEAT_COLORS[i + 1], isHost: false, connected: true }] }
+      const r = { ...room, seats: [...room.seats, { playerId: `p${i + 2}`, token: t, name: t, color: SEAT_COLORS[i + 1], isHost: false, connected: true, reentryCode: '' }] }
       room = r
     }
     const out = kickSeat(room, 'b')

@@ -11,12 +11,14 @@
 // Aqui o transporte entra por PARÂMETRO. `OnlineGate` vira uma assinatura.
 import { createClient, type Client } from './client'
 import { createHost, type Host, type HostOptions } from './host'
-import { createRoom, hostSeat, seatByToken, type JoinError, type PieceId, type Room } from './room'
+import { createRoom, hostSeat, newReentryCode, seatByToken, type JoinError, type PieceId, type Room } from './room'
 import { newRoomId } from './session'
 import type { Transport, Unsubscribe } from './transport'
 
-/** Ritual de início (`order`) é de ENTRADA, nunca de reconexão — ver `isReentry`. */
-export type SessionPhase = 'identity' | 'lobby' | 'order' | 'playing' | 'error'
+/** Ritual de início (`order`) é de ENTRADA, nunca de reconexão — ver `isReentry`.
+ * `'reentry'` (041, D-033): partida em curso, sem assento — perder o aparelho não é mais
+ * beco (era `fail('already-started')`); o formulário pede o código do próprio assento. */
+export type SessionPhase = 'identity' | 'lobby' | 'order' | 'playing' | 'error' | 'reentry'
 
 export interface SessionIdentity {
   name: string
@@ -46,6 +48,8 @@ export interface RoomSession {
   /** Cria a sala e assume a autoridade. Devolve o id, ou `null` se falhou. */
   create(who: SessionIdentity): Promise<string | null>
   requestSeat(who: SessionIdentity): void
+  /** Reanexa ao próprio assento por CÓDIGO (041, D-033) — quando o link + token não bastam. */
+  requestReentry(code: string): void
   startMatch(): Promise<void>
   kick(target: string): void
   /** A revelação da ordem terminou (FR-030). */
@@ -67,6 +71,9 @@ export interface RoomSessionOptions {
   describeError?(e: unknown): string
   /** Gerador de id de sala. Injetável para os testes terem ids determinísticos. */
   newRoomId?(): string
+  /** Gerador do código de reentrada do PRÓPRIO assento ao criar a sala (041, D-033/D12) —
+   * `room.ts` não tem RNG. Injetável para os testes terem códigos determinísticos. */
+  mintReentryCode?(): string
   /** RNG/relógio do host. Injetáveis para o sorteio de ordem ser reprodutível nos testes. */
   hostOptions?: HostOptions
 }
@@ -75,6 +82,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
   const { token, createTransport, connectStore } = opts
   const describeError = opts.describeError ?? ((e: unknown) => String(e))
   const mintRoomId = opts.newRoomId ?? newRoomId
+  const mintReentryCode = opts.mintReentryCode ?? (() => newReentryCode(Math.random))
 
   let transport: Transport | null = null
   let client: Client | null = null
@@ -110,6 +118,13 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
     const joinError = c.joinError()
     const game = c.game()
 
+    // Partida em curso mas AINDA sem assento (041, D-033): reentrada pendente ou recusada
+    // por código inválido. Fica no formulário — NUNCA pula para 'playing'/'order' sem
+    // assento, mesmo com o `GameState` já carregado (é o mesmo `game` de todo mundo).
+    if (game && !c.playerId()) {
+      emit({ room, error: joinError, busy: false, phase: 'reentry' })
+      return
+    }
     if (game) {
       disconnectStore ??= connectStore(c)
       emit({ room, error: joinError, busy: false, phase: isReentry(c) ? 'playing' : 'order' })
@@ -166,8 +181,12 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
 
         const mine = seatByToken(current, token)
         if (mine && hostSeat(current).token === token) await takeAuthority(current)
-        // FR-005: token desconhecido não entra depois do início.
-        if (!mine && current.status !== 'lobby') return fail('already-started')
+        // Token desconhecido depois do início (041, D-033): não é mais beco — oferece o
+        // formulário de reentrada por código, em vez de recusar com 'already-started'.
+        if (!mine && current.status !== 'lobby') {
+          emit({ room: current, phase: 'reentry', error: null })
+          return
+        }
 
         emit({ room: current, phase: mine ? 'lobby' : 'identity' })
         syncFromClient(c)
@@ -181,7 +200,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
       try {
         const id = mintRoomId()
         await openSession(id)
-        await takeAuthority(createRoom(id, { token, ...who }))
+        await takeAuthority(createRoom(id, { token, ...who, reentryCode: mintReentryCode() }))
         emit({ phase: 'lobby', busy: false })
         return id
       } catch (e) {
@@ -193,6 +212,14 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
     requestSeat(who: SessionIdentity): void {
       emit({ busy: true, error: null })
       client?.requestJoin(who)
+    },
+
+    // `name`/`color`/`piece` ficam de fora (contrato §3.2): a identidade visual pertence ao
+    // assento, não a quem está reabrindo. Recusa por 'bad-code' volta ao formulário —
+    // `syncFromClient` mantém a fase 'reentry' porque `playerId` continua null.
+    requestReentry(code: string): void {
+      emit({ busy: true, error: null })
+      client?.requestJoin({ name: '', color: '', reentryCode: code })
     },
 
     async startMatch(): Promise<void> {

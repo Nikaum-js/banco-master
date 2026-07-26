@@ -43,6 +43,8 @@
 - [D-030](D-030-privacidade-de-cartas-e-garantia-de-apresentacao-no-v1.md) — Privacidade de cartas é garantia de apresentação no v1 (não de dados)
 - [D-031](D-031-espolio-do-falido-vai-a-pregao-simultaneo.md) — Espólio do falido-ao-banco vai a pregão simultâneo, reusando a D-023 (implementa §9.2)
 - [D-032](D-032-log-de-eventos-tipado-narrativa-e-da-ui.md) — Log de eventos tipado: o motor emite fatos, a narrativa (e a identidade) é da UI
+- [D-033](D-033-codigo-de-reentrada-por-assento.md) — Código de reentrada por assento: reconexão de outro dispositivo (refina §11.3/§11.4 e D-019)
+- [D-034](D-034-persistencia-indisponivel-pausa-a-partida.md) — Persistência indisponível pausa a partida (refina §11.4; pausa ganha causa explícita)
 
 ### Rejeitadas
 - [D-R01](D-R01-sistema-de-draft-rejeitada.md) — Sistema de draft de propriedades no início

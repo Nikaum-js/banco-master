@@ -13,6 +13,7 @@ import { SoundBoard } from '@/game/ui/sound/SoundBoard'
 import { DebugLogger } from '@/game/ui/DebugLogger'
 import { OnlineGate } from '@/net/ui/OnlineGate'
 import { PauseBanner } from '@/net/ui/PauseBanner'
+import { ConnectionBanner } from '@/net/ui/ConnectionBanner'
 
 // O tabuleiro Clássico É a tela inicial. A rolagem é o DiceArena central; o
 // GameDriver faz o turno "ir sozinho" (resolve/finaliza); o ModalLayer (022) traz
@@ -40,6 +41,7 @@ export default function App() {
       <AudioControl />
       <ThemeControl />
       <PauseBanner />
+      <ConnectionBanner />
       <DebugLogger />
     </OnlineGate>
   )

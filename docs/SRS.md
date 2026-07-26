@@ -1,6 +1,6 @@
 # Banco Master — Software Requirements Specification (SRS)
 
-**Versão:** 1.6
+**Versão:** 1.7
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -710,9 +710,13 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 
 > 📌 **Não há timeout de desconexão** — a partida pode ficar pausada indefinidamente.
 
+> 📌 **A pausa tem causa** (v1.7, [D-034](adr/D-034-persistencia-indisponivel-pausa-a-partida.md)): desconexão de jogador em jogo (§11.3) e persistência indisponível (§11.4) são causas distintas do **mesmo** estado de pausa, e podem estar ativas ao mesmo tempo. A partida só retoma quando **nenhuma** causa persiste, e a mensagem exibida diz **qual** delas está segurando a mesa. Prazos em voo (leilão, pregão, janela de reação) são deslocados pelo intervalo **inteiro** da pausa — não pelo da última causa a se resolver.
+
 ### 11.4 Persistência de Sessão
 
 - Em caso de reload acidental, o cliente recupera o estado atual da partida e sincroniza.
+- **Reentrada de outro dispositivo** (v1.7, [D-033](adr/D-033-codigo-de-reentrada-por-assento.md)): cada assento tem um **código de reentrada** curto, visível para o dono ao lado do link da sala. Quem apresentar **link + código** reanexa ao assento de qualquer aparelho ou navegador, mesmo tendo perdido o token de sessão do dispositivo original (celular sem bateria, dados do navegador limpos, aba anônima encerrada). O código não expira e não é revogável; o token anterior deixa de valer para aquele assento. Sem isso, um assento irrecuperável travaria a mesa indefinidamente — não há timeout de desconexão (§11.3) e ninguém, nem o anfitrião, pode remover jogador depois do início.
+- **Durabilidade antes do avanço** (v1.7, [D-034](adr/D-034-persistencia-indisponivel-pausa-a-partida.md)): nenhum comando aceito avança a partida sem estar gravado. Se a gravação falhar de forma persistente, a partida **pausa** (§11.3) até a persistência voltar, em vez de seguir sobre um estado que um reload faria regredir.
 
 ---
 
@@ -996,4 +1000,4 @@ sendo a fonte de verdade da **regra**, o `CONTEXT.md` é a fonte dos **nomes**.
 
 ---
 
-**Banco Master — SRS v1.4 | Julho 2026 | Documento de fonte de verdade absoluta**
+**Banco Master — SRS v1.7 | Julho 2026 | Documento de fonte de verdade absoluta**

@@ -54,6 +54,10 @@ export interface Seat {
   piece?: PieceId // peça visual (única por sala, §12.5/spec 038); ausente em salas da 037
   isHost: boolean
   connected: boolean
+  /** Código de reentrada (041, D-033) — estável pela vida do assento; sobrevive à perda do
+   * token (celular sem bateria, dados do navegador limpos). `kickSeat`/`shuffleSeatOrder`
+   * preservam por construção (nunca reescrevem o campo). */
+  reentryCode: string
 }
 
 export interface Room {
@@ -63,13 +67,17 @@ export interface Room {
 }
 
 export type JoinResult = { ok: true; room: Room; seat: Seat } | { ok: false; reason: JoinError }
-export type JoinError = 'room-full' | 'color-taken' | 'piece-taken' | 'already-started' | 'unknown-token' | 'kicked'
+export type JoinError = 'room-full' | 'color-taken' | 'piece-taken' | 'already-started' | 'unknown-token' | 'kicked' | 'bad-code'
 
 export interface Identity {
   token: string
   name: string
   color: string
   piece?: PieceId // escolhida no lobby (spec 038); opcional para compatibilidade com a 037
+  /** Código de reentrada PRONTO (041, D-033/D12) — `room.ts` não tem RNG e não deveria
+   * ganhar um; quem minta é quem já tem RNG (host) ou o `roomSession` na criação. Vazio nos
+   * chamadores que não exercitam reentrada (determinístico, sem mock). */
+  reentryCode?: string
 }
 
 function seatIdFor(index: number): string {
@@ -89,7 +97,10 @@ export function createRoom(id: string, host: Identity): Room {
   return {
     id,
     status: 'lobby',
-    seats: [{ playerId: seatIdFor(0), token: host.token, name: host.name, color: host.color, piece: host.piece, isHost: true, connected: true }],
+    seats: [{
+      playerId: seatIdFor(0), token: host.token, name: host.name, color: host.color, piece: host.piece,
+      isHost: true, connected: true, reentryCode: host.reentryCode ?? '',
+    }],
   }
 }
 
@@ -110,6 +121,7 @@ export function joinRoom(room: Room, who: Identity): JoinResult {
     piece: who.piece,
     isHost: false,
     connected: true,
+    reentryCode: who.reentryCode ?? '',
   }
   return { ok: true, room: { ...room, seats: [...room.seats, seat] }, seat }
 }
@@ -211,4 +223,41 @@ export function blockingSeats(room: Room, eliminatedIds: ReadonlySet<string> = n
 
 export function hostDisconnected(room: Room): boolean {
   return !hostSeat(room).connected
+}
+
+// Alfabeto sem ambiguidade visual (sem `0/O`, `1/I/L`), maiúsculas — legível em voz alta e
+// digitável em teclado de celular (041, data-model §3): o caso de uso é ditar para si mesmo
+// em outro aparelho. 6 caracteres em alfabeto de 32 dá margem folgada para 8 assentos.
+const REENTRY_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+const REENTRY_CODE_LENGTH = 6
+
+// Minta um código de reentrada único NA SALA. `room.ts` não tem RNG (D12 do plan) — quem
+// chama já tem um (o host) ou o `roomSession` na criação.
+export function newReentryCode(rng: () => number, taken: ReadonlySet<string> = new Set()): string {
+  for (;;) {
+    let code = ''
+    for (let i = 0; i < REENTRY_CODE_LENGTH; i++) code += REENTRY_ALPHABET[Math.floor(rng() * REENTRY_ALPHABET.length)]
+    if (!taken.has(code)) return code
+  }
+}
+
+function normalizeCode(code: string): string {
+  return code.replace(/\s+/g, '').toUpperCase()
+}
+
+// Reanexa pelo CÓDIGO (041, D-033) em vez do token — recupera um assento cujo token se
+// perdeu (celular sem bateria, dados do navegador limpos, aba anônima encerrada). Comparação
+// sem caixa e sem espaços: quem digita um código ditado erra o caixa alta. Puro: troca só o
+// `token` e marca conectado; o anterior deixa de ter assento por construção (FR-027).
+export function reattachByCode(
+  room: Room,
+  code: string,
+  token: string,
+): { ok: true; room: Room; seat: Seat } | { ok: false; reason: 'bad-code' } {
+  const normalized = normalizeCode(code)
+  const target = room.seats.find((s) => normalizeCode(s.reentryCode) === normalized)
+  if (!target) return { ok: false, reason: 'bad-code' }
+  const seats = room.seats.map((s) => (s.playerId === target.playerId ? { ...s, token, connected: true } : s))
+  const next = { ...room, seats }
+  return { ok: true, room: next, seat: next.seats.find((s) => s.playerId === target.playerId)! }
 }

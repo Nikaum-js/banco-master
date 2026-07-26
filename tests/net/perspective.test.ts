@@ -80,7 +80,7 @@ describe('perspectiva local numa partida em rede', () => {
     net.players[1].transport.disconnect() // queda → pausa global
 
     const views = net.players.map((_, i) => viewOf(net, i))
-    expect(net.host.game().paused).toBe(true)
+    expect(net.host.game().paused).not.toBeNull()
     for (const v of views) expect(v.mayAct('roll')).toBe(false)
   })
 })

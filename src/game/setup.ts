@@ -69,7 +69,7 @@ export function createSeedState(playerIds: string[]): GameState {
       mayRollAgain: false,
       awaitingChoice: null,
     },
-    paused: false,
+    paused: null,
     phase: 'playing',
     titles: seedTitles(),
     resolution: null,

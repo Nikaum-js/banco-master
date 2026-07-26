@@ -14,8 +14,9 @@ import { hostSeat, type PieceId } from '@/net/room'
 import { getSessionToken, parseRoomLink, roomLink } from '@/net/session'
 import { createRoomSession, type RoomSession } from '@/net/roomSession'
 import { createSupabaseTransport, describeInfraError, isSupabaseConfigured } from '@/net/supabaseClient'
-import { IdentityForm, LobbyMessage, RoomLobby, TurnOrderReveal } from './LobbyScreen'
+import { IdentityForm, LobbyMessage, ReentryForm, RoomLobby, TurnOrderReveal } from './LobbyScreen'
 import { HomeScreen } from './HomeScreen'
+import { SessionBadge } from './SessionBadge'
 import { Button } from '@/game/ui/primitives'
 
 const TICK_MS = 250 // o host fecha prazos vencidos (soft-close de leilão, janela de reação)
@@ -93,7 +94,19 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
     return <TurnOrderReveal room={room} onDone={session.orderSeen} />
   }
 
-  if (phase === 'playing') return <>{children}</>
+  if (phase === 'playing') {
+    return (
+      <>
+        {children}
+        {room && <SessionBadge link={roomLink(room.id, window.location.origin)} />}
+      </>
+    )
+  }
+
+  // Partida em curso, sem assento (041, D-033) — token/dispositivo perdido não é mais beco.
+  if (phase === 'reentry') {
+    return <ReentryForm busy={busy} error={error} onSubmit={(code) => session.requestReentry(code)} />
+  }
 
   if (phase === 'error') {
     const msg =

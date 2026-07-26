@@ -4,6 +4,7 @@ import { transferKeepFee } from '@/game/economy/mortgage'
 import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import { BOARD } from '@/lib/boardData'
+import { pausedBy } from '../../net/harness'
 
 const AIRPORT = BOARD.find((s) => s.kind === 'airport')!.pos
 
@@ -55,7 +56,7 @@ describe('Negociação — troca (US1)', () => {
     const elim = twoOwners()
     elim.players[1].eliminated = true
     expect(executeTrade(elim, { fromId: 'p1', toId: 'p2', fromProps: [1], fromCash: 0, toProps: [], toCash: 0 })).toBe(elim)
-    const pausado = { ...twoOwners(), paused: true }
+    const pausado = { ...twoOwners(), paused: pausedBy('disconnect') }
     expect(executeTrade(pausado, { fromId: 'p1', toId: 'p2', fromProps: [1], fromCash: 0, toProps: [], toCash: 0 })).toBe(pausado)
   })
 

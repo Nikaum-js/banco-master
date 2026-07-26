@@ -140,3 +140,102 @@ test('queda do convidado pausa a mesa e diz quem caiu', async ({ browser }) => {
   await expect(host.getByText(/Nada se perde/).first()).toBeVisible() // sem timeout, sem punição
   await hostCtx.close()
 })
+
+// Joga rodadas alternadas até alguém ver o botão "Leilão" (recusa de compra) e clica nele —
+// dirige o jogo até um leilão aberto sem depender de uma posição fixa no tabuleiro.
+async function playUntilAuction(pages: Page[], maxRounds = 60): Promise<void> {
+  for (let i = 0; i < maxRounds; i++) {
+    for (const p of pages) {
+      const leilao = p.getByRole('button', { name: 'Leilão' })
+      if (await leilao.isVisible().catch(() => false)) {
+        await leilao.click()
+        return
+      }
+      const finalizar = p.getByRole('button', { name: 'Finalizar turno' })
+      if (await finalizar.isVisible().catch(() => false)) {
+        await finalizar.click()
+        await p.waitForTimeout(300)
+        continue
+      }
+      const rolar = p.getByRole('button', { name: 'Rolar dados' })
+      if (await rolar.isVisible().catch(() => false)) {
+        await rolar.click()
+        await p.waitForTimeout(600)
+      }
+    }
+  }
+  throw new Error('não chegou a um leilão dentro do limite de rodadas — ajuste maxRounds')
+}
+
+// SC-005/SC-009 (041, D-034/D-033) — a promessa que esta spec inteira existe para cumprir:
+// o host pode recarregar a página NO MEIO de um prazo em voo, e a partida continua exatamente
+// de onde parou — leilão vivo, prazo restante preservado (não zerado, não reiniciado), zero
+// perda de estado. A MECÂNICA (deslocamento de deadline pela pausa) já é provada headless em
+// `tests/net/pause.test.ts`/`authority-reassume.test.ts`; o que este teste agrega é a prova
+// em browser real: reload de verdade, reassunção de autoridade de verdade.
+test('leilão sobrevive ao reload do host — prazo preservado (SC-005/SC-009)', async ({ browser }) => {
+  test.skip(!process.env.E2E_PRESENCE, 'depende do heartbeat do Realtime — rode com E2E_PRESENCE=1')
+  test.slow()
+
+  const hostCtx = await browser.newContext()
+  const guestCtx = await browser.newContext()
+  const host = await hostCtx.newPage()
+  const guest = await guestCtx.newPage()
+
+  await host.goto('/')
+  await host.getByRole('button', { name: 'Criar sala' }).click()
+  await fillIdentity(host, HOST_NAME, /^Criar sala$/)
+  await expect(host.getByText('Sala aberta')).toBeVisible({ timeout: 20_000 })
+  const roomUrl = host.url()
+
+  await guest.goto(roomUrl)
+  await expect(guest.getByText('Entrar na sala')).toBeVisible({ timeout: 20_000 })
+  await fillIdentity(guest, GUEST_NAME, /^Entrar$/)
+  await expect(host.getByText(GUEST_NAME)).toBeVisible({ timeout: 20_000 })
+
+  await host.getByRole('button', { name: /Iniciar partida/ }).click()
+  for (const p of [host, guest]) {
+    await p.getByRole('button', { name: 'Começar' }).click()
+    await expect(p.locator('.board-stage')).toBeVisible({ timeout: 20_000 })
+  }
+
+  await playUntilAuction([host, guest])
+  await expect(host.getByText('Leilão').first()).toBeVisible({ timeout: 20_000 })
+  await expect(guest.getByText('Leilão').first()).toBeVisible({ timeout: 20_000 })
+
+  // Prazo restante ANTES do reload — lido da tela do convidado, que não vai recarregar.
+  const secLeftBefore = await readSecondsLeft(guest)
+  expect(secLeftBefore).toBeGreaterThan(0)
+
+  // "F5 do host": recarrega a aba. A queda de conexão pausa a mesa para o convidado — nada
+  // avança, o prazo congela — e a reassunção de autoridade (FR-015) faz o host voltar à
+  // MESMA partida, lida do snapshot.
+  await host.reload()
+
+  await expect(guest.getByText('Partida pausada')).toBeVisible({ timeout: 60_000 })
+
+  // O host reassume sozinho (nenhuma identidade/lobby de novo — `session.enter()` no boot) e
+  // a mesa retoma: sem transferência, sem timeout, sem punição.
+  await expect(host.locator('.board-stage')).toBeVisible({ timeout: 30_000 })
+  await expect(guest.getByText('Partida pausada')).not.toBeVisible({ timeout: 30_000 })
+
+  // O leilão CONTINUA vivo — estado íntegro (SC-005) — e o prazo restante foi deslocado pelo
+  // tempo da pausa, não zerado nem reiniciado do topo (SC-009).
+  await expect(host.getByText('Leilão').first()).toBeVisible({ timeout: 20_000 })
+  await expect(guest.getByText('Leilão').first()).toBeVisible()
+  const secLeftAfter = await readSecondsLeft(guest)
+  expect(secLeftAfter).toBeGreaterThan(0)
+  // Folga generosa (reload + reconexão real levam alguns segundos): o que importa é que o
+  // prazo NÃO foi para o início da janela nem para zero — foi preservado, deslocado pela pausa.
+  expect(Math.abs(secLeftAfter - secLeftBefore)).toBeLessThan(15)
+
+  await hostCtx.close()
+  await guestCtx.close()
+})
+
+async function readSecondsLeft(page: Page): Promise<number> {
+  const text = await page.getByText(/Termina em \d+s/).first().innerText()
+  const m = /Termina em (\d+)s/.exec(text)
+  if (!m) throw new Error(`não achou o contador de prazo em: ${text}`)
+  return Number(m[1])
+}

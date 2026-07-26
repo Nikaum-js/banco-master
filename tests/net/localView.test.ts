@@ -10,6 +10,7 @@ import { actorOfKind, isSenderActed, type PlayerAction } from '@/game/commands'
 import { createRoom, joinRoom, SEAT_COLORS, type Room } from '@/net/room'
 import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
+import { pausedBy } from './harness'
 
 // Todos os kinds de PlayerAction — a lista é conferida contra o union no teste de exaustividade.
 const ALL_KINDS: PlayerAction['kind'][] = [
@@ -125,11 +126,28 @@ describe('perspectiva local com sala', () => {
 
   it('durante a pausa ninguém decide (FR-014)', () => {
     const game = jogo()
-    game.paused = true
+    game.paused = pausedBy('disconnect')
     const view = localView(game, sala(), 'tok-1') // jogador da vez
 
     expect(view.mayAct('roll')).toBe(false)
     expect(view.mayAct('place-bid')).toBe(false)
+  })
+
+  it('desconectado ninguém decide — inclusive fora da vez e sem estado pendente (041, FR-007)', () => {
+    const game = jogo() // p1 é o jogador da vez
+    const room = sala()
+    const ator = localView(game, room, 'tok-1', 'reconnecting')
+    const foraDaVez = localView(game, room, 'tok-2', 'desynced')
+
+    for (const kind of ALL_KINDS) expect(ator.mayAct(kind)).toBe(false)
+    // Lance de leilão/resposta a proposta são legítimos de qualquer assento — mas não
+    // desconectado. É exatamente aqui que uma guarda incompleta passaria despercebida.
+    for (const kind of ALL_KINDS) expect(foraDaVez.mayAct(kind)).toBe(false)
+  })
+
+  it('modo local (sem sala) nunca bloqueia por conexão — SC-007', () => {
+    const view = localView(jogo(), null, null, 'desynced')
+    expect(view.mayAct('roll')).toBe(true)
   })
 })
 

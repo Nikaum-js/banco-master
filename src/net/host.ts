@@ -13,6 +13,8 @@ import {
   anyDisconnected,
   joinRoom,
   kickSeat,
+  newReentryCode,
+  reattachByCode,
   shuffleSeatOrder,
   markConnected,
   markDisconnected,
@@ -49,7 +51,6 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   let room = initialRoom
   let game: GameState | null = null
   let seq = -1 // -1 = ainda não iniciado; o snapshot inicial fica em seq 0
-  let pausedAt: number | null = null
   let opened = false
   const subs: Unsubscribe[] = []
   const listeners = new Set<() => void>()
@@ -96,8 +97,29 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
 
   // Pedido de assento no lobby (FR-002/005). A identidade do assento é o token da CONEXÃO —
   // o pedinte só escolhe nome e cor. Recusa (cheia/cor tomada/já iniciada) volta ao pedinte.
+  //
+  // Com `reentryCode` (041, D-033/contrato §3): é REANEXAÇÃO, não assento novo — o gate de
+  // `already-started` não se aplica (perder o aparelho não pode travar a mesa depois do
+  // início). `name`/`color`/`piece` são ignorados nesse caminho; a identidade visual
+  // pertence ao assento, não a quem está reabrindo. `syncPause` depois de republicar é o que
+  // retoma a partida se esta era a última ausência (FR-028).
   function handleJoinRequest(who: JoinRequest, fromToken: string): void {
-    const result = joinRoom(room, { token: fromToken, name: who.name, color: who.color, piece: who.piece })
+    if (who.reentryCode) {
+      const result = reattachByCode(room, who.reentryCode, fromToken)
+      if (!result.ok) {
+        transport.rejectJoin(fromToken, result.reason)
+        return
+      }
+      room = result.room
+      publishAndPersistRoom()
+      syncPause()
+      return
+    }
+    const taken = new Set(room.seats.map((s) => s.reentryCode))
+    const result = joinRoom(room, {
+      token: fromToken, name: who.name, color: who.color, piece: who.piece,
+      reentryCode: newReentryCode(rng, taken), // room.ts não tem RNG (D12) — o host minta
+    })
     if (!result.ok) {
       transport.rejectJoin(fromToken, result.reason)
       return
@@ -124,6 +146,19 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     return new Set(game.players.filter((p) => p.eliminated).map((p) => p.id))
   }
 
+  // Reconciliação de presença (041, FR-021/022): sobrescreve `seats[].connected` pelo
+  // conjunto REALMENTE observado no canal — nunca confia no `connected` do snapshot, que é
+  // um retrato de antes da queda/reload. Chamar ANTES de `syncPause` é o que evita emitir
+  // `pause` seguido de `resume` a cada reassunção (a pausa só é decidida depois de a mesa
+  // já refletir quem está de verdade presente).
+  function reconcilePresence(tokens: ReadonlySet<string>): void {
+    for (const seat of room.seats) {
+      const connected = tokens.has(seat.token)
+      if (seat.connected === connected) continue
+      room = connected ? markConnected(room, seat.token) : markDisconnected(room, seat.token)
+    }
+  }
+
   // Pausa global se algum assento que AINDA JOGA está desconectado; retoma quando todos eles
   // voltam (FR-016/018). Host desconectado entra no mesmo caminho: pausa indefinida, sem
   // transferência (FR-019) — a autoridade É o host, então enquanto ele está fora ninguém
@@ -131,13 +166,11 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   function syncPause(): void {
     if (!game) return
     const shouldPause = anyDisconnected(room, eliminatedIds())
-    if (shouldPause && !game.paused) {
-      pausedAt = now()
-      accept({ kind: 'pause' })
-    } else if (!shouldPause && game.paused) {
-      const pausedMs = pausedAt === null ? 0 : Math.max(0, now() - pausedAt)
-      pausedAt = null
-      accept({ kind: 'resume', pausedMs }) // desloca deadlines em voo (FR-017)
+    const hasDisconnectCause = Boolean(game.paused?.causes.includes('disconnect'))
+    if (shouldPause && !hasDisconnectCause) {
+      accept({ kind: 'pause', cause: 'disconnect', at: now() })
+    } else if (!shouldPause && hasDisconnectCause) {
+      accept({ kind: 'resume', cause: 'disconnect', at: now() }) // desloca deadlines em voo (FR-017)
     }
   }
 
@@ -149,6 +182,19 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     subs.push(transport.onSubmit(handleSubmit))
     subs.push(transport.onPresence(handlePresence))
     subs.push(transport.onJoinRequest(handleJoinRequest))
+    // FR-021/022: reconcilia presença ANTES de decidir pausa — nunca o contrário.
+    subs.push(transport.onPresenceSync((tokens) => {
+      reconcilePresence(tokens)
+      publishAndPersistRoom()
+      syncPause()
+    }))
+    // D8/D10: o adapter cru nunca emite isto — é o decorator `durableWrites` quem sobrescreve
+    // `onWriteExhausted`/`onWriteRecovered` (único ponto de montagem em `supabaseClient.ts`).
+    // A circularidade é o desenho, não um bug: a PRÓPRIA gravação desta pausa também falha
+    // enquanto a persistência estiver fora — o comando vive na memória do host e nas telas de
+    // todos por difusão, e a fila drena o estado (que já contém a pausa) quando o banco volta.
+    subs.push(transport.onWriteExhausted(() => accept({ kind: 'pause', cause: 'persistence', at: now() })))
+    subs.push(transport.onWriteRecovered(() => accept({ kind: 'resume', cause: 'persistence', at: now() })))
     await transport.saveRoom(room)
   }
 

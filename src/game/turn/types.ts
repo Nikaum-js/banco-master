@@ -53,6 +53,15 @@ export interface Turn {
 
 export type GamePhase = 'lobby' | 'playing' | 'ended'
 
+// Causa da pausa (041, D-034): a mesa pode estar parada por mais de um motivo ao
+// mesmo tempo — a partida só retoma quando nenhuma causa ativa resta.
+export type PauseCause = 'disconnect' | 'persistence'
+
+export interface PauseState {
+  causes: PauseCause[] // ativas, ordenadas, sem duplicata; nunca vazio (vazio = null)
+  since: number // instante da PRIMEIRA causa ativa; não reinicia quando outra entra
+}
+
 // Notificação informativa (030, §12.2) — evento autônomo (não resolução): não bloqueia
 // o turno; a UI exibe e dispensa. Serializável (princípio VII).
 export type Notice =
@@ -64,7 +73,7 @@ export interface GameState {
   turnOrder: number[] // índices em players (insumo do Lobby)
   activeSeat: number // índice em turnOrder
   turn: Turn
-  paused: boolean // FR-028
+  paused: PauseState | null // FR-028; causa e relógio da pausa (041, D-034)
   phase: GamePhase
   titles: Record<number, Title> // pos → posse (003); só casas compráveis
   resolution: ResolutionSlice | null // interação transitória de compra/leilão (003)

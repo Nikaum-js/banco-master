@@ -12,6 +12,7 @@
 import { actorOfKind, isSenderActed, type PlayerAction } from '@/game/commands'
 import { activePlayer } from '@/game/turn/turnMachine'
 import type { GameState } from '@/game/turn/types'
+import type { ConnectionState } from './client'
 import { seatByToken, type Room } from './room'
 
 // 'local' = sem sala (cliente único de desenvolvimento): todos os assentos são deste
@@ -43,8 +44,11 @@ function isEliminated(game: GameState, playerId: string | null): boolean {
   return game.players.find((p) => p.id === playerId)?.eliminated ?? false
 }
 
-// Monta a visão local. `room`/`myToken` nulos ⇒ modo local (single-player).
-export function localView(game: GameState, room: Room | null, myToken: string | null): LocalView {
+// Monta a visão local. `room`/`myToken` nulos ⇒ modo local (single-player). `connection`
+// (041, FR-007) exige conexão para agir — desconectado não pode acionar NENHUM ponto de
+// decisão, inclusive os que não dependem da vez (lance de leilão, resposta a proposta,
+// reação). Modo local não tem casca de rede: sempre `'connected'`, nunca bloqueia (SC-007).
+export function localView(game: GameState, room: Room | null, myToken: string | null, connection: ConnectionState = 'connected'): LocalView {
   const seat = room && myToken ? seatByToken(room, myToken) : undefined
   const seatId = seat?.playerId ?? null
   const waitingFor = waitingForOf(game)
@@ -69,6 +73,7 @@ export function localView(game: GameState, room: Room | null, myToken: string | 
     isMe: (playerId) => playerId === seatId,
     mayAct(kind) {
       if (eliminated) return false // fora da partida: acompanha, não decide (FR-007)
+      if (connection !== 'connected') return false // desconectado não aciona nada (041, FR-007)
       if (game.paused) return false // pausa rejeita comando de jogo (FR-014/FR-017 da 037)
       // Ator declarado pelo remetente (lance, proposta de troca): todo jogador é ator
       // legítimo em NOME PRÓPRIO. Se o motor aceita agora — ser licitante ativo, ter caixa —

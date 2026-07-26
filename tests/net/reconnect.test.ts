@@ -16,12 +16,12 @@ describe('reconexão sem perda (SC-003)', () => {
 
     // "Reload": a conexão antiga cai (dispara pausa) e o dispositivo reabre com o MESMO token.
     guest.client.leave()
-    expect(net.host.game().paused).toBe(true) // desconexão pausou (US3)
+    expect(net.host.game().paused).not.toBeNull() // desconexão pausou (US3)
 
     const fresh = createClient(localTransport(net.hub, guest.token))
     await fresh.join()
 
-    expect(net.host.game().paused).toBe(false) // reconexão retomou automaticamente (FR-018)
+    expect(net.host.game().paused).toBeNull() // reconexão retomou automaticamente (FR-018)
     expect(fresh.playerId()).toBe('p2') // mesmo assento (FR-004)
     expect(JSON.stringify(fresh.game())).toBe(expected) // estado idêntico, zero perda (FR-015)
     // A visão do outro cliente também segue convergida.
@@ -36,14 +36,14 @@ describe('reconexão sem perda (SC-003)', () => {
     const hostP = net.players[0]
 
     hostP.client.leave()
-    expect(net.host.game().paused).toBe(true)
+    expect(net.host.game().paused).not.toBeNull()
 
     // O host reabre o link (mesmo token): a autoridade persiste no processo; o client re-anexa.
     const fresh = createClient(localTransport(net.hub, hostP.token))
     await fresh.join()
 
     expect(fresh.playerId()).toBe('p1')
-    expect(net.host.game().paused).toBe(false)
+    expect(net.host.game().paused).toBeNull()
     expect(JSON.stringify(fresh.game())).toBe(expected)
 
     // Autoridade de volta: um novo comando legítimo é aceito e difundido.
