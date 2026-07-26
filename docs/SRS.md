@@ -1,6 +1,6 @@
 # Banco Master — Software Requirements Specification (SRS)
 
-**Versão:** 1.5
+**Versão:** 1.6
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -337,7 +337,7 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 ### 7.1 Quando ocorre
 
 - Jogador para em propriedade livre e recusa a compra.
-- Banco leiloa propriedades de jogador falido (quando devia ao banco).
+- Banco leiloa propriedades de jogador falido (quando devia ao banco) — **espólio**, no formato de pregão simultâneo da Seção 7.3 ([D-031](adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md), v1.6).
 - **Escassez de terrenos:** quando restam poucos terrenos sem dono no tabuleiro (Seção 7.3).
 
 ### 7.2 Regras do Leilão
@@ -422,8 +422,10 @@ Um jogador está em falência quando não consegue pagar o que deve, mesmo após
 
 | Devedor | Destino dos ativos |
 |---|---|
-| Devia ao banco | Propriedades (sem construções) vão a leilão pelo banco |
+| Devia ao banco | Propriedades (sem construções) vão a leilão pelo banco — o **espólio** (ver nota abaixo) |
 | Devia a outro jogador | Propriedades (sem construções) transferidas diretamente ao credor. Dinheiro restante também vai ao credor |
+
+> 📌 **Formato do leilão do espólio** (v1.6, [D-031](adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md)): o espólio inteiro vai a **pregão simultâneo** — o mesmo formato da Seção 7.3, com cronômetro próprio por propriedade. Licitantes são os jogadores **não-eliminados**; o falido não participa. Vencedor de cada lote paga **ao banco**; lote **sem lance fica livre** (§7.2), voltando ao fluxo de cair-e-comprar. O pregão é **evento autônomo**: abrir não altera a vez, e a eliminação do falido passa o turno normalmente. Se já houver um pregão de escassez aberto, os lotes do espólio **entram nele**. O espólio é só de **propriedades**: o dinheiro em caixa do falido que devia ao banco continua sendo destruído (não há credor para recebê-lo, e a tabela acima só destina caixa quando o credor é um jogador) — D-031 não altera isso.
 
 ### 9.3 Falência com Empréstimo Ativo (ver Seção 15)
 
