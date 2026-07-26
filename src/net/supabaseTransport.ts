@@ -17,7 +17,7 @@
 // paridade PLENA de anti-spoof (FR-007) do transporte real exige amarrar identidade à conexão
 // (ex.: Edge Function validando um segredo de sessão). A LÓGICA do host já rejeita spoof
 // (provado headless, SC-005); resta o endurecimento da identidade de transporte.
-import type { AcceptedCommand, CommandEnvelope, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
+import type { AcceptedCommand, CommandEnvelope, CommandFailure, ConnStatus, JoinRequest, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import type { JoinError, Room } from './room'
 import { normalizeLog } from '@/game/log'
 import type { PauseState } from '@/game/turn/types'
@@ -70,7 +70,7 @@ interface RoomRow {
   game: PersistedSnapshot['game'] | null
 }
 
-const EVENT = { submit: 'submit', accepted: 'accepted', room: 'room', join: 'join', rejected: 'rejected' } as const
+const EVENT = { submit: 'submit', accepted: 'accepted', room: 'room', join: 'join', rejected: 'rejected', commandRejected: 'command-rejected' } as const
 
 export function supabaseTransport(supabase: SupabaseLike, roomId: string, token: string): Transport {
   // `broadcast.self: true` é OBRIGATÓRIO: no modelo uniforme da spec todo participante —
@@ -85,6 +85,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
   const presenceCbs: ((change: PresenceChange) => void)[] = []
   const joinReqCbs: ((who: JoinRequest, fromToken: string) => void)[] = []
   const joinRejCbs: ((target: string, reason: JoinError) => void)[] = []
+  const commandRejCbs: ((toToken: string, info: CommandFailure) => void)[] = []
   const statusCbs: ((status: ConnStatus) => void)[] = []
   const presenceSyncCbs: ((tokens: ReadonlySet<string>) => void)[] = []
   const live = new Map<string, number>() // presenças vivas por token — base do takeover
@@ -102,6 +103,10 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
     .on('broadcast', { event: EVENT.rejected }, ({ payload }) => {
       const p = payload as { token: string; reason: JoinError }
       for (const cb of joinRejCbs) cb(p.token, p.reason)
+    })
+    .on('broadcast', { event: EVENT.commandRejected }, ({ payload }) => {
+      const p = payload as { toToken: string; info: CommandFailure }
+      for (const cb of commandRejCbs) cb(p.toToken, p.info)
     })
     .on('broadcast', { event: EVENT.accepted }, ({ payload }) => {
       for (const cb of broadcastCbs) cb(payload as AcceptedCommand)
@@ -209,6 +214,14 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, token:
     onJoinRejected(cb): Unsubscribe {
       joinRejCbs.push(cb)
       return off(joinRejCbs, cb)
+    },
+
+    rejectCommand(toToken: string, info: CommandFailure): void {
+      void channel.send({ type: 'broadcast', event: EVENT.commandRejected, payload: { toToken, info } })
+    },
+    onCommandRejected(cb): Unsubscribe {
+      commandRejCbs.push(cb)
+      return off(commandRejCbs, cb)
     },
 
     publishRoom(room: Room): void {

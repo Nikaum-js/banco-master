@@ -45,6 +45,7 @@
 - [D-032](D-032-log-de-eventos-tipado-narrativa-e-da-ui.md) — Log de eventos tipado: o motor emite fatos, a narrativa (e a identidade) é da UI
 - [D-033](D-033-codigo-de-reentrada-por-assento.md) — Código de reentrada por assento: reconexão de outro dispositivo (refina §11.3/§11.4 e D-019)
 - [D-034](D-034-persistencia-indisponivel-pausa-a-partida.md) — Persistência indisponível pausa a partida (refina §11.4; pausa ganha causa explícita)
+- [D-035](D-035-falha-de-interface-nao-derruba-a-partida.md) — Falha de interface não derruba a partida: fronteira abaixo da sessão, sem causa de pausa nova (refina §11.4 e o princípio VII)
 
 ### Rejeitadas
 - [D-R01](D-R01-sistema-de-draft-rejeitada.md) — Sistema de draft de propriedades no início

@@ -13,6 +13,8 @@ import { connectMultiplayer } from '@/net/connectStore'
 import { hostSeat, type PieceId } from '@/net/room'
 import { getSessionToken, parseRoomLink, roomLink } from '@/net/session'
 import { createRoomSession, type RoomSession } from '@/net/roomSession'
+import { setActiveSession } from '@/net/activeSession'
+import { MatchErrorBoundary } from '@/app/MatchErrorBoundary'
 import { createSupabaseTransport, describeInfraError, isSupabaseConfigured } from '@/net/supabaseClient'
 import { IdentityForm, LobbyMessage, ReentryForm, RoomLobby, TurnOrderReveal } from './LobbyScreen'
 import { HomeScreen } from './HomeScreen'
@@ -33,7 +35,7 @@ export function OnlineGate({ children }: { children: ReactNode }) {
     return q.has('local') || q.has('players')
   })
 
-  if (local) return <>{children}</>
+  if (local) return <MatchErrorBoundary roomId={null}>{children}</MatchErrorBoundary>
   if (!link.roomId && !link.createHost) {
     // Porta de entrada de verdade (FR-021): ninguém precisa saber o que é `?host=1`.
     return (
@@ -56,6 +58,13 @@ export function OnlineGate({ children }: { children: ReactNode }) {
 }
 
 function OnlineRoom({ roomId, children }: { roomId: string | null; children: ReactNode }) {
+  // Hook de E2E (042, FR-025/e2e/errorBoundary.spec.ts) — mesmo espírito de `?players=N` (036):
+  // um jeito determinístico de provar a queda da CASCA sem depender de um bug de verdade. Só
+  // atua na 1ª chamada por navegação (a fronteira de último recurso captura e não remonta
+  // `OnlineRoom` de novo sozinha); "Reabrir a sala" navega para um link limpo, sem o parâmetro.
+  if (new URLSearchParams(window.location.search).has('e2eCrashCasca')) {
+    throw new Error('E2E: queda intencional da casca de sessão (042, FR-025)')
+  }
   const [token] = useState(getSessionToken) // token de sessão do dispositivo (FR-003), estável na aba
   const [session] = useState<RoomSession>(() =>
     createRoomSession({
@@ -67,6 +76,12 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
   )
   const state = useSyncExternalStore(session.subscribe, session.getState)
   const entered = useRef(false)
+
+  // Fronteira de último recurso (042): acha a sessão sem prop-drilling por três componentes.
+  useEffect(() => {
+    setActiveSession(session)
+    return () => setActiveSession(null)
+  }, [session])
 
   // Entrada por link (convidado OU host reabrindo). O guard sobrevive ao StrictMode.
   useEffect(() => {
@@ -97,7 +112,7 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
   if (phase === 'playing') {
     return (
       <>
-        {children}
+        <MatchErrorBoundary roomId={room?.id ?? null}>{children}</MatchErrorBoundary>
         {room && <SessionBadge link={roomLink(room.id, window.location.origin)} />}
       </>
     )

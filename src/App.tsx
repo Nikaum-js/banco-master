@@ -14,6 +14,8 @@ import { DebugLogger } from '@/game/ui/DebugLogger'
 import { OnlineGate } from '@/net/ui/OnlineGate'
 import { PauseBanner } from '@/net/ui/PauseBanner'
 import { ConnectionBanner } from '@/net/ui/ConnectionBanner'
+import { CommandFailureToast } from '@/net/ui/CommandFailureToast'
+import { AccessoryErrorBoundary } from '@/app/AccessoryErrorBoundary'
 
 // O tabuleiro Clássico É a tela inicial. A rolagem é o DiceArena central; o
 // GameDriver faz o turno "ir sozinho" (resolve/finaliza); o ModalLayer (022) traz
@@ -36,12 +38,15 @@ export default function App() {
       <LandAuctionLayer />
       <HandCardLayer />
       <NoticeLayer />
-      <SoundLayer />
+      <AccessoryErrorBoundary label="Som">
+        <SoundLayer />
+      </AccessoryErrorBoundary>
       <GameHUD />
       <AudioControl />
       <ThemeControl />
       <PauseBanner />
       <ConnectionBanner />
+      <CommandFailureToast />
       <DebugLogger />
     </OnlineGate>
   )
