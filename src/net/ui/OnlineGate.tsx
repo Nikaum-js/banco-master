@@ -58,6 +58,13 @@ export function OnlineGate({ children }: { children: ReactNode }) {
 }
 
 function OnlineRoom({ roomId, children }: { roomId: string | null; children: ReactNode }) {
+  // Hook de E2E (042, FR-025/e2e/errorBoundary.spec.ts) — mesmo espírito de `?players=N` (036):
+  // um jeito determinístico de provar a queda da CASCA sem depender de um bug de verdade. Só
+  // atua na 1ª chamada por navegação (a fronteira de último recurso captura e não remonta
+  // `OnlineRoom` de novo sozinha); "Reabrir a sala" navega para um link limpo, sem o parâmetro.
+  if (new URLSearchParams(window.location.search).has('e2eCrashCasca')) {
+    throw new Error('E2E: queda intencional da casca de sessão (042, FR-025)')
+  }
   const [token] = useState(getSessionToken) // token de sessão do dispositivo (FR-003), estável na aba
   const [session] = useState<RoomSession>(() =>
     createRoomSession({
