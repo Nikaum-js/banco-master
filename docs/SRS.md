@@ -1,6 +1,6 @@
 # Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.34
+**Versão:** 1.35
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -77,7 +77,7 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Empréstimos entre jogadores | Presentes — juros 10%–50%, cobrados a cada passagem pelo GO; vencem em 3 voltas com cobrança automática do principal (D-054, §15.6) |
 | Imunidade de aluguel em negociações | Presente — pode ser negociada por N voltas ou até o fim |
 | Negociação com trava de esvaziamento | Presente — troca livre em qualquer proporção; recusadas só a doação pura e a troca que reduz o patrimônio a menos de um terço (D-058, §8.5) |
-| Sistema de raridade de cartas | 3 tiers (Lendária/Rara/Comum) com cores (laranja/azul/verde) |
+| Sistema de raridade de cartas | 4 tiers (Lendária/Épica/Rara/Comum) com cores (laranja/roxo/azul/verde) — D-075 |
 | Cartas em mão | Privadas (apenas contador visível), não-negociáveis, limite de 3 totais |
 | Bus Tickets | Item de mão separado das cartas, obtido via carta "Passagem de Ônibus" |
 | Cartas ofensivas (Aquisição Hostil, Confisco Geral, Imposto Federal, Boicote, Permuta Forçada, Embargo de Obras) | Presentes no v1 — não podem ser recusadas pelo alvo, exceto via reação (Diplomacia) |
@@ -626,7 +626,7 @@ A partida termina quando restar apenas **1 jogador** com saldo positivo. Ele é 
 
 ### 10.1 Visão Geral
 
-O Magnata Imobiliário tem **2 decks separados** de cartas — **Acaso com 21** e **Tesouro com 18** (v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md)) — distribuídas em 3 níveis de **raridade**:
+O Magnata Imobiliário tem **2 decks separados** de cartas — **Acaso com 21** e **Tesouro com 18** (v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md)) — distribuídas em 4 níveis de **raridade** (v1.35, [D-075](adr/D-075-quarto-nivel-de-raridade-epica.md)):
 
 - 🃏 **Acaso** (Chance) — efeitos ofensivos, caóticos, agressivos. "Cair em Acaso pode mudar o jogo."
 - 🎁 **Tesouro** (Community Chest) — efeitos defensivos, benignos, com pequenas surpresas. "Cair em Tesouro quase sempre tem peso."
@@ -635,20 +635,35 @@ O Magnata Imobiliário tem **2 decks separados** de cartas — **Acaso com 21** 
 
 ### 10.2 Sistema de Raridade
 
-Cada carta pertence a uma das 3 raridades, identificadas por cor:
+Cada carta pertence a uma das 4 raridades, identificadas por cor:
 
-| Raridade | Cor | Impacto | Comportamento padrão |
-|---|---|---|---|
-| 🟧 **Lendária** | Laranja | Alto — muda rumo da partida | Vai pra mão |
-| 🟦 **Rara** | Azul | Médio — vantagem tática significativa | Vai pra mão ou efeito imediato grande |
-| 🟩 **Comum** | Verde | Baixo — eventos previsíveis e curtos | Efeito imediato |
+| Raridade | Cor | Losangos | Impacto | Comportamento padrão |
+|---|---|---|---|---|
+| 🟧 **Lendária** | Laranja | ◆◆◆◆ | Alto — muda rumo da partida | Vai pra mão |
+| 🟪 **Épica** | Roxo | ◆◆◆ | Médio-alto — vantagem tática significativa | Vai pra mão ou efeito imediato grande |
+| 🟦 **Rara** | Azul | ◆◆ | Médio — evento com peso, sem decisão | Efeito imediato |
+| 🟩 **Comum** | Verde | ◆ | Baixo — eventos previsíveis e curtos | Efeito imediato |
+
+O quarto nível entrou pela **v1.35, [D-075](adr/D-075-quarto-nivel-de-raridade-epica.md)**, e
+entrou **no meio** da escada: o que era Rara virou **Épica**, o que era Comum de 1 cópia virou
+**Rara**, e Comum passou a designar só o que tem 2 cópias. Nenhuma carta entrou, saiu ou mudou de
+cópia — mudou o nome do degrau.
 
 As cópias respeitam a hierarquia de raridade (v1.34,
 [D-074](adr/D-074-raridade-de-carta-nao-inverte-probabilidade.md)): o embaralhamento
-ponderado usa pesos **Lendária 9 / Rara 10 / Comum 11**, sem exceção por modo. Assim,
-toda carta é estritamente menos provável que uma de tier inferior. Lendárias e raras têm
-1 cópia por efeito; o excedente necessário para manter os baralhos em 21/18 cartas fica
-nas comuns.
+ponderado usa pesos **Lendária 90 / Épica 104 / Rara 107 / Comum 109**, sem exceção por modo.
+Assim, toda carta é estritamente menos provável que uma de tier inferior. Todo nível acima de
+Comum tem 1 cópia por efeito; o excedente necessário para manter os baralhos em 21/18 cartas
+fica nas comuns, que por isso têm sempre 2.
+
+Chance por carta, como a vitrine de probabilidades a exibe:
+
+| Nível | Acaso | Tesouro |
+|---|---|---|
+| 🟧 Lendária | 4,1% | 4,7% |
+| 🟪 Épica | 4,8% | 5,5% |
+| 🟦 Rara | 4,9% | 5,6% |
+| 🟩 Comum | 10,0% (2 cópias) | 11,5% (2 cópias) |
 
 ### 10.3 Regras Gerais de Cartas
 
@@ -681,7 +696,7 @@ nas comuns.
 
 ### 10.4 Distribuição do Deck ACASO (21 cartas)
 
-**(v1.34, [D-074](adr/D-074-raridade-de-carta-nao-inverte-probabilidade.md), refina as cópias da [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))**
+**(v1.35, [D-075](adr/D-075-quarto-nivel-de-raridade-epica.md) renomeia os níveis; a [D-074](adr/D-074-raridade-de-carta-nao-inverte-probabilidade.md) fixou as cópias, refinando a [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))**
 
 #### 🟧 Lendárias (4 cartas)
 
@@ -692,7 +707,7 @@ nas comuns.
 | **Imposto Federal** | 1 | Mão | 🎯 Próprio turno |
 | **Permuta Forçada** | 1 | Mão | 🎯 Próprio turno |
 
-#### 🟦 Raras (4 cartas)
+#### 🟪 Épicas (4 cartas)
 
 | Carta | Cópias | Modo | Timing |
 |---|---|---|---|
@@ -701,11 +716,10 @@ nas comuns.
 | **Crise Imobiliária** | 1 | Imediato | — |
 | **Estatização** | 1 | Imediato | — |
 
-#### 🟩 Comuns (13 cartas)
+#### 🟦 Raras (7 cartas)
 
 | Carta | Cópias | Modo |
 |---|---|---|
-| **Atalho** | 2 | Imediato |
 | **Greve** | 1 | Imediato |
 | **Desvalorização Cambial** | 1 | Imediato |
 | **Obras na Pista** | 1 | Imediato |
@@ -713,12 +727,18 @@ nas comuns.
 | **Vá direto para a Prisão** | 1 | Imediato |
 | **Volta para o GO** | 1 | Imediato |
 | **Conserto de Imóveis** | 1 | Imediato |
+
+#### 🟩 Comuns (6 cartas)
+
+| Carta | Cópias | Modo |
+|---|---|---|
+| **Atalho** | 2 | Imediato |
 | **Avance 3 casas** | 2 | Imediato |
 | **Volte 3 casas** | 2 | Imediato |
 
 ### 10.5 Distribuição do Deck TESOURO (18 cartas)
 
-**(v1.34, [D-074](adr/D-074-raridade-de-carta-nao-inverte-probabilidade.md), refina as cópias da [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))**
+**(v1.35, [D-075](adr/D-075-quarto-nivel-de-raridade-epica.md) renomeia os níveis; a [D-074](adr/D-074-raridade-de-carta-nao-inverte-probabilidade.md) fixou as cópias, refinando a [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))**
 
 #### 🟧 Lendárias (2 cartas)
 
@@ -727,7 +747,7 @@ nas comuns.
 | **Diplomacia** | 1 | Mão | ⚡ Reação |
 | **Imunidade Total** | 1 | Mão | 🎯 Próprio turno |
 
-#### 🟦 Raras (4 cartas)
+#### 🟪 Épicas (4 cartas)
 
 | Carta | Cópias | Modo | Timing |
 |---|---|---|---|
@@ -736,18 +756,23 @@ nas comuns.
 | **Boom Econômico** | 1 | Imediato | — |
 | **Valorização** | 1 | Mão | 🎯 Próprio turno |
 
-#### 🟩 Comuns (12 cartas)
+#### 🟦 Raras (4 cartas)
+
+| Carta | Cópias | Modo |
+|---|---|---|
+| **Resgate do Pote** | 1 | Imediato |
+| **Obra Relâmpago** | 1 | Imediato |
+| **Incentivo Fiscal** | 1 | Imediato |
+| **Honorários médicos** | 1 | Imediato |
+
+#### 🟩 Comuns (8 cartas)
 
 | Carta | Cópias | Modo |
 |---|---|---|
 | **Investidor Anjo** | 2 | Imediato |
 | **Passagem de Ônibus** | 2 | Imediato (adiciona Bus Ticket) |
-| **Resgate do Pote** | 1 | Imediato |
-| **Obra Relâmpago** | 1 | Imediato |
-| **Incentivo Fiscal** | 1 | Imediato |
 | **Erro do banco a seu favor** | 2 | Imediato |
 | **Aniversário** | 2 | Imediato |
-| **Honorários médicos** | 1 | Imediato |
 
 ### 10.6 Catálogo de Efeitos por Carta
 
@@ -777,7 +802,7 @@ nas comuns.
 **Imunidade Total** (Tesouro) — ex-Imunidade Temporária (v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
 > Por **1 volta completa** do tabuleiro, **você** não paga **aluguel** nem **imposto algum** (imposto de casa, Crise Imobiliária, Conserto, multas de carta) e não pode ser alvo de **efeito negativo** (Aquisição Hostil, Confisco Geral, Imposto Federal, Boicote, Permuta Forçada, Embargo de Obras, cobranças de carta alheia como Aniversário).
 
-#### 🟦 Cartas Raras
+#### 🟪 Cartas Épicas
 
 **Boicote** (Acaso)
 > Escolha 1 propriedade de outro jogador. Por **2 voltas completas**, ela **não cobra aluguel** de nenhum jogador que parar nela.
@@ -803,7 +828,11 @@ nas comuns.
 **Boom Econômico** (Tesouro, imediato)
 > Todos os jogadores recebem **$200** do banco.
 
-#### 🟩 Cartas Comuns novas
+#### 🟦🟩 Cartas Raras e Comuns — novas
+
+> As duas subseções abaixo agrupam por **origem** (cartas criadas para este jogo × clássicas do
+> gênero), não por nível. Desde a [D-075](adr/D-075-quarto-nivel-de-raridade-epica.md) elas
+> misturam Raras e Comuns: o nível de cada carta é o das tabelas de §10.4 e §10.5.
 
 **Atalho** (Acaso, imediato)
 > Mova-se até 3 casas para frente ou para trás (jogador escolhe). Resolve a casa onde parar normalmente. Se passar pelo GO indo para trás, NÃO recebe bônus.
@@ -835,7 +864,7 @@ nas comuns.
 **Incentivo Fiscal** (Tesouro, imediato — v1.26, [D-064](adr/D-064-rebalanceamento-do-catalogo-de-cartas.md))
 > Receba **$50 por propriedade hipotecada** que possui. Sem hipoteca, a carta não tem efeito.
 
-#### 🟩 Cartas Comuns clássicas
+#### 🟦🟩 Cartas Raras e Comuns — clássicas
 
 **Vá direto para a Prisão** (Acaso)
 > Vá imediatamente para a casa Prisão (índice 12). **NÃO** recebe bônus do GO se passar por ele. Não move mais no turno.
@@ -870,7 +899,7 @@ nas comuns.
 Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade de movimento.
 
 **Como obter:**
-- Sacar a carta **Passagem de Ônibus** (Tesouro, Comum). Cada saque dessa carta concede **1 Bus Ticket**.
+- Sacar a carta **Passagem de Ônibus** (Tesouro, Comum — 2 cópias). Cada saque dessa carta concede **1 Bus Ticket**.
 
 **Regras:**
 - Bus Tickets têm **contador próprio** — não consomem o limite de 3 cartas na mão.
@@ -1038,7 +1067,7 @@ nomes de regiões nem divisórias decorativas.
 
 - Aba dedicada "Minhas Cartas" no HUD próprio.
 - Cada carta na mão é exibida com:
-  - Cor da raridade no fundo (laranja/azul/verde).
+  - Cor da raridade no fundo (laranja/roxo/azul/verde).
   - Nome e texto do efeito.
   - Botão "Usar" habilitado apenas quando o timing permitir (tooltip explicativo quando desabilitado).
 - Contador "X / 3 cartas na mão".
@@ -1064,7 +1093,7 @@ nomes de regiões nem divisórias decorativas.
 | Esc | Fecha modal **informativo**. **Não** fecha modal que decide a partida (compra, leilão, reação, dívida, descarte) — Esc não pode virar comando |
 | Nome acessível | Todo ícone ou imagem com significado tem nome; ícone decorativo é ocultado do leitor de tela |
 | Anúncio | O log de eventos é região viva educada; "sua vez" e prazo vencendo são anunciados com urgência |
-| Cor | Nunca é o único canal: posse, jogador da vez, raridade de carta e status de conexão têm segundo sinal |
+| Cor | Nunca é o único canal: posse, jogador da vez, raridade de carta (losangos, 4 a 1) e status de conexão têm segundo sinal |
 | Contraste | ≥ 4,5:1 para texto e ≥ 3:1 para elemento de interface e indicador de foco |
 | Alvo de toque | ≥ 24 × 24 px no caminho de jogo |
 | Movimento | `prefers-reduced-motion` respeitado em toda animação; com movimento reduzido o fato continua legível — nenhuma informação existe só na animação |

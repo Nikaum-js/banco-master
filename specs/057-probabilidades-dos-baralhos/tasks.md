@@ -17,13 +17,13 @@ Ordem importa: T1→T2 antes de qualquer UI (a projeção fica verde sozinha), T
   - assinatura **sem** `GameState` — é o que torna FR-002/SC-005 verificável por tipo;
   - filtra `status !== 'implementado'` fora da lista **e** do denominador (FR-006);
   - `total` = soma de `copies` (nunca constante 21/18);
-  - `probability` = `copies / total`, fração **não** arredondada;
-  - ordena por `probability` ↑, `rarity` ↓ (lendária>rara>comum), `title` `localeCompare('pt-BR')`;
+  - `probability` = `RARITY_WEIGHT[rarity] × copies / soma dos pesos`, fração **não** arredondada;
+  - ordena por `probability` ↑, `rarity` ↓ (lendária>épica>rara>comum), `title` `localeCompare('pt-BR')`;
   - título/desc de `CARD_LABEL`/`cardDesc` (spec 029), nunca texto novo;
   - comentário no topo citando D-037 e explicando por que não se lê o deck vivo.
 - [x] **T3** `tests/game/cards/deckOdds.test.ts` — os 6 casos do plan §6:
   contagem (18/21 e 14/18) · soma `copies`=`total` · ordenação crescente + desempate ·
-  agrupamento de cópias (Aquisição Hostil 1 linha, `copies` 2, `probability` 2/21) ·
+  agrupamento de cópias (Atalho 1 linha, `copies` 2, `probability` 218/2179) ·
   `deferido` fora da lista e do denominador · invariância ao andamento da partida.
 
 ## Fase 3 — Tela

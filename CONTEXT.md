@@ -157,13 +157,22 @@ Deck de cartas de efeito defensivo/benigno — o "Community Chest" clássico. Di
 _Avoid_: Baú, Cofre, Community Chest
 
 **Carta Lendária**:
-Carta de alto impacto (laranja), que geralmente vai para a mão.
+Carta de alto impacto (laranja, ◆◆◆◆), que geralmente vai para a mão.
+
+**Carta Épica**:
+Carta de impacto médio-alto (roxo, ◆◆◆), que pode ir para a mão ou ter efeito imediato grande.
+Nível criado pela [D-075](./docs/adr/D-075-quarto-nivel-de-raridade-epica.md) para o que antes se
+chamava Rara.
+_Avoid_: Rara (o termo mudou de referente)
 
 **Carta Rara**:
-Carta de impacto médio (azul), que pode ir para a mão ou ter efeito imediato grande.
+Carta de impacto médio (azul, ◆◆), de efeito imediato, com 1 cópia no baralho. Desde a
+[D-075](./docs/adr/D-075-quarto-nivel-de-raridade-epica.md) o termo designa o que antes era uma
+Comum de 1 cópia.
 
 **Carta Comum**:
-Carta de baixo impacto (verde), geralmente de efeito imediato.
+Carta de baixo impacto (verde, ◆), de efeito imediato. É o único nível com 2 cópias por efeito — o
+que a torna, por construção, a mais provável.
 
 **Carta em mão**:
 Carta retida pelo jogador após o saque. Privada, não-negociável, limite de 3 somando os dois decks ([D-011](./docs/adr/D-011-cartas-em-mao-privadas-e-nao-negociaveis.md)).

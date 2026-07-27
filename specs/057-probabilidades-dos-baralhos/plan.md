@@ -49,9 +49,11 @@ interface DeckOddsRow {
 interface DeckOdds { deck: DeckId; total: number; rows: DeckOddsRow[] }
 ```
 
-Ordem (FR-004): `probability` crescente → `rarity` decrescente (lendária > rara > comum) →
-`title` por `localeCompare('pt-BR')`. As três chaves são necessárias: 11 comuns do Acaso empatam
-em 1/21, e sem a terceira chave a ordem depende da ordem de declaração no catálogo.
+`probability` é `RARITY_WEIGHT[rarity] × copies / soma dos pesos`, a mesma chance usada pelo
+embaralhamento ponderado. Ordem (FR-004): `probability` crescente → `rarity` decrescente
+(lendária > épica > rara > comum) → `title` por `localeCompare('pt-BR')`. As três chaves são
+necessárias porque todas as cartas de um mesmo nível empatam, e sem a terceira chave a ordem
+depende da declaração no catálogo.
 
 `probability` fica **fração não arredondada** e o arredondamento acontece só na formatação. Guardar
 já arredondado faria a soma dos itens divergir de 1 e contaminaria o teste de soma — que, por
@@ -101,7 +103,7 @@ fechar a vitrine não fecha decisão nenhuma.
 1. Acaso: 18 linhas, `total` 21; Tesouro: 14 linhas, `total` 18.
 2. soma de `copies` = `total` nos dois baralhos (SC-002).
 3. `probability` crescente ao longo de `rows`; empate desempatado por raridade e nome.
-4. cópias agrupadas: Aquisição Hostil aparece 1×, com `copies: 2` e `probability` 2/21.
+4. cópias agrupadas: Atalho aparece 1×, com `copies: 2` e `probability` 218/2179.
 5. `deferido` fica fora da lista **e** do denominador — provado marcando um def como deferido.
 6. **invariância ao estado** (SC-003): duas chamadas iguais em pontos diferentes da partida
    devolvem o mesmo objeto de valores; e a assinatura não aceita estado (garantido por tipo).

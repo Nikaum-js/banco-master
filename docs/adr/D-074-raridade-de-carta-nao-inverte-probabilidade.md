@@ -1,7 +1,12 @@
 # D-074 — Raridade de carta é chance de saque, não rótulo
 
 **Data:** 2026-07-30 · **Status:** aceita · **Contexto SRS:** §10.2 (raridade), §10.4–10.5
-(composição) · **Refina:** [D-064](./D-064-rebalanceamento-do-catalogo-de-cartas.md)
+(composição) · **Refina:** [D-064](./D-064-rebalanceamento-do-catalogo-de-cartas.md) ·
+**Refinada por:** [D-075](./D-075-quarto-nivel-de-raridade-epica.md)
+
+> Os nomes e pesos abaixo registram a decisão de três níveis como ela foi aceita. A D-075
+> preserva sua invariante, mas introduz Épica e substitui a escala `9/10/11` por
+> `90/104/107/109`.
 
 ## Problema
 

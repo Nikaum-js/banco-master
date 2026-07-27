@@ -14,9 +14,11 @@ explicar o que aquele efeito ou carta faz — isso é legal pra ensinar sobre o 
 **Depende de**: spec 029 (metadados de apresentação de carta), spec 044 (gate de
 acessibilidade AA no caminho de jogo).
 
-> Esta spec **não cria regra de jogo**. Ela expõe, como informação, uma composição que o SRS
-> §10.4–10.5 já fixa e que a [D-064](../../docs/adr/D-064-rebalanceamento-do-catalogo-de-cartas.md)
-> já decidiu. Nenhum ADR novo é necessário: nada aqui contraria ou refina o SRS.
+> Esta spec **não cria regra de jogo**. Ela expõe, como informação, a composição e os pesos que o
+> SRS §10.2/§10.4–10.5 fixa. A [D-074](../../docs/adr/D-074-raridade-de-carta-nao-inverte-probabilidade.md)
+> tornou o saque ponderado por raridade, e a
+> [D-075](../../docs/adr/D-075-quarto-nivel-de-raridade-epica.md) introduziu o quarto nível; a
+> vitrine apenas projeta essas decisões.
 
 ## Clarifications
 
@@ -24,9 +26,9 @@ Resolvidas por SRS, ADR e código real — sem pergunta pendente ao usuário:
 
 | Ambiguidade | Resolução | Fonte |
 |---|---|---|
-| A probabilidade sai do baralho VIVO ou da composição impressa? | **Do catálogo estático e dos pesos canônicos de raridade.** A chance é `peso × cópias / soma dos pesos`; o baralho vivo continua proibido. Seu conteúdo não trafega para quem não é anfitrião, e ler o estado vivo revelaria o que já saiu | SRS §10.2–10.3 + [D-037](../../docs/adr/D-037-estado-por-perspectiva-a-mao-nao-trafega.md) + [D-074](../../docs/adr/D-074-raridade-de-carta-nao-inverte-probabilidade.md) |
-| Mostrar carta a carta ou agrupar cópias? | **Agrupar por efeito.** O catálogo tem `copies` por carta base (ex.: Aquisição Hostil ×2); listar as 21 unidades repetiria linha idêntica e esconderia justamente a informação pedida (qual efeito é mais provável) | `src/game/cards/catalog.ts` |
-| Empate de chance quebra como? | Cartas com a mesma chance são muitas (11 comuns do Acaso têm 1 cópia cada). Desempate estável por **raridade decrescente**, depois por **nome** — sem isso a ordem varia entre renders e a lista parece embaralhada | decisão desta spec |
+| A probabilidade sai do baralho VIVO ou da composição impressa? | **Do catálogo estático e dos pesos canônicos de raridade.** A chance é `peso × cópias / soma dos pesos`; o baralho vivo continua proibido. Seu conteúdo não trafega para quem não é anfitrião, e ler o estado vivo revelaria o que já saiu | SRS §10.2–10.3 + [D-037](../../docs/adr/D-037-estado-por-perspectiva-a-mao-nao-trafega.md) + [D-074](../../docs/adr/D-074-raridade-de-carta-nao-inverte-probabilidade.md) + [D-075](../../docs/adr/D-075-quarto-nivel-de-raridade-epica.md) |
+| Mostrar carta a carta ou agrupar cópias? | **Agrupar por efeito.** O catálogo tem `copies` por carta base (ex.: Atalho ×2); listar as 21 unidades repetiria linha idêntica e esconderia justamente a informação pedida (qual efeito é mais provável) | `src/game/cards/catalog.ts` |
+| Empate de chance quebra como? | Cartas do mesmo nível têm a mesma chance. Desempate estável por **raridade decrescente**, depois por **nome** — sem isso a ordem varia entre renders e a lista parece embaralhada | decisão desta spec |
 | Onde vêm título e texto de cada efeito? | `CARD_LABEL` e `CARD_DESC` em `cardMeta.ts`, que já é fonte única de modais e do painel "Minhas Cartas" | spec 029 |
 | Abre em partida ou também fora? | Abre a partir da **casa no tabuleiro**, durante a partida. É modal **informativo**: Esc fecha | SRS §1057 |
 | Vale nos dois mapas? | Sim. O motor de cartas é o mesmo; o que muda por mapa é rótulo de apresentação, já resolvido pelo `mapCatalog` | [D-069](../../docs/adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md) |
@@ -38,7 +40,7 @@ Resolvidas por SRS, ADR e código real — sem pergunta pendente ao usuário:
 Um jogador novo cai numa casa de Acaso, leva um Confisco Geral e não entende o que aconteceu
 nem se aquilo era provável. No turno seguinte ele clica na casa de Acaso do tabuleiro e vê a
 lista completa dos 18 efeitos possíveis com a chance de cada um, do mais raro ao mais comum —
-e descobre que Confisco Geral é 1 em 21.
+e descobre que Confisco Geral tem cerca de 4,1% de chance.
 
 **Independent Test**: abrir o modal de cada baralho e provar que a lista cobre todo o catálogo
 daquele deck, que as chances somam 100% e que a ordem é crescente de chance.
@@ -53,7 +55,7 @@ daquele deck, que as chances somam 100% e que a ordem é crescente de chance.
    cartas representadas) — nenhum efeito do catálogo fica de fora.
 4. **Given** a casa de Tesouro, **When** clicada, **Then** abre o modal equivalente com os 14
    efeitos do baralho Tesouro, somando 100% (18 de 18 cartas).
-5. **Given** um efeito com mais de uma cópia (ex.: Aquisição Hostil ×2), **When** listado,
+5. **Given** um efeito com mais de uma cópia (ex.: Atalho ×2), **When** listado,
    **Then** aparece em **uma** linha, com a chance das duas cópias somadas e a contagem visível.
 6. **Given** dois efeitos com a mesma chance, **When** listados, **Then** a ordem entre eles é
    estável entre renders (raridade decrescente, depois nome).
@@ -113,7 +115,8 @@ números do modal são idênticos aos do início; e que a projeção não lê `G
 - **Carta `deferido` no catálogo**: o catálogo prevê `status: 'implementado' | 'deferido'`. Um
   efeito não implementado **não** pode aparecer como recompensa possível — a lista mentiria sobre
   o jogo. Hoje todas as 39 estão `implementado`; o filtro existe para que amanhã continue verdade.
-- **Soma de arredondamento**: 1/21 = 4,76%. Arredondar cada item e somar dá 99,9%/100,1%. A
+- **Soma de arredondamento**: os pesos canônicos geram frações não terminantes. Arredondar cada
+  item e somar pode dar 99,9%/100,1%. A
   asserção de "somam 100%" é sobre **contagem de cartas** (21 de 21), não sobre a soma dos
   percentuais arredondados.
 - **Modal informativo sobre modal decisório**: cair numa casa de carta abre fluxo que **decide** a
@@ -128,7 +131,7 @@ números do modal são idênticos aos do início; e que a projeção não lê `G
 - **FR-001**: clicar na casa de **Acaso** ou de **Tesouro** no tabuleiro MUST abrir um modal
   informativo com a vitrine de probabilidades daquele baralho.
 - **FR-002**: a vitrine MUST derivar as chances **exclusivamente** do catálogo estático de cartas
-  e dos pesos canônicos de raridade da D-074, e MUST NOT ler o baralho, o descarte ou qualquer
+  e dos pesos canônicos de raridade da D-074/D-075, e MUST NOT ler o baralho, o descarte ou qualquer
   mão de `GameState`.
 - **FR-003**: a vitrine MUST agrupar por efeito, somando as cópias, e MUST exibir a contagem de
   cópias e a chance ponderada resultante de cada efeito.
@@ -181,8 +184,9 @@ números do modal são idênticos aos do início; e que a projeção não lê `G
 
 ## Assumptions
 
-- O catálogo atual (Acaso 21 em 18 efeitos: 5 lendárias, 5 raras, 11 comuns; Tesouro 18 em 14
-  efeitos: 2, 6, 10) é o estado aprovado pela D-064 e **não** é rebalanceado por esta feature.
+- O catálogo atual tem Acaso 21 em 18 efeitos (4 lendárias, 4 épicas, 7 raras, 3 comuns) e
+  Tesouro 18 em 14 efeitos (2 lendárias, 4 épicas, 4 raras, 4 comuns). A D-075 mudou os rótulos e
+  pesos, não as cópias nem o tamanho dos baralhos.
 - Probabilidade é apresentada em porcentagem com **uma** casa decimal (4,8% e não 4,761%): a
   precisão extra não muda decisão e polui a leitura de uma lista de 18 linhas.
 - A vitrine é informação de aprendizado, não de estratégia avançada: não há intenção de mostrar

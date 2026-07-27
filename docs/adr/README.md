@@ -83,7 +83,8 @@
 - [D-071](D-071-minas-sao-ativos-passivos-sem-aluguel.md) — Minas são títulos passivos sem aluguel: Ferro −25% em construção, Carvão +50% em Ferrovias, Estanho −15% em impostos/aluguéis pagos e Cobre +25% em propriedades construídas
 - [D-072](D-072-taxa-de-fumaca-sai-da-fuligem.md) — Taxa de Fumaça removida: construções da Fuligem pagam somente o custo normal; Desvio pela Ferrovia e demais regras permanecem (revoga parcialmente D-070)
 - [D-073](D-073-desvio-pela-ferrovia-uma-vez-por-turno.md) — Desvio pela Ferrovia pode ser usado no máximo uma vez por turno, encerrando o ciclo gratuito entre estações (refina D-070)
-- [D-074](D-074-raridade-de-carta-nao-inverte-probabilidade.md) — Cópias respeitam a raridade: lendárias e raras ficam em 1 cópia; excedente dos baralhos 21/18 vai para comuns (refina D-064)
+- [D-074](D-074-raridade-de-carta-nao-inverte-probabilidade.md) — No vocabulário de três níveis da época, lendárias e raras ficam em 1 cópia e o excedente dos baralhos 21/18 vai para comuns (refina D-064; nomenclatura e pesos refinados pela D-075)
+- [D-075](D-075-quarto-nivel-de-raridade-epica.md) — Quarto nível de raridade **Épica** (roxo), inserido no meio: ex-rara→épica, ex-comum de 1 cópia→rara, comum passa a ser só o que tem 2 cópias; pesos 90/104/107/109 sobem a épica e cedem em rara e comum (refina D-074, SRS §10.2/§10.4–10.5 v1.35)
 
 > ℹ️ **Renumeração na integração da 043** (a colisão que este arquivo avisava): a worktree da 043
 > tinha escrito a identidade de transporte como `D-035` e o código de reentrada como `D-038`, e
