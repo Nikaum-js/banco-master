@@ -6,40 +6,42 @@
 >
   <title id="magnata-logo-title">Magnata Imobiliário</title>
   <desc id="magnata-logo-description">
-    Monograma dourado em forma de M, coroa e edifício sobre fundo azul-marinho.
+    Um tabuleiro de propriedades em perspectiva sustenta uma metrópole cuja silhueta forma a letra M.
   </desc>
 
-  <defs>
-    <linearGradient id="magnata-background" x1="32" y1="16" x2="224" y2="240" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#041D3A" />
-      <stop offset="1" stop-color="#00142A" />
-    </linearGradient>
-    <linearGradient id="magnata-gold" x1="128" y1="10" x2="128" y2="227" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F2BE45" />
-      <stop offset="1" stop-color="#E3A92E" />
-    </linearGradient>
-    <linearGradient id="magnata-window" x1="116" y1="95" x2="140" y2="118" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFF8DC" />
-      <stop offset="1" stop-color="#F2E3B6" />
-    </linearGradient>
-  </defs>
+  <rect width="256" height="256" fill="#f7f3e9" />
 
-  <rect width="256" height="256" fill="url(#magnata-background)" />
+  <!-- Base do tabuleiro: o filete inferior mantém a leitura de peça mesmo em 32 px. -->
+  <path fill="#031f3f" d="m31 174 97 39 97-39v14l-97 44-97-44Z" />
 
-  <path
-    fill="url(#magnata-gold)"
-    d="M27 46 128 143 229 46v181h-31V121l-70 70-70-70v106H27V46Z"
-  />
-
-  <path
-    fill="url(#magnata-gold)"
-    d="m72 60 27 21 29-71 29 71 27-21v21l-27 21-29-25-29 25-27-21V60Z"
-  />
-
-  <g fill="url(#magnata-window)">
-    <rect x="116" y="95" width="10" height="10" rx="1" />
-    <rect x="130" y="95" width="10" height="10" rx="1" />
-    <rect x="116" y="109" width="10" height="10" rx="1" />
-    <rect x="130" y="109" width="10" height="10" rx="1" />
+  <!-- Casas em perspectiva. -->
+  <g stroke="#f7f3e9" stroke-width="4" stroke-linejoin="miter">
+    <path fill="#05294f" d="m30 171 31-12 34 16-33 18Z" />
+    <path fill="#d8a63c" d="m62 193 33-18 33 15-34 19Z" />
+    <path fill="#e2af40" d="m94 209 34-19 34 18-34 19Z" />
+    <path fill="#d8a63c" d="m128 190 33-15 34 18-33 15Z" />
+    <path fill="#05294f" d="m161 175 34-16 31 12-31 22Z" />
   </g>
+
+  <!-- Volumes dourados ao fundo sugerem patrimônio sem recorrer a moedas ou cifrões. -->
+  <g fill="#c99732">
+    <path d="m73 82 24-16v62l-24 14Z" />
+    <path d="m145 57 21 14v46l-21-15Z" />
+    <path d="m190 111 20 11v41l-20 11Z" />
+  </g>
+
+  <!-- Skyline e tabuleiro se encontram num M contínuo. -->
+  <path
+    fill="#031f3f"
+    d="M57 175v-72l17-11v26l22-13 15 13V52l17-11v88l17-14V82l21 14v33l13-12v-15l18-11v84l-17 8v-53l-48 40-49-40v53Z"
+  />
+
+  <!-- Contraponto inferior: fecha a letra sem transformar o símbolo numa casa genérica. -->
+  <path
+    fill="#05294f"
+    stroke="#f7f3e9"
+    stroke-width="4"
+    stroke-linejoin="miter"
+    d="m110 166 18 16 18-16v39l-18 10-18-10Z"
+  />
 </svg>

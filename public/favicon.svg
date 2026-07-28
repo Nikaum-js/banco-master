@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Magnata Imobiliário">
+  <rect width="64" height="64" rx="7" fill="#f7f3e9" />
+  <path fill="#031f3f" d="m7 44 25 10 25-10v4L32 59 7 48Z" />
+  <g stroke="#f7f3e9" stroke-width="1.5" stroke-linejoin="miter">
+    <path fill="#05294f" d="m7 43 8-3 9 4-8 5Z" />
+    <path fill="#d8a63c" d="m16 49 8-5 8 4-8 5Z" />
+    <path fill="#e2af40" d="m24 53 8-5 8 5-8 5Z" />
+    <path fill="#d8a63c" d="m32 48 8-4 9 5-9 4Z" />
+    <path fill="#05294f" d="m40 44 9-4 8 3-8 6Z" />
+  </g>
+  <g fill="#c99732">
+    <path d="m18 21 6-4v15l-6 4Z" />
+    <path d="m36 15 6 4v11l-6-4Z" />
+    <path d="m48 28 5 3v10l-5 3Z" />
+  </g>
+  <path
+    fill="#031f3f"
+    d="M14 45V26l5-3v7l5-4 4 4V13l4-3v23l4-4v-8l5 4v8l4-3v-4l5-3v22l-5 2V34L32 44 19 34v13Z"
+  />
+  <path
+    fill="#05294f"
+    stroke="#f7f3e9"
+    stroke-width="1.5"
+    d="m27 43 5 4 5-4v10l-5 3-5-3Z"
+  />
+</svg>
