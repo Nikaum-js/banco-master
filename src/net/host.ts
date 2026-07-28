@@ -229,7 +229,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   }
 
   // Pedido de assento no lobby (FR-002/005). A identidade do assento é o uid da CONEXÃO —
-  // o pedinte só escolhe nome e cor. Recusa (cheia/cor tomada/já iniciada) volta ao pedinte.
+  // o pedinte só escolhe nome, cor, avatar e skin. Recusa (cheia/cor tomada/já iniciada) volta ao pedinte.
   //
   // 043, D4/T020: a reanexação SAIU daqui — vira `reattach_by_code` no servidor (RPC), porque
   // o host não tem como assinar o tópico de um assento que ainda não existe. Este handler só
@@ -238,7 +238,7 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   function handleJoinRequest(who: JoinRequest, fromUid: string): void {
     const taken = new Set(room.seats.map((s) => s.reentryCode))
     const result = joinRoom(room, {
-      uid: fromUid, name: who.name, color: who.color,
+      uid: fromUid, name: who.name, color: who.color, avatar: who.avatar, skin: who.skin,
       reentryCode: newReentryCode(rng, taken), // room.ts não tem RNG (D12) — o host minta
     })
     if (!result.ok) {

@@ -24,6 +24,26 @@ import { mergeSnapshot, type Secrets } from './perspective'
 import { normalizeRoom, toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
 import { normalizeGame, normalizeLog } from '@/game/log'
 import type { PauseState } from '@/game/turn/types'
+import { DEFAULT_AVATAR, isAvatarId, normalizeAvatar } from '@/boards/playerAvatarCatalog'
+import { DEFAULT_SKIN, isSkinId, normalizeSkin } from '@/boards/playerSkinCatalog'
+
+const AVATAR_SKIN_WIRE_PREFIX = 'bm-avatar:v1:'
+
+function encodeAvatarSkin(who: Pick<JoinRequest, 'avatar' | 'skin'>): string {
+  return `${AVATAR_SKIN_WIRE_PREFIX}${normalizeAvatar(who.avatar)}:${normalizeSkin(who.skin)}`
+}
+
+function decodeAvatarSkin(piece: unknown): Pick<JoinRequest, 'avatar' | 'skin'> {
+  if (typeof piece !== 'string') return {}
+  if (!piece.startsWith(AVATAR_SKIN_WIRE_PREFIX)) {
+    return isAvatarId(piece) ? { avatar: piece, skin: DEFAULT_SKIN } : {}
+  }
+  const [avatar, skin] = piece.slice(AVATAR_SKIN_WIRE_PREFIX.length).split(':')
+  return {
+    avatar: isAvatarId(avatar) ? avatar : DEFAULT_AVATAR,
+    skin: isSkinId(skin) ? skin : DEFAULT_SKIN,
+  }
+}
 
 // Migração de dados (041, data-model — Migração de dados): salas persistidas ANTES desta
 // spec têm `game.paused` como booleano. `since` recebe o instante da LEITURA, nunca `0` — o
@@ -296,8 +316,23 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
   function bindLobby(ch: SupabaseChannelLike): void {
     ch
     .on('broadcast', { event: EVENT.join }, ({ payload }) => {
-      const p = payload as { who: JoinRequest; uid: string }
-      for (const cb of joinReqCbs) cb(p.who, p.uid)
+      const p = payload as {
+        who: Omit<JoinRequest, 'avatar' | 'skin'> & {
+          avatar?: JoinRequest['avatar']
+          skin?: JoinRequest['skin']
+          piece?: string | null
+        }
+        uid: string
+      }
+      const { piece, ...who } = p.who
+      const decoded = decodeAvatarSkin(piece)
+      for (const cb of joinReqCbs) {
+        cb({
+          ...who,
+          avatar: who.avatar ?? decoded.avatar,
+          skin: who.skin ?? decoded.skin,
+        }, p.uid)
+      }
     })
     .on('broadcast', { event: EVENT.rejected }, ({ payload }) => {
       const p = payload as { uid: string; reason: JoinError }
@@ -456,7 +491,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
     // carimba `auth.uid()` no servidor e difunde ao lobby por conta própria (`realtime.send`).
     async requestJoin(who: JoinRequest): Promise<void> {
       const { error } = await supabase.rpc('request_seat', {
-        room_id: roomId, name: who.name, color: who.color,
+        room_id: roomId, name: who.name, color: who.color, piece: encodeAvatarSkin(who),
       })
       if (error) throw error
     },

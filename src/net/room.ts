@@ -4,17 +4,20 @@
 // `GameState` (que nunca ganha PII nem uid — D-019): o `GameState` só conhece `playerId`s
 // serializáveis ('p1'..'p8'). Todos os reducers aqui são PUROS (não mutam o argumento).
 //
-// Identidade visual: a COR é única por sala (§12.5); o NOME é livre (duplicata permitida,
-// Clarifications). Ordem de turno = ordem de entrada (host = 1º assento); a rolagem de ordem
-// inicial pertence ao 038+ (FR-006).
+import { normalizeAvatar, type AvatarId } from '@/boards/playerAvatarCatalog'
+import { normalizeSkin, type SkinId } from '@/boards/playerSkinCatalog'
+
+// Identidade visual: a COR é única por sala (§12.5); NOME, AVATAR e SKIN podem repetir. A
+// composição pública acompanha o assento (D-047) e nunca vira regra competitiva. Ordem de turno = ordem
+// de entrada (host = 1º assento); a rolagem de ordem inicial pertence ao 038+ (FR-006).
 
 // Paleta de assentos — espelha `PLAYER_COLORS` de `game/ui/panels/playersView.ts` (mantida
 // aqui para não acoplar a casca de rede à UI). 8 cores → no máximo 8 assentos (§11.1).
 //
-// A PEÇA (avião, navio, trem…) foi removida em D-044: era escolha sem consequência — nunca
-// chegou ao tabuleiro, onde o token sempre foi a carinha na cor do assento. Com ela fora, a
-// COR é o único distintivo entre jogadores, e por isso a paleta deixou de ser escolhida a
-// olho (D-045): as oito nascem em OKLCH com croma coeso (~0,13) e claridade escalonada
+// A PEÇA (avião, navio, trem…) foi removida em D-044. A D-047 trouxe de volta apenas a forma
+// visual do próprio `PlayerFace`, sem unicidade: a COR continua sendo o distintivo obrigatório
+// entre jogadores. Por isso a paleta deixou de ser escolhida a olho (D-045): as oito nascem
+// em OKLCH com croma coeso (~0,13) e claridade escalonada
 // (0,62–0,82), e a ORDEM é por ponto-mais-distante — as mesas pequenas ficam com os pares
 // mais separados que a paleta permite (2 jogadores: ΔE 0,26; 4: 0,11; 8: 0,07, medidos no
 // PIOR caso entre visão típica, deuteranopia e protanopia).
@@ -39,6 +42,10 @@ export interface Seat {
   uid: string // ERA `token` (043, D-042) — identidade atestada pelo servidor, chave de reconexão
   name: string // nome exibido (livre)
   color: string // cor (única por sala)
+  /** D-047: forma visual pública; opcional apenas para absorver salas anteriores à 046. */
+  avatar?: AvatarId
+  /** D-047: camada visual pública; opcional apenas para absorver salas anteriores à 046. */
+  skin?: SkinId
   isHost: boolean
   connected: boolean
   /** D-046: privado enquanto `Room.status === 'bidding'`; público na revelação. Opcional
@@ -121,6 +128,8 @@ export function normalizeRoom(room: Room): Room {
     openingAuction: room.openingAuction ?? null,
     seats: room.seats.map((seat) => ({
       ...seat,
+      avatar: normalizeAvatar(seat.avatar),
+      skin: normalizeSkin(seat.skin),
       openingBid: seat.openingBid ?? null,
       bidLocked: seat.bidLocked ?? false,
       openingRoll: seat.openingRoll ?? null,
@@ -135,6 +144,10 @@ export interface Identity {
   uid: string // ERA `token` (043, D-042) — emitido pelo servidor, nunca escolhido pelo participante
   name: string
   color: string
+  /** O adapter aceita ausência/valor legado; a autoridade sempre normaliza ao catálogo. */
+  avatar?: AvatarId | string
+  /** O adapter aceita ausência/valor legado; a autoridade sempre normaliza ao catálogo. */
+  skin?: SkinId | string
   /** Código de reentrada PRONTO (041, D-033/D12) — `room.ts` não tem RNG e não deveria
    * ganhar um; quem minta é quem já tem RNG (host) ou o `roomSession` na criação. Vazio nos
    * chamadores que não exercitam reentrada (determinístico, sem mock). */
@@ -163,6 +176,8 @@ export function createRoom(id: string, host: Identity): Room {
     openingAuction: null,
     seats: [{
       playerId: seatIdFor(0), uid: host.uid, name: host.name, color: host.color,
+      avatar: normalizeAvatar(host.avatar),
+      skin: normalizeSkin(host.skin),
       isHost: true, connected: true, openingBid: null, bidLocked: false, openingRoll: null,
       reentryCode: host.reentryCode ?? '',
     }],
@@ -178,10 +193,11 @@ export function isSeatColor(c: string): boolean {
 // Regras: sala cheia recusa; cor fora da paleta recusa; cor duplicada recusa; após o início,
 // uid novo é recusado.
 export function joinRoom(room: Room, who: Identity): JoinResult {
-  const existing = seatByUid(room, who.uid)
-  if (existing) return { ok: true, room: markConnected(room, who.uid), seat: seatByUid(markConnected(room, who.uid), who.uid)! }
-  if (room.status !== 'lobby') return { ok: false, reason: 'already-started' } // sem novos assentos após o início (FR-005, §11.2)
-  if (room.seats.length >= MAX_SEATS) return { ok: false, reason: 'room-full' } // §11.1
+  const current = normalizeRoom(room)
+  const existing = seatByUid(current, who.uid)
+  if (existing) return { ok: true, room: markConnected(current, who.uid), seat: seatByUid(markConnected(current, who.uid), who.uid)! }
+  if (current.status !== 'lobby') return { ok: false, reason: 'already-started' } // sem novos assentos após o início (FR-005, §11.2)
+  if (current.seats.length >= MAX_SEATS) return { ok: false, reason: 'room-full' } // §11.1
   // A cor precisa ser da PALETA antes de precisar ser única. Sem esta linha, a unicidade
   // é só igualdade exata de string: `''` passa (e cai no fallback por índice de
   // `identityOf`, que pode colidir com a cor de outro assento), e `#d9a651` passa ao lado
@@ -190,12 +206,14 @@ export function joinRoom(room: Room, who: Identity): JoinResult {
   // dicromacia que é a razão de ela existir. O lobby já só oferece as oito; esta é a
   // guarda da AUTORIDADE, pro caso do pedido não vir do lobby.
   if (!isSeatColor(who.color)) return { ok: false, reason: 'invalid-color' }
-  if (room.seats.some((s) => s.color === who.color)) return { ok: false, reason: 'color-taken' } // cor única (§12.5)
+  if (current.seats.some((s) => s.color === who.color)) return { ok: false, reason: 'color-taken' } // cor única (§12.5)
   const seat: Seat = {
-    playerId: seatIdFor(room.seats.length),
+    playerId: seatIdFor(current.seats.length),
     uid: who.uid,
     name: who.name,
     color: who.color,
+    avatar: normalizeAvatar(who.avatar),
+    skin: normalizeSkin(who.skin),
     isHost: false,
     connected: true,
     openingBid: null,
@@ -203,7 +221,7 @@ export function joinRoom(room: Room, who: Identity): JoinResult {
     openingRoll: null,
     reentryCode: who.reentryCode ?? '',
   }
-  return { ok: true, room: { ...room, seats: [...room.seats, seat] }, seat }
+  return { ok: true, room: { ...current, seats: [...current.seats, seat] }, seat }
 }
 
 // Cores ainda disponíveis para escolha no lobby mínimo.

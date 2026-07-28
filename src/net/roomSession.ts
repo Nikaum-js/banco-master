@@ -16,6 +16,8 @@ import { newRoomId } from './session'
 import type { Transport, Unsubscribe } from './transport'
 import { nullTelemetry, type Telemetry, type TelemetryEvent } from '@/telemetry/port'
 import { matchKey } from '@/telemetry/matchKey'
+import type { AvatarId } from '@/boards/playerAvatarCatalog'
+import type { SkinId } from '@/boards/playerSkinCatalog'
 
 /** Ritual de início (`reveal`) é de ENTRADA, nunca de reconexão — ver `isReentry`.
  * `'reentry'` (041, D-033): partida em curso, sem assento — perder o aparelho não é mais
@@ -25,6 +27,10 @@ export type SessionPhase = 'identity' | 'lobby' | 'auction' | 'reveal' | 'playin
 export interface SessionIdentity {
   name: string
   color: string
+  /** O formulário novo sempre envia; opcional para chamadores/testes legados. */
+  avatar?: AvatarId
+  /** O formulário novo sempre envia; opcional para chamadores/testes legados. */
+  skin?: SkinId
 }
 
 export interface RoomSessionState {
@@ -284,7 +290,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
 
     // 043, D4: por RPC (`transport.reattach`), não mais um `JoinRequest` com código — reanexar
     // deixou de ser um tipo de pedido de assento. `name`/`color` ficam de fora (contrato
-    // §3.2): a identidade visual pertence ao assento, não a quem está reabrindo. Sucesso não
+    // §3.2): nome/cor/avatar/skin pertencem ao assento, não a quem está reabrindo. Sucesso não
     // precisa tocar `phase`/`room` aqui — `client.ts` reage sozinho ao aviso de reanexação
     // (ressincroniza, descobre o próprio assento) e `syncFromClient` segue a fase dali. Recusa
     // por 'bad-code' volta ao formulário — `syncFromClient` mantém 'reentry' porque `playerId`

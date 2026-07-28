@@ -24,6 +24,8 @@ import type { GameState } from '@/game/turn/types'
 import type { Resolved } from './recorder'
 import type { Secrets } from './perspective'
 import type { JoinError, PublicRoom, Room } from './room'
+import type { AvatarId } from '@/boards/playerAvatarCatalog'
+import type { SkinId } from '@/boards/playerSkinCatalog'
 
 // Comando em trânsito guest→host: carrega o `playerId` DECLARADO pelo remetente. O host
 // confere contra a identidade real da conexão — o `uid` da conexão que entregou o comando,
@@ -79,8 +81,8 @@ export interface CommandFailure {
   occurrenceId: string
 }
 
-// Pedido de assento no lobby (FR-002). NÃO carrega identidade: o host usa o `uid` da CONEXÃO
-// (`fromUid`) como identidade do assento — quem pede não escolhe quem é.
+// Pedido de assento no lobby (FR-002). NÃO carrega identidade de autoridade: o host usa o
+// `uid` da CONEXÃO (`fromUid`) como dono do assento. O pedido traz só a apresentação pública.
 //
 // 043, D4/T019: `reentryCode` SAI daqui — reanexar deixou de ser um tipo de pedido de assento
 // e virou caminho próprio (`Transport.reattach`), porque o host não tem como assinar o tópico
@@ -88,6 +90,10 @@ export interface CommandFailure {
 export interface JoinRequest {
   name: string
   color: string
+  /** Opcional apenas para clientes anteriores à 046; a autoridade aplica o fallback. */
+  avatar?: AvatarId
+  /** Opcional apenas para clientes anteriores à 046; a autoridade aplica o fallback. */
+  skin?: SkinId
 }
 
 // Status de conexão da PRÓPRIA sessão (041, contrato §1). Só dois valores: "conectado
