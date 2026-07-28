@@ -12,7 +12,10 @@ import { THEME } from '@/game/theme'
 import { deedView, type BuildBlock } from '@/game/ui/deed/deedView'
 import { deedPresentation } from '@/game/ui/deed/presentation'
 import { GROUP_COLOR } from './groupColors'
-import { skinParts, type SkinId } from './faceSkins'
+import { AvatarArtwork } from './playerAvatars'
+import { normalizeAvatar, type AvatarId } from './playerAvatarCatalog'
+import { PlayerSkinArtwork } from './playerSkins'
+import { normalizeSkin, type SkinId } from './playerSkinCatalog'
 import { useTradeUI } from '@/game/ui/trade/tradeUI'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { markLayout, popoverPlacement, sideOf, type Side } from './topology'
@@ -406,10 +409,9 @@ export function CornerSquare({ square, accent = 'cream' }:
 }
 
 // ---------------------------------------------------------------------
-// PlayerFace — carinha SVG simples (cabeça redonda + olhos + sorriso).
-// Usada tanto como peça no tabuleiro quanto como avatar nos painéis.
-// Animações: bob (respiração), blink (piscada) e pulse extra pro jogador
-// da vez. Cada player tem delays dessincronizados via hash da cor.
+// PlayerFace — representação canônica do avatar em lobby, token e painéis.
+// O catálogo fechado vive em `playerAvatarCatalog`; a cor continua sendo o distintivo único.
+// Cada player ganha delays determinísticos para os gestos não rodarem em sincronia.
 // ---------------------------------------------------------------------
 function hashStr(s: string) {
   let h = 0
@@ -422,6 +424,7 @@ export function PlayerFace({
   size = 24,
   active = false,
   asleep = false,
+  avatar,
   skin,
   className,
 }: {
@@ -429,124 +432,53 @@ export function PlayerFace({
   size?: number | string
   active?: boolean
   asleep?: boolean
-  /** Visual do personagem (`boards/faceSkins`). Ausente = carinha clássica. */
+  avatar?: AvatarId
   skin?: SkinId
   className?: string
 }) {
-  // Fallback de cor: nunca pinta a cabeça de preto se a cor vier vazia/indefinida.
   const head = color || 'var(--color-ink-400)'
-  // Delays únicos por player pra blink/bob não rodarem em sincronia.
+  const resolvedAvatar = normalizeAvatar(avatar)
+  const resolvedSkin = normalizeSkin(skin)
   const h = hashStr(head)
-  const bobDelay = `${(h % 2400) / 1000}s`
-  const blinkDelayL = `${((h + 1300) % 5000) / 1000}s`
-  const blinkDelayR = `${((h + 1430) % 5000) / 1000}s`  // levemente diferente
-  // Camadas da skin já resolvidas na cor do jogador (vazio na carinha clássica).
-  const s = skinParts(skin, head)
+  const delay = `-${(h % 5200) / 1000}s`
 
   return (
     <svg
-      viewBox="0 0 32 32"
+      viewBox="0 0 160 160"
       width={size}
       height={size}
       className={cn(
-        'shrink-0',
+        'avatar-face shrink-0',
+        `avatar-face--${resolvedAvatar}`,
+        `avatar-skin--${resolvedSkin}`,
+        asleep && 'avatar-face--asleep',
         !asleep && (active ? 'face-idle-active' : 'face-idle'),
         className,
       )}
       style={{
         filter: active ? `drop-shadow(0 0 4px color-mix(in srgb, ${head} 70%, transparent))` : undefined,
-        animationDelay: !asleep ? bobDelay : undefined,
-      }}
+        '--face-delay': delay,
+      } as React.CSSProperties}
+      data-avatar={resolvedAvatar}
+      data-skin={resolvedSkin}
       aria-hidden="true"
     >
-      {/* Sombra da cabeça */}
-      <ellipse cx="16" cy="30" rx="11" ry="1.6" fill="rgba(0,0,0,0.45)" />
-
-      {/* Skin: camada atrás da cabeça (orelhas, crista, antena) */}
-      {s.behind}
-
-      {/* Cabeça — círculo padrão, ou o formato próprio da skin */}
-      {s.head ?? (
-        <circle cx="16" cy="15" r="13" fill={head} stroke="var(--color-ink-950)" strokeWidth="1.5" />
-      )}
-
-      {/* Highlight 3D no topo */}
-      {!s.noHighlight && (
-        <ellipse
-          cx="12"
-          cy="9"
-          rx="5.5"
-          ry="3.5"
-          fill="rgba(255,255,255,0.28)"
-        />
-      )}
-
-      {/* Skin: camada entre a cabeça e o rosto (focinho, máscara) */}
-      {s.mid}
-
-      {/* Olhos — abertos ou fechados se "asleep" (jogador falido) */}
-      {asleep ? (
-        <>
-          <path d="M9 15 Q11 16.5 13 15" stroke="var(--color-ink-950)" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-          <path d="M19 15 Q21 16.5 23 15" stroke="var(--color-ink-950)" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-        </>
-      ) : s.eyes ? (
-        s.eyes
-      ) : (
-        <>
-          {/* Olho esquerdo (cada um piscando com delay próprio) */}
-          <g className="face-eye" style={{ animationDelay: blinkDelayL }}>
-            <circle cx="11" cy="14.5" r="2.2" fill="#fff" />
-            <circle cx="11.4" cy="14.8" r="1.2" fill="var(--color-ink-950)" />
-            <circle cx="11.0" cy="14.4" r="0.4" fill="#fff" />
-          </g>
-          {/* Olho direito */}
-          <g className="face-eye" style={{ animationDelay: blinkDelayR }}>
-            <circle cx="21" cy="14.5" r="2.2" fill="#fff" />
-            <circle cx="21.4" cy="14.8" r="1.2" fill="var(--color-ink-950)" />
-            <circle cx="21.0" cy="14.4" r="0.4" fill="#fff" />
-          </g>
-        </>
-      )}
-
-      {/* Boca */}
-      {asleep ? (
-        <line x1="13" y1="22" x2="19" y2="22" stroke="var(--color-ink-950)" strokeWidth="1.3" strokeLinecap="round" />
-      ) : s.mouth ? (
-        s.mouth
-      ) : (
-        <path
-          d="M11.5 20.5 Q16 24 20.5 20.5"
-          stroke="var(--color-ink-950)"
-          strokeWidth="1.4"
-          fill="none"
-          strokeLinecap="round"
-        />
-      )}
-
-      {/* Skin: camada sobre tudo (chapéu, cabelo, capacete) */}
-      {s.front}
+      <PlayerSkinArtwork id={resolvedSkin} color={head} layer="behind" />
+      <AvatarArtwork id={resolvedAvatar} color={head} asleep={asleep} />
+      <PlayerSkinArtwork id={resolvedSkin} color={head} layer="front" />
 
       {/* Anel giratório do jogador da vez — na COR do player (não dourado fixo) */}
       {active && (
         <circle
-          cx="16"
-          cy="15"
-          r="14.5"
+          className="face-active-ring"
+          cx="80"
+          cy="80"
+          r="70"
           fill="none"
           stroke={head}
-          strokeWidth="1.5"
-          strokeDasharray="2 2"
-        >
-          <animateTransform
-            attributeName="transform"
-            type="rotate"
-            from="0 16 15"
-            to="360 16 15"
-            dur="14s"
-            repeatCount="indefinite"
-          />
-        </circle>
+          strokeWidth="4"
+          strokeDasharray="8 8"
+        />
       )}
     </svg>
   )
@@ -825,7 +757,7 @@ function PlayerRow({ player: p }: { player: Player }) {
       )}
     >
       <MoneyPulse pulse={pulse} className="right-3 top-1.5" />
-      <PlayerFace color={p.color} active={p.active} asleep={p.bankrupt} size={40} />
+      <PlayerFace color={p.color} avatar={p.avatar} skin={p.skin} active={p.active} asleep={p.bankrupt} size={40} />
       <div className="player-row__identity flex-1 min-w-0">
         <p className="display display--tight text-cream text-[17px] leading-none truncate">{p.name}</p>
         <div className="player-row__meta flex items-center gap-2 mt-1">
@@ -1038,7 +970,7 @@ export function DiceArena() {
       {/* Jogador da vez — carinha + nome acima dos dados. Anel pisca quando é
           hora de rolar (turno ativo no demo local de 1 cliente). */}
       <div className="flex flex-col items-center gap-1.5">
-        <PlayerFace color={active.color} active={canRoll} size={72} />
+        <PlayerFace color={active.color} avatar={active.avatar} skin={active.skin} active={canRoll} size={72} />
         <p className="display text-cream text-xl leading-none tracking-wide">
           {active.name}
         </p>
@@ -1129,13 +1061,13 @@ export function DiceArena() {
 // momento do turno. Mostra credor, principal e o quanto sangra a cada GO.
 function LoanPanel() {
   const game = useGameStore((s) => s.game)
+  const room = useRoomStore((s) => s.room)
   const dispatch = useGameStore((s) => s.dispatch)
   const payOffLoan = (): void => dispatch({ kind: 'pay-off-loan' })
   const active = game.players[game.turnOrder[game.activeSeat]]
   const loan = game.loans.find((l) => l.debtorId === active.id)
   if (!loan) return null
-  const ci = game.players.findIndex((p) => p.id === loan.creditorId)
-  const creditorColor = ci >= 0 ? PLAYER_COLORS[ci % PLAYER_COLORS.length] : 'var(--color-brass)'
+  const creditor = identityOf(room, loan.creditorId)
   const interest = Math.round((loan.principal * loan.ratePct) / 100)
   const canPay = active.cash >= loan.principal
   return (
@@ -1143,8 +1075,8 @@ function LoanPanel() {
       <SectionHeader title="Empréstimo ativo" meta={<Chip tone="alert">{loan.ratePct}% por volta</Chip>} />
       <div className="flex items-center gap-2 mb-2.5">
         <span className="label text-cream-muted">Você deve a</span>
-        <PlayerFace color={creditorColor} size={20} />
-        <span className="display text-cream text-sm leading-none">{loan.creditorId}</span>
+        <PlayerFace color={creditor.color} avatar={creditor.avatar} skin={creditor.skin} size={20} />
+        <span className="display text-cream text-sm leading-none">{creditor.name}</span>
       </div>
       <div className="flex items-center justify-between text-sm">
         <span className="text-cream-muted">Principal</span>
@@ -1217,13 +1149,14 @@ function PotCard({ pot }: { pot: number }) {
 
 export function ActionsPanel() {
   const game = useGameStore((s) => s.game)
+  const room = useRoomStore((s) => s.room)
   const pot = game.centerPot
   // 027 — painel ao vivo. `tradesView` era um módulo de duas expressões com um chamador:
   // a interface (tipo + módulo + arquivo de teste) era maior que a implementation.
   const trades = { pending: game.pendingTrade, history: [...game.tradeHistory].reverse() }
-  const colorById = Object.fromEntries(
-    game.players.map((p, i) => [p.id, PLAYER_COLORS[i % PLAYER_COLORS.length]]),
-  ) as Record<string, string>
+  const identityById = Object.fromEntries(
+    game.players.map((p) => [p.id, identityOf(room, p.id)]),
+  )
 
   return (
     <aside className="side-panel">
@@ -1246,8 +1179,8 @@ export function ActionsPanel() {
           />
         ) : (
           <div className="flex flex-col gap-2">
-            {trades.pending && <TradeRow key="pending" trade={trades.pending} done={false} colorById={colorById} />}
-            {trades.history.map((t, i) => <TradeRow key={`h${i}`} trade={t} done colorById={colorById} />)}
+            {trades.pending && <TradeRow key="pending" trade={trades.pending} done={false} identityById={identityById} />}
+            {trades.history.map((t, i) => <TradeRow key={`h${i}`} trade={t} done identityById={identityById} />)}
           </div>
         )}
         <Button
@@ -1264,8 +1197,18 @@ export function ActionsPanel() {
   )
 }
 
-function TradeRow({ trade, done, colorById }: { trade: Trade; done: boolean; colorById: Record<string, string> }) {
+function TradeRow({
+  trade,
+  done,
+  identityById,
+}: {
+  trade: Trade
+  done: boolean
+  identityById: Record<string, ReturnType<typeof identityOf>>
+}) {
   const { reduced } = useMotion()
+  const from = identityById[trade.fromId] ?? identityOf(null, trade.fromId)
+  const to = identityById[trade.toId] ?? identityOf(null, trade.toId)
   return (
     <div
       className={cn(
@@ -1274,11 +1217,11 @@ function TradeRow({ trade, done, colorById }: { trade: Trade; done: boolean; col
       )}
     >
       <div className="flex items-center gap-1.5 min-w-0">
-        <PlayerFace color={colorById[trade.fromId] ?? 'var(--color-ink-400)'} size={22} />
-        <span className="display display--tight text-cream text-sm leading-none truncate">{trade.fromId}</span>
+        <PlayerFace color={from.color} avatar={from.avatar} skin={from.skin} size={22} />
+        <span className="display display--tight text-cream text-sm leading-none truncate">{from.name}</span>
         <TradeArrowGlyph size={11} />
-        <PlayerFace color={colorById[trade.toId] ?? 'var(--color-ink-400)'} size={22} />
-        <span className="display display--tight text-cream text-sm leading-none truncate">{trade.toId}</span>
+        <PlayerFace color={to.color} avatar={to.avatar} skin={to.skin} size={22} />
+        <span className="display display--tight text-cream text-sm leading-none truncate">{to.name}</span>
         {done ? (
           <Chip className="ml-auto" title="Negociação aceita">
             <span className="text-gold"><CheckTinyGlyph size={9} /></span> Aceita
@@ -1609,7 +1552,13 @@ function CenterLog() {
                       <CoinIcon size={11} className="text-cream" />
                     </span>
                   ) : (
-                    <PlayerFace color={c} size={20} className="!animate-none" />
+                    <PlayerFace
+                      color={c}
+                      avatar={identityOf(room, l.who).avatar}
+                      skin={identityOf(room, l.who).skin}
+                      size={20}
+                      className="!animate-none"
+                    />
                   )}
                 </span>
                 <span className="flex-1 min-w-0 leading-snug text-cream-muted" style={{ fontSize: latest ? '13.5px' : '13px' }}>

@@ -1,12 +1,11 @@
-// Telas de sala (spec 037, T018; redesenho no lançamento) — nome + cor + visual + assentos
+// Telas de sala (spec 037, T018; redesenho no lançamento) — nome + cor + avatar + assentos
 // + iniciar. Vocabulário visual: a "sala de mapas" do `entryShell` (o mesmo mundo do
-// tabuleiro — graticule, latão, marcas de registro) e o PRÓPRIO token do tabuleiro
-// (`PlayerFace`) como preview: a pergunta "como eu apareço na mesa?" é respondida
-// mostrando, não descrevendo.
+// tabuleiro — graticule, latão, marcas de registro).
 import { useEffect, useState } from 'react'
 import { Button, Chip } from '@/game/ui/primitives'
 import { PlayerFace } from '@/boards/shared'
-import { SKINS, type SkinId } from '@/boards/faceSkins'
+import { DEFAULT_AVATAR, type AvatarId } from '@/boards/playerAvatarCatalog'
+import { DEFAULT_SKIN, type SkinId } from '@/boards/playerSkinCatalog'
 import {
   availableColors,
   MAX_SEATS,
@@ -17,6 +16,7 @@ import {
 } from '@/net/room'
 import { NAME_MAX, recallPlayerName, rememberPlayerName } from '@/net/session'
 import { EntryPanel, EntryStage, EntryHeader } from './entryShell'
+import { AvatarConceptLab } from './AvatarConceptLab'
 
 const JOIN_ERROR_TEXT: Record<JoinError, string> = {
   'room-full': `Sala cheia — o limite é ${MAX_SEATS} jogadores.`,
@@ -93,7 +93,7 @@ export function IdentityForm({
   cta: string
   busy?: boolean
   error?: JoinError | string | null
-  onSubmit: (name: string, color: string) => void
+  onSubmit: (name: string, color: string, avatar: AvatarId, skin: SkinId) => void
 }) {
   const salaVazia: Room = { id: '', status: 'lobby', seats: [] }
   const free = availableColors(room ?? salaVazia)
@@ -101,12 +101,10 @@ export function IdentityForm({
   // sobra é a aparência — o nome só é redigitado por quem quiser trocá-lo.
   const [name, setName] = useState(() => recallPlayerName())
   const [color, setColor] = useState(free[0] ?? '')
-  // Visual do personagem — por enquanto SÓ nesta tela (escolha visual, ainda não
-  // viaja no `onSubmit` nem entra no assento; a propagação vem depois de fechar o catálogo).
-  const [skin, setSkin] = useState<SkinId>('careca')
+  const [avatar, setAvatar] = useState<AvatarId>(DEFAULT_AVATAR)
+  const [skin, setSkin] = useState<SkinId>(DEFAULT_SKIN)
   const chosen = free.includes(color) ? color : (free[0] ?? '')
   const message = error && (error in JOIN_ERROR_TEXT ? JOIN_ERROR_TEXT[error as JoinError] : String(error))
-  const skinLabel = SKINS.find((s) => s.id === skin)?.label ?? 'Viajante'
 
   return (
     <Frame
@@ -122,22 +120,24 @@ export function IdentityForm({
           <p className="home-map-panel__eyebrow">Seu marcador de viagem</p>
           <span aria-hidden>BM · 01</span>
         </div>
-        <div className="identity-passport__portrait">
-          <span className="identity-passport__orbit" aria-hidden />
-          <PlayerFace color={chosen || 'var(--color-ink-400)'} size={92} active skin={skin} />
-        </div>
+        <AvatarConceptLab
+          color={chosen || 'var(--color-ink-400)'}
+          avatar={avatar}
+          skin={skin}
+          onAvatarChange={setAvatar}
+          onSkinChange={setSkin}
+        />
         <div className="identity-passport__name">
           <p className={name.trim() ? 'text-starlight' : 'text-starlight-muted/70'}>
             {name.trim() || 'Viajante sem nome'}
           </p>
-          <span>{skinLabel}</span>
         </div>
         <div className="identity-passport__route" aria-hidden>
           <i />
           <i />
           <i />
         </div>
-        <p className="identity-passport__hint">Assim você aparece no tabuleiro</p>
+        <p className="identity-passport__hint">5 formatos · 8 skins · combine do seu jeito</p>
       </section>
 
       <section className="identity-controls">
@@ -173,26 +173,6 @@ export function IdentityForm({
           </div>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <span className="label text-brass">Seu visual</span>
-          <div className="identity-skin-grid">
-            {SKINS.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setSkin(s.id)}
-                aria-label={`Visual ${s.label}`}
-                aria-pressed={s.id === skin}
-                title={s.label}
-                className="identity-skin-option"
-              >
-                <PlayerFace color={chosen || 'var(--color-ink-400)'} size={32} skin={s.id} />
-                <span>{s.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {message && <p className="text-signal-glow text-sm leading-snug">{message}</p>}
 
         <Button
@@ -200,7 +180,7 @@ export function IdentityForm({
           disabled={!name.trim() || !chosen || busy}
           onClick={() => {
             rememberPlayerName(name)
-            onSubmit(name.trim(), chosen)
+            onSubmit(name.trim(), chosen, avatar, skin)
           }}
         >
           {busy ? 'Conectando…' : cta}
@@ -299,7 +279,7 @@ export function RoomLobby({
             key={s.uid}
             className="lobby-seat flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-card)]"
           >
-            <PlayerFace color={s.color} size={30} />
+            <PlayerFace color={s.color} avatar={s.avatar} skin={s.skin} size={30} />
             <span className="text-starlight truncate flex-1 inline-flex items-center gap-2 min-w-0">
               <span className="truncate">{s.name}</span>
             </span>
@@ -528,7 +508,7 @@ export function OpeningAuction({
             key={seat.uid}
             className={`auction-player ${seat.bidLocked ? 'auction-player--locked' : ''}`}
           >
-            <PlayerFace color={seat.color} size={28} />
+            <PlayerFace color={seat.color} avatar={seat.avatar} skin={seat.skin} size={28} />
             <span className="text-starlight truncate flex-1">{seat.name}</span>
             {seat.uid === myUid && <Chip tone="gold">você</Chip>}
             <span className="label text-starlight-muted">
@@ -587,7 +567,7 @@ export function TurnOrderReveal({ room }: { room: Room }) {
               style={{ animationDelay: `${i * 110}ms` }}
             >
               <span className="display text-brass text-xl w-7 text-center tabular-nums">{i + 1}º</span>
-              <PlayerFace color={s.color} size={30} />
+              <PlayerFace color={s.color} avatar={s.avatar} skin={s.skin} size={30} />
               <span className="text-starlight truncate flex-1">{s.name}</span>
               {diceMode ? (
                 <span

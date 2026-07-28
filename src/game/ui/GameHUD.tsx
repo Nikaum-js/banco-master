@@ -22,9 +22,9 @@ import { type ReactNode, useId, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { HandCoins, Landmark, ShieldAlert } from 'lucide-react'
 import { PlayerFace } from '@/boards/shared'
-import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
 import { useGameStore } from '@/game/store'
 import { useLocalView, useRoomStore } from '@/net/roomStore'
+import { identityOf } from '@/net/identity'
 import { PlayerName } from '@/net/ui/PlayerName'
 import { WaitingBar } from '@/net/ui/WaitingBar'
 import { isBankrupt } from '@/game/falencia/falencia'
@@ -59,12 +59,6 @@ const SIGNAL_TEXT: React.CSSProperties = {
 
 // Cor do jogador por id (mesma paleta de assento do tabuleiro/tokens). Mantém o
 // credor visualmente ligado à sua carinha no board.
-function colorOfPlayer(players: { id: string }[], id: string | null): string | null {
-  if (!id) return null
-  const i = players.findIndex((p) => p.id === id)
-  return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : null
-}
-
 // Cascas de largura total sobre o primitivo Button — hierarquia do card de
 // decisão: primária (latão + glow), neutra (secondary) e destrutiva (danger).
 function PrimaryBtn({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: ReactNode }) {
@@ -170,7 +164,8 @@ export function GameHUD() {
 
   const active = game.players[game.turnOrder[game.activeSeat]]
   const view = useLocalView() // spec 038: controles só do assento local (FR-002)
-  const online = useRoomStore((s) => s.room !== null)
+  const room = useRoomStore((s) => s.room)
+  const online = room !== null
   const { reduced } = useMotion()
   // Feedback de caixa (044/T020 — FR-029): a tela de dívida mostra o caixa do devedor
   // mudando ao vivo (hipoteca/venda pra cobrir a fatura) sem NENHUM aviso; mesmo pulso que
@@ -180,7 +175,7 @@ export function GameHUD() {
   // `return` abaixo. Adicionar uma sexta tela é editar a tabela, não adivinhar a posição.
   const hud = activeHudView(game)
 
-  const activeColor = colorOfPlayer(game.players, active.id) ?? 'var(--color-brass)'
+  const activeIdentity = identityOf(room, active.id)
 
   // ---- Fim de jogo — classificação completa (044, US2/D-038) ----
   // Substitui a antiga celebração isolada do vencedor: toda tela agora mostra a mesma
@@ -210,7 +205,7 @@ export function GameHUD() {
     }
     return (
       <AnimatePresence>
-        <LoanRequestCard req={hud.req} players={game.players} onRespond={respondLoan} />
+        <LoanRequestCard req={hud.req} onRespond={respondLoan} />
       </AnimatePresence>
     )
   }
@@ -286,7 +281,7 @@ export function GameHUD() {
     // Elegibilidade vem do MOTOR (§15.2): antes esta lista refazia à mão 5 das 8 guardas
     // de `proposeLoan`, e deixava `paused` de fora.
     const lenders = eligibleLenders(game).map((id) => game.players.find((p) => p.id === id)!)
-    const creditorColor = colorOfPlayer(game.players, hud.creditorId)
+    const creditor = hud.creditorId ? identityOf(room, hud.creditorId) : null
     // % do valor já coberto pelo caixa atual — alimenta a barra credor↔devedor.
     const covered = Math.max(0, Math.min(1, active.cash / hud.amount))
     // §9.1: só pode declarar falência se nem liquidando tudo cobre a dívida.
@@ -312,7 +307,7 @@ export function GameHUD() {
               <div className="flex items-center justify-between gap-3">
                 {/* Devedor (jogador da vez) */}
                 <div className="flex flex-col items-center gap-1 w-20">
-                  <PlayerFace color={activeColor} size={40} />
+                  <PlayerFace color={activeIdentity.color} avatar={activeIdentity.avatar} skin={activeIdentity.skin} size={40} />
                   <span className="label text-cream truncate max-w-full">
                     <PlayerName playerId={active.id} />
                   </span>
@@ -350,14 +345,14 @@ export function GameHUD() {
 
                 {/* Credor — PlayerFace na cor do assento, ou banco */}
                 <div className="flex flex-col items-center gap-1 w-20">
-                  {hud.creditorId && creditorColor ? (
-                    <PlayerFace color={creditorColor} size={40} />
+                  {creditor ? (
+                    <PlayerFace color={creditor.color} avatar={creditor.avatar} skin={creditor.skin} size={40} />
                   ) : (
                     <div className="w-10 h-10 rounded-full flex items-center justify-center bg-coffee-900 border border-brass/50">
                       <Landmark size={20} className="text-gold" />
                     </div>
                   )}
-                  <span className="label text-cream truncate max-w-full">{hud.creditorId ?? 'Banco'}</span>
+                  <span className="label text-cream truncate max-w-full">{creditor?.name ?? 'Banco'}</span>
                 </div>
               </div>
 
@@ -412,7 +407,7 @@ export function GameHUD() {
               <div className="flex flex-col gap-2 mt-4">
                 <PrimaryBtn onClick={payDebt} disabled={!canPay}>Pagar {fmt(hud.amount)}</PrimaryBtn>
                 {lenders.map((p) => {
-                  const lc = colorOfPlayer(game.players, p.id)
+                  const lender = identityOf(room, p.id)
                   return (
                     <Button
                       key={p.id}
@@ -420,7 +415,7 @@ export function GameHUD() {
                       onClick={() => proposeLoan(p.id)}
                       className="w-full justify-start gap-2"
                     >
-                      {lc && <PlayerFace color={lc} size={22} />}
+                      <PlayerFace color={lender.color} avatar={lender.avatar} skin={lender.skin} size={22} />
                       <span className="flex-1 text-left">
                         Pedir {fmt(shortfall)} a <PlayerName playerId={p.id} />
                       </span>
@@ -485,27 +480,26 @@ const RATE_OPTIONS = [10, 20, 30, 40, 50] as const
 // credor, não precisa do tabuleiro). Estado local só pra taxa selecionada.
 function LoanRequestCard({
   req,
-  players,
   onRespond,
 }: {
   req: LoanRequest
-  players: { id: string }[]
   onRespond: (accept: boolean, ratePct: number) => void
 }) {
   const [rate, setRate] = useState<number>(20)
-  const debtorColor = colorOfPlayer(players, req.debtorId) ?? 'var(--color-brass)'
+  const room = useRoomStore((s) => s.room)
+  const debtor = identityOf(room, req.debtorId)
   const interest = interestOf(req.principal, rate) // §15.4 — fórmula do motor, não uma cópia
 
   return (
     <DecisionShell dim>
       <CardFrame accent="var(--color-brass)" glow="color-mix(in srgb, var(--color-brass) 45%, transparent)" width={400}>
-        <ReactionHead icon={<HandCoins size={20} className="text-gold-glow" />} title="Empréstimo" subtitle={`${req.debtorId} pede a você`} />
+        <ReactionHead icon={<HandCoins size={20} className="text-gold-glow" />} title="Empréstimo" subtitle={`${debtor.name} pede a você`} />
         <div className="p-5">
           {/* Quem pede + quanto */}
           <div className="flex items-center justify-center gap-3">
-            <PlayerFace color={debtorColor} size={44} />
+            <PlayerFace color={debtor.color} avatar={debtor.avatar} skin={debtor.skin} size={44} />
             <div className="text-left">
-              <p className="label text-cream-muted leading-none">{req.debtorId} precisa de</p>
+              <p className="label text-cream-muted leading-none">{debtor.name} precisa de</p>
               <p className="currency leading-none mt-1" style={{ fontSize: 30, ...GOLD_TEXT }}>{fmt(req.principal)}</p>
             </div>
           </div>

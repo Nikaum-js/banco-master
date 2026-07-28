@@ -10,8 +10,9 @@ import { useGameStore } from '@/game/store'
 import { useTokenAnim } from '@/game/ui/tokenAnim'
 import { play } from '@/game/ui/sound/engine'
 import { PlayerFace } from '@/boards/shared'
-import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
+import { useRoomStore } from '@/net/roomStore'
+import { identityOf } from '@/net/identity'
 
 const BOARD_SIZE = 48
 const STEP_MS = 150 // tempo entre passos
@@ -82,6 +83,7 @@ function useWalkedPositions(targets: Record<string, number>, paused: boolean, re
 
 export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSProperties }) {
   const game = useGameStore((s) => s.game)
+  const room = useRoomStore((s) => s.room)
   const rolling = useTokenAnim((s) => s.rolling)
   const activeId = game.players[game.turnOrder[game.activeSeat]]?.id
   const { reduced } = useMotion()
@@ -133,8 +135,9 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
         </motion.div>
       )}
 
-      {game.players.map((p, i) => {
+      {game.players.map((p) => {
         if (p.eliminated) return null
+        const identity = identityOf(room, p.id)
         const pos = shown[p.id] ?? p.pos
         const group = groups[pos] ?? [p.id]
         const n = group.length
@@ -162,7 +165,13 @@ export function LiveTokens({ gridArea }: { gridArea: (pos: number) => CSSPropert
                 animate={reduced ? { scale: 1 } : { scale: [1, 1.22, 1] }}
                 transition={{ duration: MOTION.base, ease: EASE.standard }}
               >
-                <PlayerFace color={PLAYER_COLORS[i % PLAYER_COLORS.length]} size={size} active={p.id === activeId} />
+                <PlayerFace
+                  color={identity.color}
+                  avatar={identity.avatar}
+                  skin={identity.skin}
+                  size={size}
+                  active={p.id === activeId}
+                />
               </motion.div>
             </div>
           </motion.div>

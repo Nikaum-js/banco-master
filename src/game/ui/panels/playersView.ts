@@ -7,6 +7,8 @@
 import { identityOf } from '@/net/identity'
 import { seatByUid, type Room } from '@/net/room'
 import type { GameState } from '@/game/turn/types'
+import type { AvatarId } from '@/boards/playerAvatarCatalog'
+import type { SkinId } from '@/boards/playerSkinCatalog'
 
 // ---------------------------------------------------------------------
 // Mockups de painéis laterais — fiel ao HUD do SRS §12.3.
@@ -17,6 +19,8 @@ export type Player = {
   id?: string               // playerId do motor ('p1'..'p8') — chave estável (nomes duplicam)
   name: string
   color: string
+  avatar: AvatarId
+  skin: SkinId
   connected?: boolean       // spec 038 — status de sessão no painel (§12.3/FR-015)
   you?: boolean             // spec 038 — o assento deste dispositivo
   money: number
@@ -37,25 +41,30 @@ export type Player = {
 export const PLAYER_COLORS = ['#d9a650', '#3b8bd0', '#36dde7', '#00bca5', '#e77376', '#7b9d41', '#b665a2', '#b0a5ff']
 
 // Mapeia o GameState real → view-model `Player` dos painéis. PURO (testável).
-// A identidade (nome/cor) vem da SALA quando há uma (spec 038); sem sala, do fallback —
+// A identidade (nome/cor/avatar/skin) vem da SALA quando há uma (spec 038/046); sem sala, do fallback —
 // nunca do `GameState`, que segue sem PII (D-019). É aqui que `p1..pN` some da UI.
 export function playersView(game: GameState, room: Room | null = null, myUid: string | null = null): Player[] {
   const activeId = game.players[game.turnOrder[game.activeSeat]]?.id
   const mySeat = room && myUid ? seatByUid(room, myUid) : undefined
-  return game.players.map((p) => ({
-    id: p.id,
-    name: identityOf(room, p.id).name,
-    color: identityOf(room, p.id).color,
-    connected: room ? (room.seats.find((s) => s.playerId === p.id)?.connected ?? true) : true,
-    you: mySeat?.playerId === p.id,
-    money: p.cash,
-    pos: p.pos,
-    cardsInHand: p.hand.length, // só o contador é público (privacidade §10.3)
-    busTickets: p.busTickets,
-    speedDieReady: p.completouPrimeiraVolta,
-    active: p.id === activeId,
-    bankrupt: p.eliminated,
-    loanActive: game.loans.some((l) => l.debtorId === p.id),
-    immune: game.immunities.some((i) => i.beneficiaryId === p.id),
-  }))
+  return game.players.map((p) => {
+    const identity = identityOf(room, p.id)
+    return {
+      id: p.id,
+      name: identity.name,
+      color: identity.color,
+      avatar: identity.avatar,
+      skin: identity.skin,
+      connected: room ? (room.seats.find((s) => s.playerId === p.id)?.connected ?? true) : true,
+      you: mySeat?.playerId === p.id,
+      money: p.cash,
+      pos: p.pos,
+      cardsInHand: p.hand.length, // só o contador é público (privacidade §10.3)
+      busTickets: p.busTickets,
+      speedDieReady: p.completouPrimeiraVolta,
+      active: p.id === activeId,
+      bankrupt: p.eliminated,
+      loanActive: game.loans.some((l) => l.debtorId === p.id),
+      immune: game.immunities.some((i) => i.beneficiaryId === p.id),
+    }
+  })
 }

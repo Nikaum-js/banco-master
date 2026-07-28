@@ -27,6 +27,8 @@ import { HomeScreen } from './HomeScreen'
 import { SessionBadge } from './SessionBadge'
 import { Button } from '@/game/ui/primitives'
 import { OrientationGate } from '@/game/ui/OrientationGate'
+import type { AvatarId } from '@/boards/playerAvatarCatalog'
+import type { SkinId } from '@/boards/playerSkinCatalog'
 
 const TICK_MS = 250 // o host fecha prazos vencidos (soft-close de leilão, janela de reação)
 
@@ -168,8 +170,8 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
   if (phase === 'identity') {
     // Criar a sala troca a URL para o link dela — assim um F5 do host cai no fluxo de
     // reentrada e reassume a autoridade (FR-015).
-    const createAndHost = (name: string, color: string): void => {
-      void session.create({ name, color }).then((id) => {
+    const createAndHost = (name: string, color: string, avatar: AvatarId, skin: SkinId): void => {
+      void session.create({ name, color, avatar, skin }).then((id) => {
         if (id) window.history.replaceState(null, '', roomLink(id, window.location.origin))
       })
     }
@@ -181,7 +183,7 @@ function OnlineRoom({ roomId, children }: { roomId: string | null; children: Rea
         cta="Confirmar e entrar"
         busy={busy}
         error={error}
-        onSubmit={(name, color) => session.requestSeat({ name, color })}
+        onSubmit={(name, color, avatar, skin) => session.requestSeat({ name, color, avatar, skin })}
       />
     ) : (
       <IdentityForm

@@ -11,14 +11,16 @@ import { Bus, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
 import { useTradeUI } from './tradeUI'
-import { useLocalView } from '@/net/roomStore'
+import { useLocalView, useRoomStore } from '@/net/roomStore'
+import { identityOf } from '@/net/identity'
 import { WaitingBar } from '@/net/ui/WaitingBar'
 import { validateTrade } from '@/game/economy/trade'
 import type { Trade, Immunity } from '@/game/economy/types'
 import { BOARD, type Square } from '@/lib/boardData'
 import { PlayerFace } from '@/boards/shared'
+import type { AvatarId } from '@/boards/playerAvatarCatalog'
+import type { SkinId } from '@/boards/playerSkinCatalog'
 import { SquareIcon } from '@/boards/glyphs/squares'
-import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
 import { CoinIcon } from '@/game/ui/icons'
 import { Button, EmptyState } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
@@ -35,11 +37,6 @@ import {
 import { deedPresentation } from '@/game/ui/deed/presentation'
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n))
-const colorOf = (players: { id: string }[], id: string) => {
-  const i = players.findIndex((p) => p.id === id)
-  return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : 'var(--color-brass)'
-}
-
 function CheckGlyph() {
   return (
     <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="var(--color-ink-950)" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -451,10 +448,22 @@ function TradeScale({
 }
 
 // Rosto + nome que flanqueia a balança (alinhado ao prato do seu lado).
-function FaceTag({ color, name, active = true }: { color: string; name: string; active?: boolean }) {
+function FaceTag({
+  color,
+  avatar,
+  skin,
+  name,
+  active = true,
+}: {
+  color: string
+  avatar: AvatarId
+  skin: SkinId
+  name: string
+  active?: boolean
+}) {
   return (
     <div className="flex flex-col items-center gap-1 w-[64px] shrink-0">
-      <PlayerFace color={color} size={36} active={active} />
+      <PlayerFace color={color} avatar={avatar} skin={skin} size={36} active={active} />
       <span className="label text-gold max-w-full truncate">{name}</span>
     </div>
   )
@@ -466,6 +475,8 @@ function FaceTag({ color, name, active = true }: { color: string; name: string; 
 function Side({
   title,
   color,
+  avatar,
+  skin,
   ownerCash,
   ownerTickets,
   props,
@@ -479,6 +490,8 @@ function Side({
 }: {
   title: string
   color: string
+  avatar: AvatarId
+  skin: SkinId
   ownerCash: number
   ownerTickets: number
   props: number[]
@@ -498,7 +511,7 @@ function Side({
   return (
     <div className="flex-1 min-w-0 flex flex-col">
       <div className="px-3 pt-3 pb-2 flex items-center gap-2 sticky top-0 z-10 bg-coffee-800/90 backdrop-blur-sm shrink-0 border-b border-coffee-700/40">
-        <PlayerFace color={color} size={18} />
+        <PlayerFace color={color} avatar={avatar} skin={skin} size={18} />
         <p className="label text-gold truncate">{title}</p>
         {summary && (
           <p className="ml-auto label text-gold-glow tabular-nums shrink-0 text-micro" title="Resumo deste lado da troca">
@@ -528,6 +541,7 @@ function Side({
 // ---------------------------------------------------------------------
 function Composer({ onClose }: { onClose: () => void }) {
   const game = useGameStore((s) => s.game)
+  const room = useRoomStore((s) => s.room)
   const dispatchTrade = useGameStore((s) => s.dispatch)
   const proposeTrade = (trade: Trade): void => dispatchTrade({ kind: 'propose-trade', trade })
 
@@ -553,8 +567,8 @@ function Composer({ onClose }: { onClose: () => void }) {
   const fromChange = change('from')
   const toChange = change('to')
 
-  const meColor = colorOf(game.players, proposer.id)
-  const themColor = recipient ? colorOf(game.players, recipient.id) : 'var(--color-starlight-muted)'
+  const meIdentity = identityOf(room, proposer.id)
+  const themIdentity = recipient ? identityOf(room, recipient.id) : null
 
   return (
     <Card>
@@ -564,7 +578,7 @@ function Composer({ onClose }: { onClose: () => void }) {
           Fundo translúcido: deixa o gradiente do shell respirar (nada de cor chapada). */}
       <div className="px-4 pt-3 pb-2 bg-coffee-950/25 border-b border-coffee-700/50 shrink-0 flex flex-col gap-1.5">
         <div className="flex items-center justify-center gap-1">
-          <FaceTag color={meColor} name="Você" />
+          <FaceTag color={meIdentity.color} avatar={meIdentity.avatar} skin={meIdentity.skin} name="Você" />
           <TradeScale
             leftPositions={[...offered]}
             leftCash={fromCash}
@@ -573,24 +587,33 @@ function Composer({ onClose }: { onClose: () => void }) {
             rightCash={toCash}
             rightTickets={toTickets}
           />
-          <FaceTag color={themColor} name={recipient?.id ?? '—'} active={!!recipient} />
+          <FaceTag
+            color={themIdentity?.color ?? 'var(--color-starlight-muted)'}
+            avatar={themIdentity?.avatar ?? 'classic-alive'}
+            skin={themIdentity?.skin ?? 'careca'}
+            name={themIdentity?.name ?? '—'}
+            active={!!recipient}
+          />
         </div>
         {others.length > 1 && (
           <div className="flex items-center justify-center gap-1.5">
             <span className="label text-cream-muted text-micro">Trocar com</span>
-            {others.map((p) => (
+            {others.map((p) => {
+              const identity = identityOf(room, p.id)
+              return (
               <button
                 key={p.id}
                 type="button"
-                title={p.id}
-                aria-label={`Trocar com ${p.id}`}
+                title={identity.name}
+                aria-label={`Trocar com ${identity.name}`}
                 aria-pressed={p.id === draft.toId}
                 onClick={() => send({ kind: 'pick-recipient', toId: p.id })}
                 className={cn('rounded-full p-0.5 border transition-colors', p.id === draft.toId ? 'border-gold bg-gold/15' : 'border-transparent hover:border-gold/50')}
               >
-                <PlayerFace color={colorOf(game.players, p.id)} size={24} active={p.id === draft.toId} />
+                <PlayerFace color={identity.color} avatar={identity.avatar} skin={identity.skin} size={24} active={p.id === draft.toId} />
               </button>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
@@ -598,7 +621,9 @@ function Composer({ onClose }: { onClose: () => void }) {
       <div className="flex-1 min-h-0 overflow-hidden flex divide-x divide-coffee-500/40">
         <Side
           title="Você oferece"
-          color={meColor}
+          color={meIdentity.color}
+          avatar={meIdentity.avatar}
+          skin={meIdentity.skin}
           ownerCash={proposer.cash}
           ownerTickets={proposer.busTickets}
           props={view.fromProps}
@@ -621,8 +646,10 @@ function Composer({ onClose }: { onClose: () => void }) {
           }
         />
         <Side
-          title={`${recipient?.id ?? '—'} oferece`}
-          color={themColor}
+          title={`${themIdentity?.name ?? '—'} oferece`}
+          color={themIdentity?.color ?? 'var(--color-starlight-muted)'}
+          avatar={themIdentity?.avatar ?? 'classic-alive'}
+          skin={themIdentity?.skin ?? 'careca'}
           ownerCash={recipient?.cash ?? 0}
           ownerTickets={recipient?.busTickets ?? 0}
           props={view.toProps}
@@ -661,6 +688,8 @@ function Composer({ onClose }: { onClose: () => void }) {
 function ReadSide({
   title,
   color,
+  avatar,
+  skin,
   props,
   cash,
   tickets = 0,
@@ -669,6 +698,8 @@ function ReadSide({
 }: {
   title: string
   color: string
+  avatar: AvatarId
+  skin: SkinId
   props: number[]
   cash: number
   tickets?: number
@@ -679,7 +710,7 @@ function ReadSide({
   return (
     <div className="flex-1 min-w-0 flex flex-col">
       <div className="px-3 pt-3 pb-2 flex items-center gap-2 shrink-0 border-b border-coffee-700/40">
-        <PlayerFace color={color} size={18} />
+        <PlayerFace color={color} avatar={avatar} skin={skin} size={18} />
         <p className="label text-gold truncate">{title}</p>
       </div>
       <div className="flex-1 overflow-auto px-3 pt-2.5 pb-3 flex flex-col gap-1.5">
@@ -722,19 +753,20 @@ function Received({ trade }: { trade: Trade }) {
   const rejectTrade = (): void => dispatch({ kind: 'reject-trade' })
   const dismiss = useTradeUI((s) => s.dismiss)
   const game = useGameStore((s) => s.game)
+  const room = useRoomStore((s) => s.room)
   const stillValid = validateTrade(game, trade)
 
-  const fromColor = colorOf(game.players, trade.fromId)
-  const toColor = colorOf(game.players, trade.toId)
+  const from = identityOf(room, trade.fromId)
+  const to = identityOf(room, trade.toId)
 
   return (
     <Card>
       {/* X fecha SEM responder — a proposta segue na mesa (reabre pelo painel lateral) */}
-      <Header title="Proposta de negociação" subtitle={`${trade.toId} decide se aceita ou recusa`} onClose={dismiss} />
+      <Header title="Proposta de negociação" subtitle={`${to.name} decide se aceita ou recusa`} onClose={dismiss} />
 
       {/* Mesa read-only: a mesma balança, já carregada com a proposta */}
       <div className="px-4 pt-3 pb-2 bg-coffee-950/25 border-b border-coffee-700/50 shrink-0 flex items-center justify-center gap-1">
-        <FaceTag color={fromColor} name={trade.fromId} />
+        <FaceTag color={from.color} avatar={from.avatar} skin={from.skin} name={from.name} />
         <TradeScale
           leftPositions={trade.fromProps}
           leftCash={trade.fromCash}
@@ -743,14 +775,16 @@ function Received({ trade }: { trade: Trade }) {
           rightCash={trade.toCash}
           rightTickets={trade.toBusTickets ?? 0}
         />
-        <FaceTag color={toColor} name={trade.toId} />
+        <FaceTag color={to.color} avatar={to.avatar} skin={to.skin} name={to.name} />
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden flex divide-x divide-coffee-500/40">
         {/* Do ponto de vista do destinatário (toId): recebe o que `from` dá; dá o que `from` pede. */}
         <ReadSide
-          title={`${trade.toId} recebe`}
-          color={fromColor}
+          title={`${to.name} recebe`}
+          color={from.color}
+          avatar={from.avatar}
+          skin={from.skin}
           props={trade.fromProps}
           cash={trade.fromCash}
           tickets={trade.fromBusTickets ?? 0}
@@ -758,8 +792,10 @@ function Received({ trade }: { trade: Trade }) {
           immunityTransfers={trade.fromImmunityTransfers}
         />
         <ReadSide
-          title={`${trade.toId} dá`}
-          color={toColor}
+          title={`${to.name} dá`}
+          color={to.color}
+          avatar={to.avatar}
+          skin={to.skin}
           props={trade.toProps}
           cash={trade.toCash}
           tickets={trade.toBusTickets ?? 0}

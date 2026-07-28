@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from 'motion/react'
 import { Bus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGameStore } from '@/game/store'
-import { useLocalView } from '@/net/roomStore'
+import { useLocalView, useRoomStore } from '@/net/roomStore'
+import { identityOf } from '@/net/identity'
 import { WaitingBar } from '@/net/ui/WaitingBar'
 import { activeModal, type ModalView, type HandCardView } from './activeModal'
 import type { Rarity } from '@/game/cards/types'
@@ -19,7 +20,6 @@ import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { PlayerFace } from '@/boards/shared'
 import { GROUP_COLOR } from '@/boards/groupColors'
 import { SquareIcon } from '@/boards/glyphs/squares'
-import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
 import { GavelIcon, CoinIcon, HouseIcon, HotelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
@@ -369,16 +369,28 @@ function BusLine({
   const turnOrder = useGameStore((s) => s.game.turnOrder)
   const activeSeat = useGameStore((s) => s.game.activeSeat)
   const titles = useGameStore((s) => s.game.titles)
+  const room = useRoomStore((s) => s.room)
   const [hover, setHover] = useState<number | null>(null)
   const [departing, setDeparting] = useState<number | null>(null)
   const activeIdx = turnOrder[activeSeat] // índice em players do jogador da vez
   const side = busSideOf(fromPos)
   const cells = BOARD.filter((sq) => busSideOf(sq.pos) === side).reverse() // casas do lado, na ordem do tabuleiro (de trás pra frente)
   // Rostos por casa (peão = carinha, nunca bolinha): cor por assento + destaque do jogador da vez.
-  const facesAt: Record<number, { color: string; active: boolean }[]> = {}
+  const facesAt: Record<number, {
+    color: string
+    avatar: ReturnType<typeof identityOf>['avatar']
+    skin: ReturnType<typeof identityOf>['skin']
+    active: boolean
+  }[]> = {}
   players.forEach((p, i) => {
     if (p.eliminated) return
-    ;(facesAt[p.pos] ??= []).push({ color: PLAYER_COLORS[i % PLAYER_COLORS.length], active: i === activeIdx })
+    const identity = identityOf(room, p.id)
+    ;(facesAt[p.pos] ??= []).push({
+      color: identity.color,
+      avatar: identity.avatar,
+      skin: identity.skin,
+      active: i === activeIdx,
+    })
   })
   // Parada onde o ônibus está: embarcando > cursor > a sua. Posição em % do
   // centro da célula — as células são flex-1 iguais, então (i + 0.5) / n.
@@ -458,8 +470,7 @@ function BusLine({
           // Posse (igual ao tabuleiro): casa com dono "veste" a cor dele (tint + moldura)
           // e NÃO mostra preço — só casa livre exibe valor.
           const ownerId = titles[sq.pos]?.ownerId
-          const oi = ownerId ? players.findIndex((p) => p.id === ownerId) : -1
-          const ownerColor = oi >= 0 ? PLAYER_COLORS[oi % PLAYER_COLORS.length] : undefined
+          const ownerColor = ownerId ? identityOf(room, ownerId).color : undefined
           const faces = facesAt[sq.pos] ?? []
           return (
             <span key={sq.pos} className="flex-1 min-w-0 px-0.5">
@@ -508,7 +519,7 @@ function BusLine({
                 </span>
                 <span className="flex items-center justify-center gap-px flex-wrap shrink-0 pb-1 min-h-[16px]">
                   {faces.slice(0, 4).map((f, j) => (
-                    <PlayerFace key={j} color={f.color} active={f.active} size={16} />
+                    <PlayerFace key={j} color={f.color} avatar={f.avatar} skin={f.skin} active={f.active} size={16} />
                   ))}
                 </span>
               </button>
@@ -652,6 +663,7 @@ function AuctionCard({
   // trazia `activeBidders`, então a tela oferecia três botões que o motor descartava.
   const stillBidding = view.activeBidders.includes(activeId)
   const players = useGameStore((s) => s.game.players)
+  const room = useRoomStore((s) => s.room)
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 200)
@@ -705,10 +717,12 @@ function AuctionCard({
               {view.highBidder ? (
                 <>
                   {(() => {
-                    const i = players.findIndex((pl) => pl.id === view.highBidder)
-                    return i >= 0 ? <PlayerFace color={PLAYER_COLORS[i % PLAYER_COLORS.length]} size={18} /> : null
+                    const identity = identityOf(room, view.highBidder)
+                    return players.some((player) => player.id === view.highBidder)
+                      ? <PlayerFace color={identity.color} avatar={identity.avatar} skin={identity.skin} size={18} />
+                      : null
                   })()}
-                  <span className="text-cream">{view.highBidder}</span>
+                  <span className="text-cream">{identityOf(room, view.highBidder).name}</span>
                 </>
               ) : (
                 <span className="text-cream">ninguém ainda</span>
