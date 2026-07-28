@@ -15,7 +15,14 @@ const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0))
 
 function salaComTres() {
   let room = createRoom('r1', { uid: 'tok-h', name: 'Host', color: SEAT_COLORS[0], reentryCode: 'AAAAAA' })
-  const a = joinRoom(room, { uid: 'tok-a', name: 'Ana', color: SEAT_COLORS[1], reentryCode: 'BBBBBB' })
+  const a = joinRoom(room, {
+    uid: 'tok-a',
+    name: 'Ana',
+    color: SEAT_COLORS[1],
+    avatar: 'prism-face',
+    skin: 'aviador',
+    reentryCode: 'BBBBBB',
+  })
   if (!a.ok) throw new Error(a.reason)
   room = a.room
   const b = joinRoom(room, { uid: 'tok-b', name: 'Bob', color: SEAT_COLORS[2], reentryCode: 'CCCCCC' })
@@ -71,6 +78,8 @@ describe('reattachByCode — reducer puro (041, D-033)', () => {
     expect(out.seat.name).toBe('Ana')
     expect(out.seat.connected).toBe(true)
     expect(out.seat.reentryCode).toBe('BBBBBB') // o código sobrevive à própria reentrada
+    expect(out.seat.avatar).toBe('prism-face')
+    expect(out.seat.skin).toBe('aviador')
   })
 
   it('o uid ANTERIOR deixa de ter assento (FR-027)', () => {

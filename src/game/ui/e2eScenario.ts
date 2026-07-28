@@ -19,6 +19,8 @@
 import { useGameStore } from '@/game/store'
 import { createSeedState } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
+import { createRoom, joinRoom, SEAT_COLORS } from '@/net/room'
+import { useRoomStore } from '@/net/roomStore'
 
 const DEBTOR_ID = 'p1'
 const CREDITOR_ID = 'p2'
@@ -61,3 +63,31 @@ function applyE2EEndgameScenario(): void {
 }
 
 applyE2EEndgameScenario()
+
+// `?players=2&scenario=avatar-skin` mantém o tabuleiro local, mas injeta a mesma identidade
+// pública de uma sala real. O E2E consegue então provar que forma + skin chegam ao token,
+// HUD e painéis sem abrir uma sala remota ou depender de credenciais.
+function applyE2EAvatarSkinScenario(): void {
+  if (typeof window === 'undefined') return
+  if (new URLSearchParams(window.location.search).get('scenario') !== 'avatar-skin') return
+
+  let room = createRoom('avatar-visual-test', {
+    uid: 'visual-p1',
+    name: 'Cartola',
+    color: SEAT_COLORS[0],
+    avatar: 'prism-face',
+    skin: 'cartola',
+  })
+  const guest = joinRoom(room, {
+    uid: 'visual-p2',
+    name: 'Astronauta',
+    color: SEAT_COLORS[1],
+    avatar: 'totem-face',
+    skin: 'astronauta',
+  })
+  if (!guest.ok) throw new Error(`Cenário visual inválido: ${guest.reason}`)
+  room = { ...guest.room, status: 'playing' }
+  useRoomStore.setState({ room, myUid: 'visual-p1' })
+}
+
+applyE2EAvatarSkinScenario()

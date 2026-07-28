@@ -129,8 +129,8 @@ jobs:
       # `vite build && vite preview` sozinho e audita cada parada do caminho de jogo com
       # `@axe-core/playwright`. Falha em violação `serious`/`critical` (D-039); o resto vai
       # só pro log do passo, sem quebrar o job.
-      - name: Acessibilidade (axe)
-        run: bunx playwright test e2e/a11y.spec.ts
+      - name: Acessibilidade e avatares visuais
+        run: bunx playwright test e2e/a11y.spec.ts e2e/avatarSkins.spec.ts
 
       - if: failure()
         uses: actions/upload-artifact@v4

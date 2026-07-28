@@ -298,13 +298,26 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     await guest.connect()
     await asHost(host)
 
-    const pedidos: string[] = []
-    host.onJoinRequest((_who, fromUid) => pedidos.push(fromUid))
+    const pedidos: { fromUid: string; avatar?: string; skin?: string }[] = []
+    host.onJoinRequest((who, fromUid) => pedidos.push({
+      fromUid,
+      avatar: who.avatar,
+      skin: who.skin,
+    }))
     const recusas: string[] = []
     guest.onJoinRejected((uid, reason) => recusas.push(`${uid}:${reason}`))
 
-    await guest.requestJoin({ name: 'Ana', color: '#fff' })
-    expect(pedidos).toEqual(['t-guest'])
+    await guest.requestJoin({
+      name: 'Ana',
+      color: '#fff',
+      avatar: 'totem-face',
+      skin: 'astronauta',
+    })
+    expect(pedidos).toEqual([{
+      fromUid: 't-guest',
+      avatar: 'totem-face',
+      skin: 'astronauta',
+    }])
 
     host.rejectJoin('t-guest', 'already-started')
     expect(recusas).toEqual(['t-guest:already-started'])

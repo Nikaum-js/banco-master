@@ -1,7 +1,7 @@
 // FR-001..006a — reducers puros da sala: cor única, nome livre, sala cheia, recusa pós-início,
 // reattach pelo uid.
 import { describe, expect, it } from 'vitest'
-import { createRoom, joinRoom, reattach, startGame, SEAT_COLORS, MAX_SEATS, playerIdsInOrder } from '@/net/room'
+import { createRoom, joinRoom, normalizeRoom, reattach, startGame, SEAT_COLORS, MAX_SEATS, playerIdsInOrder } from '@/net/room'
 
 const host = { uid: 'h', name: 'Nik', color: SEAT_COLORS[0] }
 
@@ -56,6 +56,32 @@ describe('sala e identidade', () => {
     const room = createRoom('r1', host)
     const same = joinRoom(room, { uid: 'g', name: 'Nik', color: SEAT_COLORS[1] })
     expect(same.ok).toBe(true)
+  })
+
+  it('avatar e skin são persistidos, podem repetir e valores legados caem nos defaults', () => {
+    let room = createRoom('r1', { ...host, avatar: 'totem-face', skin: 'cartola' })
+    const guest = joinRoom(room, {
+      uid: 'g',
+      name: 'Amigo',
+      color: SEAT_COLORS[1],
+      avatar: 'totem-face',
+      skin: 'cartola',
+    })
+    expect(guest.ok).toBe(true)
+    if (guest.ok) room = guest.room
+    expect(room.seats.map((seat) => seat.avatar)).toEqual(['totem-face', 'totem-face'])
+    expect(room.seats.map((seat) => seat.skin)).toEqual(['cartola', 'cartola'])
+
+    const legacy = normalizeRoom({
+      ...room,
+      seats: room.seats.map((seat, index) => (
+        index === 0
+          ? { ...seat, avatar: 'liquid-form' as never, skin: 'invalida' as never }
+          : { ...seat, avatar: undefined, skin: undefined }
+      )),
+    })
+    expect(legacy.seats.map((seat) => seat.avatar)).toEqual(['classic-alive', 'classic-alive'])
+    expect(legacy.seats.map((seat) => seat.skin)).toEqual(['careca', 'careca'])
   })
 
   it('sala cheia (8) recusa o 9º (§11.1)', () => {

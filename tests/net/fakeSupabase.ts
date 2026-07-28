@@ -290,7 +290,7 @@ export function fakeSupabase(): FakeSupabase {
           const roomId = String(args.room_id)
           if (fn === 'request_seat') {
             FakeChannel.deliverBroadcast(broker.channels, `room:${roomId}:lobby`, 'join', {
-              who: { name: args.name, color: args.color },
+              who: { name: args.name, color: args.color, piece: args.piece },
               uid,
             })
             return Promise.resolve({ data: null, error: null })

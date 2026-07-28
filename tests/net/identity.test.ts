@@ -1,10 +1,9 @@
 // Identidade de exibição (spec 038, US2). O que se prova aqui:
-//   • nome/cor vêm da SALA e nunca do GameState (D-019 — a fronteira é testada);
+//   • nome/cor/avatar/skin vêm da SALA e nunca do GameState (D-019 — a fronteira é testada);
 //   • nomes duplicados continuam permitidos e distinguíveis pela cor (FR-011);
 //   • sem sala há fallback exibível, então `p1..p8` não vaza para a UI em modo algum (FR-009).
 //
-// A PEÇA saiu em D-044: o que distingue um jogador na mesa é a cor do assento, e é ela que
-// os testes de unicidade cobrem agora.
+// D-047: avatar e skin são públicos e repetíveis; a cor segue como distinção única obrigatória.
 import { describe, expect, it } from 'vitest'
 import { fallbackIdentity, identityOf } from '@/net/identity'
 import { createRoom, joinRoom, MAX_SEATS, SEAT_COLORS, type Room } from '@/net/room'
@@ -29,6 +28,24 @@ describe('identidade a partir da sala', () => {
 
     expect(identityOf(room, 'p1')).toMatchObject({ name: 'Nik', color: SEAT_COLORS[0] })
     expect(identityOf(room, 'p2')).toMatchObject({ name: 'Ana', color: SEAT_COLORS[1] })
+  })
+
+  it('projeta avatar e skin do assento e aplica fallbacks para sala legada', () => {
+    const room = createRoom('r1', {
+      uid: 'tok-0',
+      name: 'Nik',
+      color: SEAT_COLORS[0],
+      avatar: 'prism-face',
+      skin: 'astronauta',
+    })
+    expect(identityOf(room, 'p1').avatar).toBe('prism-face')
+    expect(identityOf(room, 'p1').skin).toBe('astronauta')
+    const legacy = identityOf({
+      ...room,
+      seats: [{ ...room.seats[0], avatar: undefined, skin: undefined }],
+    }, 'p1')
+    expect(legacy.avatar).toBe('classic-alive')
+    expect(legacy.skin).toBe('careca')
   })
 
   it('nomes duplicados são permitidos e seguem distinguíveis pela cor (FR-011)', () => {
@@ -60,6 +77,8 @@ describe('fallback sem sala (cliente único) — FR-009/FR-029', () => {
       const id = fallbackIdentity(`p${i}`)
       expect(id.name).toBe(`Jogador ${i}`)
       expect(id.color).toBeTruthy()
+      expect(id.avatar).toBe('classic-alive')
+      expect(id.skin).toBe('careca')
     }
   })
 

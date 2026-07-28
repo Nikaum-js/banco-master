@@ -46,14 +46,28 @@ describe('playersView — GameState → painel (020)', () => {
   // 038: com sala, a identidade vem do lobby — é a única fonte de nome/cor (D-019).
   it('FR-009: nome e cor vêm da sala; `you` marca o assento do uid local', () => {
     const g = createSeedState(['p1', 'p2'])
-    let room = createRoom('r1', { uid: 'tok-nik', name: 'Nik', color: SEAT_COLORS[0] })
-    const r = joinRoom(room, { uid: 'tok-ana', name: 'Ana', color: SEAT_COLORS[1] })
+    let room = createRoom('r1', {
+      uid: 'tok-nik',
+      name: 'Nik',
+      color: SEAT_COLORS[0],
+      avatar: 'orbital-eyes',
+      skin: 'cavanhaque',
+    })
+    const r = joinRoom(room, {
+      uid: 'tok-ana',
+      name: 'Ana',
+      color: SEAT_COLORS[1],
+      avatar: 'single-line',
+      skin: 'robo',
+    })
     if (!r.ok) throw new Error(r.reason)
     room = r.room
 
     const view = playersView(g, room, 'tok-ana')
     expect(view.map((p) => p.name)).toEqual(['Nik', 'Ana'])
     expect(view[1].color).toBe(SEAT_COLORS[1])
+    expect(view.map((p) => p.avatar)).toEqual(['orbital-eyes', 'single-line'])
+    expect(view.map((p) => p.skin)).toEqual(['cavanhaque', 'robo'])
     expect(view[0].you).toBe(false)
     expect(view[1].you).toBe(true)
   })

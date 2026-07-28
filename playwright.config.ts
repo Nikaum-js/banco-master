@@ -39,14 +39,14 @@ export default defineConfig({
       // Smoke E2E (036) + multiplayer (038/042) — dev server, como sempre foi.
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: ['**/fullMatch.spec.ts', '**/a11y.spec.ts'],
+      testIgnore: ['**/fullMatch.spec.ts', '**/a11y.spec.ts', '**/avatarSkins.spec.ts'],
     },
     {
       // FR-051 (044/T052): partida completa e acessibilidade rodam sobre a versão
       // CONSTRUÍDA — o que o CI promoveria —, nunca o dev server.
       name: 'built',
       use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:4173' },
-      testMatch: ['**/fullMatch.spec.ts', '**/a11y.spec.ts'],
+      testMatch: ['**/fullMatch.spec.ts', '**/a11y.spec.ts', '**/avatarSkins.spec.ts'],
     },
   ],
   webServer: [
