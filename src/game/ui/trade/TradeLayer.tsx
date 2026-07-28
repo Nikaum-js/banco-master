@@ -5,7 +5,7 @@
 // Reusa o vocabulário visual do leilão (deed/avatar) e o shell canônico de modal.
 // Único ponto com efeito: dispara proposeTrade/acceptTrade/rejectTrade. A regra
 // (validade) vem de validateTrade. Troca-se propriedade + dinheiro + Bus Tickets (D-028).
-import { useState, useEffect, type ReactNode } from 'react'
+import { useReducer, useEffect, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Bus, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -13,11 +13,10 @@ import { useGameStore } from '@/game/store'
 import { useTradeUI } from './tradeUI'
 import { useLocalView } from '@/net/roomStore'
 import { WaitingBar } from '@/net/ui/WaitingBar'
-import { validateTrade, tradableProps } from '@/game/economy/trade'
+import { validateTrade } from '@/game/economy/trade'
 import type { Trade, Immunity } from '@/game/economy/types'
-import { BOARD, type PropertySquare, type Square } from '@/lib/boardData'
+import { BOARD, type Square } from '@/lib/boardData'
 import { PlayerFace } from '@/boards/shared'
-import { GROUP_COLOR } from '@/boards/groupColors'
 import { SquareIcon } from '@/boards/glyphs/squares'
 import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
 import { CoinIcon } from '@/game/ui/icons'
@@ -25,17 +24,20 @@ import { Button, EmptyState } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 import { useMotion } from '@/game/ui/motion'
 import { money } from '@/lib/money'
+import {
+  createTradeDraft,
+  projectTradeDraft,
+  TRADE_LAPS_PRESETS,
+  updateTradeDraft,
+  type TradeDraftParty,
+  type TradeGrantMap,
+} from './draft'
+import { deedPresentation } from '@/game/ui/deed/presentation'
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n))
 const colorOf = (players: { id: string }[], id: string) => {
   const i = players.findIndex((p) => p.id === id)
   return i >= 0 ? PLAYER_COLORS[i % PLAYER_COLORS.length] : 'var(--color-brass)'
-}
-
-// Tudo que o dono possui (sem o filtro "sem construção" de `tradableProps` — imunidade
-// não move o título, então uma cidade construída pode receber isenção normalmente). §8.4
-function ownedProps(game: { titles: Record<number, { ownerId: string | null }> }, ownerId: string): number[] {
-  return BOARD.filter((sq) => 'price' in sq && game.titles[sq.pos]?.ownerId === ownerId).map((sq) => sq.pos)
 }
 
 function CheckGlyph() {
@@ -69,12 +71,12 @@ function Header({ title, subtitle, onClose }: { title: string; subtitle?: string
 // Avatar do título: bandeira circular (propriedade) ou glifo (aeroporto/utilidade).
 // ---------------------------------------------------------------------
 function DeedAvatar({ sq, size = 22 }: { sq: Square; size?: number }) {
-  if (sq.kind === 'property') {
-    const uf = (sq as PropertySquare).uf
+  const deed = deedPresentation(sq)
+  if (deed?.flagCode) {
     return (
       // `block`: fora de flex (ex. prato da balança) um span inline ignoraria width/height
       <span className="block rounded-full bg-coffee-900 border border-coffee-950 overflow-hidden shrink-0 shadow-[var(--shadow-card)]" style={{ width: size, height: size }}>
-        <img src={`https://flagcdn.com/${uf.toLowerCase()}.svg`} alt={uf} className="w-full h-full object-cover block" draggable={false} />
+        <img src={`https://flagcdn.com/${deed.flagCode.toLowerCase()}.svg`} alt={deed.flagCode} className="w-full h-full object-cover block" draggable={false} />
       </span>
     )
   }
@@ -85,22 +87,19 @@ function DeedAvatar({ sq, size = 22 }: { sq: Square; size?: number }) {
   )
 }
 
-const deedSub = (sq: Square) =>
-  sq.kind === 'property' ? ((sq as PropertySquare).capital ?? '') : sq.kind === 'airport' ? 'Aeroporto' : sq.kind === 'utility' ? 'Utilidade' : ''
-const deedAccent = (sq: Square) => (sq.kind === 'property' ? GROUP_COLOR[(sq as PropertySquare).group] : 'var(--color-brass)')
-
 // Chip de título — faixa de cor do grupo + avatar + nome. Clicável (toggle) ou
 // estático (read-only, no modal recebido).
 function DeedChip({ pos, on, onToggle, readOnly }: { pos: number; on?: boolean; onToggle?: () => void; readOnly?: boolean }) {
   const sq = BOARD[pos]
-  const sub = deedSub(sq)
+  const deed = deedPresentation(sq)
+  if (!deed) return null
   const inner = (
     <>
-      <span className="self-stretch w-1.5 shrink-0 rounded-l-[var(--radius-sharp)]" style={{ background: deedAccent(sq) }} aria-hidden />
+      <span className="self-stretch w-1.5 shrink-0 rounded-l-[var(--radius-sharp)]" style={{ background: deed.accent }} aria-hidden />
       <DeedAvatar sq={sq} size={22} />
       <span className="flex-1 min-w-0 py-1">
-        <span className="block text-cream text-xs leading-tight truncate">{sq.name}</span>
-        {sub && <span className="block text-cream-muted leading-none truncate text-nano">{sub}</span>}
+        <span className="block text-cream text-xs leading-tight truncate">{deed.name}</span>
+        {deed.subtitle && <span className="block text-cream-muted leading-none truncate text-nano">{deed.subtitle}</span>}
       </span>
       {!readOnly && (
         <span className={cn('shrink-0 mr-2 w-[18px] h-[18px] rounded-full flex items-center justify-center transition-colors', on ? 'bg-gold' : 'border border-coffee-500/70')}>
@@ -121,11 +120,6 @@ function DeedChip({ pos, on, onToggle, readOnly }: { pos: number; on?: boolean; 
 // Presets de duração — cobre o uso real (2 = duração padrão das cartas de imunidade
 // temporária; 5 = "por um tempo"; permanente = até o fim de jogo). Input livre não
 // compensa a complexidade extra numa troca que já tem propriedade + dinheiro + tickets.
-const LAPS_PRESETS = [2, 5] as const
-
-// voltas selecionadas (número) ou permanente (null); `undefined` = ainda não concedida.
-type GrantMap = Record<number, number | null>
-
 function ToggleDot({ on }: { on: boolean }) {
   return (
     <span className={cn('shrink-0 w-[18px] h-[18px] rounded-full flex items-center justify-center transition-colors', on ? 'bg-gold' : 'border border-coffee-500/70')}>
@@ -169,7 +163,7 @@ function GrantRow({ pos, laps, onToggle, onSetLaps }: { pos: number; laps: numbe
       </button>
       {on && (
         <div className="flex items-center gap-1 pl-[26px]">
-          {LAPS_PRESETS.map((n) => (
+          {TRADE_LAPS_PRESETS.map((n) => (
             <button
               key={n}
               type="button"
@@ -215,7 +209,7 @@ function ImmunitySide({
   transfers: Set<number>
   onToggleTransfer: (pos: number) => void
   grantable: number[]
-  grants: GrantMap
+  grants: TradeGrantMap
   onToggleGrant: (pos: number) => void
   onSetLaps: (pos: number, laps: number | null) => void
 }) {
@@ -538,82 +532,28 @@ function Composer({ onClose }: { onClose: () => void }) {
   const proposeTrade = (trade: Trade): void => dispatchTrade({ kind: 'propose-trade', trade })
 
   const me = game.players[game.turnOrder[game.activeSeat]]
-  const others = game.players.filter((p) => p.id !== me.id && !p.eliminated)
-  const [toId, setToId] = useState(others[0]?.id ?? '')
+  const [draft, send] = useReducer(
+    (current: ReturnType<typeof createTradeDraft>, action: Parameters<typeof updateTradeDraft>[2]) =>
+      updateTradeDraft(game, current, action),
+    game,
+    (initialGame) => createTradeDraft(initialGame, me.id),
+  )
+  const view = projectTradeDraft(game, draft)
+  const { proposer, recipients: others, recipient, trade, canPropose } = view
+  const { props: offered, cash: fromCash, tickets: fromTickets, grants: fromGrants, transfers: fromTransfers } = draft.from
+  const { props: requested, cash: toCash, tickets: toTickets, grants: toGrants, transfers: toTransfers } = draft.to
+  const change = (party: TradeDraftParty) => ({
+    property: (pos: number) => send({ kind: 'toggle-property', party, pos }),
+    cash: (amount: number) => send({ kind: 'set-cash', party, amount }),
+    tickets: (amount: number) => send({ kind: 'set-tickets', party, amount }),
+    grant: (pos: number) => send({ kind: 'toggle-grant', party, pos }),
+    grantLaps: (pos: number, laps: number | null) => send({ kind: 'set-grant-laps', party, pos, laps }),
+    transfer: (pos: number) => send({ kind: 'toggle-transfer', party, pos }),
+  })
+  const fromChange = change('from')
+  const toChange = change('to')
 
-  const [offered, setOffered] = useState<Set<number>>(new Set())
-  const [requested, setRequested] = useState<Set<number>>(new Set())
-  const [fromCash, setFromCash] = useState(0)
-  const [toCash, setToCash] = useState(0)
-  const [fromTickets, setFromTickets] = useState(0)
-  const [toTickets, setToTickets] = useState(0)
-  // Imunidade (024 US3 concede nova; 028 transfere existente) — pos → voltas (null =
-  // permanente) para concessões; Set de pos para transferências.
-  const [fromGrants, setFromGrants] = useState<GrantMap>({})
-  const [toGrants, setToGrants] = useState<GrantMap>({})
-  const [fromTransfers, setFromTransfers] = useState<Set<number>>(new Set())
-  const [toTransfers, setToTransfers] = useState<Set<number>>(new Set())
-
-  // Trocar de destinatário reseta o que dependia dele. Feito no próprio handler
-  // (`pickRecipient`), não num efeito sobre `toId`: só o clique muda o destinatário, e
-  // resetar em efeito custava um render intermediário com pedido de outra pessoa na tela.
-  const pickRecipient = (id: string): void => {
-    setToId(id)
-    setRequested(new Set())
-    setToTickets(0)
-    setToGrants({})
-    setToTransfers(new Set())
-  }
-
-  const recipient = others.find((p) => p.id === toId)
-  const myProps = tradableProps(game, me.id)
-  const theirProps = recipient ? tradableProps(game, recipient.id) : []
-  // Concedível = propriedade própria MANTIDA (não pode estar sendo cedida na troca, §8.4).
-  const myGrantable = ownedProps(game, me.id).filter((pos) => !offered.has(pos))
-  const theirGrantable = recipient ? ownedProps(game, recipient.id).filter((pos) => !requested.has(pos)) : []
-  const myImmunities = game.immunities.filter((i) => i.beneficiaryId === me.id)
-  const theirImmunities = recipient ? game.immunities.filter((i) => i.beneficiaryId === recipient.id) : []
-
-  const toggle = (set: Set<number>, setter: (s: Set<number>) => void, pos: number) => {
-    const next = new Set(set)
-    if (next.has(pos)) next.delete(pos)
-    else next.add(pos)
-    setter(next)
-  }
-
-  const toggleGrant = (setter: (fn: (prev: GrantMap) => GrantMap) => void, pos: number): void => {
-    setter((prev) => {
-      if (pos in prev) {
-        const next = { ...prev }
-        delete next[pos]
-        return next
-      }
-      return { ...prev, [pos]: LAPS_PRESETS[0] }
-    })
-  }
-
-  const trade: Trade = {
-    fromId: me.id,
-    toId,
-    fromProps: [...offered],
-    fromCash,
-    toProps: [...requested],
-    toCash,
-    fromBusTickets: fromTickets,
-    toBusTickets: toTickets,
-    // Defensivo: se uma propriedade concedida acabou marcada pra ceder depois, ela sai
-    // daqui (não do estado do formulário) — não precisa de efeito pra manter em sincronia.
-    fromImmunities: Object.entries(fromGrants).filter(([pos]) => !offered.has(Number(pos))).map(([pos, laps]) => ({ pos: Number(pos), laps })),
-    toImmunities: Object.entries(toGrants).filter(([pos]) => !requested.has(Number(pos))).map(([pos, laps]) => ({ pos: Number(pos), laps })),
-    fromImmunityTransfers: [...fromTransfers],
-    toImmunityTransfers: [...toTransfers],
-  }
-  const nonEmpty =
-    offered.size || requested.size || fromCash > 0 || toCash > 0 || fromTickets > 0 || toTickets > 0 ||
-    Object.keys(fromGrants).length > 0 || Object.keys(toGrants).length > 0 || fromTransfers.size > 0 || toTransfers.size > 0
-  const canPropose = !!recipient && !!nonEmpty && validateTrade(game, trade)
-
-  const meColor = colorOf(game.players, me.id)
+  const meColor = colorOf(game.players, proposer.id)
   const themColor = recipient ? colorOf(game.players, recipient.id) : 'var(--color-starlight-muted)'
 
   return (
@@ -644,11 +584,11 @@ function Composer({ onClose }: { onClose: () => void }) {
                 type="button"
                 title={p.id}
                 aria-label={`Trocar com ${p.id}`}
-                aria-pressed={p.id === toId}
-                onClick={() => pickRecipient(p.id)}
-                className={cn('rounded-full p-0.5 border transition-colors', p.id === toId ? 'border-gold bg-gold/15' : 'border-transparent hover:border-gold/50')}
+                aria-pressed={p.id === draft.toId}
+                onClick={() => send({ kind: 'pick-recipient', toId: p.id })}
+                className={cn('rounded-full p-0.5 border transition-colors', p.id === draft.toId ? 'border-gold bg-gold/15' : 'border-transparent hover:border-gold/50')}
               >
-                <PlayerFace color={colorOf(game.players, p.id)} size={24} active={p.id === toId} />
+                <PlayerFace color={colorOf(game.players, p.id)} size={24} active={p.id === draft.toId} />
               </button>
             ))}
           </div>
@@ -659,24 +599,24 @@ function Composer({ onClose }: { onClose: () => void }) {
         <Side
           title="Você oferece"
           color={meColor}
-          ownerCash={me.cash}
-          ownerTickets={me.busTickets}
-          props={myProps}
+          ownerCash={proposer.cash}
+          ownerTickets={proposer.busTickets}
+          props={view.fromProps}
           selected={offered}
-          onToggle={(pos) => toggle(offered, setOffered, pos)}
+          onToggle={fromChange.property}
           cash={fromCash}
-          onCash={setFromCash}
+          onCash={fromChange.cash}
           tickets={fromTickets}
-          onTickets={setFromTickets}
+          onTickets={fromChange.tickets}
           immunity={
             <ImmunitySide
-              transferable={myImmunities}
+              transferable={view.fromImmunities}
               transfers={fromTransfers}
-              onToggleTransfer={(pos) => toggle(fromTransfers, setFromTransfers, pos)}
-              grantable={myGrantable}
+              onToggleTransfer={fromChange.transfer}
+              grantable={view.fromGrantable}
               grants={fromGrants}
-              onToggleGrant={(pos) => toggleGrant(setFromGrants, pos)}
-              onSetLaps={(pos, laps) => setFromGrants((prev) => ({ ...prev, [pos]: laps }))}
+              onToggleGrant={fromChange.grant}
+              onSetLaps={fromChange.grantLaps}
             />
           }
         />
@@ -685,22 +625,22 @@ function Composer({ onClose }: { onClose: () => void }) {
           color={themColor}
           ownerCash={recipient?.cash ?? 0}
           ownerTickets={recipient?.busTickets ?? 0}
-          props={theirProps}
+          props={view.toProps}
           selected={requested}
-          onToggle={(pos) => toggle(requested, setRequested, pos)}
+          onToggle={toChange.property}
           cash={toCash}
-          onCash={setToCash}
+          onCash={toChange.cash}
           tickets={toTickets}
-          onTickets={setToTickets}
+          onTickets={toChange.tickets}
           immunity={
             <ImmunitySide
-              transferable={theirImmunities}
+              transferable={view.toImmunities}
               transfers={toTransfers}
-              onToggleTransfer={(pos) => toggle(toTransfers, setToTransfers, pos)}
-              grantable={theirGrantable}
+              onToggleTransfer={toChange.transfer}
+              grantable={view.toGrantable}
               grants={toGrants}
-              onToggleGrant={(pos) => toggleGrant(setToGrants, pos)}
-              onSetLaps={(pos, laps) => setToGrants((prev) => ({ ...prev, [pos]: laps }))}
+              onToggleGrant={toChange.grant}
+              onSetLaps={toChange.grantLaps}
             />
           }
         />
