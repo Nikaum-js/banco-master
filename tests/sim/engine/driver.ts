@@ -6,6 +6,7 @@ import { buildGameCtx, buildInitialGame } from '@/game/setup'
 import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
 import { applyCommand } from '@/game/commands'
+import { deadlinePlan } from '@/game/deadlines'
 import { mulberry32 } from './rng'
 import type { SimAction } from './types'
 
@@ -40,37 +41,35 @@ export function dispatch(session: SimSession, action: SimAction): void {
 // Relógio lógico (D2): quando não resta lance possível, avança `clock` até o deadline
 // mais próximo e fecha na hora — sem esperar de verdade.
 export function closeExhaustedAuctions(session: SimSession): boolean {
-  let closed = false
   const { game } = session
+  const candidates: number[] = []
+
   if (game.resolution?.kind === 'auction') {
     const a = game.resolution.auction
     const canStillBid = a.activeBidders.some((id) => {
       const cash = game.players.find((p) => p.id === id)?.cash ?? 0
       return cash > a.currentBid
     })
-    if (!canStillBid) {
-      // closeAuction não olha `deadline`/`now` (só o timer real do store faz isso) — fecha na hora.
-      // Pelo `applyCommand` para herdar o gatilho de escassez, como no store real.
-      session.game = applyCommand(session.game, { kind: 'close-auction' }, session.ctx)
-      closed = true
-    }
+    if (!canStillBid) candidates.push(a.deadline)
   }
-  if (session.game.landAuction) {
-    const la = session.game.landAuction
+
+  if (game.landAuction) {
+    const la = game.landAuction
     const anyBiddable = la.lots.some((lot) =>
       la.bidders.some((id) => {
-        const cash = session.game.players.find((p) => p.id === id)?.cash ?? 0
+        const cash = game.players.find((p) => p.id === id)?.cash ?? 0
         return cash > lot.currentBid
       }),
     )
-    if (!anyBiddable && la.lots.length > 0) {
-      const soonest = Math.min(...la.lots.map((l) => l.deadline))
-      session.clock = Math.max(session.clock, soonest)
-      session.game = applyCommand(session.game, { kind: 'close-land-lots', now: session.clock }, session.ctx)
-      closed = true
-    }
+    if (!anyBiddable && la.lots.length > 0) candidates.push(...la.lots.map((lot) => lot.deadline))
   }
-  return closed
+
+  if (candidates.length === 0) return false
+
+  session.clock = Math.max(session.clock, Math.min(...candidates))
+  const actions = deadlinePlan(session.game, session.clock).due
+  for (const action of actions) session.game = applyCommand(session.game, action, session.ctx)
+  return actions.length > 0
 }
 
 // Só para referência de teste (BOARD_SIZE) — reexport leve, evita import duplicado.

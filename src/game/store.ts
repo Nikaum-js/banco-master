@@ -15,6 +15,7 @@ import type { GameState } from './turn/types'
 import type { TurnCtx } from './turn/turnMachine'
 import { applyCommand, type GameAction } from './commands'
 import { buildGameCtx, buildInitialGame } from './setup'
+import { deadlinePlan } from './deadlines'
 
 // Jogo novo pronto pra jogar: seed + baralhos embaralhados (FR-001). Usado no
 // boot e no "Novo jogo" (reset ao fim da partida). A composição vive em `setup.ts`.
@@ -36,21 +37,13 @@ export interface GameStore {
   resetGame(): void
 }
 
-// Timer dos leilões: handle fora do estado (não-serializável); reconstruído pelo deadline.
-let auctionTimer: ReturnType<typeof setTimeout> | null = null
-function clearAuctionTimer(): void {
-  if (auctionTimer) {
-    clearTimeout(auctionTimer)
-    auctionTimer = null
-  }
-}
-
-// Timer do pregão de escassez de terrenos (031) — separado do leilão de propriedade.
-let landTimer: ReturnType<typeof setTimeout> | null = null
-function clearLandTimer(): void {
-  if (landTimer) {
-    clearTimeout(landTimer)
-    landTimer = null
+// Um timer para todos os prazos serializáveis. A política de qual evento vence e quando
+// mora em `deadlines.ts`; este handle é só o adapter do relógio do browser.
+let deadlineTimer: ReturnType<typeof setTimeout> | null = null
+function clearDeadlineTimer(): void {
+  if (deadlineTimer) {
+    clearTimeout(deadlineTimer)
+    deadlineTimer = null
   }
 }
 
@@ -63,50 +56,22 @@ function initialPlayerIds(): string[] {
   return Array.from({ length: count }, (_, i) => `p${i + 1}`)
 }
 
-// Comandos que mexem no cronômetro do leilão de PROPRIEDADE (soft-close por lance).
-const REARMS_AUCTION = new Set<GameAction['kind']>(['decline-property', 'place-bid', 'pass-bid', 'pause', 'resume'])
-
-// Comandos que mexem no cronômetro do PREGÃO de terrenos. Superconjunto de
-// `LAND_TRIGGERING` (commands.ts): lá é a mudança de ESTADO, aqui é só o agendamento.
-const REARMS_LAND = new Set<GameAction['kind']>([
-  'place-land-bid',
-  'close-land-auction',
-  'close-land-lots',
-  'close-auction',
-  'buy-property',
-  'finalize',
-  'declare-bankruptcy',
-  'accept-trade',
-  'pause',
-  'resume',
-])
-
 export const useGameStore = create<GameStore>((set, get) => {
-  // (Re)agenda o fechamento do leilão de PROPRIEDADE pelo deadline; respeita pausa.
-  // (O leilão de casas — 026 — é evento autônomo de fecho manual, não usa este timer.)
-  function rearmAuction(): void {
-    clearAuctionTimer()
-    const g = get().game
-    if (g.paused || g.resolution?.kind !== 'auction') return
-    const ms = Math.max(0, g.resolution.auction.deadline - Date.now())
-    auctionTimer = setTimeout(() => {
-      clearAuctionTimer()
-      get().dispatch({ kind: 'close-auction' }) // pelo mesmo caminho: pega o gatilho de escassez
-    }, ms)
-  }
+  function rearmDeadlines(): void {
+    clearDeadlineTimer()
+    const now = Date.now()
+    const plan = deadlinePlan(get().game, now)
+    const wakeAt = plan.due.length > 0 ? now : plan.next
+    if (wakeAt === null) return
 
-  // (Re)agenda o fechamento dos lotes do PREGÃO (031) pelo prazo PRÓPRIO de cada lote:
-  // dispara no lote que vence primeiro, fecha os expirados e reagenda p/ os demais.
-  function rearmLandAuction(): void {
-    clearLandTimer()
-    const g = get().game
-    if (g.paused || !g.landAuction || g.landAuction.lots.length === 0) return
-    const soonest = Math.min(...g.landAuction.lots.map((l) => l.deadline))
-    const ms = Math.max(0, soonest - Date.now())
-    landTimer = setTimeout(() => {
-      clearLandTimer()
-      get().dispatch({ kind: 'close-land-lots', now: Date.now() })
-    }, ms)
+    deadlineTimer = setTimeout(() => {
+      deadlineTimer = null
+      const current = deadlinePlan(get().game, Date.now())
+      for (const action of current.due) get().dispatch(action)
+      // Um comando pode fechar só parte do Pregão ou abrir outro prazo. Recalcular no estado
+      // final também cobre um due que virou no mesmo tick e um comando que terminou em no-op.
+      rearmDeadlines()
+    }, Math.max(0, wakeAt - now))
   }
 
   return {
@@ -119,13 +84,11 @@ export const useGameStore = create<GameStore>((set, get) => {
       const after = applyCommand(before, action, get().ctx)
       if (after === before) return // no-op (FR-009): nem `set`, nem reagendamento
       set({ game: after })
-      if (REARMS_AUCTION.has(action.kind)) rearmAuction()
-      if (REARMS_LAND.has(action.kind)) rearmLandAuction()
+      rearmDeadlines()
     },
 
     resetGame: () => {
-      clearAuctionTimer()
-      clearLandTimer()
+      clearDeadlineTimer()
       set((st) => ({ game: freshGame(st.game.players.map((p) => p.id)) })) // mesmos jogadores, baralho novo
     },
   }

@@ -6,7 +6,7 @@
 import type { RNG } from '@/game/turn/dice'
 import type { GameState } from '@/game/turn/types'
 import type { TurnCtx } from '@/game/turn/turnMachine'
-import { actorOf, applyCommand, type GameAction, type PlayerAction, type SystemAction } from '@/game/commands'
+import { actorOf, applyCommand, type GameAction, type PlayerAction } from '@/game/commands'
 import { buildGameCtx, buildInitialGame } from '@/game/setup'
 import { matchSummary } from '@/game/summary'
 import { nullTelemetry, type Telemetry, type TelemetryEvent } from '@/telemetry/port'
@@ -29,6 +29,7 @@ import {
 } from './room'
 import type { AcceptedCommand, CommandEnvelope, JoinRequest, PresenceChange, Transport, Unsubscribe } from './transport'
 import { registerFailure } from '@/app/failureRegistry'
+import { deadlinePlan } from '@/game/deadlines'
 
 // Ações de sistema nunca carregam carta — `actorOf` (D9/T034) só existe para `PlayerAction`.
 const SYSTEM_KINDS = new Set<GameAction['kind']>(['close-auction', 'close-land-lots', 'close-land-auction', 'pause', 'resume'])
@@ -397,16 +398,9 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
     },
 
     tick(): void {
-      if (!game || game.paused) return // prazos congelam durante a pausa (FR-017)
+      if (!game) return
       const t = now()
-      const sys: SystemAction[] = []
-      if (game.resolution?.kind === 'auction' && t >= game.resolution.auction.deadline) {
-        sys.push({ kind: 'close-auction' })
-      }
-      if (game.landAuction && game.landAuction.lots.some((l) => t >= l.deadline)) {
-        sys.push({ kind: 'close-land-lots', now: t })
-      }
-      for (const a of sys) accept(a)
+      for (const action of deadlinePlan(game, t).due) accept(action)
     },
 
     room: () => room,
