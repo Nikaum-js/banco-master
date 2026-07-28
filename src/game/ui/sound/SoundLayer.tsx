@@ -1,82 +1,14 @@
-// SoundLayer (spec 035) — componente headless (sem render) que observa o estado
-// compartilhado e dispara cues. Espelha GameDriver/NoticeLayer. Não escreve no
-// GameState (FR-018). Cada cue pertence a UM canal → idempotência (FR-007).
-//
-// Canal 1: transições tipadas (rolagem, resolução, notice, prisão, fim, pregão,
-//          empréstimo, deltas de construção/hipoteca).
-// Canal 2: tail do log (imposto/aluguel/GO/juros/falência/saque), por identidade
-//          de objeto — robusto ao bound/shift de 50 do log.
-// No 1º render só SNAPSHOT (sem tocar) → sem replay de histórico na reconexão (FR-011).
+// SoundLayer (spec 035) — ponte headless entre o estado React e as duas bordas
+// impuras de áudio. Toda a projeção incremental vive no módulo puro `project`.
 import { useEffect, useRef } from 'react'
 import { useGameStore } from '@/game/store'
 import { useAudioPrefs } from './prefs'
 import { ensureUnlockListener, play, setMasterGain } from './engine'
-import { classifyLogEntry, countNewLogEntries, cueForResolution, cueForRoll, cueForNotice, logKey } from './classify'
-import type { SoundCue } from './cues'
-import type { GameState } from '@/game/turn/types'
-import type { Title } from '@/game/economy/types'
-
-// Cues que JÁ sonorizam uma movimentação de dinheiro. Se algum tocou no tick,
-// o canal de delta de caixa fica mudo (evita dobrar som no mesmo evento, FR-007).
-const MONEY_CUES: ReadonlySet<SoundCue> = new Set([
-  'buy', 'sell', 'build', 'mortgage', 'unmortgage', 'rent-paid', 'tax-paid',
-  'go-bonus', 'free-parking', 'loan-granted', 'loan-interest', 'debt',
-  'auction-close', 'bankruptcy', 'hostile-takeover', 'jail-out', 'win',
-])
-
-// "Nível" de construção de um título (soma para detectar build/sell por delta).
-function buildLevel(t: Title): number {
-  return t.houses + (t.hotel ? 1 : 0) + (t.hotel2 ? 1 : 0) + (t.skyscraper ? 1 : 0) + (t.hangar ? 1 : 0)
-}
-
-// IMPORTANTE: o motor clona o GameState inteiro a cada ação (structuredClone),
-// então NENHUM campo aqui pode ser comparado por identidade de objeto — só
-// valores primitivos e chaves derivadas (logKeys).
-interface Prev {
-  seat: number
-  resKind: string | null
-  noticeKind: string | null
-  jail: Record<string, boolean>
-  phase: string
-  loans: number
-  landAuction: boolean
-  landBids: number
-  logKeys: string[]
-  titles: Record<number, { level: number; mortgaged: boolean }>
-  cash: Record<string, number>
-}
-
-function snapshotTitles(g: GameState): Record<number, { level: number; mortgaged: boolean }> {
-  const out: Record<number, { level: number; mortgaged: boolean }> = {}
-  for (const [pos, t] of Object.entries(g.titles)) out[+pos] = { level: buildLevel(t), mortgaged: t.mortgaged }
-  return out
-}
-
-function snapshot(g: GameState): Prev {
-  const jail: Record<string, boolean> = {}
-  const cash: Record<string, number> = {}
-  g.players.forEach((p) => {
-    jail[p.id] = p.jail.inJail
-    cash[p.id] = p.cash
-  })
-  return {
-    seat: g.turn.seat,
-    resKind: g.resolution?.kind ?? null,
-    noticeKind: g.notice?.kind ?? null,
-    jail,
-    phase: g.phase,
-    loans: g.loans.length,
-    landAuction: g.landAuction !== null,
-    landBids: g.landAuction ? g.landAuction.lots.reduce((s, l) => s + (l.currentBid > 0 ? 1 : 0), 0) : 0,
-    logKeys: g.log.map(logKey),
-    titles: snapshotTitles(g),
-    cash,
-  }
-}
+import { createSoundProjector } from './project'
 
 export function SoundLayer() {
   const game = useGameStore((s) => s.game)
-  const prev = useRef<Prev | null>(null)
+  const projector = useRef(createSoundProjector())
 
   // Destrava o áudio no 1º gesto e aplica o ganho inicial das prefs uma vez —
   // as mudanças seguintes são cobertas pelos setters do store e pelo rehydrate.
@@ -87,91 +19,7 @@ export function SoundLayer() {
   }, [])
 
   useEffect(() => {
-    const next = snapshot(game)
-    const p = prev.current
-    prev.current = next
-    if (p === null) return // 1º render: só snapshot, sem tocar (FR-011)
-
-    // Registra o que tocou no tick — o canal de delta de caixa (C3) consulta isso.
-    const played: SoundCue[] = []
-    const fire = (cue: SoundCue) => {
-      played.push(cue)
-      play(cue)
-    }
-
-    // — Canal 1: transições tipadas —
-    // Resolução (borda de subida do kind).
-    if (game.resolution && game.resolution.kind !== p.resKind) {
-      const cue = cueForResolution(game.resolution.kind)
-      if (cue) fire(cue)
-    }
-
-    // Notice (borda de subida).
-    if (game.notice && game.notice.kind !== p.noticeKind) {
-      const cue = cueForNotice(game.notice.kind)
-      if (cue) fire(cue)
-    }
-
-    // Prisão (entrar/sair) por jogador.
-    for (const [id, inJail] of Object.entries(next.jail)) {
-      const was = p.jail[id] ?? false
-      if (inJail && !was) fire('jail-in')
-      else if (!inJail && was) fire('jail-out')
-    }
-
-    // Fim de jogo.
-    if (next.phase === 'ended' && p.phase !== 'ended') fire('win')
-
-    // Empréstimo concedido.
-    if (next.loans > p.loans) fire('loan-granted')
-
-    // Pregão de terrenos: novo lance / fechamento.
-    if (next.landAuction && next.landBids > p.landBids) fire('auction-bid')
-    if (!next.landAuction && p.landAuction) fire('auction-close')
-
-    // Deltas de construção/hipoteca (C2) — ação inferida pelo estado compartilhado.
-    for (const [pos, cur] of Object.entries(next.titles)) {
-      const before = p.titles[+pos]
-      if (!before) continue
-      if (cur.level > before.level) fire('build')
-      else if (cur.level < before.level) fire('sell')
-      if (cur.mortgaged && !before.mortgaged) fire('mortgage')
-      else if (!cur.mortgaged && before.mortgaged) fire('unmortgage')
-    }
-
-    // — Canal 2: tail do log (diff POR VALOR — robusto ao clone do motor e ao
-    // shift de 50; identidade de objeto não sobrevive ao structuredClone) —
-    const log = game.log
-    const fresh = countNewLogEntries(p.logKeys, next.logKeys)
-    for (let i = log.length - fresh; i < log.length; i++) {
-      const e = log[i]
-      // A rolagem vive no log (`kind: 'roll'`) mas o cue precisa do Roll completo
-      // (dupla/Speed/Ônibus) — classifica pelo lastRoll corrente.
-      if (e.kind === 'roll') {
-        if (game.turn.lastRoll) fire(cueForRoll(game.turn.lastRoll))
-        continue
-      }
-      const cue = classifyLogEntry(e)
-      if (cue) fire(cue)
-    }
-
-    // — Canal 3: delta de caixa (ganhar ≠ perder dinheiro) —
-    // Cobre movimentações SEM cue próprio (cartas de Tesouro/Acaso que pagam ou
-    // cobram, trocas, credor recebendo dívida). Se qualquer cue de dinheiro já
-    // tocou neste tick, o evento já foi sonorizado → silêncio (FR-007).
-    if (!played.some((c) => MONEY_CUES.has(c))) {
-      const gained = Object.entries(next.cash).some(([id, c]) => c > (p.cash[id] ?? c))
-      const lost = Object.entries(next.cash).some(([id, c]) => c < (p.cash[id] ?? c))
-      if (gained) fire('money-gain')
-      else if (lost) fire('money-loss')
-    }
-
-    // Turno finalizado (a vez passou de assento) — os dados recolhidos da mesa.
-    // Só toca em virada QUIETA: se outro cue soou neste tick (compra, aluguel...),
-    // a própria ação já fechou o turno sonoramente — não empilhar (FR-007/FR-009).
-    // TODO(multiplayer): quando existir jogador local (Supabase), disparar também
-    // 'your-turn' (sino de balcão) no cliente cujo assento === next.seat.
-    if (next.seat !== p.seat && next.phase !== 'ended' && played.length === 0) fire('turn-end')
+    for (const cue of projector.current.project(game)) play(cue)
   }, [game])
 
   return null
