@@ -1,6 +1,7 @@
 # D-044 — Remoção da peça do jogador
 
-**Data:** 2026-07-27 · **Status:** aceita
+**Data:** 2026-07-27 · **Status:** revogada
+**Revogada por:** [D-047](D-047-avatares-escolhiveis-e-persistentes.md)
 **Revoga:** a escolha de peça introduzida pela spec 038 (FR-022/FR-023) e o §12.5 na parte que a tornava única por sala.
 
 **Decisão:** o jogador deixa de escolher uma **peça** (avião, navio, trem, táxi, balão, bússola, mala, farol). A identidade visual na mesa passa a ser **nome + cor do assento**, e só. Some o catálogo `PIECES`, a regra de unicidade (`availablePieces`, recusa `'piece-taken'`), o campo `piece` de `Seat`/`Identity`/`JoinRequest`/`SessionIdentity`, a arte em `net/ui/pieceGlyphs.tsx` e o seletor "Sua peça" do lobby.

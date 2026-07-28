@@ -6,6 +6,16 @@ Este é o glossário do **domínio de negócio** — os termos que o SRS usa par
 
 ## Language
 
+### Sala e identidade
+
+**Avatar**:
+Forma base escolhida para o `PlayerFace` do assento. O catálogo final contém Clássico Vivo, Olhos Orbitais, Linha Única, Prisma e Totem; a escolha persiste do lobby à partida e pode se repetir entre jogadores ([D-047](./docs/adr/D-047-avatares-escolhiveis-e-persistentes.md)).
+_Avoid_: peça
+
+**Skin**:
+Visual sobreposto ao Avatar. O catálogo contém Careca, Cavanhaque, Topete, Cartola, Safári, Aviador, Robô e Astronauta; toda Skin é compatível com todo Avatar e a combinação persiste como identidade do assento ([D-047](./docs/adr/D-047-avatares-escolhiveis-e-persistentes.md)).
+_Avoid_: peça, Avatar
+
 ### Tabuleiro e movimento
 
 **GO**:

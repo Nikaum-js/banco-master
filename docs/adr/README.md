@@ -57,6 +57,7 @@
 - [D-044](D-044-remocao-da-peca-do-jogador.md) — Remoção da peça do jogador: identidade na mesa é nome + cor (revoga FR-022/023 da 038)
 - [D-045](D-045-paleta-de-assentos-derivada-em-oklch.md) — Paleta de assentos derivada em OKLCH, verificada sob dicromacia (refina D-044)
 - [D-046](D-046-leilao-da-largada-financia-a-loteria.md) — Host escolhe o Ritual de Largada: Leilão secreto financia a Loteria; Maior dado é gratuito (refina D-006 e a ordem inicial da 038)
+- [D-047](D-047-avatares-escolhiveis-e-persistentes.md) — Cinco avatares e oito skins combináveis persistem do lobby à partida (revoga parcialmente D-044; refina D-045)
 
 > ℹ️ **Renumeração na integração da 043** (a colisão que este arquivo avisava): a worktree da 043
 > tinha escrito a identidade de transporte como `D-035` e o código de reentrada como `D-038`, e

@@ -1,6 +1,6 @@
 # Banco Master — Software Requirements Specification (SRS)
 
-**Versão:** 1.12
+**Versão:** 1.14
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -712,9 +712,9 @@ Bus Tickets são **itens de mão separados** das cartas. Permitem flexibilidade 
 ### 11.2 Entrada na Sala
 
 - Qualquer pessoa com o link entra antes da partida iniciar.
-- Cada jogador escolhe **nome** e **cor** antes de entrar. A cor é **única na sala** e é o que distingue os jogadores na mesa.
+- Cada jogador escolhe **nome**, **cor**, **avatar** e **skin** antes de entrar. A cor é **única na sala**; avatar e skin não são exclusivos e podem se repetir.
 
-> 📌 **A peça saiu** (v1.10, [D-044](adr/D-044-remocao-da-peca-do-jogador.md)): a escolha de **token/peça** (avião, navio, trem…) foi removida — nunca chegou ao tabuleiro, onde o token sempre foi o avatar pintado com a cor do assento. Com ela fora, a **cor** é o único distintivo, e por isso a paleta das oito passou a ser derivada e verificada sob dicromacia ([D-045](adr/D-045-paleta-de-assentos-derivada-em-oklch.md)) em vez de escolhida a olho.
+> 📌 **Avatar é o próprio token e Skin é sua camada visual** (v1.14, [D-047](adr/D-047-avatares-escolhiveis-e-persistentes.md)): a peça separada (avião, navio, trem…) continua removida. O jogador escolhe independentemente uma das cinco formas finais do `PlayerFace` — **Clássico Vivo, Olhos Orbitais, Linha Única, Prisma ou Totem** — e uma das oito skins — **Careca, Cavanhaque, Topete, Cartola, Safári, Aviador, Robô ou Astronauta**. Toda combinação é válida. A mesma composição aparece no lobby, no token que percorre o tabuleiro e nas superfícies de identidade da partida. As duas escolhas persistem no assento e sobrevivem à reconexão; salas antigas usam Clássico Vivo + Careca. A cor continua única e continua sendo o distintivo obrigatório verificado sob dicromacia ([D-045](adr/D-045-paleta-de-assentos-derivada-em-oklch.md)); avatares e skins podem se repetir.
 - Após início, não é possível adicionar novos jogadores.
 
 ### 11.3 Desconexão e Reconexão
