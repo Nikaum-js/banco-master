@@ -863,41 +863,226 @@
 
   /* ---- Animações dos avatares de jogador (PlayerFace) ---- */
 
-  /* Idle bob — respiração leve, sobe-desce 2px num loop suave */
+  /* O ciclo tem uma janela curta de gesto e uma pausa longa. A sensação é de presença,
+     não de GIF repetindo: nenhuma expressão completa volta antes de 8s. */
   @keyframes face-bob {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-2px); }
+    0%, 66%, 100% { transform: translateY(0); }
+    74%           { transform: translateY(-1.5px); }
+    82%, 90%      { transform: translateY(0); }
+    86%           { transform: translateY(-0.5px); }
   }
   .face-idle {
-    animation: face-bob 3s ease-in-out infinite;
+    animation: face-bob 10s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
     will-change: transform;
   }
 
-  /* Idle bob ATIVO — jogador da vez, ligeiramente mais animado + scale */
+  /* O jogador da vez responde um pouco antes, mas ainda repousa mais da metade do ciclo. */
   @keyframes face-active-bob {
-    0%, 100% { transform: translateY(0)   scale(1); }
-    50%      { transform: translateY(-3px) scale(1.04); }
+    0%, 58%, 100% { transform: translateY(0) scale(1); }
+    68%           { transform: translateY(-2px) scale(1.025); }
+    80%, 90%      { transform: translateY(0) scale(1); }
+    85%           { transform: translateY(-0.7px) scale(1.01); }
   }
   .face-idle-active {
-    animation: face-active-bob 2.2s ease-in-out infinite;
+    animation: face-active-bob 8s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
     will-change: transform;
   }
 
-  /* Blink — pisca rápido (250ms a cada 5s), em scaleY próximo de 0 */
-  @keyframes face-blink {
-    0%, 92%, 100% { transform: scaleY(1); }
-    94%, 97%      { transform: scaleY(0.05); }
-  }
-  .face-eye {
+  .avatar-face [class*="avatar-"],
+  .avatar-face [class*="skin-"] {
     transform-box: fill-box;
     transform-origin: center;
-    animation: face-blink 5s ease-in-out infinite;
   }
+  .avatar-face--asleep .avatar-expressive {
+    opacity: 0;
+  }
+  .avatar-face--asleep,
+  .avatar-face--asleep * {
+    animation: none !important;
+  }
+
+  @keyframes avatar-blink {
+    0%, 79%, 84%, 100% { transform: scaleY(1); }
+    81%, 82%           { transform: scaleY(0.06); }
+  }
+  @keyframes avatar-glance {
+    0%, 58%, 86%, 100% { transform: translateX(0); }
+    66%, 72%           { transform: translateX(3px); }
+    78%                { transform: translateX(-2px); }
+  }
+  @keyframes avatar-smile {
+    0%, 68%, 92%, 100% { transform: scaleX(1) scaleY(1); }
+    77%                { transform: scaleX(0.9) scaleY(1.1); }
+    84%                { transform: scaleX(1.04) scaleY(0.97); }
+  }
+  @keyframes avatar-sway {
+    0%, 62%, 94%, 100% { transform: translate(0, 0) rotate(0); }
+    72%                { transform: translate(0, -2px) rotate(-1deg); }
+    82%                { transform: translate(1px, 0) rotate(1deg); }
+  }
+
+  .avatar-classic__body {
+    animation: avatar-sway 11s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+  .avatar-classic__eyes,
+  .avatar-single-line__eyes,
+  .avatar-prism__eyes {
+    animation: avatar-blink 9.5s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+  .avatar-classic__pupils,
+  .avatar-single-line__pupils,
+  .avatar-prism__pupils,
+  .avatar-totem__pupils {
+    animation: avatar-glance 11.5s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+  .avatar-classic__mouth,
+  .avatar-single-line__mouth,
+  .avatar-prism__mouth,
+  .avatar-orbital__mouth {
+    animation: avatar-smile 12s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+
+  @keyframes avatar-orbit-left {
+    0%, 60%, 94%, 100% { transform: translate(0, 0) rotate(0); }
+    72%                { transform: translate(-4px, -3px) rotate(3deg); }
+    84%                { transform: translate(1px, 1px) rotate(-1deg); }
+  }
+  @keyframes avatar-orbit-right {
+    0%, 60%, 94%, 100% { transform: translate(0, 0) rotate(0); }
+    72%                { transform: translate(4px, 3px) rotate(-3deg); }
+    84%                { transform: translate(-1px, -1px) rotate(1deg); }
+  }
+  @keyframes avatar-orbit-signal {
+    0%, 64%, 92%, 100% { opacity: 0.38; stroke-dashoffset: 0; }
+    76%                { opacity: 0.66; stroke-dashoffset: 10; }
+    84%                { opacity: 0.48; stroke-dashoffset: 14; }
+  }
+  .avatar-orbital__eye--left {
+    animation: avatar-orbit-left 12s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+  .avatar-orbital__eye--right {
+    animation: avatar-orbit-right 12s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+  .avatar-orbital__expression {
+    animation: avatar-blink 10.5s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+  .avatar-orbital__orbit {
+    animation: avatar-orbit-signal 12s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+
+  @keyframes avatar-line-pulse {
+    0%, 64%, 94%, 100% { stroke-dasharray: 1 0; stroke-dashoffset: 0; }
+    76%                { stroke-dasharray: 0.86 0.14; stroke-dashoffset: -0.08; }
+    84%                { stroke-dasharray: 0.94 0.06; stroke-dashoffset: -0.12; }
+  }
+  .avatar-single-line__body {
+    animation: avatar-sway 11.5s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+  .avatar-single-line__stroke {
+    animation: avatar-line-pulse 11.5s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+
+  @keyframes avatar-prism-glint {
+    0%, 66%, 94%, 100% { opacity: 0.24; }
+    76%                { opacity: 0.75; }
+    84%                { opacity: 0.38; }
+  }
+  .avatar-prism__body {
+    animation: avatar-sway 12s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+  .avatar-prism__glint {
+    animation: avatar-prism-glint 12s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+
+  @keyframes avatar-totem-top {
+    0%, 62%, 94%, 100% { transform: translateX(0) rotate(0); }
+    72%                { transform: translateX(-2px) rotate(-1deg); }
+    82%                { transform: translateX(1px) rotate(0.5deg); }
+  }
+  @keyframes avatar-totem-middle {
+    0%, 62%, 94%, 100% { transform: translate(0, 0); }
+    72%                { transform: translate(3px, -1px); }
+    82%                { transform: translate(-1px, 0); }
+  }
+  @keyframes avatar-totem-bottom {
+    0%, 62%, 94%, 100% { transform: translate(0, 0); }
+    72%                { transform: translate(-2px, 1px); }
+    82%                { transform: translate(1px, 0); }
+  }
+  @keyframes avatar-totem-bar {
+    0%, 66%, 94%, 100% { transform: scaleY(0.72); }
+    74%                { transform: scaleY(1.18); }
+    82%                { transform: scaleY(0.88); }
+  }
+  .avatar-totem__top {
+    animation: avatar-totem-top 12s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+  .avatar-totem__middle {
+    animation: avatar-totem-middle 12s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+  .avatar-totem__bottom {
+    animation: avatar-totem-bottom 12s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+  .avatar-totem__bar {
+    animation: avatar-totem-bar 10.5s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+  .avatar-totem__bar--2 { animation-delay: calc(var(--face-delay, 0s) + 0.12s); }
+  .avatar-totem__bar--3 { animation-delay: calc(var(--face-delay, 0s) + 0.24s); }
+  .avatar-totem__bar--4 { animation-delay: calc(var(--face-delay, 0s) + 0.36s); }
+  .avatar-totem__bar--5 { animation-delay: calc(var(--face-delay, 0s) + 0.48s); }
+
+  @keyframes skin-robot-beacon {
+    0%, 72%, 78%, 84%, 100% { opacity: 1; }
+    75%, 81%                { opacity: 0.25; }
+  }
+  @keyframes skin-astronaut-shine {
+    0%, 68%, 94%, 100% { opacity: 0.68; transform: translate(0, 0); }
+    78%                { opacity: 0.92; transform: translate(3px, -2px); }
+    86%                { opacity: 0.58; transform: translate(0, 0); }
+  }
+  .skin-robot__beacon {
+    animation: skin-robot-beacon 13s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+  .skin-astronaut__shine {
+    animation: skin-astronaut-shine 15s ease-in-out infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+
+  @keyframes face-active-ring {
+    to { transform: rotate(360deg); }
+  }
+  .face-active-ring {
+    transform-origin: 80px 80px;
+    animation: face-active-ring 20s linear infinite;
+    animation-delay: var(--face-delay, 0s);
+  }
+
   @media (prefers-reduced-motion: reduce) {
+    .avatar-face,
+    .avatar-face *,
     .face-idle,
-    .face-idle-active,
-    .face-eye {
-      animation: none;
+    .face-idle-active {
+      animation: none !important;
+      transition-duration: 0.01ms !important;
       will-change: auto;
     }
   }
@@ -2302,6 +2487,167 @@
       inset 0 0 0 8px color-mix(in srgb, var(--color-ink-950) 32%, transparent),
       0 0 32px -18px color-mix(in srgb, var(--color-brass) 62%, transparent);
   }
+  .avatar-concept-lab {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    margin-top: 1.15rem;
+    display: grid;
+    justify-items: center;
+    gap: 0.55rem;
+  }
+  .avatar-concept-lab .identity-passport__portrait {
+    margin-top: 0;
+  }
+  .avatar-concept-lab__stage {
+    touch-action: manipulation;
+  }
+  .avatar-concept-lab__art {
+    position: relative;
+    z-index: 1;
+    width: 92%;
+    height: 92%;
+    overflow: visible;
+    filter: drop-shadow(0 11px 9px rgb(0 0 0 / 0.28));
+    animation: avatar-concept-enter 280ms var(--ease-standard) both;
+  }
+  @keyframes avatar-concept-enter {
+    from {
+      opacity: 0;
+      transform: scale(0.9) rotate(-2deg);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) rotate(0);
+    }
+  }
+  .avatar-concept-lab__meta {
+    min-height: 2rem;
+    text-align: center;
+  }
+  .avatar-concept-lab__meta strong,
+  .avatar-concept-lab__meta span {
+    display: block;
+  }
+  .avatar-concept-lab__meta strong {
+    color: var(--color-brass-glow);
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+  }
+  .avatar-concept-lab__meta span {
+    margin-top: 0.3rem;
+    color: color-mix(in srgb, var(--color-starlight-muted) 78%, transparent);
+    font-family: var(--font-sans);
+    font-size: 0.48rem;
+    font-weight: 650;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+  .avatar-concept-lab__options {
+    display: grid;
+    justify-content: center;
+    gap: 0.4rem;
+  }
+  .avatar-concept-lab__pickers {
+    width: min(100%, 13rem);
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 0.6rem;
+  }
+  .avatar-concept-lab__picker {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .avatar-concept-lab__picker legend {
+    width: 100%;
+    margin-bottom: 0.35rem;
+    color: color-mix(in srgb, var(--color-brass) 78%, var(--color-starlight-muted));
+    font-family: var(--font-sans);
+    font-size: 0.5rem;
+    font-weight: 750;
+    letter-spacing: 0.14em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  .avatar-concept-lab__options--avatars {
+    grid-template-columns: repeat(6, 1.25rem);
+  }
+  .avatar-concept-lab__options--skins {
+    grid-template-columns: repeat(4, 2.75rem);
+  }
+  .avatar-concept-lab__options--skins .avatar-concept-lab__option {
+    grid-column: auto;
+  }
+  .avatar-concept-lab__option {
+    position: relative;
+    grid-column: span 2;
+    width: 2.75rem;
+    min-height: 2.75rem;
+    display: grid;
+    place-items: center;
+    padding: 0.2rem;
+    cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--color-brass) 22%, var(--color-ink-500));
+    border-radius: var(--radius-sharp);
+    color: var(--color-starlight-muted);
+    background: color-mix(in srgb, var(--color-ink-900) 88%, transparent);
+    transition:
+      border-color var(--motion-fast) var(--ease-standard),
+      background-color var(--motion-fast) var(--ease-standard),
+      transform var(--motion-fast) var(--ease-standard);
+  }
+  .avatar-concept-lab__options--avatars .avatar-concept-lab__option:nth-child(4) {
+    grid-column: 2 / span 2;
+  }
+  .avatar-concept-lab__options--avatars .avatar-concept-lab__option:nth-child(5) {
+    grid-column: 4 / span 2;
+  }
+  .avatar-concept-lab__option::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 0.18rem;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: transparent;
+    transform: translateX(-50%);
+    box-shadow: none;
+  }
+  .avatar-concept-lab__option:hover {
+    border-color: color-mix(in srgb, var(--color-brass) 62%, var(--color-ink-500));
+    background: color-mix(in srgb, var(--color-brass) 8%, var(--color-ink-900));
+  }
+  .avatar-concept-lab__option[aria-pressed="true"] {
+    border-color: var(--color-brass);
+    color: var(--color-brass-glow);
+    background: color-mix(in srgb, var(--color-brass) 13%, var(--color-ink-900));
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--color-brass) 28%, transparent),
+      0 0 12px -7px var(--color-brass-glow);
+  }
+  .avatar-concept-lab__option[aria-pressed="true"]::after {
+    background: var(--color-brass-glow);
+    box-shadow: 0 0 6px var(--color-brass);
+  }
+  .avatar-concept-lab__option:active {
+    transform: translateY(1px);
+  }
+  .avatar-concept-lab__option:focus-visible {
+    outline: 2px solid var(--color-brass-glow);
+    outline-offset: 2px;
+  }
+  .avatar-concept-lab__option .avatar-face,
+  .avatar-concept-lab__option .avatar-face * {
+    animation: none !important;
+  }
   .identity-passport__orbit {
     position: absolute;
     inset: 12px;
@@ -2329,7 +2675,7 @@
     position: relative;
     z-index: 1;
     width: min(100%, 14rem);
-    margin-top: 1.25rem;
+    margin-top: 0.85rem;
     text-align: center;
   }
   .identity-passport__name p {
@@ -2414,47 +2760,6 @@
       0 0 0 4px var(--color-brass),
       0 0 18px -4px color-mix(in srgb, var(--identity-color) 76%, transparent);
   }
-  .identity-skin-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.5rem;
-  }
-  .identity-skin-option {
-    min-height: 4.35rem;
-    display: grid;
-    place-items: center;
-    gap: 0.25rem;
-    padding: 0.45rem 0.2rem;
-    border: 1px solid var(--color-ink-500);
-    border-radius: var(--radius-sharp);
-    color: var(--color-starlight-muted);
-    background:
-      linear-gradient(145deg, color-mix(in srgb, var(--color-ink-800) 90%, transparent), color-mix(in srgb, var(--color-ink-950) 88%, transparent));
-    transition:
-      color var(--motion-fast) var(--ease-standard),
-      border-color var(--motion-fast) var(--ease-standard),
-      background-color var(--motion-fast) var(--ease-standard);
-  }
-  .identity-skin-option span {
-    overflow: hidden;
-    max-width: 100%;
-    font-size: 0.5rem;
-    letter-spacing: 0.06em;
-    text-overflow: ellipsis;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-  .identity-skin-option:hover {
-    border-color: color-mix(in srgb, var(--color-brass) 48%, var(--color-ink-500));
-    color: var(--color-starlight);
-  }
-  .identity-skin-option[aria-pressed="true"] {
-    border-color: var(--color-brass);
-    color: var(--color-brass-glow);
-    background:
-      linear-gradient(145deg, color-mix(in srgb, var(--color-brass) 12%, var(--color-ink-800)), var(--color-ink-900));
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-brass) 14%, transparent);
-  }
   .identity-submit {
     margin-top: auto;
   }
@@ -2500,7 +2805,12 @@
     .identity-passport__portrait {
       width: 8rem;
       height: 8rem;
-      margin-top: 1rem;
+    }
+    .avatar-concept-lab {
+      margin-top: 0.8rem;
+    }
+    .avatar-concept-lab__pickers {
+      width: min(100%, 13rem);
     }
     .identity-controls {
       padding: 1rem 0 0;
@@ -2511,7 +2821,8 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .identity-passport__orbit {
+    .identity-passport__orbit,
+    .avatar-concept-lab__art {
       animation: none;
     }
   }
