@@ -10,7 +10,7 @@ import { useLocalView, useRoomStore } from '@/net/roomStore'
 import { cityLevel } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
 import { deedView, type BuildBlock } from '@/game/ui/deed/deedView'
-import { computeRents } from '@/game/ui/deed/deedRents'
+import { deedPresentation } from '@/game/ui/deed/presentation'
 import { GROUP_COLOR } from './groupColors'
 import { skinParts, type SkinId } from './faceSkins'
 import { useTradeUI } from '@/game/ui/trade/tradeUI'
@@ -1902,12 +1902,13 @@ function DeedActions({ pos }: { pos: number }) {
 function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onClose: () => void }) {
   const game = useGameStore((s) => s.game)
   const dv = deedView(game, square.pos)!
+  const presentation = deedPresentation(square)
   const owner = dv.owner
   const buildings = dv.level // 0–7 real
-  const rents = computeRents(square.group, square.rent)
+  const rents = presentation.rents
   const houseCost = dv.buildCost
   const mortgage = dv.mortgageValue
-  const stripeColor = GROUP_COLOR[square.group]
+  const stripeColor = presentation.accent
   const isMortgaged = dv.mortgaged
 
   // Linha de aluguel ATIVA (highlight) pelo nível real
@@ -1951,18 +1952,18 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
             "
           >
             <img
-              src={`https://flagcdn.com/${square.uf.toLowerCase()}.svg`}
-              alt={square.uf}
+              src={`https://flagcdn.com/${presentation.flagCode.toLowerCase()}.svg`}
+              alt={presentation.flagCode}
               className="w-full h-full object-cover"
               draggable={false}
             />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="display text-coffee-950 text-xl leading-none truncate">
-              {square.name}
+              {presentation.name}
             </h3>
             <p className="label text-coffee-950/80 mt-0.5 text-micro">
-              {square.capital}
+              {presentation.subtitle}
             </p>
           </div>
         </div>
@@ -2031,6 +2032,7 @@ export function AirportPopover({
   // Geometria do balão vem de `./topology` — este bloco estava escrito TRÊS vezes,
   // uma por popover (property/airport/utility).
   const { position: positionStyle, centerTransform, tail: tailStyle } = popoverPlacement(side)
+  const presentation = deedPresentation(square)
 
   return (
     <div ref={clampRef} style={{ position: 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
@@ -2044,7 +2046,7 @@ export function AirportPopover({
                 <SquareIcon square={square} size={32} />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="display text-coffee-950 text-lg leading-none truncate">{square.name}</h3>
+                <h3 className="display text-coffee-950 text-lg leading-none truncate">{presentation.name}</h3>
                 <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-coffee-950/25 text-coffee-950 font-bold" style={{ fontSize: '10px', letterSpacing: '0.08em' }}>{square.iata}</span>
               </div>
             </div>
@@ -2053,10 +2055,9 @@ export function AirportPopover({
           <div className="px-3.5 py-3">
             <p className="label text-gold mb-2 text-micro">Aluguel por aeroportos possuídos</p>
             <div className="flex flex-col gap-0.5">
-              <CompactRent label="1 aeroporto" value={25}  />
-              <CompactRent label="2 aeroportos" value={50}  />
-              <CompactRent label="3 aeroportos" value={100} />
-              <CompactRent label="4 aeroportos" value={200} accent />
+              {presentation.rentRows.map((row, index) => (
+                <CompactRent key={row.key} label={row.label} value={row.value} accent={index === presentation.rentRows.length - 1} />
+              ))}
             </div>
             {/* Hangar bonus */}
             <div className="mt-3 pt-2.5 border-t border-coffee-500/60">
@@ -2065,8 +2066,8 @@ export function AirportPopover({
               </p>
             </div>
             <div className="mt-2.5 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-0.5">
-              <CompactRent label="Preço"    value={square.price}                 muted />
-              <CompactRent label="Hipoteca" value={Math.floor(square.price / 2)} muted />
+              <CompactRent label="Preço"    value={presentation.price}    muted />
+              <CompactRent label="Hipoteca" value={presentation.mortgage} muted />
             </div>
             <DeedActions pos={square.pos} />
           </div>
@@ -2101,6 +2102,7 @@ export function UtilityPopover({
   const { position: positionStyle, centerTransform, tail: tailStyle } = popoverPlacement(side)
 
   const accentColor = square.icon === 'fuel' ? 'var(--color-group-green)' : square.icon === 'bolt' ? 'var(--color-brass-glow)' : 'var(--color-group-orange)'
+  const presentation = deedPresentation(square)
 
   return (
     <div ref={clampRef} style={{ position: 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
@@ -2114,8 +2116,8 @@ export function UtilityPopover({
                 <SquareIcon square={square} size={32} />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="display text-coffee-950 text-lg leading-none truncate">{square.name}</h3>
-                <p className="label text-coffee-950/80 mt-0.5 text-micro">Utilidade</p>
+                <h3 className="display text-coffee-950 text-lg leading-none truncate">{presentation.name}</h3>
+                <p className="label text-coffee-950/80 mt-0.5 text-micro">{presentation.subtitle}</p>
               </div>
             </div>
           </div>
@@ -2123,9 +2125,14 @@ export function UtilityPopover({
           <div className="px-3.5 py-3">
             <p className="label text-gold mb-2 text-micro">Aluguel baseado nos dados</p>
             <div className="flex flex-col gap-0.5">
-              <CompactRentText label="1 utilidade"  value="4× os dados" />
-              <CompactRentText label="2 utilidades" value="10× os dados" />
-              <CompactRentText label="3 utilidades" value="20× os dados" accent />
+              {presentation.rentRows.map((row, index) => (
+                <CompactRentText
+                  key={row.key}
+                  label={row.label}
+                  value={`${row.value}× os dados`}
+                  accent={index === presentation.rentRows.length - 1}
+                />
+              ))}
             </div>
             <div className="mt-3 pt-2.5 border-t border-coffee-500/60">
               <p className="text-cream-muted text-micro">
@@ -2133,8 +2140,8 @@ export function UtilityPopover({
               </p>
             </div>
             <div className="mt-2.5 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-0.5">
-              <CompactRent label="Preço"    value={square.price}                 muted />
-              <CompactRent label="Hipoteca" value={Math.floor(square.price / 2)} muted />
+              <CompactRent label="Preço"    value={presentation.price}    muted />
+              <CompactRent label="Hipoteca" value={presentation.mortgage} muted />
             </div>
             <DeedActions pos={square.pos} />
           </div>
@@ -2208,4 +2215,3 @@ export function CompactRent({
     </div>
   )
 }
-

@@ -19,15 +19,14 @@ import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { PlayerFace } from '@/boards/shared'
 import { GROUP_COLOR } from '@/boards/groupColors'
 import { SquareIcon } from '@/boards/glyphs/squares'
-import { computeRents } from '@/game/ui/deed/deedRents'
 import { PLAYER_COLORS } from '@/game/ui/panels/playersView'
-import { buildCost } from '@/game/economy/construction'
 import { GavelIcon, CoinIcon, HouseIcon, HotelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
 import { useModalTitleId } from '@/game/ui/a11y/dialog'
 import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import { money } from '@/lib/money'
+import { deedPresentation } from '@/game/ui/deed/presentation'
 
 // Botão de ação do modal — casca fina sobre o primitivo Button (flex-1).
 function ActionBtn({
@@ -607,32 +606,12 @@ function DiscardRow({ card, onPick }: { card: HandCardView; onPick: () => void }
 // Faixas de aluguel exibidas no deed do leilão (até hotel).
 type AuctionSquare = Extract<ModalView, { kind: 'auction' }>['square']
 function deedRows(sq: AuctionSquare): { label: string; value: string }[] {
-  if (sq.kind === 'property') {
-    const r = computeRents((sq as PropertySquare).group, (sq as PropertySquare).rent)
-    return [
-      { label: 'Com aluguel', value: `R$ ${r.base}` },
-      { label: '1 casa', value: `R$ ${r.house1}` },
-      { label: '2 casas', value: `R$ ${r.house2}` },
-      { label: '3 casas', value: `R$ ${r.house3}` },
-      { label: '4 casas', value: `R$ ${r.house4}` },
-      { label: 'Hotel', value: `R$ ${r.hotel}` },
-      { label: '2º hotel', value: `R$ ${r.hotel2}` },
-      { label: 'Arranha-céu', value: `R$ ${r.skyscraper}` },
-    ]
-  }
-  if (sq.kind === 'airport') {
-    return [
-      { label: '1 aeroporto', value: 'R$ 25' },
-      { label: '2 aeroportos', value: 'R$ 50' },
-      { label: '3 aeroportos', value: 'R$ 100' },
-      { label: '4 aeroportos', value: 'R$ 200' },
-    ]
-  }
-  return [
-    { label: '1 utilidade', value: '4× dados' },
-    { label: '2 utilidades', value: '10× dados' },
-    { label: '3 utilidades', value: '20× dados' },
-  ]
+  const deed = deedPresentation(sq)
+  if (!deed) return []
+  return deed.rentRows.map((row, index) => ({
+    label: deed.kind === 'property' && index === 0 ? 'Com aluguel' : row.label,
+    value: row.kind === 'money' ? `R$ ${row.value}` : `${row.value}× dados`,
+  }))
 }
 
 function DeedStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
@@ -646,11 +625,11 @@ function DeedStat({ icon, label, value }: { icon: React.ReactNode; label: string
 }
 
 function DeedIcon({ sq }: { sq: AuctionSquare }) {
-  if (sq.kind === 'property') {
-    const uf = (sq as PropertySquare).uf
+  const deed = deedPresentation(sq)
+  if (deed?.flagCode) {
     return (
       <div className="w-10 h-10 rounded-full bg-coffee-900 border-2 border-coffee-950 overflow-hidden shrink-0 shadow-[var(--shadow-card)]">
-        <img src={`https://flagcdn.com/${uf.toLowerCase()}.svg`} alt={uf} className="w-full h-full object-cover" draggable={false} />
+        <img src={`https://flagcdn.com/${deed.flagCode.toLowerCase()}.svg`} alt={deed.flagCode} className="w-full h-full object-cover" draggable={false} />
       </div>
     )
   }
@@ -682,10 +661,8 @@ function AuctionCard({
   const secLeft = Math.ceil(msLeft / 1000)
   const fillPct = Math.max(0, Math.min(100, 100 - (msLeft / AUCTION_WINDOW) * 100)) // enche; reseta a cada lance
   const sq = view.square
-  const price = 'price' in sq ? sq.price : 0
-  const isProp = sq.kind === 'property'
-  const houseCost = isProp ? buildCost(sq as PropertySquare) : 0
-  const accent = isProp ? GROUP_COLOR[(sq as PropertySquare).group] : 'var(--color-brass)'
+  const deed = deedPresentation(sq)
+  if (!deed) return null
 
   return (
     <ModalShell className="w-[600px] max-w-[95vw]">
@@ -779,8 +756,8 @@ function AuctionCard({
         {/* Coluna direita — deed (aluguéis + preço/casa/hotel) */}
         <div className="flex-1 p-5">
           <div className="rounded-[var(--radius-card)] border border-coffee-500 bg-coffee-900/50 overflow-hidden h-full flex flex-col">
-            <div className="px-4 py-2.5 text-center border-b border-coffee-500/60" style={{ background: `color-mix(in srgb, ${accent} 22%, transparent)` }}>
-              <p className="display text-cream text-base leading-none">{sq.name}</p>
+            <div className="px-4 py-2.5 text-center border-b border-coffee-500/60" style={{ background: `color-mix(in srgb, ${deed.accent} 22%, transparent)` }}>
+              <p className="display text-cream text-base leading-none">{deed.name}</p>
             </div>
             <div className="px-4 py-3 flex flex-col gap-2 flex-1">
               {deedRows(sq).map((r) => (
@@ -791,9 +768,9 @@ function AuctionCard({
               ))}
             </div>
             <div className="px-3 py-3 border-t border-coffee-500/60 flex items-stretch gap-2">
-              <DeedStat icon={<CoinIcon size={16} />} label="Preço" value={`R$ ${price}`} />
-              {isProp && <DeedStat icon={<HouseIcon size={16} />} label="Casa" value={`R$ ${houseCost}`} />}
-              {isProp && <DeedStat icon={<HotelIcon size={16} />} label="Hotel" value={`R$ ${houseCost}`} />}
+              <DeedStat icon={<CoinIcon size={16} />} label="Preço" value={`R$ ${deed.price}`} />
+              {deed.kind === 'property' && <DeedStat icon={<HouseIcon size={16} />} label="Casa" value={`R$ ${deed.buildCost}`} />}
+              {deed.kind === 'property' && <DeedStat icon={<HotelIcon size={16} />} label="Hotel" value={`R$ ${deed.buildCost}`} />}
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 // Pregão de escassez de TERRENOS (031, §7.3) — modal autônomo (lê game.landAuction).
 // Visual baseado no LEILÃO COMUM (003/ModalLayer): avatar = flag circular do país (ou SquareIcon),
-// header com a cor do grupo, tabela de aluguel (computeRents) e rodapé Preço/Casa/Hotel.
+// header com a cor do grupo, tabela de aluguel canônica e rodapé Preço/Casa/Hotel.
 // Cada lote é um deed-card com seu PRÓPRIO cronômetro de 8s (barra) — lance reinicia só o lote dele.
 // pt-BR. NÃO é o leilão de casas (D-022).
 import { useEffect, useState } from 'react'
@@ -9,32 +9,29 @@ import { useGameStore } from '@/game/store'
 import { useLocalView, useName } from '@/net/roomStore'
 import { PlayerName } from '@/net/ui/PlayerName'
 import { committedCash, LAND_AUCTION_WINDOW } from '@/game/economy/landAuction'
-import { rentLadder } from '@/game/economy/rent'
-import { buildCost } from '@/game/economy/construction'
 import type { LandLot } from '@/game/economy/types'
-import { BOARD, type PropertySquare, type Square } from '@/lib/boardData'
-import { GROUP_COLOR } from '@/boards/groupColors'
+import { BOARD, type Square } from '@/lib/boardData'
 import { SquareIcon } from '@/boards/glyphs/squares'
 import { CoinIcon, HouseIcon, HotelIcon, GavelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
-import { THEME } from '@/game/theme'
 import { MOTION, useMotion } from '@/game/ui/motion'
 import { money } from '@/lib/money'
+import { deedPresentation } from '@/game/ui/deed/presentation'
 
 const INCREMENTS = [10, 50, 100] as const
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
 
 // Avatar da propriedade (igual ao leilão comum): flag circular do país; aeroporto/utilidade = ícone.
 function LandDeedIcon({ sq, size = 40 }: { sq: Square; size?: number }) {
-  if (sq.kind === 'property') {
-    const uf = (sq as PropertySquare).uf
+  const deed = deedPresentation(sq)
+  if (deed?.flagCode) {
     return (
       <div
         className="rounded-full bg-coffee-900 border-2 border-coffee-950 overflow-hidden shrink-0 shadow-[var(--shadow-card)]"
         style={{ width: size, height: size }}
       >
-        <img src={`https://flagcdn.com/${uf.toLowerCase()}.svg`} alt={uf} className="w-full h-full object-cover" draggable={false} />
+        <img src={`https://flagcdn.com/${deed.flagCode.toLowerCase()}.svg`} alt={deed.flagCode} className="w-full h-full object-cover" draggable={false} />
       </div>
     )
   }
@@ -42,27 +39,14 @@ function LandDeedIcon({ sq, size = 40 }: { sq: Square; size?: number }) {
 }
 
 function rentRows(sq: Square): { label: string; value: string }[] {
-  if (sq.kind === 'property') {
-    const p = sq as PropertySquare
-    const l = rentLadder(p.group, p.rent)
-    return [
-      { label: 'Terreno', value: money(p.rent) },
-      { label: '1 casa', value: money(l.house[0]) },
-      { label: '2 casas', value: money(l.house[1]) },
-      { label: '3 casas', value: money(l.house[2]) },
-      { label: '4 casas', value: money(l.house[3]) },
-      { label: 'Hotel', value: money(l.hotel) },
-      { label: '2º hotel', value: money(l.hotel2) },
-      { label: 'Arranha-céu', value: money(l.skyscraper) },
-    ]
-  }
-  if (sq.kind === 'airport') {
-    return [
-      ...THEME.AIRPORT_RENT.map((v, i) => ({ label: `${i + 1} aeroporto${i ? 's' : ''}`, value: money(v) })),
-      { label: 'Com Hangar', value: '2×' },
-    ]
-  }
-  return THEME.UTILITY_MULT.map((v, i) => ({ label: `${i + 1} utilidade${i ? 's' : ''}`, value: `${v}× dados` }))
+  const deed = deedPresentation(sq)
+  if (!deed) return []
+  const rows = deed.rentRows.map((row, index) => ({
+    label: deed.kind === 'property' && index === 0 ? 'Terreno' : row.label,
+    value: row.kind === 'money' ? money(row.value) : `${row.value}× dados`,
+  }))
+  if (deed.kind === 'airport') rows.push({ label: 'Com Hangar', value: `${deed.hangar.multiplier}×` })
+  return rows
 }
 
 function DeedStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
@@ -78,11 +62,8 @@ function DeedStat({ icon, label, value }: { icon: React.ReactNode; label: string
 function LotCard(props: { lot: LandLot; now: number; cashAvail: number; onBid: (pos: number, amount: number) => void }) {
   const { lot, now, cashAvail, onBid } = props
   const sq = BOARD[lot.pos]
-  const isProp = sq.kind === 'property'
-  const isAirport = sq.kind === 'airport'
-  const accent = isProp ? GROUP_COLOR[(sq as PropertySquare).group] : 'var(--color-brass)'
-  const price = 'price' in sq ? (sq as { price: number }).price : 0
-  const houseCost = isProp ? buildCost(sq as PropertySquare) : 0
+  const deed = deedPresentation(sq)
+  if (!deed) return null
   const remainingMs = lot.deadline - now
   const frac = clamp01(remainingMs / LAND_AUCTION_WINDOW)
   const secs = Math.max(0, Math.ceil(remainingMs / 1000))
@@ -91,11 +72,11 @@ function LotCard(props: { lot: LandLot; now: number; cashAvail: number; onBid: (
   return (
     <div className="rounded-[var(--radius-card)] border border-coffee-500 bg-coffee-900/50 overflow-hidden flex flex-col">
       {/* Avatar + nome (header com tinta do grupo) */}
-      <div className="px-3 py-2.5 flex items-center gap-2 border-b border-coffee-500/60" style={{ background: `color-mix(in srgb, ${accent} 24%, transparent)` }}>
+      <div className="px-3 py-2.5 flex items-center gap-2 border-b border-coffee-500/60" style={{ background: `color-mix(in srgb, ${deed.accent} 24%, transparent)` }}>
         <LandDeedIcon sq={sq} size={34} />
         <div className="min-w-0">
-          <p className="display display--tight text-cream text-sm leading-tight truncate">{sq.name}</p>
-          <p className="label text-cream-muted leading-none">{isProp ? (sq as PropertySquare).capital ?? '' : sq.kind === 'airport' ? 'Aeroporto' : 'Utilidade'}</p>
+          <p className="display display--tight text-cream text-sm leading-tight truncate">{deed.name}</p>
+          <p className="label text-cream-muted leading-none">{deed.subtitle}</p>
         </div>
       </div>
 
@@ -116,10 +97,10 @@ function LotCard(props: { lot: LandLot; now: number; cashAvail: number; onBid: (
 
       {/* Rodapé Preço / Casa / Hotel (propriedade) ou Preço / Hangar (aeroporto) */}
       <div className="px-2 py-2 border-t border-coffee-500/50 flex items-stretch gap-1">
-        <DeedStat icon={<CoinIcon size={14} />} label="Preço" value={money(price)} />
-        {isProp && <DeedStat icon={<HouseIcon size={14} />} label="Casa" value={money(houseCost)} />}
-        {isProp && <DeedStat icon={<HotelIcon size={14} />} label="Hotel" value={money(houseCost)} />}
-        {isAirport && <DeedStat icon={<HotelIcon size={14} />} label="Hangar" value={money(THEME.HANGAR_COST)} />}
+        <DeedStat icon={<CoinIcon size={14} />} label="Preço" value={money(deed.price)} />
+        {deed.kind === 'property' && <DeedStat icon={<HouseIcon size={14} />} label="Casa" value={money(deed.buildCost)} />}
+        {deed.kind === 'property' && <DeedStat icon={<HotelIcon size={14} />} label="Hotel" value={money(deed.buildCost)} />}
+        {deed.kind === 'airport' && <DeedStat icon={<HotelIcon size={14} />} label="Hangar" value={money(deed.hangar.cost)} />}
       </div>
 
       {/* Lance atual */}

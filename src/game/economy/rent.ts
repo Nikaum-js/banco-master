@@ -16,7 +16,7 @@ function majority(size: number): number {
 
 // FONTE ÚNICA da tabela de construção (032/D-024): aplica os multiplicadores do GRUPO
 // (theme.RENT_MULT) ao aluguel-base da cidade. Consumida por rentCity (motor) E pelas UIs de
-// deed (computeRents/ModalLayer/pregão 031) — engine e UI nunca divergem.
+// deed (`deedPresentation`/ModalLayer/pregão 031) — engine e UI nunca divergem.
 export function rentLadder(
   group: GroupKey,
   base: number,
