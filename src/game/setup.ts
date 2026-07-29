@@ -85,7 +85,8 @@ export function createSeedState(playerIds: string[], startedAt = 0): GameState {
     immunities: [], // 014 — imunidades de aluguel ativas
     tempEffects: [], // 015 — efeitos temporários de carta
     log: [], // 021 — event log do jogo
-    pendingTrade: null, // 024 — proposta de troca pendente
+    tradeProposals: [], // 047 — propostas simultâneas e independentes
+    nextTradeProposalId: 1, // 047 — ids determinísticos no snapshot/replay
     landAuction: null, // 031 — pregão de escassez de terrenos (evento autônomo)
     landAuctionArmed: true, // 031 — trava de episódio: armado de início
     tradeHistory: [], // 027 — histórico de trocas aceitas

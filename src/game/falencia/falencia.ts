@@ -123,6 +123,9 @@ export function declareBankruptcy(state: GameState, ctx: TurnCtx): GameState {
   // §9.4 (019): imunidades concedidas/recebidas pelo eliminado e efeitos temporários por ele originados.
   s.immunities = s.immunities.filter((i) => i.granterId !== debtor.id && i.beneficiaryId !== debtor.id)
   s.tempEffects = s.tempEffects.filter((e) => e.ownerId !== debtor.id)
+  s.tradeProposals = s.tradeProposals.filter(
+    ({ trade }) => trade.fromId !== debtor.id && trade.toId !== debtor.id,
+  )
 
   s.resolution = null
   s.turn.pendingResolve = false

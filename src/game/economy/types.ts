@@ -128,8 +128,8 @@ export interface TempEffect {
   lapsRemaining: number // voltas restantes (apagao/greve: 1; boicote/imunidade-temp: 2)
 }
 
-// Negociação (013/024) — troca entre dois jogadores. Aqui (não em trade.ts) para o
-// GameState poder referenciar `pendingTrade` sem ciclo de imports.
+// Negociação (013/024/047) — troca entre dois jogadores e seu envelope persistente.
+// Aqui (não em trade.ts) para o GameState referenciar propostas sem ciclo de imports.
 export interface ImmunityGrant {
   pos: number // propriedade própria mantida sobre a qual se concede imunidade (§8.4)
   laps: number | null // voltas (inteiro > 0) ou null = permanente
@@ -148,6 +148,11 @@ export interface Trade {
   toImmunities?: ImmunityGrant[] // concedidas por `to` → beneficiário `from`
   fromImmunityTransfers?: number[] // posições de imunidades de que `from` é beneficiário, transferidas a `to` (028, §8.4)
   toImmunityTransfers?: number[] // imunidades de que `to` é beneficiário, transferidas a `from`
+}
+
+export interface TradeProposal {
+  id: number // monotônico e único durante a partida (D-048)
+  trade: Trade
 }
 
 export type ResolutionSlice =

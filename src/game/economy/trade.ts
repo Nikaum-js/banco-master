@@ -162,30 +162,33 @@ export function executeTrade(state: GameState, trade: Trade): GameState {
   return applyTrade(state, trade)
 }
 
-// Proposta pendente (024) — uma por vez. proposeTrade grava se válida; acceptTrade
-// executa se ainda válida; rejectTrade descarta. Não bloqueiam o turno ativo.
+// Propostas simultâneas (047/D-048). Nenhuma reserva ativos ou bloqueia o turno;
+// cada resposta endereça um envelope e revalida a troca no estado mais recente.
 export function proposeTrade(state: GameState, trade: Trade): GameState {
-  if (state.paused || state.pendingTrade !== null) return state
+  if (state.paused) return state
   if (!validateTrade(state, trade)) return state
   const s = clone(state)
-  s.pendingTrade = trade
+  s.tradeProposals.push({ id: s.nextTradeProposalId, trade })
+  s.nextTradeProposalId += 1
   return s
 }
 
-export function acceptTrade(state: GameState): GameState {
-  if (state.paused || !state.pendingTrade) return state
-  const trade = state.pendingTrade
+export function acceptTrade(state: GameState, proposalId: number): GameState {
+  if (state.paused) return state
+  const proposal = state.tradeProposals.find((candidate) => candidate.id === proposalId)
+  if (!proposal) return state
+  const { trade } = proposal
   if (!validateTrade(state, trade)) return state // obsoleta → no-op (pode recusar)
   const s = executeTrade(state, trade)
   s.tradeHistory = [...s.tradeHistory, trade].slice(-12) // 027 — registro (bounded)
   logEvent(s, { kind: 'trade', who: trade.fromId, toId: trade.toId }) // 027/040
-  s.pendingTrade = null
+  s.tradeProposals = s.tradeProposals.filter((candidate) => candidate.id !== proposalId)
   return s
 }
 
-export function rejectTrade(state: GameState): GameState {
-  if (!state.pendingTrade) return state
+export function rejectTrade(state: GameState, proposalId: number): GameState {
+  if (!state.tradeProposals.some((candidate) => candidate.id === proposalId)) return state
   const s = clone(state)
-  s.pendingTrade = null
+  s.tradeProposals = s.tradeProposals.filter((candidate) => candidate.id !== proposalId)
   return s
 }

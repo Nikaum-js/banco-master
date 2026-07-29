@@ -80,8 +80,8 @@ export type PlayerAction =
   // Troca — propor = qualquer; aceitar/recusar = destinatário.
   | { kind: 'execute-trade'; trade: Trade }
   | { kind: 'propose-trade'; trade: Trade }
-  | { kind: 'accept-trade' }
-  | { kind: 'reject-trade' }
+  | { kind: 'accept-trade'; proposalId: number }
+  | { kind: 'reject-trade'; proposalId: number }
   // Notificação informativa (030).
   | { kind: 'dismiss-notice' }
 
@@ -186,8 +186,8 @@ export function applyCommand(state: GameState, action: GameAction, ctx: TurnCtx)
     // — troca —
     case 'execute-trade': next = executeTrade(state, action.trade); break
     case 'propose-trade': next = proposeTrade(state, action.trade); break
-    case 'accept-trade': next = acceptTrade(state); break
-    case 'reject-trade': next = rejectTrade(state); break
+    case 'accept-trade': next = acceptTrade(state, action.proposalId); break
+    case 'reject-trade': next = rejectTrade(state, action.proposalId); break
     // — notificação —
     case 'dismiss-notice': next = dismissNotice(state); break
     // — sistema: pausa/retomada —
@@ -251,7 +251,7 @@ function applyResume(state: GameState, cause: PauseCause, at: number): GameState
 //               em NOME PRÓPRIO — a elegibilidade (ser licitante ativo, ter caixa) segue
 //               sendo dos gates do motor, não desta tabela;
 //   função    → derivado do estado pendente (destinatário da troca, credor, alvo da reação).
-type ActorRule = 'active' | 'sender' | ((state: GameState) => string | null)
+type ActorRule = 'active' | 'sender' | 'action' | ((state: GameState) => string | null)
 
 const ACTOR_RULES: Record<PlayerAction['kind'], ActorRule> = {
   // Ações do jogador ativo.
@@ -286,14 +286,14 @@ const ACTOR_RULES: Record<PlayerAction['kind'], ActorRule> = {
   'place-land-bid': 'sender',
   'propose-trade': 'sender',
   'execute-trade': 'sender',
-  // Respostas do contra-parte — derivadas do estado pendente.
+  // Respostas da contraparte — derivadas do estado ou da ação completa.
   'respond-reaction': (state) => {
     const r = state.resolution
     return r?.kind === 'reaction-diplomacia' || r?.kind === 'reaction-bunker' ? r.reactorId : null
   },
   'respond-loan': (state) => state.pendingLoan?.creditorId ?? null,
-  'accept-trade': (state) => state.pendingTrade?.toId ?? null,
-  'reject-trade': (state) => state.pendingTrade?.toId ?? null,
+  'accept-trade': 'action',
+  'reject-trade': 'action',
 }
 
 // Ator por KIND, sem a ação montada — o que a UI precisa para perguntar "esta decisão é
@@ -303,7 +303,7 @@ const ACTOR_RULES: Record<PlayerAction['kind'], ActorRule> = {
 export function actorOfKind(state: GameState, kind: PlayerAction['kind']): string | null {
   const rule = ACTOR_RULES[kind]
   if (rule === 'active') return activePlayer(state).id
-  if (rule === 'sender') return null
+  if (rule === 'sender' || rule === 'action') return null
   return rule(state)
 }
 
@@ -318,6 +318,9 @@ export function isSenderActed(kind: PlayerAction['kind']): boolean {
 // quem o comando age (US4-3). Retorna null quando o ator não é determinável no estado atual
 // (ex.: responder sem proposta pendente) — o host trata como comando descartável.
 export function actorOf(state: GameState, action: PlayerAction): string | null {
+  if (action.kind === 'accept-trade' || action.kind === 'reject-trade') {
+    return state.tradeProposals.find((proposal) => proposal.id === action.proposalId)?.trade.toId ?? null
+  }
   if (!isSenderActed(action.kind)) return actorOfKind(state, action.kind)
   // 'sender': o ator é o que a ação declara — `playerId` (leilões) ou `trade.fromId` (trocas).
   switch (action.kind) {

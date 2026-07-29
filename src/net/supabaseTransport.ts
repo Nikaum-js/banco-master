@@ -24,6 +24,7 @@ import { mergeSnapshot, type Secrets } from './perspective'
 import { normalizeRoom, toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
 import { normalizeGame, normalizeLog } from '@/game/log'
 import type { PauseState } from '@/game/turn/types'
+import type { Trade, TradeProposal } from '@/game/economy/types'
 import { DEFAULT_AVATAR, isAvatarId, normalizeAvatar } from '@/boards/playerAvatarCatalog'
 import { DEFAULT_SKIN, isSkinId, normalizeSkin } from '@/boards/playerSkinCatalog'
 
@@ -55,13 +56,35 @@ function normalizePaused(paused: unknown, readAt: number): PauseState | null {
   return null // `false` ou ausente
 }
 
+function normalizeTradeProposals(game: PersistedSnapshot['game']): {
+  tradeProposals: TradeProposal[]
+  nextTradeProposalId: number
+} {
+  const legacy = game as PersistedSnapshot['game'] & { pendingTrade?: Trade | null }
+  const tradeProposals = Array.isArray(legacy.tradeProposals)
+    ? legacy.tradeProposals
+    : legacy.pendingTrade
+      ? [{ id: 1, trade: legacy.pendingTrade }]
+      : []
+  const afterLastId = tradeProposals.reduce((next, proposal) => Math.max(next, proposal.id + 1), 1)
+  const persistedNext = Number.isInteger(legacy.nextTradeProposalId) ? legacy.nextTradeProposalId : 1
+  return {
+    tradeProposals,
+    nextTradeProposalId: Math.max(afterLastId, persistedNext),
+  }
+}
+
 // Absorve `normalizeLog` (021/040), a migração de `paused` legado e os quatro campos de
-// fim de jogo (044, `normalizeGame`) — o mesmo ponto onde
+// fim de jogo (044, `normalizeGame`) e a coleção de propostas (047) — o mesmo ponto onde
 // `loadSnapshot` já normalizava o log agora normaliza o snapshot inteiro.
 export function normalizeSnapshot(game: PersistedSnapshot['game'], now: () => number = Date.now): PersistedSnapshot['game'] {
+  const currentGame = Object.fromEntries(
+    Object.entries(game).filter(([key]) => key !== 'pendingTrade'),
+  ) as PersistedSnapshot['game']
   return {
-    ...game,
+    ...currentGame,
     ...normalizeGame(game),
+    ...normalizeTradeProposals(game),
     log: normalizeLog(game.log ?? []),
     paused: normalizePaused((game as { paused?: unknown }).paused, now()),
   }

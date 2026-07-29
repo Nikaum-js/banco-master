@@ -2,8 +2,8 @@
 //
 // VALORES DE TEMA (032/D-024): o custo de casa é um **tier por grupo** (`THEME.HOUSE_COST`,
 // não mais proporcional ao preço) e a tabela de aluguel por nível vem da FONTE ÚNICA
-// `rentLadder` (`rent.ts`, `THEME.RENT_MULT` por grupo). As regras (uniformidade, 70%/100%,
-// metade na venda) não mudam — só os valores, calibráveis no tema.
+// `rentLadder` (`rent.ts`, `THEME.RENT_MULT` por grupo). Custos e aluguel seguem calibráveis
+// no tema; elegibilidade e uniformidade permanecem centralizadas neste módulo.
 import { BOARD } from '@/lib/boardData'
 import type { PropertySquare, GroupKey } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
@@ -28,6 +28,13 @@ export function cityLevel(title: { houses: number; hotel: boolean; hotel2: boole
   if (title.hotel2) return 6
   if (title.hotel) return 5
   return title.houses
+}
+
+// D-050: país incompleto libera um nível por cidade possuída; país completo libera
+// toda a escada. Derivado, nunca persistido, para snapshots antigos continuarem válidos.
+export function buildLevelLimit(ownedCount: number, totalCount: number): number {
+  if (ownedCount <= 0 || totalCount <= 0) return 0
+  return ownedCount >= totalCount ? 7 : ownedCount
 }
 
 // Cidades do grupo possuídas pelo jogador.
@@ -56,14 +63,14 @@ export function nextBuildTarget(state: GameState, group: GroupKey, ownerId: stri
   const cities = ownedGroupCities(state, group, ownerId)
   if (cities.length === 0) return null
   const min = Math.min(...cities.map((c) => cityLevel(state.titles[c.pos])))
-  if (min >= 7) return null // tudo já no topo (Skyscraper)
+  if (min >= buildLevelLimit(cities.length, groupSize(group))) return null
   const target = cities.find((c) => cityLevel(state.titles[c.pos]) === min)
   return target ? target.pos : null
 }
 
 // Pode construir 1 nível NESTA cidade? Encapsula a guarda de buildHouse (023):
-// canBuild + nível<7 + uniformidade (menor nível do grupo) + caixa + estoque +
-// (arranha-céu exige grupo completo). Não considera `paused` (o comando trata).
+// canBuild + nível<7 + uniformidade (menor nível do grupo) + teto de posse + caixa.
+// Não considera `paused` (o comando trata).
 export function canBuildHouse(state: GameState, pos: number): boolean {
   if (!canBuild(state, pos)) return false
   const sq = BOARD[pos]
@@ -74,8 +81,10 @@ export function canBuildHouse(state: GameState, pos: number): boolean {
   const cities = ownedGroupCities(state, sq.group, player.id)
   const min = Math.min(...cities.map((c) => cityLevel(state.titles[c.pos])))
   if (cur !== min) return false // uniformidade
+  const size = groupSize(sq.group)
+  if (cur === 6 && cities.length !== size) return false // → Skyscraper exige grupo completo (§13.7)
+  if (cur >= buildLevelLimit(cities.length, size)) return false // D-050: teto enquanto país incompleto
   if (player.cash < buildCost(sq)) return false
-  if (cur === 6) return cities.length === groupSize(sq.group) // → Skyscraper exige grupo completo (§13.7)
   return true // casas/hotéis/arranha-céus são ilimitados (sem estoque do banco)
 }
 

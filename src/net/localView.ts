@@ -9,7 +9,7 @@
 // IMPORTANTE — isto NÃO é validação. Um cliente adulterado que ignore o `mayAct` tem o
 // comando descartado pelo host (FR-004/FR-007 da 037, provado em `antispoof.test.ts` e no
 // smoke contra a infra real). Aqui é só o que a interface oferece.
-import { actorOfKind, isSenderActed, type PlayerAction } from '@/game/commands'
+import { actorOf, actorOfKind, isSenderActed, type PlayerAction } from '@/game/commands'
 import { activePlayer } from '@/game/turn/turnMachine'
 import type { GameState } from '@/game/turn/types'
 import type { ConnectionState } from './client'
@@ -24,17 +24,17 @@ export interface LocalView {
   readonly role: LocalRole
   isMe(playerId: string): boolean
   mayAct(kind: PlayerAction['kind']): boolean
+  mayActAction(action: PlayerAction): boolean
   readonly waitingFor: string | null
 }
 
 // De quem o jogo está esperando agora — vira "aguardando <nome>" na UI. Decisões fora do
-// turno (resposta a troca, reação, resposta de empréstimo) têm prioridade sobre o jogador
-// da vez: é literalmente quem trava o jogo neste instante.
+// turno que realmente bloqueiam a partida têm prioridade. Propostas de negociação são
+// paralelas e nunca mudam quem a mesa está aguardando (047/D-048).
 export function waitingForOf(game: GameState): string | null {
   if (game.phase !== 'playing') return null
   const r = game.resolution
   if (r?.kind === 'reaction-diplomacia' || r?.kind === 'reaction-bunker') return r.reactorId
-  if (game.pendingTrade) return game.pendingTrade.toId
   if (game.pendingLoan) return game.pendingLoan.creditorId
   return activePlayer(game).id
 }
@@ -60,6 +60,7 @@ export function localView(game: GameState, room: Room | null, myUid: string | nu
       role: 'local',
       isMe: (playerId) => playerId === waitingFor,
       mayAct: () => true,
+      mayActAction: () => true,
       waitingFor,
     }
   }
@@ -80,6 +81,10 @@ export function localView(game: GameState, room: Room | null, myUid: string | nu
       // é outra pergunta, respondida pelos gates que já existem.
       if (isSenderActed(kind)) return true
       return actorOfKind(game, kind) === seatId
+    },
+    mayActAction(action) {
+      if (eliminated || connection !== 'connected' || game.paused) return false
+      return actorOf(game, action) === seatId
     },
     waitingFor,
   }
