@@ -51,6 +51,7 @@ describe('sala aberta', () => {
 
     expect(screen.queryByRole('textbox', { name: 'Link da sala' })).toBeNull()
     expect(screen.getByText('Link pronto para compartilhar')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Compartilhar sala' })).toBeTruthy()
     expect(screen.getByText('Seu assento · Host')).toBeTruthy()
     expect(screen.queryByText(/^você$/i)).toBeNull()
     expect(screen.queryByText(/^host$/i)).toBeNull()
@@ -64,6 +65,10 @@ describe('sala aberta', () => {
       expect(writeText).toHaveBeenCalledWith('http://localhost:5173/?room=fc532036e9')
       expect(screen.getByRole('button', { name: 'Link da sala copiado' })).toBeTruthy()
     })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Compartilhar sala' }))
+    expect(screen.getByRole('dialog', { name: 'Compartilhar sala' })).toBeTruthy()
+    expect(screen.getByRole('img', { name: 'QR Code do convite da sala' })).toBeTruthy()
   })
 
   it('explica os rituais e libera a ação quando a mesa atinge o mínimo', () => {

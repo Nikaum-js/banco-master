@@ -19,6 +19,7 @@ import {
 import { NAME_MAX, recallPlayerName, rememberPlayerName } from '@/net/session'
 import { EntryPanel, EntryStage, EntryHeader } from './entryShell'
 import { AvatarPickers, AvatarPreview } from './AvatarConceptLab'
+import { RoomInviteDialog } from './RoomInviteDialog'
 
 const JOIN_ERROR_TEXT: Record<JoinError, string> = {
   'room-full': `Sala cheia — o limite é ${MAX_SEATS} jogadores.`,
@@ -225,6 +226,7 @@ export function RoomLobby({
   onKick?: (uid: string) => void
 }) {
   const [copied, setCopied] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
 
   function copy(): void {
     void navigator.clipboard?.writeText(link).then(() => {
@@ -293,6 +295,19 @@ export function RoomLobby({
             {copied ? 'Copiado' : 'Copiar link'}
           </button>
         </div>
+        <button
+          type="button"
+          className="lobby-share-action"
+          onClick={() => setInviteOpen(true)}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <path d="m8.7 10.6 6.6-4.1M8.7 13.4l6.6 4.1" />
+          </svg>
+          Compartilhar sala
+        </button>
       </div>
 
       {/* 2. Quem já está na sala. Assento vazio não é informação: a capacidade está no
@@ -425,6 +440,7 @@ export function RoomLobby({
         </p>
       )}
       </section>
+      {inviteOpen && <RoomInviteDialog link={link} onClose={() => setInviteOpen(false)} />}
     </Frame>
   )
 }
