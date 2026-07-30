@@ -14,7 +14,15 @@ afterEach(() => cleanup())
 // foco) + um Overlay com dois controles focáveis dentro. `onDismiss` é espionável e
 // independente do botão "Fechar" interno — assim os testes de Esc não se confundem
 // com o teste de restauração de foco.
-function Harness({ dismissible, onDismiss }: { dismissible?: boolean; onDismiss?: () => void }) {
+function Harness({
+  dismissible,
+  onDismiss,
+  veil,
+}: {
+  dismissible?: boolean
+  onDismiss?: () => void
+  veil?: 'default' | 'clear'
+}) {
   const [open, setOpen] = useState(false)
   return (
     <div>
@@ -22,7 +30,7 @@ function Harness({ dismissible, onDismiss }: { dismissible?: boolean; onDismiss?
         Abrir
       </button>
       {open && (
-        <Overlay dismissible={dismissible} onClick={onDismiss}>
+        <Overlay dismissible={dismissible} onClick={onDismiss} veil={veil}>
           <ModalShell>
             <ModalHeader title="Modal de teste" />
             <button type="button">Primeiro</button>
@@ -61,6 +69,27 @@ describe('trap de foco do modal (T022)', () => {
     expect(shell?.classList.contains('atlas-surface--modal')).toBe(true)
     expect(header?.style.background).toBe('')
     expect(header?.querySelector('.modal-header__rule')).toBeTruthy()
+  })
+
+  it('a variante clear preserva o diálogo sem véu nem backdrop blur', () => {
+    render(<Harness veil="clear" />)
+    fireEvent.click(screen.getByText('Abrir'))
+
+    const dialog = screen.getByRole('dialog', { name: 'Modal de teste' })
+    expect(dialog.getAttribute('data-veil')).toBe('clear')
+    expect(dialog.style.background).toBe('transparent')
+    expect(dialog.className).not.toContain('backdrop-blur')
+    expect(document.activeElement).toBe(screen.getByText('Primeiro'))
+  })
+
+  it('o overlay padrão conserva vinheta e blur', () => {
+    render(<Harness />)
+    fireEvent.click(screen.getByText('Abrir'))
+
+    const dialog = screen.getByRole('dialog', { name: 'Modal de teste' })
+    expect(dialog.getAttribute('data-veil')).toBe('default')
+    expect(dialog.style.background).toContain('radial-gradient')
+    expect(dialog.className).toContain('backdrop-blur-[3px]')
   })
 
   it('Tab e Shift+Tab circulam só entre os controles do modal (trap)', () => {

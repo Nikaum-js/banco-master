@@ -19,12 +19,7 @@ import { cardById } from '@/game/cards/catalog'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { PlayerFace } from '@/boards/PlayerFace'
 import { SquareIcon, AcasoCellGlyph, TesouroCellGlyph } from '@/boards/glyphs/squares'
-import {
-  PlotBadgeIcon,
-  HouseBadgeIcon,
-  HotelBadgeIcon,
-  SkyscraperBadgeIcon,
-} from '@/boards/glyphs/badges'
+import { buildingFamily } from '@/boards/glyphs/buildingFamily'
 import { CoinIcon, GavelIcon } from '@/game/ui/icons'
 import { Button } from '@/game/ui/primitives'
 import { Overlay, ModalShell, ModalHeader } from '@/game/ui/shell'
@@ -35,6 +30,7 @@ import { deedPresentation } from '@/game/ui/deed/presentation'
 import { CountryFlag } from '@/boards/glyphs/flags'
 import { activeBoard, activeCatalog, activeLabels, capLabel } from '@/game/ui/theme/boardTheme'
 import { PropertyIconDisc } from '@/boards/glyphs/propertyIcons'
+import { METAL_ACCENT, METAL_LABEL } from '@/boards/glyphs/metals'
 
 // Botão de ação do modal — casca fina sobre o primitivo Button (flex-1).
 function ActionBtn({
@@ -241,7 +237,7 @@ export function ModalLayer() {
         </Overlay>
       )}
       {view && mineModal && (
-        <Overlay key="modal-backdrop" z={60}>
+        <Overlay key="modal-backdrop" z={60} veil={view.kind === 'auction' ? 'clear' : 'default'}>
           {view.kind === 'auction' && (
             <AuctionCard view={view} activeId={local.seatId ?? activeId} placeBid={placeBid} />
           )}
@@ -396,6 +392,10 @@ function busStopFooterAccent(square: Square, ownerColor?: string): string {
         : square.icon === 'bolt'
           ? 'var(--color-brass-glow)'
           : 'var(--color-group-orange)'
+    case 'mine':
+      // Cor do metal (D-071) — o mesmo par que o glifo usa, para a casa e o título
+      // combinarem sem o jogador ter de ler o nome.
+      return METAL_ACCENT[square.metal]
     case 'property':
     case 'corner-go':
     case 'corner-jail':
@@ -408,11 +408,15 @@ function busStopFooterAccent(square: Square, ownerColor?: string): string {
 function busStopMeta(square: Square): string {
   switch (square.kind) {
     case 'property':
-      return square.capital ?? activeCatalog().groupNames[square.group]
+      // Um mapa não precisa usar todos os `GroupKey` (a Fuligem usa 8 dos 10, D-070),
+      // então `groupNames` é parcial; o `capital` da própria casa é a fonte primária.
+      return square.capital ?? activeCatalog().groupNames[square.group] ?? ''
     case 'airport':
       return `${activeLabels().airport} · ${square.iata}`
     case 'utility':
       return 'Serviço público'
+    case 'mine':
+      return `Mina · ${METAL_LABEL[square.metal]}`
     case 'tax':
       return 'Imposto'
     case 'acaso':
@@ -723,14 +727,15 @@ function DeedIcon({ sq }: { sq: AuctionSquare }) {
 }
 
 function AuctionTierMarkers({ kind, count }: { kind: AuctionTierKind; count: number }) {
-  if (kind === 'base') return <PlotBadgeIcon />
+  const B = buildingFamily(activeCatalog().id) // D-070: glifos do mapa ativo
+  if (kind === 'base') return <B.plot />
   if (kind === 'house') {
-    return Array.from({ length: count }, (_, index) => <HouseBadgeIcon key={index} />)
+    return Array.from({ length: count }, (_, index) => <B.unit key={index} />)
   }
   if (kind === 'hotel') {
-    return Array.from({ length: count }, (_, index) => <HotelBadgeIcon key={index} />)
+    return Array.from({ length: count }, (_, index) => <B.big key={index} />)
   }
-  return <SkyscraperBadgeIcon />
+  return <B.top />
 }
 
 function AuctionRentTier({

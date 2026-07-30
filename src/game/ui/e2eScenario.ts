@@ -24,9 +24,7 @@ import { useRoomStore } from '@/net/roomStore'
 
 const DEBTOR_ID = 'p1'
 const CREDITOR_ID = 'p2'
-const DEBTOR_PROPERTY = 1 // Roma (brown, preço 60) — "uma casa" (D10)
-const CREDITOR_PROPERTIES = [5, 7, 9] // Pisa/Cairo/Gizé — patrimônio visível na classificação
-const DEBT_AMOUNT = 500 // > liquidationValue(devedor) = 20 (caixa) + 30 (hipoteca de Roma) = 50
+const DEBT_AMOUNT = 500 // > caixa + hipoteca do primeiro título em qualquer mapa publicado
 const DEBTOR_CASH = 20
 const CREDITOR_CASH = 3000
 const SEEDED_ROUND = 12 // "perto do fim" (D10) — cosmético; `matchSummary` só lê o valor
@@ -42,8 +40,14 @@ function buildEndgameScenario(): GameState {
   debtor.cash = DEBTOR_CASH
   creditor.cash = CREDITOR_CASH
 
-  g.titles[DEBTOR_PROPERTY].ownerId = debtor.id
-  for (const pos of CREDITOR_PROPERTIES) g.titles[pos].ownerId = creditor.id
+  // Deriva os lotes do estado semeado do mapa ativo. Índices fixos eram válidos no Atlas,
+  // mas podiam apontar para Tesouro no Fuligem e quebravam o cenário antes de renderizar.
+  const [debtorProperty, ...creditorProperties] = Object.keys(g.titles).map(Number)
+  if (debtorProperty === undefined || creditorProperties.length < 3) {
+    throw new Error('Cenário de fim de jogo exige ao menos quatro títulos compráveis')
+  }
+  g.titles[debtorProperty].ownerId = debtor.id
+  for (const pos of creditorProperties.slice(0, 3)) g.titles[pos].ownerId = creditor.id
 
   g.round = SEEDED_ROUND
   g.activeSeat = 0 // assento do devedor
@@ -95,29 +99,45 @@ applyE2EAvatarSkinScenario()
 // `?players=2&scenario=fuligem-showcase&map=fuligem` (055/SC-005): estado LEGAL de mesa
 // rica para a validação visual do segundo mapa — bairro completo com construções (oficinas,
 // fábrica, Complexo, Torre de Ferro), hipoteca com placa, Ferrovia com Estação de Carga e
-// Sorte Grande acumulada. Mesmo andaime dos cenários acima: só ativa com o parâmetro,
-// nenhum reducer é tocado — o estado plantado é exatamente o que o motor produziria.
+// Sorte Grande acumulada. `scenario=fuligem-auction` reutiliza a mesma mesa e abre um
+// leilão real, para conferir o modal junto do caixa dos rivais. Mesmo andaime dos cenários
+// acima: só ativa com o parâmetro, nenhum reducer é tocado — o estado plantado é exatamente
+// o que o motor produziria.
 function applyE2EFuligemShowcaseScenario(): void {
   if (typeof window === 'undefined') return
-  if (new URLSearchParams(window.location.search).get('scenario') !== 'fuligem-showcase') return
+  const scenario = new URLSearchParams(window.location.search).get('scenario')
+  if (scenario !== 'fuligem-showcase' && scenario !== 'fuligem-auction') return
 
   const g = createSeedState(['p1', 'p2'], Date.now() - 65_000)
   const [ana, bia] = g.players
   ana.cash = 1420
   bia.cash = 860
 
-  // Bairro da Fumaça completo (pos 1/3/5) com a escada visível: 4 oficinas,
+  // Vila Bonfim completa (pos 6/8/9) com a escada visível: 4 oficinas,
   // fábrica e Torre de Ferro — o trilho de conexão do Bairro Completo acende.
-  g.titles[1] = { ...g.titles[1], ownerId: ana.id, houses: 4 }
-  g.titles[3] = { ...g.titles[3], ownerId: ana.id, houses: 0, hotel: true }
-  g.titles[5] = { ...g.titles[5], ownerId: ana.id, houses: 0, hotel: true, hotel2: true, skyscraper: true }
-  // Ferrovia Sul (pos 6) com Estação de Carga.
-  g.titles[6] = { ...g.titles[6], ownerId: ana.id, hangar: true }
+  g.titles[6] = { ...g.titles[6], ownerId: ana.id, houses: 4 }
+  g.titles[8] = { ...g.titles[8], ownerId: ana.id, houses: 0, hotel: true }
+  g.titles[9] = { ...g.titles[9], ownerId: ana.id, houses: 0, hotel: true, hotel2: true, skyscraper: true }
+  // Estação Bonfim (pos 5) com Estação de Carga.
+  g.titles[5] = { ...g.titles[5], ownerId: ana.id, hangar: true }
   // Propriedades da adversária: uma hipotecada (placa HIPOTECADA) e uma normal.
-  g.titles[7] = { ...g.titles[7], ownerId: bia.id, mortgaged: true }
-  g.titles[9] = { ...g.titles[9], ownerId: bia.id }
+  g.titles[11] = { ...g.titles[11], ownerId: bia.id, mortgaged: true }
+  g.titles[13] = { ...g.titles[13], ownerId: bia.id }
   // Sorte Grande acumulada — o pote físico cresce.
   g.centerPot = 1850
+  if (scenario === 'fuligem-auction') {
+    g.turn = { ...g.turn, state: 'casa-a-resolver', pendingResolve: true }
+    g.resolution = {
+      kind: 'auction',
+      auction: {
+        pos: 33,
+        currentBid: 420,
+        highBidder: bia.id,
+        activeBidders: [ana.id, bia.id],
+        deadline: Date.now() + 60_000,
+      },
+    }
+  }
 
   useGameStore.setState({ game: g })
 

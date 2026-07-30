@@ -58,12 +58,17 @@ test('partida local no mapa fuligem apresenta o catálogo inteiro do tabuleiro',
   // O eixo visual é o mapa (D-069): o atributo do tema segue a seleção explícita.
   await expect(page.locator('html')).toHaveAttribute('data-board-theme', 'fuligem')
 
-  // Conteúdo do catálogo nas 48 casas: bairros, ferrovias, utilidades, Sorte Grande.
-  await expect(page.getByText('Rua da Fumaça')).toBeVisible()
-  await expect(page.getByText('Ferrovia Sul')).toBeVisible()
-  await expect(page.getByText('Ferrovia Norte')).toBeVisible()
+  // Conteúdo do catálogo nas 40 casas: bairros, ferrovias, minas e Sorte Grande.
+  await expect(page.getByText('Ladeira do Barreiro')).toBeVisible()
+  await expect(page.getByText('Rua Treze de Maio')).toBeVisible()
+  await expect(page.getByText('Alameda das Palmeiras')).toBeVisible()
+  await expect(page.getByText('Estação Bonfim')).toBeVisible()
+  await expect(page.getByText('Estação do Vale')).toBeVisible()
   await expect(page.getByText('Sorte Grande', { exact: true })).toBeVisible()
   await expect(page.getByText('Bilhete de Trem', { exact: true })).toBeVisible()
+  await expect(page.getByText('Pátio das Máquinas', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Represa do Salto', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Baixada das Olarias', { exact: true })).toHaveCount(0)
   // O vocabulário aprovado NÃO renomeia Acaso/Tesouro/GO/Prisão.
   await expect(page.getByText('Acaso').first()).toBeVisible()
   await expect(page.getByText('Tesouro').first()).toBeVisible()
@@ -86,8 +91,8 @@ test('cenário semeado mostra compras, hipoteca, bairro completo, estação e po
   await expect(page.getByText('1.850')).toBeVisible()
   await shoot(page, 'tabuleiro-comprado-hipoteca-bairro-completo')
 
-  // Escritura da Ferrovia com Estação de Carga (regra do hangar intacta, rótulo do mapa).
-  await page.getByRole('button', { name: /Ferrovia Sul/ }).click()
+  // Escritura da ferrovia com Estação de Carga (regra do hangar intacta, rótulo do mapa).
+  await page.getByRole('button', { name: /Estação Bonfim/ }).click()
   await expect(page.getByText('Estação de Carga').first()).toBeVisible()
   await shoot(page, 'ferrovia-estacao-de-carga')
   await page.keyboard.press('Escape')
@@ -98,6 +103,22 @@ test('cenário semeado mostra compras, hipoteca, bairro completo, estação e po
   await newTrade.click()
   await expect(page.getByText(/Bilhete de Trem/).first()).toBeVisible({ timeout: 10_000 })
   await shoot(page, 'troca')
+})
+
+test('leilão preserva a leitura do caixa dos rivais', async ({ page }) => {
+  await page.goto('/play?players=2&scenario=fuligem-auction&map=fuligem')
+  await expect(page.getByRole('heading', { name: 'Leilão ao vivo' })).toBeVisible({ timeout: 20_000 })
+
+  const overlay = page.locator('[data-veil="clear"]')
+  await expect(overlay).toBeVisible()
+  await expect(overlay).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(overlay).toHaveCSS('backdrop-filter', 'none')
+  const players = page.getByRole('list', { name: 'Participantes da partida' })
+  await expect(players.getByText('R$1.420', { exact: true })).toBeVisible()
+  await expect(players.getByText('R$860', { exact: true })).toBeVisible()
+
+  await expectNoBlockingA11y(page, 'leilão fuligem com caixa visível')
+  await shoot(page, 'leilao-caixa-visivel')
 })
 
 test('classificação final chega pelo caminho real no mapa fuligem', async ({ page }) => {

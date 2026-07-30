@@ -17,9 +17,9 @@ import { useMotion } from '@/game/ui/motion'
 import { ModalTitleContext, useModalTitleId, useDialogA11y } from '@/game/ui/a11y/dialog'
 
 // Overlay padrão: véu de tinta com VINHETA (centro mais claro, bordas mais
-// fundas — foco no cartão) + blur leve, sempre o MESMO. Só o z-index varia
-// (empilhamento entre camadas: modal 60 · trade 65 · carta 66 · notice 67 ·
-// pregão 68).
+// fundas — foco no cartão) + blur leve. O leilão usa `veil="clear"` para o caixa dos
+// rivais continuar legível, sem abrir mão da semântica/trava modal. O z-index varia
+// por camada: modal 60 · trade 65 · carta 66 · notice 67 · pregão 68.
 export function Overlay({
   z = 60,
   onClick,
@@ -27,6 +27,7 @@ export function Overlay({
   children,
   dismissible = false,
   ariaLabel,
+  veil = 'default',
 }: {
   z?: number
   onClick?: () => void
@@ -39,6 +40,9 @@ export function Overlay({
   // Nome acessível pra Overlay sem ModalHeader (ex.: EndGameScreen). Com ModalHeader,
   // deixe de fora — o título dele já vira `aria-labelledby` via contexto.
   ariaLabel?: string
+  // Leilão precisa deixar o caixa dos rivais legível para lance estratégico (056).
+  // `clear` muda só a pintura: a camada continua cobrindo a viewport e prendendo o foco.
+  veil?: 'default' | 'clear'
 }) {
   const { fade } = useMotion() // freio de graça: quem usa Overlay não precisa lembrar disso
   const titleId = useId()
@@ -62,10 +66,16 @@ export function Overlay({
         }}
         style={{
           zIndex: z,
-          background:
-            'radial-gradient(120% 120% at 50% 40%, color-mix(in srgb, var(--color-coffee-950) 60%, transparent) 0%, color-mix(in srgb, var(--color-coffee-950) 90%, transparent) 100%)',
+          background: veil === 'clear'
+            ? 'transparent'
+            : 'radial-gradient(120% 120% at 50% 40%, color-mix(in srgb, var(--color-coffee-950) 60%, transparent) 0%, color-mix(in srgb, var(--color-coffee-950) 90%, transparent) 100%)',
         }}
-        className={cn('modal-overlay fixed inset-0 flex items-center justify-center backdrop-blur-[3px] p-4 outline-none', className)}
+        data-veil={veil}
+        className={cn(
+          'modal-overlay fixed inset-0 flex items-center justify-center p-4 outline-none',
+          veil === 'default' && 'backdrop-blur-[3px]',
+          className,
+        )}
       >
         {children}
       </motion.div>
