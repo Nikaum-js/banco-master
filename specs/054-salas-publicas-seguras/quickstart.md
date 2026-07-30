@@ -54,9 +54,11 @@ não republica o lobby.
 ## Inspeção do bundle
 
 ```bash
-rg -n "sb_secret_|SERVICE_ROLE_KEY|SUPABASE_SERVICE|postgresql://" dist
+rg -n "sb_secret_[A-Za-z0-9_-]{16,}|SERVICE_ROLE_KEY[[:space:]]*[:=]|SUPABASE_SERVICE[[:space:]]*[:=]|postgresql://[^[:space:]\"']+:[^[:space:]\"']+@" dist
 ```
 
-Chave publishable é pública por desenho. A string genérica `service_role` pode existir no
-SDK do Supabase; o que falha o gate é uma credencial administrativa, JWT secreto ou conexão
-Postgres incluída no artefato.
+Chave publishable é pública por desenho. Literais genéricos como `sb_secret_`, `service_role`
+e `postgresql://` existem no SDK do Supabase; o que falha o gate é uma credencial
+administrativa completa ou conexão Postgres com usuário e senha incluída no artefato. Todo
+JWT encontrado no bundle também deve ter seu payload inspecionado e conter somente
+`"role":"anon"`.
