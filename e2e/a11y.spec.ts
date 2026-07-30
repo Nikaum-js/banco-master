@@ -51,19 +51,19 @@ test('caminho de jogo não tem violação de acessibilidade serious/critical', a
   const report: Record<string, ViolationRow[]> = {}
 
   // — 1. Home —
-  await page.goto('/')
+  await page.goto('/jogar')
   await expect(page.getByRole('button', { name: /^Criar sala$/ })).toBeVisible()
   await auditStop(page, 'home', report)
 
   // — 2. Lobby ("Criar sala") — o projeto `built` sobe com credenciais Supabase FALSAS
   // (playwright.config.ts) só pra passar de "Multiplayer indisponível" pro formulário; o
   // roteiro NUNCA submete (sem rede real disponível no gate padrão, ver aviso da "pausa" abaixo).
-  await page.goto('/?host=1')
+  await page.goto('/jogar?host=1')
   await expect(page.getByLabel('Seu nome')).toBeVisible()
   await auditStop(page, 'lobby', report)
 
   // — 3. Tabuleiro —
-  await page.goto('/?players=2')
+  await page.goto('/jogar?players=2')
   await expect(page.locator('.board-stage')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Rolar dados' })).toBeVisible()
   await auditStop(page, 'tabuleiro', report)
@@ -108,6 +108,38 @@ test('caminho de jogo não tem violação de acessibilidade serious/critical', a
     '[a11y] COBERTURA: "pausa/reconexão" (multiplayer) não está nesta varredura — depende de sala ' +
       'real (Realtime + heartbeat), fora do padrão do gate. Ver e2e/multiplayer.spec.ts (E2E_PRESENCE=1).',
   )
+
+  expect(blocking, `violações serious/critical:\n${blocking.join('\n')}`).toEqual([])
+  expect(errors, `erros de runtime: ${JSON.stringify(errors)}`).toEqual([])
+})
+
+// Páginas públicas de marketing (051, FR-008): mesma régua AA do caminho de jogo, sobre o
+// HTML construído. São estáticas — a auditoria é barata e roda as três numa passada.
+test('páginas de marketing não têm violação de acessibilidade serious/critical', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  const errors = trackRuntimeErrors(page)
+  const report: Record<string, ViolationRow[]> = {}
+
+  await page.goto('/')
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await auditStop(page, 'landing', report)
+
+  await page.goto('/como-jogar')
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await auditStop(page, 'como-jogar', report)
+
+  await page.goto('/faq')
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await auditStop(page, 'faq', report)
+
+  const blocking: string[] = []
+  for (const [screen, violations] of Object.entries(report)) {
+    for (const v of violations) {
+      const line = `[a11y] ${screen}: impact=${v.impact ?? '?'} ${v.id} (${v.nodes} nó(s)) — ${v.help}`
+      console.log(line)
+      if (v.impact && BLOCKING_IMPACTS.has(v.impact)) blocking.push(line)
+    }
+  }
 
   expect(blocking, `violações serious/critical:\n${blocking.join('\n')}`).toEqual([])
   expect(errors, `erros de runtime: ${JSON.stringify(errors)}`).toEqual([])

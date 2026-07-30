@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { Bus, ChevronRight } from 'lucide-react'
+import { Bus, ChevronRight, DoorOpen } from 'lucide-react'
 import { motion } from 'motion/react'
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -24,6 +24,7 @@ import {
 } from './glyphs/badges'
 import { ChartPattern, GridPattern } from './glyphs/patterns'
 import { playersView, type Player } from '@/game/ui/panels/playersView'
+import { ConcedeDialog } from '@/game/ui/concede/ConcedeDialog'
 import { diceArenaView } from '@/game/ui/panels/diceArenaView'
 import { Dice, SpeedDie, ROLL_DURATION_MS } from '@/game/ui/dice'
 import { toUiSpeedFace, type SpeedFace } from '@/game/ui/diceFaces'
@@ -36,6 +37,7 @@ import { ShopIcon, GavelIcon, DiceIcon, CoinIcon, HouseIcon } from '@/game/ui/ic
 import { Button, SectionHeader, Chip, EmptyState, MoneyPulse } from '@/game/ui/primitives'
 import { useMoneyPulse } from '@/game/ui/useMoneyPulse'
 import type { TempEffect, TradeProposal } from '@/game/economy/types'
+import type { GameState } from '@/game/turn/types'
 import { interestOf, lapsRemainingOf } from '@/game/emprestimos/emprestimos'
 import { money } from '@/lib/money'
 import { describeLogEntry } from '@/game/ui/log/describeLog'
@@ -637,6 +639,7 @@ function PlayerRow({ player: p }: { player: Player }) {
   // Feedback de caixa (024.1; extraído em 044/T020 pra `primitives.tsx` — mesmo pulso
   // que PotCard usa e que a tela de dívida do GameHUD passou a reusar).
   const pulse = useMoneyPulse(p.money)
+  const quit = useConcedeControl(p)
 
   return (
     <li
@@ -669,6 +672,20 @@ function PlayerRow({ player: p }: { player: Player }) {
         {p.active && <span className="sr-only">Turno atual</span>}
         <div className="player-row__headline">
           <p className="display display--tight">{p.name}</p>
+          {quit && (
+            // §9.6/D-057 — só na PRÓPRIA linha, e discreto: some no fundo da linha até o
+            // hover/foco. Sair da partida não pode competir visualmente com jogar.
+            <button
+              type="button"
+              className="player-row__quit"
+              onClick={quit.open}
+              disabled={!quit.enabled}
+              aria-label="Desistir da partida"
+              title={quit.enabled ? 'Desistir da partida' : 'Só é possível desistir na sua vez'}
+            >
+              <DoorOpen size={13} aria-hidden />
+            </button>
+          )}
         </div>
       </div>
 
@@ -695,15 +712,74 @@ function PlayerRow({ player: p }: { player: Player }) {
         </span>
       </div>
 
-      <div className="player-row__money">
-        <span>Caixa</span>
-        <p className={cn('currency', p.bankrupt && 'line-through')}>
+      {/* §12.3/D-061 — com cobrança pendente, o caixa mostra o LÍQUIDO real (caixa − obrigação).
+          Negativo vem em vermelho E com texto ("falta X"): cor sozinha não comunica (§12.6), e o
+          adversário precisa entender que há dívida em resolução sem depender de ver a faixa de
+          cobrança, que é só do devedor. */}
+      <div className={cn('player-row__money', p.owed > 0 && 'player-row__money--debt')}>
+        <span>{p.owed > 0 ? 'Caixa líquido' : 'Caixa'}</span>
+        <p className={cn('currency', p.bankrupt && 'line-through', p.net < 0 && 'player-row__money--negative')}>
           <small>R$</small>
-          {p.money.toLocaleString('pt-BR')}
+          {p.net.toLocaleString('pt-BR')}
         </p>
+        {p.owed > 0 && (
+          <span className="player-row__owed">
+            {p.net < 0 ? `falta ${money(p.owed - p.money)}` : `deve ${money(p.owed)}`}
+          </span>
+        )}
       </div>
+
+      {quit?.confirming && (
+        <ConcedeDialog
+          game={quit.game}
+          playerId={p.id!}
+          onConfirm={quit.confirm}
+          onCancel={quit.close}
+        />
+      )}
     </li>
   )
+}
+
+/**
+ * O controle de desistência desta linha — `null` em toda linha que não é a do assento local
+ * (§9.6/D-057: cada um só desiste por si).
+ *
+ * `isMe` e não `player.you`: em partida sem sala (cliente único de desenvolvimento) nenhum
+ * assento é "você", e `isMe` já resolve isso do jeito estabelecido — sem sala, meu é o
+ * assento da vez. `enabled` vem de `mayAct('concede')`, a MESMA tabela de ator que o host
+ * usa para descartar comando ilegítimo: o botão aparece na sua linha o tempo todo (senão
+ * ninguém o encontra quando precisa), mas só clica na sua vez.
+ */
+function useConcedeControl(p: Player): {
+  game: GameState
+  enabled: boolean
+  confirming: boolean
+  open: () => void
+  close: () => void
+  confirm: () => void
+} | null {
+  const game = useGameStore((s) => s.game)
+  const dispatch = useGameStore((s) => s.dispatch)
+  const local = useLocalView()
+  const [confirming, setConfirming] = useState(false)
+
+  // Devolver `null` aqui também é o que FECHA o diálogo quando o assento sai da mesa (o
+  // próprio comando, ou o fim da partida): sem controle, o chamador não renderiza a
+  // confirmação, e ela não sobrevive ao fato que confirmava.
+  if (!p.id || !local.isMe(p.id) || p.bankrupt || game.phase !== 'playing') return null
+
+  return {
+    game,
+    enabled: local.mayAct('concede'),
+    confirming,
+    open: () => setConfirming(true),
+    close: () => setConfirming(false),
+    confirm: () => {
+      setConfirming(false)
+      dispatch({ kind: 'concede' })
+    },
+  }
 }
 
 // Botão único das ações do turno (Rolar / Comprar / Leilão / Finalizar) —
@@ -1684,6 +1760,13 @@ const BUILD_BLOCK_MSG: Record<NonNullable<BuildBlock>, string> = {
 function DeedActions({ pos }: { pos: number }) {
   const game = useGameStore((s) => s.game)
   const dispatch = useGameStore((s) => s.dispatch)
+  // `ownedByActive` sozinho responde "é do jogador da VEZ?", não "é MEU?" — e as duas
+  // perguntas só coincidem em cliente único. Numa sala, abrir o título do adversário
+  // enquanto ele joga mostrava Construir/Vender/Hipotecar a quem não pode acionar nada:
+  // o host descartava o comando (FR-004/FR-007), mas a affordance mentia. Construir,
+  // vender e hipotecar são todos comandos de ator `'active'`, então um `mayAct` responde
+  // pelos seis — e ainda fecha o painel durante pausa e desconexão, onde nada aplica.
+  const local = useLocalView()
   const buildHouse = (pos: number): void => dispatch({ kind: 'build-house', pos })
   const sellBuilding = (pos: number): void => dispatch({ kind: 'sell-building', pos })
   const buildHangar = (pos: number): void => dispatch({ kind: 'build-hangar', pos })
@@ -1692,7 +1775,7 @@ function DeedActions({ pos }: { pos: number }) {
   const unmortgageProperty = (pos: number): void => dispatch({ kind: 'unmortgage', pos })
 
   const dv = deedView(game, pos)
-  if (!dv || !dv.ownedByActive) return null
+  if (!dv || !dv.ownedByActive || !local.mayAct('build-house')) return null
   const { flags } = dv
   const blockMsg = dv.buildBlock ? BUILD_BLOCK_MSG[dv.buildBlock] : undefined
   const mortgageTitle = !flags.podeHipotecar && !dv.mortgaged

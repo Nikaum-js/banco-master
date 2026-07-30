@@ -19,9 +19,11 @@ export function parseRoomLink(search: string): RoomLink {
   return { roomId: q.get('room'), createHost: q.get('host') === '1' }
 }
 
-// Link compartilhável de uma sala (FR-001).
+// Link compartilhável de uma sala (FR-001). Desde a 051 o app vive em `/jogar` — a raiz
+// é a landing pública. Convites antigos (`/?room=`) continuam entrando: a borda redireciona
+// pra cá com a query intacta (vercel.json + middleware de dev, spec 051/FR-004).
 export function roomLink(roomId: string, origin = ''): string {
-  return `${origin}/?room=${encodeURIComponent(roomId)}`
+  return `${origin}/jogar?room=${encodeURIComponent(roomId)}`
 }
 
 // Id de sala novo — curto, suficiente p/ o MVP (colisão desprezível no free tier).

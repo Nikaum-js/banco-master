@@ -64,14 +64,16 @@ function handCardActions(game: GameState, active: Player): SimAction[] {
   return out
 }
 
-// Propostas de troca sempre VÁLIDAS pelos gates (024) — trivial (vazia), doação de 1
-// propriedade e a mesma propriedade PAGA no piso da §8.5. Cobertura básica de US1 sob fuzzing.
+// Propostas de troca sempre VÁLIDAS pelos gates (024) — trivial (vazia), 1 propriedade
+// PAGA no mínimo que a §8.5 aceita, e a troca prop-por-prop. Cobertura básica de US1 sob
+// fuzzing.
 //
-// A forma paga entrou com a 050 e não é enfeite: até então, a única troca do lote que MOVIA
-// propriedade era a doação, e a D-055 tornou doação inválida. Sem substituta, o fuzzing parou
-// de redistribuir tabuleiro e a convergência despencou — medido na seed 20860713 com 6
-// jogadores, a partida saltou de 486 para 4506 rodadas e estourou o teto do lote. O defeito
-// era do harness, não da regra: ele só sabia propor exatamente aquilo que passou a ser proibido.
+// A forma paga entrou com a 050 e não é enfeite: sem uma troca que MOVA propriedade, o
+// fuzzing para de redistribuir tabuleiro e a convergência despenca — medido na seed
+// 20860713 com 6 jogadores, a partida saltou de 486 para 4506 rodadas e estourou o teto
+// do lote. O preço vem do próprio motor (`tradeBalance`): sob a D-058 a doação pura segue
+// proibida, então a forma paga cobre o mínimo — $1 quando a troca não esvazia ninguém,
+// o que faltar para o piso de um terço quando esvazia.
 function candidateTrades(game: GameState): { fromId: string; trade: Trade }[] {
   const alive = game.players.filter((p) => !p.eliminated)
   const out: { fromId: string; trade: Trade }[] = []
@@ -84,11 +86,11 @@ function candidateTrades(game: GameState): { fromId: string; trade: Trade }[] {
       if (tradable.length > 0) {
         const withProp: Trade = { ...empty, fromProps: [tradable[0]] }
         if (validateTrade(game, withProp)) out.push({ fromId: from.id, trade: withProp })
-        // O preço vem do próprio motor (`tradeBalance`), não de uma fração escrita aqui: se o
-        // piso da §8.5 for recalibrado, o lote acompanha sem ninguém lembrar de vir editar.
-        const price = tradeBalance(game, withProp).from.missing
+        // O preço vem do próprio motor (`tradeBalance`), não de uma fração escrita aqui: se a
+        // trava da §8.5 for recalibrada, o lote acompanha sem ninguém lembrar de vir editar.
+        const price = Math.max(1, tradeBalance(game, withProp).from.missing)
         const paid: Trade = { ...withProp, toCash: price }
-        if (price > 0 && price <= to.cash && validateTrade(game, paid)) out.push({ fromId: from.id, trade: paid })
+        if (price <= to.cash && validateTrade(game, paid)) out.push({ fromId: from.id, trade: paid })
         // Troca de propriedade por propriedade — o movimento clássico do gênero, e o único
         // que redistribui tabuleiro sem depender de caixa. Faltava no harness, e é ele que
         // devolve a convergência nas mesas de 6, onde o dinheiro fica espalhado demais para

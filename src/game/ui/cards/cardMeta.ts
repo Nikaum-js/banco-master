@@ -16,6 +16,15 @@ export const RARITY_LABEL: Record<Rarity, string> = {
   comum: 'Comum',
 }
 
+// Losangos do selo de raridade na carta revelada. Existem para a hierarquia
+// (lendária > rara > comum) não depender SÓ de cor: laranja e verde a 4.5:1 num
+// fundo de tinta continuam sendo duas cores para quem não as distingue.
+export const RARITY_PIPS: Record<Rarity, number> = {
+  lendaria: 3,
+  rara: 2,
+  comum: 1,
+}
+
 // Rótulo legível por efeito.
 export const CARD_LABEL: Record<string, string> = {
   aquisicaoHostil: 'Aquisição Hostil',

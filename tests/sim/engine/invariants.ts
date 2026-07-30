@@ -17,16 +17,24 @@ import { activeLoanFor } from '@/game/emprestimos/emprestimos'
 import type { SimAction } from './types'
 
 export interface Violation {
-  code: 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h'
+  // 'a'..'h' — invariantes originais da 036 + conservação de caixa.
+  // 'n' narração, 't' não-truncagem, 'o' razão de obrigações, 'v' convergência host×cliente:
+  // os quatro que faltavam, e sem os quais os CARDs 01/02/04/05/09 eram invisíveis ao harness.
+  code: 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'n' | 't' | 'o' | 'v'
   detail: string
 }
 
 function checkA(state: GameState): Violation[] {
   const out: Violation[] = []
-  const debtOpen = state.resolution?.kind === 'debt'
   for (const p of state.players) {
-    if (!Number.isFinite(p.cash)) out.push({ code: 'a', detail: `cash não-finito para ${p.id}: ${p.cash}` })
-    else if (p.cash < 0 && !debtOpen) out.push({ code: 'a', detail: `cash negativo para ${p.id} fora de dívida pendente: ${p.cash}` })
+    if (!Number.isFinite(p.cash)) { out.push({ code: 'a', detail: `cash não-finito para ${p.id}: ${p.cash}` }); continue }
+    if (!Number.isInteger(p.cash)) { out.push({ code: 'a', detail: `cash fracionário para ${p.id}: ${p.cash}` }); continue }
+    // D-061: o caixa NUNCA fica negativo no estado, nem com dívida aberta. A dívida vive no slot
+    // de resolução e na fila de obrigações, não como saldo negativo — o negativo do §12.3 é uma
+    // LEITURA (caixa − obrigação), calculada na apresentação. Antes desta decisão o invariante
+    // tolerava negativo "se houver dívida pendente", e essa tolerância era o que permitia um
+    // reducer novo deixar caixa negativo sem ninguém notar.
+    if (p.cash < 0) out.push({ code: 'a', detail: `cash negativo para ${p.id}: ${p.cash}` })
   }
   return out
 }
@@ -114,6 +122,27 @@ function checkG(state: GameState): Violation[] {
   return out
 }
 
+// (h) Fila de obrigações bem-formada (§9.1/D-061): valor positivo, devedor vivo, sem duplicata
+// do mesmo par — uma entrada de valor zero ou de jogador inexistente travaria o slot de decisão
+// para sempre, e o sintoma seria a mesa parada esperando por nada.
+function checkH(state: GameState): Violation[] {
+  const out: Violation[] = []
+  const vivos = new Set(state.players.filter((p) => !p.eliminated).map((p) => p.id))
+  const vistos = new Set<string>()
+  for (const o of state.obligations) {
+    if (!Number.isInteger(o.amount) || o.amount <= 0) out.push({ code: 'h', detail: `obrigação com valor inválido: ${o.amount}` })
+    if (!vivos.has(o.debtorId)) out.push({ code: 'h', detail: `obrigação de devedor inexistente/eliminado: ${o.debtorId}` })
+    if (o.creditorId !== null && !vivos.has(o.creditorId)) out.push({ code: 'h', detail: `obrigação para credor eliminado: ${o.creditorId}` })
+    const chave = `${o.debtorId}→${o.creditorId ?? 'bank'}:${o.cause}`
+    if (vistos.has(chave)) out.push({ code: 'h', detail: `obrigação duplicada do mesmo par: ${chave}` })
+    vistos.add(chave)
+  }
+  return out
+}
+
 export function checkInvariants(prev: GameState, next: GameState, action?: SimAction): Violation[] {
-  return [...checkA(next), ...checkB(prev, next, action), ...checkC(next), ...checkD(next), ...checkE(next), ...checkF(next), ...checkG(next)]
+  return [
+    ...checkA(next), ...checkB(prev, next, action), ...checkC(next), ...checkD(next),
+    ...checkE(next), ...checkF(next), ...checkG(next), ...checkH(next),
+  ]
 }

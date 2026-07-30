@@ -47,9 +47,10 @@ export interface TradeDraftProjection {
   trade: Trade
   canPropose: boolean
   /**
-   * Piso de contrapartida (§8.5) quando a proposta NÃO o atinge: quanto falta a cada lado, em
-   * valor avaliado. `null` quando atende (ou quando nem há termos). Proposta bloqueada sem
-   * número na tela é lida como bug — este campo existe para a recusa se explicar.
+   * Trava de esvaziamento (§8.5, D-058) quando a proposta NÃO passa: quanto falta a cada lado
+   * para não ficar esvaziado, e se algum lado está doando sem receber nada. `null` quando passa
+   * (ou quando nem há termos). Proposta bloqueada sem motivo na tela é lida como bug — este
+   * campo existe para a recusa se explicar.
    */
   counterpart: TradeCounterpartGap | null
 }
@@ -57,6 +58,8 @@ export interface TradeDraftProjection {
 export interface TradeCounterpartGap {
   fromMissing: number
   toMissing: number
+  fromDonation: boolean
+  toDonation: boolean
 }
 
 function emptySide(): TradeDraftSide {
@@ -198,8 +201,13 @@ export function projectTradeDraft(game: GameState, draft: TradeDraft): TradeDraf
   const recipient = eligibleRecipients.find((player) => player.id === draft.toId)
   const trade = toTrade(draft)
   const balance = recipient && hasTerms(trade) ? tradeBalance(game, trade) : null
-  const gap = balance && (balance.from.missing > 0 || balance.to.missing > 0)
-    ? { fromMissing: balance.from.missing, toMissing: balance.to.missing }
+  const gap = balance && (balance.from.missing > 0 || balance.to.missing > 0 || balance.from.donation || balance.to.donation)
+    ? {
+        fromMissing: balance.from.missing,
+        toMissing: balance.to.missing,
+        fromDonation: balance.from.donation,
+        toDonation: balance.to.donation,
+      }
     : null
 
   return {

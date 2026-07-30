@@ -7,7 +7,7 @@ const MIN_ROUNDS = 10
 
 test('partida de 3 jogadores roda 10+ rodadas sem erro de runtime', async ({ page }) => {
   const errors = trackRuntimeErrors(page)
-  await page.goto(`/?players=${PLAYER_COUNT}`)
+  await page.goto(`/jogar?players=${PLAYER_COUNT}`)
 
   await expect(page.locator('.board-stage')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByRole('button', { name: 'Rolar dados' })).toBeVisible()

@@ -1,12 +1,14 @@
 // Orquestra 1 partida completa: enumerar → escolher → aplicar → checar conservação de
 // dinheiro (todo dispatch) → sondar/invariantes estruturais (1x/turno) → checar fim de
 // jogo/teto de rodadas (036 + extensão de conservação/cobertura).
-import { createSimSession, dispatch, closeExhaustedAuctions, type SimSession } from './driver'
+import { createSimSession, closeExhaustedAuctions, type SimSession } from './driver'
 import { enumerateActions } from './actions'
 import { pickAction } from './agent'
 import { pickProbe, applyProbe } from './invalidProbe'
 import { checkInvariants } from './invariants'
 import { checkConservation, checkAuctionClose } from './conservation'
+import { checkNarration, checkNoTruncation } from './narration'
+import { stepWithConvergence } from './convergence'
 import type { SimAction, SimFailure, SimResult } from './types'
 import { sampleWealth, type WealthSample } from './wealth'
 
@@ -99,16 +101,36 @@ export function runGame(seed: number, playerCount: number, roundCap: number = DE
       const points = enumerateActions(session)
       const { action } = pickAction(session.ctx.rng, points)
       const before = session.game
-      dispatch(session, action)
+      // CONVERGÊNCIA (v): cada despacho passa pelo caminho de produção do multiplayer — host
+      // gravando o não-determinismo, cliente reproduzindo — e os dois estados têm de ser
+      // idênticos. Antes disto o harness rodava só a autoridade, e por construção não conseguia
+      // encontrar divergência nenhuma; "as contas oscilam" (CARD 04) é o sintoma exato de uma.
+      const step = stepWithConvergence(before, action, session.ctx)
+      session.game = step.host
       actionsExecuted++
+      if (step.violations.length > 0) {
+        const detail = step.violations.map((v) => `[${v.code}] ${v.detail}`).join('; ')
+        return fail('invariant', seed, playerCount, rounds, action, detail, rounds, actionsExecuted, Date.now() - t0, coverage)
+      }
 
       // Conservação de dinheiro: checada em TODO dispatch (não só na troca de assento) —
       // cada mecanismo (aluguel/imposto/cartas/GO/TaxMan/etc.) só é atribuível ao dispatch
       // exato que o disparou.
+      //
+      // NARRAÇÃO (n) e NÃO-TRUNCAGEM (t) andam junto e no mesmo lugar, e por um motivo: as três
+      // são propriedades DO DESPACHO, não do estado final. Conservação diz que o dinheiro fecha;
+      // narração diz que alguém consegue explicar por quê; não-truncagem diz que nenhuma
+      // obrigação a jogador foi apagada no caminho. O harness tinha só a primeira, e é por isso
+      // que quatro relatos de bug financeiro passaram por milhares de partidas simuladas.
       const { violations: moneyViolations, mechanisms } = checkConservation(before, session.game, action)
       addCoverage(coverage, mechanisms)
-      if (moneyViolations.length > 0) {
-        const detail = moneyViolations.map((v) => `[${v.code}] ${v.detail}`).join('; ')
+      const ledgerViolations = [
+        ...moneyViolations,
+        ...checkNarration(before, session.game),
+        ...checkNoTruncation(before, session.game),
+      ]
+      if (ledgerViolations.length > 0) {
+        const detail = ledgerViolations.map((v) => `[${v.code}] ${v.detail}`).join('; ')
         return fail('invariant', seed, playerCount, rounds, action, detail, rounds, actionsExecuted, Date.now() - t0, coverage)
       }
 

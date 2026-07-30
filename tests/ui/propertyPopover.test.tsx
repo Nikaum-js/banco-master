@@ -8,7 +8,7 @@ import { GameHUD } from '@/game/ui/GameHUD'
 import { createSeedState } from '@/game/setup'
 import { useGameStore } from '@/game/store'
 import { BOARD, type PropertySquare } from '@/lib/boardData'
-import { createRoom, SEAT_COLORS } from '@/net/room'
+import { createRoom, joinRoom, SEAT_COLORS } from '@/net/room'
 import { useRoomStore } from '@/net/roomStore'
 
 afterEach(() => {
@@ -40,6 +40,29 @@ describe('popover de propriedade', () => {
     expect(layer).toBeTruthy()
     expect(layer?.getAttribute('style')).toContain('z-index: 65')
     expect(screen.getByRole('button', { name: 'Hipotecar' })).toBeTruthy()
+  })
+
+  it('não oferece gestão de um título alheio a quem não é o jogador da vez', () => {
+    // O bug: `ownedByActive` responde "é do jogador da VEZ?", não "é MEU?". Numa sala, abrir
+    // o título do adversário enquanto ele joga mostrava Construir/Vender/Hipotecar a quem o
+    // host ia descartar de qualquer jeito.
+    const game = createSeedState(['p1', 'p2'])
+    game.titles[1].ownerId = 'p1' // Roma é do jogador da vez (p1)
+    const criada = createRoom('r1', { uid: 'host', name: 'Nikolas', color: SEAT_COLORS[0] })
+    const entrou = joinRoom(criada, { uid: 'tok-2', name: 'Nikolas 2', color: SEAT_COLORS[1] })
+    if (!entrou.ok) throw new Error(entrou.reason)
+
+    act(() => {
+      useGameStore.setState({ game })
+      useRoomStore.setState({ room: entrou.room, myUid: 'tok-2' }) // sou p2, é a vez de p1
+    })
+
+    render(<PropertyPopover square={BOARD[1] as PropertySquare} side="top" onClose={() => undefined} />)
+
+    expect(screen.getByText('Nikolas')).toBeTruthy() // o dono continua visível
+    expect(screen.queryByRole('button', { name: 'Construir' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Vender' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Hipotecar' })).toBeNull()
   })
 
   it('apresenta a progressão completa e resolve o dono para sua identidade pública', () => {

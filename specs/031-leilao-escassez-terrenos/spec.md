@@ -4,7 +4,9 @@
 
 **Created**: 2026-05-25
 
-**Status**: Draft
+**Status**: ❌ DESCONTINUADA (2026-07-29)
+
+> ⚠️ **Esta feature foi removida do produto** pela [D-059](../../docs/adr/D-059-leilao-de-escassez-de-terrenos-revertido.md), que revoga a D-023. Não existe mais gatilho por contagem de terrenos livres: `maybeOpenLandAuction`, `freeLots`, `landAuctionArmed`, `THEME.LAND_AUCTION_THRESHOLD` e a tabela `LAND_TRIGGERING` foram apagados, e o tipo `AuctionOrigin` com eles. O **formato** de pregão simultâneo que esta spec desenhou **sobreviveu** e continua em produção — é o do espólio do falido ([spec 039](../039-leilao-espolio-falido/spec.md), [D-031](../../docs/adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md)), que herdou `economy/landAuction.ts`, a `LandAuctionLayer` e a trava de solvência daqui. Leia esta spec para entender o mecanismo; ignore tudo o que fala de gatilho, limiar e episódio. O texto abaixo fica como registro histórico.
 
 **Input**: User description: "Leilão de escassez de terrenos — quando sobram poucos terrenos sem dono no tabuleiro, eles vão a um pregão automático (simultâneo), disparado quando restam ≤3 terrenos compráveis sem dono e há ≥2 jogadores vivos; cada terreno é um leilão inglês próprio, fechando todos juntos por cronômetro; um jogador pode arrematar vários, limitado pelo caixa; sem lance, o terreno fica livre."
 

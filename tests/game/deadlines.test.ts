@@ -17,8 +17,8 @@ describe('deadlinePlan', () => {
   it('fecha só os lotes vencidos pelo comando canônico do Pregão', () => {
     const game = createSeedState(['p1', 'p2'])
     game.landAuction = {
-      origin: 'scarcity',
-      bankruptId: null,
+      bankruptId: 'p3',
+    origin: 'bankruptcy',
       bidders: ['p1', 'p2'],
       lots: [
         { pos: 1, currentBid: 0, highBidder: null, deadline: 800 },
@@ -39,8 +39,8 @@ describe('deadlinePlan', () => {
       auction: { pos: 1, currentBid: 0, highBidder: null, activeBidders: ['p1'], deadline: 500 },
     }
     game.landAuction = {
-      origin: 'bankruptcy',
       bankruptId: 'p1',
+      origin: 'bankruptcy',
       bidders: ['p2'],
       lots: [{ pos: 3, currentBid: 0, highBidder: null, deadline: 500 }],
     }

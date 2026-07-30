@@ -44,6 +44,27 @@ export function committedCash(state: GameState, playerId: string, exceptPos: num
   )
 }
 
+/**
+  * Quantos terrenos livres AINDA precisam ser comprados para o pregão de escassez disparar
+  * (§7.5, D-060). É o número que a interface mostra enquanto não há pregão aberto.
+  *
+  * O motor é a fonte de verdade — a UI não recomputa contagem de tabuleiro. Nunca negativo, e
+  * `0` significa "o gatilho está armado neste instante": a próxima compra abre o pregão.
+  *
+  * `null` quando não faz sentido contar: já há pregão aberto (a UI mostra o leilão, não o
+  * contador), o episódio está gasto (`landAuctionArmed === false`, não vai disparar por mais
+  * compras que aconteçam), não há terreno livre nenhum, ou a mesa não tem disputa possível.
+  * Distinguir "faltam 0" de "não vai acontecer" é a diferença entre informar e mentir.
+  */
+export function lotsUntilScarcityAuction(state: GameState): number | null {
+  if (state.landAuction) return null // pregão em curso — o contador dá lugar ao estado do leilão
+  if (!state.landAuctionArmed) return null // episódio gasto: não dispara nesta descida
+  if (aliveCount(state) < 2) return null // sem disputa possível
+  const free = freeLots(state).length
+  if (free < 1) return null // nada a leiloar (guarda U1)
+  return Math.max(0, free - THEME.LAND_AUCTION_THRESHOLD)
+}
+
 // Gatilho (chamado pelo store após eventos que mudam posse). Abre o pregão se:
 // 1 ≤ freeLots ≤ THRESHOLD, ≥2 vivos, sem pregão aberto e episódio armado.
 // Cada lote nasce com seu próprio prazo (now + WINDOW).

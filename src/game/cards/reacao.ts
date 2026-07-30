@@ -9,6 +9,7 @@ import { removeFromHand } from './hand'
 import { ownerOf } from '../economy/titles'
 import { isTempImmune, addTempEffect } from '../economy/tempEffects'
 import { acquire, evict, audit, canAcquire, canEvict, canAudit } from './ofensivas'
+import { logEvent } from '../log'
 
 // id da carta na mão do jogador cujo efeito é a reação procurada (privado: não revela ao
 // atacante). 043, T031 — ignora slot OCULTO: numa mão alheia (perspectiva de quem não é
@@ -114,9 +115,19 @@ export function respondReaction(state: GameState, use: boolean, ports: TurnPorts
   } else if (reactor.cash >= r.amount) {
     reactor.cash -= r.amount // recusou: paga o imposto
     ports.onPayToCenter(s, r.amount)
+    // ACHADO PELO INVARIANTE DE NARRAÇÃO da simulação (D-063), não por leitura: recusar o Bunker
+    // pagava o imposto sem NENHUM fato. O `tax` do registry de resolução nunca chega a rodar
+    // aqui — `taxBunkerResolve` intercepta a casa ANTES dele para abrir a janela de reação —,
+    // então o pagamento acontecia por um caminho que ninguém tinha lembrado de narrar. É o mesmo
+    // molde dos seis furos que a D-063 listou: um débito correto num ramo silencioso.
+    logEvent(s, { kind: 'tax', who: r.reactorId, amount: r.amount })
     completeResolution(s)
   } else {
-    s.resolution = { kind: 'debt', amount: r.amount, creditorId: null } // sem caixa → dívida (008)
+    // sem caixa → dívida (008). O reator do Bunker é sempre o jogador da vez (`taxBunkerResolve`
+    // roda na resolução da casa dele), mas `debtorId` vai explícito de todo jeito: um dia isso
+    // deixa de valer, e a dívida implícita foi exatamente o que a D-061 teve de desfazer.
+    s.resolution = { kind: 'debt', amount: r.amount, creditorId: null, debtorId: r.reactorId, cause: 'bunker-tax' }
+    logEvent(s, { kind: 'debt-open', who: r.reactorId, amount: r.amount, creditorId: null, cause: 'bunker-tax' })
   }
   return s
 }

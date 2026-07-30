@@ -71,15 +71,19 @@ describe('recuperação de chunk lazy entre deploys', () => {
 })
 
 describe('roteamento de assets na Vercel', () => {
-  it('mantém deep links na SPA sem reescrever asset inexistente para index.html', () => {
+  // Desde a 051 não existe mais catch-all de SPA: a raiz é a landing estática e o app
+  // vive em /jogar (rewrites explícitos). A invariante que protegia o importWithReload
+  // continua a mesma — um asset hasheado INEXISTENTE precisa responder 404, nunca ser
+  // reescrito para uma página HTML (o que mascararia o deploy novo e quebraria a
+  // detecção de release velho).
+  it('nenhum rewrite captura /assets/* nem devolve o index no lugar de asset', () => {
     const config = JSON.parse(readFileSync('vercel.json', 'utf8')) as {
       rewrites: { source: string; destination: string }[]
     }
-    const spa = config.rewrites.find((rewrite) => rewrite.destination === '/index.html')
-    expect(spa).toBeDefined()
-
-    const matches = new RegExp(`^${spa!.source}$`)
-    expect(matches.test('/sala/atlas')).toBe(true)
-    expect(matches.test('/assets/GameSurface-old.js')).toBe(false)
+    expect(config.rewrites.some((rewrite) => rewrite.destination === '/index.html')).toBe(false)
+    for (const rewrite of config.rewrites) {
+      const matches = new RegExp(`^${rewrite.source}$`)
+      expect(matches.test('/assets/GameSurface-old.js'), `${rewrite.source} captura assets`).toBe(false)
+    }
   })
 })

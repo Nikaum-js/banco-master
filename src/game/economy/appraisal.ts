@@ -1,124 +1,104 @@
-// Avaliação de proposta e piso de contrapartida (050, SRS §8.5 / D-055) — puro.
+// Trava de esvaziamento (SRS §8.5 / D-058, que substitui a D-055) — puro.
 //
-// O que esta regra barra não é negociação ruim, é o ABANDONO COM DANO DIRIGIDO: quem está
-// perdendo entrega o patrimônio inteiro a um jogador escolhido a dedo e sai, e a partida
+// Negociação desequilibrada é LIVRE em qualquer proporção: 3-por-1, um país por $200,
+// pagar caro, vender barato — valor é subjetivo entre jogadores e o jogo não legisla
+// sobre ele. O que esta regra barra é o ABANDONO COM DANO DIRIGIDO: quem está de saída
+// entrega o patrimônio inteiro a um jogador escolhido a dedo, e a partida dos outros
 // passa a ser decidida por uma rixa em vez de pelo tabuleiro.
 //
-// A assimetria é deliberada: o piso incide sobre os ATIVOS que um lado entrega (propriedade,
-// Bus Ticket, imunidade), nunca sobre o dinheiro que ele paga. Pagar caro é uma decisão
-// econômica ruim para quem paga, não uma transferência de controle — e se o dinheiro pesasse
-// contra o pagador, comprar um país acima da tabela viraria proposta ilegal.
+// Abandono tem assinatura objetiva — o jogador sai da troca sem patrimônio. Daí as duas
+// únicas recusas: doação pura (entregar e não receber absolutamente nada) e esvaziamento
+// (ficar com menos de um terço do patrimônio que tinha, contando o que recebe).
 //
-// Os valores abaixo são MEDIDA DE VERIFICAÇÃO, nunca cobrança: ninguém paga nem recebe nada
-// por causa deles.
+// Imunidade vale ZERO dos dois lados, por construção do motor: imunidades concedidas ou
+// recebidas por um jogador evaporam quando ele sai da partida (§9.4, e a desistência da
+// D-057 compartilha essa limpeza). Conceder imunidade não transfere patrimônio — e, para
+// quem está entregando o último ativo, receber imunidade não é contrapartida real.
+//
+// Os valores abaixo são MEDIDA DE VERIFICAÇÃO, nunca cobrança: ninguém paga nem recebe
+// nada por causa deles.
 import { BOARD } from '@/lib/boardData'
 import type { GameState } from '../turn/types'
-import type { ImmunityGrant, Trade } from './types'
+import type { Trade } from './types'
 
 export const BUS_TICKET_APPRAISAL = 100
-/** Imunidade vale, por volta, esta fração do preço da propriedade que ela protege. */
-export const IMMUNITY_LAP_RATE = 0.1
-/** Teto da imunidade (e valor da permanente): esta fração do preço da propriedade. */
-export const IMMUNITY_MAX_RATE = 0.5
-/** Cada lado precisa receber ao menos esta fração do valor dos ativos que entrega (§8.5). */
-export const MIN_COUNTERPART_RATIO = 0.5
-
-function priceOf(pos: number): number {
-  const sq = BOARD[pos]
-  return sq && 'price' in sq ? sq.price : 0
-}
+/** A troca não pode deixar um lado com menos desta fração do patrimônio que tinha (§8.5). */
+export const MIN_KEEP_RATIO = 1 / 3
 
 // Preço de tabela; hipotecada vale metade — senão hipotecar em massa viraria a burla óbvia
 // (quatro propriedades hipotecadas "valeriam" o dobro do que representam).
 function appraiseProperty(state: GameState, pos: number): number {
-  const price = priceOf(pos)
+  const sq = BOARD[pos]
+  const price = sq && 'price' in sq ? sq.price : 0
   return state.titles[pos]?.mortgaged ? Math.round(price / 2) : price
 }
 
-/**
- * Imunidade vale uma fração do que ela protege, nunca um valor fixo.
- *
- * Um número fixo quebra nas duas pontas: alto demais, isentar uma casa marrom "vale" mais que
- * a própria casa e qualquer troca com imunidade passa a ser recusada; baixo demais, a imunidade
- * some da conta e deixa de ser contrapartida. Atrelar ao preço também fecha a lavagem — para
- * "receber" o equivalente a um império doado, o outro lado precisa comprometer um império.
- */
-function appraiseImmunity(pos: number, laps: number | null): number {
-  const price = priceOf(pos)
-  const cap = price * IMMUNITY_MAX_RATE
-  return Math.round(laps === null ? cap : Math.min(laps * price * IMMUNITY_LAP_RATE, cap))
-}
-
-function appraiseGrants(grants: ImmunityGrant[] | undefined): number {
-  return (grants ?? []).reduce((sum, g) => sum + appraiseImmunity(g.pos, g.laps), 0)
-}
-
-// Imunidade JÁ ATIVA que troca de beneficiário (§8.4): vale pelas voltas que ainda restam.
-function appraiseTransfers(state: GameState, beneficiaryId: string, positions: number[] | undefined): number {
-  let sum = 0
-  for (const pos of positions ?? []) {
-    const im = state.immunities.find((i) => i.beneficiaryId === beneficiaryId && i.pos === pos)
-    if (im) sum += appraiseImmunity(pos, im.lapsRemaining)
+/** Patrimônio de um jogador: propriedades avaliadas + Bus Tickets + caixa. Imunidades não. */
+function worthOf(state: GameState, playerId: string): number {
+  const player = state.players.find((p) => p.id === playerId)
+  if (!player) return 0
+  let worth = player.cash + player.busTickets * BUS_TICKET_APPRAISAL
+  for (const sq of BOARD) {
+    if ('price' in sq && state.titles[sq.pos]?.ownerId === playerId) worth += appraiseProperty(state, sq.pos)
   }
-  return sum
+  return worth
 }
 
-/** O que um lado entrega em ATIVOS — a base do piso. Dinheiro não entra aqui de propósito. */
-function assetsFrom(state: GameState, trade: Trade, which: 'from' | 'to'): number {
+/** Valor duro que um lado põe na mesa: propriedades + tickets + dinheiro. Imunidades pesam zero. */
+function hardValue(state: GameState, trade: Trade, which: 'from' | 'to'): number {
   const props = which === 'from' ? trade.fromProps : trade.toProps
   const tickets = (which === 'from' ? trade.fromBusTickets : trade.toBusTickets) ?? 0
+  const cash = which === 'from' ? trade.fromCash : trade.toCash
+  return props.reduce((sum, pos) => sum + appraiseProperty(state, pos), 0) + tickets * BUS_TICKET_APPRAISAL + cash
+}
+
+// Imunidade não pesa, mas EXISTE: recebê-la já tira a proposta do caso "doação pura".
+function offersAnything(trade: Trade, which: 'from' | 'to'): boolean {
   const grants = which === 'from' ? trade.fromImmunities : trade.toImmunities
   const transfers = which === 'from' ? trade.fromImmunityTransfers : trade.toImmunityTransfers
-  const holderId = which === 'from' ? trade.fromId : trade.toId
-  return (
-    props.reduce((sum, pos) => sum + appraiseProperty(state, pos), 0)
-    + tickets * BUS_TICKET_APPRAISAL
-    + appraiseGrants(grants)
-    + appraiseTransfers(state, holderId, transfers)
-  )
+  return (grants?.length ?? 0) > 0 || (transfers?.length ?? 0) > 0
 }
 
 export interface SideBalance {
-  /** Valor avaliado dos ativos que este lado entrega. */
-  given: number
-  /** Tudo o que este lado recebe — ativos do outro lado MAIS o dinheiro dele. */
-  received: number
-  /** Mínimo que este lado precisa receber para a proposta valer. */
-  required: number
-  /** Quanto falta para atingir o piso; `0` quando já atinge. */
+  /** Patrimônio deste lado antes da troca. */
+  before: number
+  /** Patrimônio depois dela, já contando o que recebe em valor duro. */
+  after: number
+  /** Mínimo com que este lado precisa ficar (⌈before × MIN_KEEP_RATIO⌉). */
+  floor: number
+  /** Quanto falta receber para a troca não esvaziá-lo; `0` quando não esvazia. */
   missing: number
-}
-
-// Entregar QUALQUER coisa — inclusive só dinheiro — e não receber absolutamente nada não é
-// troca, é doação. O piso de 50% sozinho não pega esse caso porque dinheiro pago de propósito
-// não pesa contra o pagador; sem esta linha, transferir o caixa inteiro ao líder continuaria
-// possível. Receber $1 já sai daqui e cai no piso normal — é o mesmo desenho do resto.
-function givesWithoutReceiving(assetsGiven: number, cashGiven: number, received: number): boolean {
-  return (assetsGiven > 0 || cashGiven > 0) && received === 0
+  /** Entrega valor duro e não recebe absolutamente nada — nem imunidade. */
+  donation: boolean
 }
 
 /**
- * As duas contas da proposta, lado a lado. A interface usa `missing` para explicar a recusa —
- * proposta bloqueada sem número é lida como bug.
+ * As duas contas da proposta, lado a lado. A interface usa `missing`/`donation` para
+ * explicar a recusa — proposta bloqueada sem motivo na tela é lida como bug.
  */
 export function tradeBalance(state: GameState, trade: Trade): { from: SideBalance; to: SideBalance } {
-  const fromAssets = assetsFrom(state, trade, 'from')
-  const toAssets = assetsFrom(state, trade, 'to')
-  const side = (given: number, received: number): SideBalance => {
-    const required = Math.ceil(given * MIN_COUNTERPART_RATIO)
-    return { given, received, required, missing: Math.max(0, required - received) }
+  const fromGiven = hardValue(state, trade, 'from')
+  const toGiven = hardValue(state, trade, 'to')
+  const side = (playerId: string, given: number, received: number, receivesImmunity: boolean): SideBalance => {
+    const before = worthOf(state, playerId)
+    const after = before - given + received
+    const floor = Math.ceil(before * MIN_KEEP_RATIO)
+    return {
+      before,
+      after,
+      floor,
+      missing: Math.max(0, floor - after),
+      donation: given > 0 && received === 0 && !receivesImmunity,
+    }
   }
   return {
-    from: side(fromAssets, toAssets + trade.toCash),
-    to: side(toAssets, fromAssets + trade.fromCash),
+    from: side(trade.fromId, fromGiven, toGiven, offersAnything(trade, 'to')),
+    to: side(trade.toId, toGiven, fromGiven, offersAnything(trade, 'from')),
   }
 }
 
 /** Predicado do §8.5, consumido por `validateTrade` — criação e aceitação passam pelo mesmo. */
 export function meetsCounterpart(state: GameState, trade: Trade): boolean {
   const { from, to } = tradeBalance(state, trade)
-  if (from.missing > 0 || to.missing > 0) return false
-  if (givesWithoutReceiving(from.given, trade.fromCash, from.received)) return false
-  if (givesWithoutReceiving(to.given, trade.toCash, to.received)) return false
-  return true
+  return from.missing === 0 && to.missing === 0 && !from.donation && !to.donation
 }

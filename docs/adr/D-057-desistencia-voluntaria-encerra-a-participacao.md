@@ -1,0 +1,21 @@
+# D-057 — Desistir é uma saída própria, e o que sobra volta ao banco
+
+**Data:** 2026-07-29 · **Status:** aceita
+
+**Decisão:** um jogador pode **encerrar a própria participação** na partida por vontade própria, sem precisar dever nada a ninguém. É a **desistência**, e ela não se confunde com a falência do §9.1:
+
+1. **Não exige insolvência.** A falência do §9.1 só é permitida a quem não consegue pagar nem liquidando tudo; a desistência é permitida a qualquer jogador não-eliminado, com qualquer caixa e qualquer patrimônio.
+2. **Só na própria vez.** O controle só está disponível para o jogador da vez, com a partida em andamento e sem pausa. Quem quer sair espera o próprio turno — é um turno de espera no máximo, e em troca nenhuma saída acontece no meio de um lance de leilão, de uma reação pendente ou da resposta de outro jogador.
+3. **Havendo empréstimo ativo, o credor herda** — ativos e passivos, exatamente como no §9.3. Desistir não é rota de fuga de dívida: quem emprestou continua recebendo o que a falência forçada lhe daria.
+4. **Não havendo empréstimo, tudo volta ao banco.** As propriedades voltam a ser **livres** (§7.2), sem construções, sem Hangar e sem hipoteca; o caixa restante é destruído. **Não há pregão de espólio.**
+5. **A eliminação em si é a mesma do §9.4**, e a partida termina pelo §9.5 quando sobrar um só jogador. Quem desiste entra na ordem de eliminação como qualquer falido e aparece na classificação final (D-038).
+
+**Por quê:** uma partida de oito jogadores dura o que dura, e a única saída que o jogo oferecia até aqui era ficar insolvente. Quem queria parar tinha de esperar quebrar — ou abandonar a aba, o que deixa a mesa esperando um assento que não vai voltar (§12.5 pausa por desconexão). Dar uma porta explícita transforma um abandono silencioso, que trava todo mundo, num evento do jogo que a mesa vê e do qual o motor sabe se recuperar.
+
+O destino dos bens é onde esta decisão **diverge da [D-031](D-031-espolio-do-falido-vai-a-pregao-simultaneo.md)**, e de propósito. A D-031 manda o espólio a pregão porque a falência forçada é o **desfecho de uma disputa**: alguém apertou alguém até quebrar, e o patrimônio que sai da mesa é o prêmio dessa pressão — leiloá-lo devolve à mesa o valor que a disputa criou. A desistência não tem disputa nem vencedor. Abrir pregão com o patrimônio de quem simplesmente foi embora criaria uma redistribuição gratuita, disparável pelo próprio beneficiário: bastaria combinar com um jogador que desiste na hora certa, com pouco caixa na mesa, para comprar meio tabuleiro a preço de pregão vazio. Devolver as propriedades ao banco, livres, é o resultado neutro — elas voltam ao fluxo de cair-e-comprar e ninguém ganha nada por outro ter saído.
+
+A exceção do empréstimo existe pelo motivo oposto: ali **há** uma relação criada por decisão de outro jogador, que arriscou caixa próprio contando com a garantia do §9.3. Se desistir apagasse o empréstimo, emprestar deixaria de ser risco calculado (§15) e passaria a ser risco de o devedor apertar um botão.
+
+**Refina:** [§9](../SRS.md) inteiro — a falência deixa de ser o único caminho de saída. Não revoga nada: o §9.1 continua exigindo insolvência para a falência forçada, e a [D-031](D-031-espolio-do-falido-vai-a-pregao-simultaneo.md) continua valendo para todo espólio que nasce de dívida.
+
+**Como aplicar:** o SRS ganha o §9.6 com a regra, e o §9.2 passa a dizer que o pregão de espólio é do falido por dívida. No motor, a desistência é um comando próprio do jogador da vez — não reusa o de falência, porque as guardas são diferentes (um exige insolvência, o outro proíbe qualquer exigência de saldo) — e compartilha com ele a eliminação, a limpeza de empréstimos, imunidades, efeitos e propostas, e a checagem de fim de jogo. As propriedades devolvidas ao banco voltam a contar como terrenos livres, então a desistência é gatilho de reavaliação do Pregão de Terrenos (§7.5) como a falência já era. Na interface o controle é **discreto e não fica ao lado do que se aperta por engano**: mora na própria linha do jogador no painel de participantes, visível só para o assento local, e **exige confirmação explícita** antes de aplicar — é a única ação do jogo que não tem desfazer.

@@ -1,29 +1,332 @@
 <!doctype html>
+<!--
+  Landing pública (051) — contrato de direção (Impeccable):
+  THESIS: a mesa está posta à meia-noite — a landing é a embalagem premium da mesa de
+  jogo, não um site sobre ela. Recusa o arranjo SaaS (hero centrado + grid de features).
+  OWN-WORLD: Atlas da Meia-Noite — tinta ink-900/950 com graticule, latão como único
+  acento estrutural, Bebas display condensada, Inter corpo, Roboto Slab numérico,
+  marcas de registro, régua de graduação, filete 1px, escritura como componente.
+  STORY: em 5s o visitante entende — jogo de tabuleiro imobiliário online entre amigos,
+  por sala privada e link; acredita vendo o produto real; age em "Jogar agora".
+  FIRST VIEWPORT: header fino; à esquerda eyebrow, wordmark 2 tons, tagline e par de
+  CTAs; à direita o tabuleiro real emoldurado como instrumento; embaixo a régua de
+  fatos (48 casas · 10 países · até 8 jogadores).
+  FORM: pedido precisamente especificado num mundo estabelecido — shape direto,
+  sem sorteio de conceito (brief fixa mundo e estrutura).
+-->
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Convite antigo chegava na raiz (/?room=...). Em produção quem traduz é a borda
+      // (vercel.json); este fallback cobre dev, preview e qualquer host estático.
+      // Não-módulo de propósito: roda no parse, antes de qualquer asset.
+      ;(function () {
+        var params = ['room', 'host', 'local', 'players', 'multi', 'sons', 'ui-lab', 'e2eCrashCasca', 'scenario']
+        var q = new URLSearchParams(location.search)
+        for (var i = 0; i < params.length; i++) {
+          if (q.has(params[i])) {
+            location.replace('/jogar' + location.search + location.hash)
+            return
+          }
+        }
+      })()
+    </script>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="application-name" content="Magnata Imobiliário" />
+    <title>Magnata Imobiliário — jogo de tabuleiro online com amigos</title>
     <meta
       name="description"
-      content="Jogue Magnata Imobiliário online com amigos: compre cidades, negocie propriedades e dispute partidas multiplayer em tempo real."
+      content="Jogo de tabuleiro online de propriedades, negociação e estratégia. Crie uma sala privada, compartilhe o link e jogue com 2 a 8 amigos em tempo real — direto no navegador, sem criar conta."
     />
-    <link rel="canonical" href="https://magnata-imobiliario.vercel.app/" />
+    <link rel="canonical" href="%SITE_URL%/" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="pt_BR" />
     <meta property="og:site_name" content="Magnata Imobiliário" />
-    <meta property="og:title" content="Magnata Imobiliário — Jogo de tabuleiro online" />
+    <meta property="og:title" content="Magnata Imobiliário — jogo de tabuleiro online com amigos" />
     <meta
       property="og:description"
-      content="Compre cidades, negocie propriedades e dispute partidas multiplayer em tempo real com seus amigos."
+      content="Compre cidades, negocie propriedades e domine o tabuleiro com seus amigos. Sala privada por convite, 2 a 8 jogadores, direto no navegador."
     />
-    <meta property="og:url" content="https://magnata-imobiliario.vercel.app/" />
-    <title>Magnata Imobiliário — Jogo de tabuleiro online</title>
+    <meta property="og:url" content="%SITE_URL%/" />
+    <meta property="og:image" content="%SITE_URL%/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Tabuleiro do Magnata Imobiliário durante uma partida" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Magnata Imobiliário — jogo de tabuleiro online com amigos" />
+    <meta
+      name="twitter:description"
+      content="Compre cidades, negocie propriedades e domine o tabuleiro com seus amigos. Sala privada por convite, 2 a 8 jogadores, direto no navegador."
+    />
+    <meta name="twitter:image" content="%SITE_URL%/og.jpg" />
+    <link rel="stylesheet" href="/src/marketing/marketing.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "Magnata Imobiliário",
+        "url": "%SITE_URL%/",
+        "inLanguage": "pt-BR",
+        "description": "Jogo de tabuleiro online de propriedades, negociação e estratégia para 2 a 8 jogadores humanos, em salas privadas por convite, jogado no navegador.",
+        "playMode": "MultiPlayer",
+        "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 2, "maxValue": 8 },
+        "gamePlatform": "Navegador web",
+        "genre": ["Jogo de tabuleiro", "Estratégia", "Negociação"],
+        "image": "%SITE_URL%/og.jpg"
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <a class="mk-skip" href="#conteudo">Pular para o conteúdo</a>
+
+    <header class="mk-header">
+      <div class="mk-container">
+        <a class="mk-brand" href="/" aria-label="Magnata Imobiliário — início">Magnata <b>Imobiliário</b></a>
+        <nav aria-label="Principal">
+          <a href="/como-jogar">Como jogar</a>
+          <a href="/faq">FAQ</a>
+          <a class="mk-btn mk-btn--brass" href="/jogar">Jogar agora</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="conteudo">
+      <!-- ============ Hero ============ -->
+      <section class="mk-hero" aria-labelledby="titulo">
+        <div class="mk-container">
+          <div>
+            <p class="mk-hero__eyebrow" data-arrive="1">Jogo de tabuleiro online · 2 a 8 jogadores</p>
+            <h1 id="titulo" data-arrive="1">Magnata <b>Imobiliário</b></h1>
+            <p class="mk-hero__tagline" data-arrive="2">
+              Compre cidades, negocie propriedades e domine o tabuleiro com seus amigos.
+            </p>
+            <p class="mk-hero__lede" data-arrive="2">
+              Partidas multiplayer em tempo real, direto no navegador, sem instalar nada e sem              criar conta. Você abre uma sala privada, manda o link, e a mesa se senta.
+            </p>
+            <p class="mk-hero__actions" data-arrive="3">
+              <a class="mk-btn mk-btn--brass" href="/jogar">Jogar agora</a>
+              <a class="mk-btn mk-btn--ghost" href="/como-jogar">Como jogar</a>
+            </p>
+            <ul class="mk-facts" data-arrive="4">
+              <li><b>48</b> casas no tabuleiro</li>
+              <li><b>10</b> países</li>
+              <li>até <b>8</b> jogadores</li>
+            </ul>
+          </div>
+          <figure class="mk-frame" data-arrive="3">
+            <img
+              src="/src/marketing/assets/tabuleiro.webp"
+              alt="Tabuleiro do Magnata Imobiliário no meio de uma partida: 48 casas ao redor da mesa, painéis dos jogadores e o log de eventos"
+              width="1440"
+              height="900"
+              fetchpriority="high"
+            />
+            <figcaption>Partida real — tabuleiro Cidades do Mundo</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- ============ Como funciona ============ -->
+      <section class="mk-section" aria-labelledby="como-funciona">
+        <div class="mk-container">
+          <hr class="mk-rule" aria-hidden="true" />
+          <h2 id="como-funciona">Como funciona</h2>
+          <p class="mk-section__intro">
+            Não existe fila nem matchmaking público: a partida acontece entre quem recebe o convite.
+          </p>
+          <ol class="mk-steps">
+            <li>
+              <h3>Crie a sala</h3>
+              <p>
+                Escolha seu nome, cor e avatar e abra a mesa. Você é o host: decide o
+                <b>Ritual de Largada</b> e dá início quando a turma chegar.
+              </p>
+            </li>
+            <li>
+              <h3>Compartilhe o link</h3>
+              <p>
+                A sala é <b>privada</b>: só entra quem tem o link. Mande no grupo, espere os
+                assentos acenderem, de 2 a 8 jogadores.
+              </p>
+            </li>
+            <li>
+              <h3>Dispute o tabuleiro</h3>
+              <p>
+                Compre cidades, construa, cobre aluguel e <b>negocie sem trilhos</b> até sobrar
+                um magnata na mesa.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- ============ Experiência do jogo ============ -->
+      <section class="mk-section" aria-labelledby="experiencia">
+        <div class="mk-container">
+          <hr class="mk-rule" aria-hidden="true" />
+          <h2 id="experiencia">O jogo dentro da caixa</h2>
+          <p class="mk-section__intro">
+            Um livro-razão do que a mesa oferece: tudo isso já está no tabuleiro.
+          </p>
+          <dl class="mk-ledger">
+            <div style="--ledger-hue: var(--color-group-yellow)">
+              <dt>Negociação livre</dt>
+              <dd>
+                Propostas com propriedades, dinheiro, Bus Tickets e até imunidade de aluguel.
+                O valor das coisas, quem decide é a mesa.
+              </dd>
+            </div>
+            <div style="--ledger-hue: var(--color-group-orange)">
+              <dt>Leilões ao vivo</dt>
+              <dd>
+                Recusou a compra? Abre o pregão. E no fim da partida os últimos terrenos livres
+                sobem juntos, num pregão simultâneo com cronômetro.
+              </dd>
+            </div>
+            <div style="--ledger-hue: var(--color-group-skyblue)">
+              <dt>Acaso &amp; Tesouro</dt>
+              <dd>
+                Dois baralhos, três raridades. Cartas na mão são privadas: o resto da mesa só
+                vê o contador.
+              </dd>
+            </div>
+            <div style="--ledger-hue: var(--color-group-green)">
+              <dt>Construção</dt>
+              <dd>
+                Casas, hotéis e arranha-céus. Dá pra começar a construir com uma cidade só do                país; completar o grupo destrava a escada inteira.
+              </dd>
+            </div>
+            <div style="--ledger-hue: var(--color-group-red)">
+              <dt>Empréstimos</dt>
+              <dd>
+                Capital entre jogadores, com juros cobrados a cada volta. Quem empresta assume                o risco e herda o espólio se o devedor quebrar.
+              </dd>
+            </div>
+            <div style="--ledger-hue: var(--color-group-purple)">
+              <dt>Ritual de Largada</dt>
+              <dd>
+                O host escolhe como a ordem nasce: leilão secreto de posições ou maior dado,
+                rolado à vista da mesa.
+              </dd>
+            </div>
+            <div style="--ledger-hue: var(--color-group-navy)">
+              <dt>Sem timer de turno</dt>
+              <dd>
+                Negociação boa tem o tempo dela. Ninguém corta a sua proposta no meio.
+              </dd>
+            </div>
+            <div style="--ledger-hue: var(--color-group-platinum)">
+              <dt>Queda não pune</dt>
+              <dd>
+                Caiu a conexão? A partida pausa e espera. Volte pelo mesmo link, ou de outro                aparelho, com o código de reentrada do seu assento.
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- ============ Produto real ============ -->
+      <section class="mk-section" aria-labelledby="produto">
+        <div class="mk-container">
+          <hr class="mk-rule" aria-hidden="true" />
+          <h2 id="produto">A mesa de verdade</h2>
+          <p class="mk-section__intro">
+            Sem mockup: estas são telas do jogo rodando, com uma mesa de exemplo.
+          </p>
+          <div class="mk-shots">
+            <figure class="mk-frame">
+              <img
+                src="/src/marketing/assets/lobby.webp"
+                alt="Lobby de uma sala do Magnata Imobiliário com três jogadores sentados, aguardando o host iniciar"
+                width="1440"
+                height="900"
+                loading="lazy"
+              />
+              <figcaption>A sala aberta — cada convidado escolhe cor e avatar</figcaption>
+            </figure>
+            <figure class="mk-frame">
+              <img
+                src="/src/marketing/assets/negociacao.webp"
+                alt="Compositor de negociação do Magnata Imobiliário com uma proposta sendo montada entre dois jogadores"
+                width="1440"
+                height="900"
+                loading="lazy"
+              />
+              <figcaption>O balcão de negociação — proposta livre, lado a lado</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Temas ============ -->
+      <section class="mk-section" aria-labelledby="temas">
+        <div class="mk-container">
+          <hr class="mk-rule" aria-hidden="true" />
+          <h2 id="temas">O primeiro universo</h2>
+          <div class="mk-themes">
+            <article class="mk-deed" aria-label="Tabuleiro Cidades do Mundo">
+              <div class="mk-deed__stripe" aria-hidden="true">
+                <i style="background: var(--color-group-brown)"></i><i style="background: var(--color-group-skyblue)"></i><i style="background: var(--color-group-pink)"></i><i style="background: var(--color-group-purple)"></i><i style="background: var(--color-group-orange)"></i><i style="background: var(--color-group-red)"></i><i style="background: var(--color-group-yellow)"></i><i style="background: var(--color-group-green)"></i><i style="background: var(--color-group-navy)"></i><i style="background: var(--color-group-platinum)"></i>
+              </div>
+              <div class="mk-deed__body">
+                <h3>Cidades do Mundo</h3>
+                <p>
+                  28 cidades em 10 países, da Roma de entrada ao super-luxo de Dubai, mais
+                  aeroportos, utilidades e o espaço Bus Ticket, em 48 casas.
+                </p>
+                <ul class="mk-deed__cities">
+                  <li style="--city-hue: var(--color-group-brown)">Roma</li>
+                  <li style="--city-hue: var(--color-group-skyblue)">Cairo</li>
+                  <li style="--city-hue: var(--color-group-pink)">Tóquio</li>
+                  <li style="--city-hue: var(--color-group-purple)">Madri</li>
+                  <li style="--city-hue: var(--color-group-orange)">Berlim</li>
+                  <li style="--city-hue: var(--color-group-red)">Pequim</li>
+                  <li style="--city-hue: var(--color-group-yellow)">Rio</li>
+                  <li style="--city-hue: var(--color-group-green)">Nova York</li>
+                  <li style="--city-hue: var(--color-group-navy)">Paris</li>
+                  <li style="--city-hue: var(--color-group-platinum)">Dubai</li>
+                </ul>
+              </div>
+            </article>
+            <aside class="mk-next-board">
+              <h3>Próximos tabuleiros</h3>
+              <p>
+                O tema é desacoplado das regras: a base foi construída para receber novos
+                universos. Quando um novo tabuleiro estrear, será por aqui.
+              </p>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ CTA final ============ -->
+      <section class="mk-finale" aria-labelledby="convite">
+        <div class="mk-container">
+          <h2 id="convite">A mesa está posta. <b>Convide seus amigos.</b></h2>
+          <p>
+            Crie a sala em segundos, mande o link no grupo e comece a partida: de 2 a 8
+            jogadores, direto no navegador.
+          </p>
+          <a class="mk-btn mk-btn--brass" href="/jogar">Criar minha sala</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="mk-footer">
+      <div class="mk-container">
+        <a class="mk-brand" href="/">Magnata <b>Imobiliário</b></a>
+        <nav aria-label="Rodapé">
+          <a href="/jogar">Jogar</a>
+          <a href="/como-jogar">Como jogar</a>
+          <a href="/faq">Perguntas frequentes</a>
+        </nav>
+        <p class="mk-footer__note">
+          Magnata Imobiliário é um jogo de tabuleiro online independente, jogado no navegador.
+        </p>
+      </div>
+    </footer>
   </body>
 </html>

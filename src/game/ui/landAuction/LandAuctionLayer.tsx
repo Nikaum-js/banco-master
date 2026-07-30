@@ -1,7 +1,11 @@
 // Pregão de escassez de TERRENOS (031, §7.3) — modal autônomo (lê game.landAuction).
 // Visual baseado no LEILÃO COMUM (003/ModalLayer): avatar = flag circular do país (ou SquareIcon),
 // header com a cor do grupo, tabela de aluguel canônica e rodapé Preço/Casa/Hotel.
-// Cada lote é um deed-card com seu PRÓPRIO cronômetro de 8s (barra) — lance reinicia só o lote dele.
+// Cada lote é um deed-card com seu PRÓPRIO cronômetro (barra + contagem regressiva) — lance
+// reinicia só o lote dele. A janela é `THEME.LAND_AUCTION_SECONDS`, hoje 24s (D-060): era 8s,
+// e foi a pressa que essa janela criava — sem prazo visível — que motivou a remoção do
+// mecanismo na D-059. O prazo mostrado deriva do `deadline` AUTORITATIVO do estado, corrigido
+// pelo offset de relógio do host, nunca de um timer local.
 // pt-BR. NÃO é o leilão de casas (D-022).
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'

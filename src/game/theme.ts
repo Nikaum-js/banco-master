@@ -45,10 +45,13 @@ export const THEME = {
 
   JAIL_FINE: 50, // multa de prisão (§7)
 
-  // Leilão de escassez de TERRENOS (031, §7.3): dispara quando restam ≤ este nº de
-  // terrenos sem dono (e ≥2 vivos). Cada lote tem seu PRÓPRIO cronômetro (fecha sozinho).
-  LAND_AUCTION_THRESHOLD: 3,
-  LAND_AUCTION_SECONDS: 8, // janela por lote (reinicia só com lance NAQUELE lote)
+  // Pregão simultâneo (§7.3) — DUAS procedências: escassez de terrenos (§7.5) e espólio do
+  // falido (§9.2). Cada lote tem seu PRÓPRIO cronômetro e fecha sozinho.
+  LAND_AUCTION_THRESHOLD: 3, // escassez: dispara quando restam ≤ este nº de terrenos sem dono (e ≥2 vivos)
+  // 24s, não 8s (D-060): oito segundos é menos que o tempo de ler o nome da cidade, achá-la no
+  // tabuleiro e conferir o próprio caixa — o jogador não decidia, reagia. Foi a queixa que
+  // motivou a D-059 a remover o mecanismo inteiro; a D-060 o traz de volta consertando ISTO.
+  LAND_AUCTION_SECONDS: 24, // janela por lote (reinicia só com lance NAQUELE lote)
 
   // D-003 (Speed Die) SUSPENSO pós-playtest: gerava confusão (3º dado + Mr.Magnata/
   // Ônibus/Triple). false = jogo rola sempre 2 dados. Reversível: voltar a true

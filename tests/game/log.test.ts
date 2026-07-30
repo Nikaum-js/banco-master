@@ -58,7 +58,7 @@ describe('Log de eventos — emissões do núcleo (021/040)', () => {
     g.turn.pendingResolve = true
     g.resolution = { kind: 'debt', amount: 50, creditorId: 'p2' }
     const r = payDebt(g)
-    expect(r.log.at(-1)).toEqual({ kind: 'debt-paid', who: 'p1', amount: 50 })
+    expect(r.log.at(-1)).toEqual({ kind: 'debt-paid', who: 'p1', amount: 50, creditorId: 'p2' }) // `creditorId`: D-063
   })
 
   it('SC-001: declareBankruptcy loga kind "bankruptcy"', () => {

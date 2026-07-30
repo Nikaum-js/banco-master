@@ -9,6 +9,7 @@ import { cityLevel } from '../economy/construction'
 import { transferKeepFee } from '../economy/mortgage'
 import { isTempImmune } from '../economy/tempEffects'
 import { netWorth } from './effects'
+import { logEvent } from '../log'
 
 function priceOf(sq: Square): number {
   return 'price' in sq ? sq.price : 0
@@ -54,6 +55,8 @@ export function acquire(state: GameState, attackerId: string, pos: number): bool
   ownerP.cash += price // compensação ao dono (a taxa de hipoteca vai ao banco)
   state.titles[pos].ownerId = attackerId // mortgaged acompanha
   state.notice = { kind: 'hostile-takeover', victimId: owner, attackerId, pos } // 030, §12.2
+  // O `notice` é efêmero (a UI o dispensa); o histórico precisa do fato, com o valor (D-063).
+  logEvent(state, { kind: 'hostile-takeover', who: attackerId, pos, amount: price + fee, victimId: owner })
   return true
 }
 
@@ -70,7 +73,9 @@ export function canEvict(state: GameState, attackerId: string, pos: number): boo
 // Despejo: demole 1 casa (não hotel) de outro jogador; volta ao banco; o dono não recebe nada.
 export function evict(state: GameState, attackerId: string, pos: number): boolean {
   if (!canEvict(state, attackerId, pos)) return false
+  const owner = ownerOf(state, pos)
   state.titles[pos].houses -= 1
+  logEvent(state, { kind: 'evict', who: attackerId, pos, victimId: owner! })
   return true
 }
 
@@ -86,8 +91,12 @@ export function audit(state: GameState, attackerId: string, targetId: string, po
   const target = state.players.find((p) => p.id === targetId)!
 
   const owed = Math.round(netWorth(state, targetId) * 0.1)
-  const paid = Math.min(target.cash, owed) // sem caixa → paga o que houver (sem falir nesta versão)
+  // Truncagem MANTIDA de propósito (§9.1/D-061): o credor é o POTE, não um jogador — ninguém é
+  // privado de receita a que a regra lhe deu direito, e cobrança incondicional que pode falir
+  // transforma azar em eliminação. O que mudou é que agora o fato existe.
+  const paid = Math.min(target.cash, owed) // sem caixa → paga o que houver
   target.cash -= paid
   ports.onPayToCenter(state, paid) // → pote (§13.4)
+  logEvent(state, { kind: 'audit', who: attackerId, targetId, amount: paid })
   return true
 }

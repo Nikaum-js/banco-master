@@ -153,7 +153,7 @@ describe('Empréstimos — juros no GO e quitação (US2)', () => {
     chargeLoanInterest(g, 'p1') // interest 100 > 40
     expect(g.players[0].cash).toBe(0)
     expect(g.players[1].cash).toBe(1040) // recebeu o parcial
-    expect(g.resolution).toEqual({ kind: 'debt', amount: 60, creditorId: 'p2', origin: 'loan-interest' })
+    expect(g.resolution).toEqual({ kind: 'debt', amount: 60, creditorId: 'p2', debtorId: 'p1', cause: 'loan-interest', origin: 'loan-interest' })
   })
 
   it('SC-002: advance cruzando o GO dispara a cobrança via porta afterPassGo', () => {
@@ -314,7 +314,7 @@ describe('Empréstimos — vencimento sem caixa (US2, §15.6)', () => {
     chargeLoanInterest(g, 'p1') // devido 600
     expect(g.players[0].cash).toBe(0)
     expect(g.players[1].cash).toBe(1250)
-    expect(g.resolution).toEqual({ kind: 'debt', amount: 350, creditorId: 'p2', origin: 'loan-due' })
+    expect(g.resolution).toEqual({ kind: 'debt', amount: 350, creditorId: 'p2', debtorId: 'p1', cause: 'loan-due', origin: 'loan-due' })
     expect(g.log.some((e) => e.kind === 'loan-due-short' && e.amount === 250 && e.shortfall === 350)).toBe(true)
   })
 
@@ -324,7 +324,7 @@ describe('Empréstimos — vencimento sem caixa (US2, §15.6)', () => {
     expect(g.loans).toHaveLength(0)
     expect(activeLoanFor(g, 'p1')).toBeUndefined()
     chargeLoanInterest(g, 'p1') // GO seguinte: nada a cobrar
-    expect(g.resolution).toEqual({ kind: 'debt', amount: 350, creditorId: 'p2', origin: 'loan-due' })
+    expect(g.resolution).toEqual({ kind: 'debt', amount: 350, creditorId: 'p2', debtorId: 'p1', cause: 'loan-due', origin: 'loan-due' })
   })
 
   it('FR-008: a dívida do vencimento é pagável depois de levantar caixa', () => {
@@ -382,7 +382,7 @@ describe('Empréstimos — dívida de juros × resolução da casa (colisão do 
 
   it('resolvePending NÃO sobrescreve a dívida de juros em voo; a casa resolve após quitar', () => {
     const g = interestDebtOnLanding()
-    expect(g.resolution).toEqual({ kind: 'debt', amount: 60, creditorId: 'p2', origin: 'loan-interest' })
+    expect(g.resolution).toEqual({ kind: 'debt', amount: 60, creditorId: 'p2', debtorId: 'p1', cause: 'loan-interest', origin: 'loan-interest' })
     expect(g.players[1].cash).toBe(2000 + 240) // credor recebeu o parcial
 
     const ctxE: TurnCtx = { rng: () => 0, ports: defaultPorts, resolve: economyResolve }

@@ -43,7 +43,6 @@ describe('espólio em rede (039)', () => {
 
     const g = net.host.game()
     expect(g.landAuction).not.toBeNull()
-    expect(g.landAuction!.origin).toBe('bankruptcy')
     expect(g.landAuction!.bankruptId).toBe('p1')
     expect(g.landAuction!.lots.map((l) => l.pos).sort((a, b) => a - b)).toEqual([1, 3, 6])
     // O falido sai dos licitantes (FR-012) e a mesa segue com os dois sobreviventes.

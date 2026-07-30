@@ -27,7 +27,10 @@ export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
 
   const payer = state.players.find((p) => p.id === playerId)
   if (payer && payer.cash < amount) {
-    state.resolution = { kind: 'debt', amount, creditorId: owner } // dívida pendente (008) — pagar/falir
+    // dívida pendente (008) — pagar/falir. `debtorId`/`cause` (D-061/D-063): o devedor deixa de
+    // ser implícito e a abertura deixa de ser muda.
+    state.resolution = { kind: 'debt', amount, creditorId: owner, debtorId: playerId, cause: 'rent' }
+    logEvent(state, { kind: 'debt-open', who: playerId, amount, creditorId: owner, cause: 'rent' })
     return { done: false }
   }
   if (payer) payer.cash -= amount

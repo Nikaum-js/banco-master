@@ -38,7 +38,7 @@ export function normalizeLog(log: unknown[]): LogEntry[] {
 // inclusive o marcador sintético que a suíte de conformidade do Transport usa pra provar
 // que `saveRoom` não apaga a partida em andamento (`tests/net/conformance.test.ts`), que
 // não é um `GameState` e não deve ganhar campo que nunca pediu.
-export function normalizeGame(raw: unknown): Partial<Pick<GameState, 'eliminationOrder' | 'round' | 'startedAt' | 'endedAt'>> {
+export function normalizeGame(raw: unknown): Partial<Pick<GameState, 'eliminationOrder' | 'round' | 'startedAt' | 'endedAt' | 'obligations' | 'landAuctionArmed'>> {
   const g = (raw ?? {}) as Partial<GameState>
   if (!Array.isArray(g.players)) return {}
   return {
@@ -46,5 +46,12 @@ export function normalizeGame(raw: unknown): Partial<Pick<GameState, 'eliminatio
     round: typeof g.round === 'number' ? g.round : 0,
     startedAt: typeof g.startedAt === 'number' ? g.startedAt : 0,
     endedAt: typeof g.endedAt === 'number' ? g.endedAt : null,
+    // D-061 — snapshot anterior não tem fila: ausente é `[]`, que é a semântica de antes
+    // (obrigação curta era apagada, então nunca havia nada devido).
+    obligations: Array.isArray(g.obligations) ? g.obligations : [],
+    // D-060 — snapshot gravado entre a D-059 e a D-060 não tem a trava de episódio. Ausente
+    // lê-se como `true` (armado), que é o valor de partida nova e o CONSERVADOR: no pior caso
+    // o pregão de escassez dispara uma vez a mais, nunca uma a menos.
+    landAuctionArmed: typeof g.landAuctionArmed === 'boolean' ? g.landAuctionArmed : true,
   }
 }

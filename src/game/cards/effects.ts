@@ -10,6 +10,8 @@ import type { TurnPorts } from '../turn/resolution'
 import { advance, JAIL_POS } from '../turn/turnMachine'
 import { buildCost, cityLevel, HANGAR_COST } from '../economy/construction'
 import { addTempEffect } from '../economy/tempEffects'
+import { chargePlayer } from '../economy/obligation'
+import { logEvent } from '../log'
 
 type Handler = (state: GameState, playerId: string, ports: TurnPorts) => void
 
@@ -38,23 +40,31 @@ export function netWorth(state: GameState, playerId: string): number {
 }
 
 const handlers: Record<string, Handler> = {
-  boomEconomico: (s) => {
-    for (const p of s.players) if (!p.eliminated) p.cash += 200
+  boomEconomico: (s, id) => {
+    for (const p of s.players) {
+      if (p.eliminated) continue
+      p.cash += 200
+      // `card-immediate` registra só o delta de QUEM SACOU; sem esta linha os demais recebiam
+      // $200 sem nenhum fato no histórico (D-063).
+      if (p.id !== id) logEvent(s, { kind: 'card-collect', who: p.id, name: 'Boom Economico', delta: 200, counterpartId: 'bank' })
+    }
   },
   erroBanco: (s, id) => {
     pl(s, id).cash += 200
   },
-  // Sem caixa suficiente → paga o que houver, sem abrir dívida/falência por esta via
-  // (mesmo padrão de `audit()`/Auditoria Fiscal — ofensivas.ts, 016). Evita saldo
-  // negativo fora do fluxo de dívida (FR-004a da simulação, 036).
+  // §10.6/D-061 — o credor é um JOGADOR, então a obrigação NÃO trunca: cada adversário paga o
+  // que tem e o restante fica devido, entrando no fluxo de dívida do §9.1 (fora da vez dele).
+  //
+  // Antes desta decisão isto era `Math.min(50, p.cash)` e a diferença simplesmente deixava de
+  // existir: um adversário com $43 entregava $43 e os $7 evaporavam — não iam ao banco, não
+  // ficavam devidos. O aniversariante recebia menos do que a carta prometia e nada na tela
+  // explicava por quê. A truncagem estava documentada (FR-004a da 036) como forma de garantir
+  // "sem saldo negativo fora do fluxo de dívida"; a garantia era boa, o MEIO estava errado.
   aniversario: (s, id) => {
-    const me = pl(s, id)
     for (const p of s.players) {
-      if (p.id !== id && !p.eliminated) {
-        const paid = Math.min(50, p.cash)
-        p.cash -= paid
-        me.cash += paid
-      }
+      if (p.id === id || p.eliminated) continue
+      const paid = chargePlayer(s, p.id, id, 50, 'obligation')
+      if (paid > 0) logEvent(s, { kind: 'card-collect', who: p.id, name: 'Aniversario', delta: -paid, counterpartId: id })
     }
   },
   honorarios: (s, id, ports) => {
@@ -63,13 +73,20 @@ const handlers: Record<string, Handler> = {
     p.cash -= paid
     ports.onPayToCenter(s, paid)
   },
-  criseImobiliaria: (s, _id, ports) => {
+  // Credor é o POTE, não um jogador: truncagem MANTIDA por decisão explícita (§9.1/D-061) —
+  // ninguém é privado de receita a que a regra lhe deu direito, e cobrança incondicional que
+  // pode falir transforma azar em eliminação. O que mudou é que os OUTROS jogadores deixam de
+  // pagar em silêncio (D-063).
+  criseImobiliaria: (s, id, ports) => {
     for (const p of s.players) {
       if (p.eliminated) continue
       const owed = Math.round(netWorth(s, p.id) * 0.05)
       const paid = Math.min(owed, p.cash)
       p.cash -= paid
       ports.onPayToCenter(s, paid)
+      if (p.id !== id && paid > 0) {
+        logEvent(s, { kind: 'card-collect', who: p.id, name: 'Crise Imobiliaria', delta: -paid, counterpartId: 'bank' })
+      }
     }
   },
   consertoImoveis: (s, id, ports) => {

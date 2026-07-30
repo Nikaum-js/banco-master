@@ -48,8 +48,7 @@ export const VISUAL_LAB_CASES = [
   { id: 'trade-received', category: 'Negociação', label: 'Proposta recebida', description: 'Resumo válido pronto para aceitar ou recusar.', surface: 'trade' },
   { id: 'trade-invalid', category: 'Negociação', label: 'Proposta inválida', description: 'Estado alterado depois do envio da proposta.', surface: 'trade' },
 
-  { id: 'land-auction', category: 'Pregão', label: 'Leilão de Escassez', description: 'Três lotes concorrendo ao mesmo tempo.', surface: 'land-auction' },
-  { id: 'estate-auction', category: 'Pregão', label: 'Espólio de falido', description: 'Pregão com origem de falência.', surface: 'land-auction' },
+  { id: 'estate-auction', category: 'Pregão', label: 'Espólio de falido', description: 'Três lotes do falido concorrendo ao mesmo tempo.', surface: 'land-auction' },
 
   { id: 'debt-short', category: 'HUD de decisão', label: 'Dívida sem caixa', description: 'Cobertura parcial, empréstimo e falência.', surface: 'hud' },
   { id: 'debt-payable', category: 'HUD de decisão', label: 'Dívida pagável', description: 'Caixa suficiente para quitar imediatamente.', surface: 'hud' },
@@ -204,24 +203,11 @@ export function prepareVisualLabCase(id: VisualLabCaseId): void {
       }]
       useTradeUI.setState({ open: false, selectedProposalId: 1 })
       break
-    case 'land-auction':
-      for (const pos of [33, 34, 35]) setTitle(game, pos, null)
-      game.landAuction = {
-        origin: 'scarcity',
-        bankruptId: null,
-        bidders: ['p1', 'p2', 'p3'],
-        lots: [
-          { pos: 33, currentBid: 240, highBidder: 'p1', deadline: now + 7_800 },
-          { pos: 34, currentBid: 0, highBidder: null, deadline: now + 6_900 },
-          { pos: 35, currentBid: 320, highBidder: 'p2', deadline: now + 5_600 },
-        ],
-      }
-      break
     case 'estate-auction':
       for (const pos of [25, 26, 27]) setTitle(game, pos, null)
       game.landAuction = {
-        origin: 'bankruptcy',
         bankruptId: 'p3',
+        origin: 'bankruptcy',
         bidders: ['p1', 'p2'],
         lots: [
           { pos: 25, currentBid: 310, highBidder: 'p2', deadline: now + 7_600 },

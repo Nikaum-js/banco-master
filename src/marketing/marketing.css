@@ -1,0 +1,1050 @@
+/* =====================================================================
+   Folha das páginas públicas (051) — landing, como-jogar, faq, 404.
+   Mundo visual: "Atlas da Meia-Noite" (ver DESIGN.md). Os tokens vêm do
+   subset em tokens.css; aqui mora só composição e componente de marketing.
+   Nenhum import do jogo: o bundle destas páginas é CSS + fontes, JS zero.
+   ===================================================================== */
+@import "./tokens.css";
+
+@import "@fontsource/bebas-neue/400.css";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/roboto-slab";
+
+/* ---------- Base ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  color-scheme: dark;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth-scroll entra no mesmo freio dos tokens de movimento: sob preferência de
+   movimento reduzido, o pulo do skip-link e das âncoras é instantâneo. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  background:
+    radial-gradient(ellipse 52% 74% at 50% 50%, rgb(11 25 39 / 0.34) 0%, transparent 76%),
+    var(--color-ink-900);
+  color: var(--color-starlight);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  font-size: 1rem;
+  line-height: 1.6;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100svh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Graticule — a mesma malha de carta náutica do jogo (grade maior + grade fina). */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgb(238 242 251 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(238 242 251 / 0.05) 1px, transparent 1px),
+    linear-gradient(to right, rgb(238 242 251 / 0.022) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(238 242 251 / 0.022) 1px, transparent 1px);
+  background-size: 168px 168px, 168px 168px, 42px 42px, 42px 42px;
+}
+
+/* Vinheta + aurora de latão no horizonte superior. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 90% 50% at 50% -10%, rgb(217 166 80 / 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse at center, transparent 40%, rgb(2 6 16 / 0.5) 100%);
+}
+
+main,
+header.mk-header,
+footer.mk-footer {
+  position: relative;
+  z-index: 1;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  color: var(--color-starlight);
+}
+
+p {
+  max-width: 65ch;
+}
+
+a {
+  color: var(--color-brass-glow);
+  text-decoration-color: color-mix(in srgb, var(--color-brass) 55%, transparent);
+  text-underline-offset: 3px;
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+a:hover {
+  color: var(--color-starlight);
+}
+
+::selection {
+  background-color: var(--color-brass);
+  color: var(--color-ink-950);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brass);
+  outline-offset: 2px;
+  border-radius: var(--radius-sharp);
+}
+
+.mk-skip {
+  position: absolute;
+  left: 1rem;
+  top: -3rem;
+  z-index: 50;
+  padding: 0.6rem 1rem;
+  background: var(--color-ink-950);
+  border: 1px solid var(--color-brass);
+  border-radius: var(--radius-sharp);
+  color: var(--color-brass-glow);
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: top var(--motion-fast) var(--ease-standard);
+}
+
+.mk-skip:focus-visible {
+  top: 1rem;
+}
+
+.mk-container {
+  width: min(100% - 2.5rem, 68rem);
+  margin-inline: auto;
+}
+
+/* Etiqueta pequena com letterspacing (o `.label` do jogo). */
+.mk-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-mono);
+  color: var(--color-starlight-muted);
+}
+
+/* ---------- Botões — o vocabulário tátil do jogo (ui-button) ---------- */
+.mk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 1.4rem;
+  border-radius: var(--radius-sharp);
+  border: 1px solid;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform var(--motion-base) var(--ease-emphasis),
+    box-shadow var(--motion-base) var(--ease-standard),
+    background-color var(--motion-base) var(--ease-standard),
+    border-color var(--motion-base) var(--ease-standard);
+}
+
+/* Primário: o latão sólido da rolagem de dados — reservado ao gesto-herói. */
+.mk-btn--brass {
+  color: var(--color-ink-950);
+  border-color: color-mix(in srgb, var(--color-brass-glow) 68%, white);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-brass-glow) 45%, white) 0%,
+    var(--color-brass-glow) 42%,
+    var(--color-brass) 70%,
+    var(--color-brass-soft) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    0 3px 0 color-mix(in srgb, var(--color-brass-soft) 64%, var(--color-ink-950)),
+    0 12px 24px -18px color-mix(in srgb, var(--color-brass) 74%, transparent);
+}
+
+.mk-btn--brass:hover {
+  color: var(--color-ink-950);
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.34),
+    0 3px 0 color-mix(in srgb, var(--color-brass-soft) 68%, var(--color-ink-950)),
+    0 0 0 1px color-mix(in srgb, var(--color-brass) 34%, transparent),
+    0 16px 32px -18px color-mix(in srgb, var(--color-brass) 82%, transparent);
+}
+
+.mk-btn--brass:active {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 2px 5px rgb(4 7 15 / 0.38),
+    0 1px 0 color-mix(in srgb, var(--color-brass-soft) 60%, var(--color-ink-950));
+}
+
+/* Secundário: contorno de tinta com latão contido. */
+.mk-btn--ghost {
+  color: var(--color-brass-glow);
+  border-color: color-mix(in srgb, var(--color-brass) 42%, var(--color-ink-500));
+  background: color-mix(in srgb, var(--color-brass) 6%, var(--color-ink-950));
+}
+
+.mk-btn--ghost:hover {
+  color: var(--color-brass-glow);
+  border-color: var(--color-brass);
+  background: color-mix(in srgb, var(--color-brass) 14%, var(--color-ink-900));
+  transform: translateY(-2px);
+}
+
+@media (pointer: coarse) {
+  .mk-btn,
+  .mk-header nav a {
+    min-height: 44px;
+  }
+}
+
+/* ---------- Header ---------- */
+.mk-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-ink-500) 72%, transparent);
+  background: color-mix(in srgb, var(--color-ink-950) 62%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.mk-header .mk-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.5rem;
+}
+
+.mk-brand {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--color-starlight);
+  white-space: nowrap;
+}
+
+.mk-brand b {
+  font-weight: 400;
+  color: var(--color-brass);
+}
+
+.mk-header nav {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.mk-header nav a:not(.mk-btn) {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.7rem;
+  border-radius: var(--radius-sharp);
+  color: var(--color-starlight-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.mk-header .mk-btn {
+  white-space: nowrap;
+}
+
+.mk-header nav a:not(.mk-btn):hover,
+.mk-header nav a:not(.mk-btn)[aria-current="page"] {
+  color: var(--color-starlight);
+}
+
+.mk-header nav a[aria-current="page"] {
+  box-shadow: inset 0 -2px 0 var(--color-brass);
+}
+
+.mk-header .mk-btn {
+  min-height: 2.25rem;
+  padding: 0.3rem 1rem;
+  font-size: 0.95rem;
+}
+
+/* ---------- Hero ---------- */
+.mk-hero {
+  padding-block: clamp(3rem, 8vh, 5.5rem) clamp(2.5rem, 6vh, 4rem);
+}
+
+.mk-hero .mk-container {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 4rem);
+}
+
+.mk-hero__eyebrow {
+  color: var(--color-brass);
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.mk-hero h1 {
+  margin-top: 0.75rem;
+  font-size: clamp(3.1rem, 7.5vw, 5.5rem);
+  line-height: 0.88;
+}
+
+.mk-hero h1 b {
+  font-weight: 400;
+  color: var(--color-brass);
+}
+
+.mk-hero__tagline {
+  margin-top: 1.25rem;
+  font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+  line-height: 1.5;
+  color: var(--color-starlight);
+  max-width: 34ch;
+  text-wrap: balance;
+}
+
+.mk-hero__lede {
+  margin-top: 0.85rem;
+  font-size: 0.92rem;
+  color: var(--color-starlight-muted);
+  max-width: 44ch;
+}
+
+.mk-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+/* Régua de fatos: graduação de carta náutica, não fileira de stat-tiles. */
+.mk-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 2rem;
+  margin-top: 2.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-ink-500) 85%, transparent);
+  background:
+    repeating-linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-brass) 28%, transparent) 0 1px,
+        transparent 1px 14px
+      )
+      top / 100% 3px no-repeat;
+  list-style: none;
+  padding-left: 0;
+}
+
+.mk-facts li {
+  font-family: var(--font-slab);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: var(--color-starlight-muted);
+}
+
+.mk-facts b {
+  font-weight: 600;
+  color: var(--color-brass-glow);
+}
+
+/* Moldura de instrumento para o produto real: marcas de registro nos cantos
+   (as mesmas do board-square do jogo) + régua de graduação na borda. */
+.mk-frame {
+  position: relative;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--color-brass) 26%, var(--color-ink-500));
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-ink-950) 72%, transparent);
+  box-shadow: var(--shadow-lift);
+}
+
+.mk-frame::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  pointer-events: none;
+  --tick: color-mix(in srgb, var(--color-brass) 38%, transparent);
+  background:
+    linear-gradient(var(--tick), var(--tick)) left top / 10px 1px,
+    linear-gradient(var(--tick), var(--tick)) left top / 1px 10px,
+    linear-gradient(var(--tick), var(--tick)) right top / 10px 1px,
+    linear-gradient(var(--tick), var(--tick)) right top / 1px 10px,
+    linear-gradient(var(--tick), var(--tick)) left bottom / 10px 1px,
+    linear-gradient(var(--tick), var(--tick)) left bottom / 1px 10px,
+    linear-gradient(var(--tick), var(--tick)) right bottom / 10px 1px,
+    linear-gradient(var(--tick), var(--tick)) right bottom / 1px 10px;
+  background-repeat: no-repeat;
+}
+
+.mk-frame img {
+  border-radius: var(--radius-sharp);
+  border: 1px solid var(--color-ink-abyss);
+}
+
+.mk-frame figcaption {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.25rem 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+  color: var(--color-starlight-muted);
+}
+
+.mk-frame figcaption::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-brass);
+  flex: 0 0 auto;
+}
+
+/* ---------- Seções ---------- */
+.mk-section {
+  padding-block: clamp(3rem, 8vh, 5.5rem);
+}
+
+.mk-section > .mk-container > h2 {
+  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+  line-height: 1;
+}
+
+.mk-section__intro {
+  margin-top: 0.85rem;
+  color: var(--color-starlight-muted);
+  font-size: 0.95rem;
+}
+
+/* Filete de seção: linha com um tick de latão — o OrnamentRule da entrada. */
+.mk-rule {
+  display: block;
+  width: 4.5rem;
+  height: 3px;
+  margin-bottom: 1.1rem;
+  border: 0;
+  background:
+    linear-gradient(var(--color-brass), var(--color-brass)) left center / 1.4rem 3px no-repeat,
+    linear-gradient(color-mix(in srgb, var(--color-ink-400) 80%, transparent), color-mix(in srgb, var(--color-ink-400) 80%, transparent))
+      left center / 100% 1px no-repeat;
+}
+
+/* ---------- Como funciona: linha de embarque em 3 paradas ---------- */
+.mk-steps {
+  counter-reset: parada;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2.25rem;
+  margin-top: 2.5rem;
+  padding-left: 0;
+  list-style: none;
+  position: relative;
+}
+
+/* A rota pontilhada que liga as paradas (o tracejado das rotas do palco de entrada). */
+.mk-steps::before {
+  content: "";
+  position: absolute;
+  top: 1.05rem;
+  left: calc(16.66% );
+  right: calc(16.66%);
+  border-top: 2px dashed color-mix(in srgb, var(--color-brass) 34%, transparent);
+}
+
+.mk-steps li {
+  position: relative;
+  min-width: 0;
+}
+
+.mk-steps li::before {
+  counter-increment: parada;
+  content: counter(parada);
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--color-brass) 56%, var(--color-ink-500));
+  background: color-mix(in srgb, var(--color-brass) 8%, var(--color-ink-950));
+  box-shadow: 0 0 0 6px var(--color-ink-900);
+  color: var(--color-brass-glow);
+  font-family: var(--font-slab);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.mk-steps h3 {
+  margin-top: 0.9rem;
+  font-size: 1.3rem;
+  letter-spacing: 0.05em;
+}
+
+.mk-steps p {
+  margin-top: 0.45rem;
+  font-size: 0.9rem;
+  color: var(--color-starlight-muted);
+}
+
+.mk-steps p b {
+  color: var(--color-starlight);
+  font-weight: 600;
+}
+
+/* ---------- Livro-razão de mecânicas ---------- */
+.mk-ledger {
+  margin-top: 2.5rem;
+  border-top: 1px solid var(--color-ink-500);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: clamp(2rem, 5vw, 4.5rem);
+}
+
+.mk-ledger > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.35rem 1.25rem;
+  padding-block: 1.05rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-ink-500) 80%, transparent);
+}
+
+.mk-ledger dt {
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-starlight);
+  white-space: nowrap;
+}
+
+.mk-ledger dt::before {
+  content: "";
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-right: 0.65rem;
+  vertical-align: 6%;
+  background: var(--ledger-hue, var(--color-brass));
+  border-radius: 1px;
+}
+
+.mk-ledger dd {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--color-starlight-muted);
+}
+
+/* ---------- Produto real ---------- */
+.mk-shots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  margin-top: 2.5rem;
+}
+
+/* ---------- Temas ---------- */
+.mk-themes {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: clamp(2rem, 4vw, 3.5rem);
+  margin-top: 2.5rem;
+  align-items: stretch;
+}
+
+/* Título de propriedade do universo atual: a barra de luzes de cidade em cima
+   é a assinatura do tabuleiro (10 grupos, 10 cores). */
+.mk-deed {
+  border: 1px solid color-mix(in srgb, var(--color-brass) 30%, var(--color-ink-500));
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-ink-950) 66%, transparent);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.mk-deed__stripe {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  height: 0.55rem;
+}
+
+.mk-deed__body {
+  padding: 1.4rem 1.5rem 1.5rem;
+}
+
+.mk-deed__body h3 {
+  font-size: 1.65rem;
+}
+
+.mk-deed__body > p {
+  margin-top: 0.6rem;
+  font-size: 0.9rem;
+  color: var(--color-starlight-muted);
+}
+
+.mk-deed__cities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 1.1rem;
+  padding-left: 0;
+  list-style: none;
+}
+
+.mk-deed__cities li {
+  padding: 0.28rem 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--city-hue, var(--color-brass)) 40%, var(--color-ink-500));
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--city-hue, var(--color-brass)) 9%, var(--color-ink-950));
+  font-family: var(--font-slab);
+  font-size: 0.72rem;
+  color: var(--color-starlight);
+}
+
+/* O compartimento do próximo tabuleiro: assumidamente vazio, sem promessa. */
+.mk-next-board {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1.5rem;
+  border: 1px dashed color-mix(in srgb, var(--color-ink-300) 55%, transparent);
+  border-radius: var(--radius-card);
+  color: var(--color-starlight-muted);
+}
+
+.mk-next-board h3 {
+  font-size: 1.25rem;
+  color: var(--color-starlight-muted);
+}
+
+.mk-next-board p {
+  font-size: 0.88rem;
+}
+
+/* ---------- CTA final ---------- */
+.mk-finale {
+  padding-block: clamp(3.5rem, 9vh, 6rem);
+  text-align: center;
+}
+
+.mk-finale .mk-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4rem;
+  padding-block: clamp(2.5rem, 5vw, 4rem);
+  border-block: 1px solid color-mix(in srgb, var(--color-brass) 26%, var(--color-ink-500));
+  background:
+    repeating-linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-brass) 22%, transparent) 0 1px,
+        transparent 1px 14px
+      )
+      top / 100% 3px no-repeat,
+    repeating-linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-brass) 22%, transparent) 0 1px,
+        transparent 1px 14px
+      )
+      bottom / 100% 3px no-repeat;
+}
+
+.mk-finale h2 {
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
+  line-height: 0.92;
+  max-width: 18ch;
+}
+
+.mk-finale h2 b {
+  font-weight: 400;
+  color: var(--color-brass);
+}
+
+.mk-finale p {
+  color: var(--color-starlight-muted);
+  font-size: 0.95rem;
+  max-width: 52ch;
+}
+
+/* ---------- Footer ---------- */
+.mk-footer {
+  border-top: 1px solid color-mix(in srgb, var(--color-ink-500) 72%, transparent);
+  padding-block: 2rem 2.5rem;
+}
+
+.mk-footer .mk-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+}
+
+.mk-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+}
+
+.mk-footer a {
+  color: var(--color-starlight-muted);
+  font-size: 0.82rem;
+  text-decoration: none;
+  padding-block: 0.35rem;
+}
+
+.mk-footer a:hover {
+  color: var(--color-starlight);
+}
+
+.mk-footer .mk-footer__note {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--color-starlight-muted) 82%, transparent);
+  max-width: none;
+}
+
+/* ---------- Artigo (como-jogar) ---------- */
+.mk-article {
+  padding-block: clamp(2.5rem, 6vh, 4rem) clamp(3rem, 8vh, 5rem);
+}
+
+.mk-article .mk-container {
+  max-width: 46rem;
+}
+
+.mk-article header p {
+  margin-top: 0.9rem;
+  color: var(--color-starlight-muted);
+}
+
+.mk-article h1 {
+  font-size: clamp(2.6rem, 6vw, 3.8rem);
+  line-height: 0.92;
+}
+
+.mk-article h2 {
+  margin-top: 3.25rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-ink-500) 80%, transparent);
+  font-size: 1.7rem;
+}
+
+.mk-article h3 {
+  margin-top: 1.9rem;
+  font-size: 1.2rem;
+  color: var(--color-brass-glow);
+}
+
+.mk-article p,
+.mk-article li {
+  margin-top: 0.8rem;
+  font-size: 0.95rem;
+  color: color-mix(in srgb, var(--color-starlight) 88%, var(--color-starlight-muted));
+}
+
+.mk-article ul,
+.mk-article ol {
+  padding-left: 1.3rem;
+}
+
+.mk-article li {
+  margin-top: 0.45rem;
+}
+
+.mk-article li::marker {
+  color: var(--color-brass);
+}
+
+.mk-article strong {
+  color: var(--color-starlight);
+}
+
+/* ---------- FAQ ---------- */
+.mk-faq-list {
+  margin-top: 2.25rem;
+  border-top: 1px solid var(--color-ink-500);
+}
+
+.mk-faq-list details {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-ink-500) 80%, transparent);
+}
+
+.mk-faq-list summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 0.25rem;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-display);
+  font-size: 1.22rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-starlight);
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+.mk-faq-list summary::-webkit-details-marker {
+  display: none;
+}
+
+.mk-faq-list summary::after {
+  content: "+";
+  flex: 0 0 auto;
+  font-family: var(--font-slab);
+  font-size: 1.1rem;
+  color: var(--color-brass);
+  transition: rotate var(--motion-base) var(--ease-emphasis);
+}
+
+.mk-faq-list details[open] summary::after {
+  rotate: 45deg;
+}
+
+.mk-faq-list summary:hover {
+  color: var(--color-brass-glow);
+}
+
+.mk-faq-list details > div {
+  padding: 0 0.25rem 1.25rem;
+}
+
+.mk-faq-list details p {
+  font-size: 0.92rem;
+  color: color-mix(in srgb, var(--color-starlight) 86%, var(--color-starlight-muted));
+  max-width: 62ch;
+}
+
+.mk-faq-list details p + p {
+  margin-top: 0.6rem;
+}
+
+/* ---------- 404 ---------- */
+.mk-lost {
+  min-height: calc(100svh - 3.5rem);
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 1.1rem;
+  padding: 2rem;
+}
+
+.mk-lost h1 {
+  font-size: clamp(3rem, 10vw, 5rem);
+  line-height: 0.9;
+}
+
+.mk-lost h1 b {
+  font-weight: 400;
+  color: var(--color-brass);
+}
+
+.mk-lost code {
+  font-family: var(--font-slab);
+  font-size: 0.92em;
+  color: var(--color-brass-glow);
+}
+
+.mk-lost p {
+  color: var(--color-starlight-muted);
+  margin-inline: auto;
+}
+
+.mk-lost nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+/* ---------- O momento autoral: a chegada do hero ----------
+   Uma entrada só, orquestrada (eyebrow → letreiro → texto → ações → mapa),
+   com os tokens de movimento do jogo. Sob movimento reduzido as durações
+   zeram (tokens.css) e tudo simplesmente ESTÁ lá. */
+@keyframes mk-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(0.6rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.mk-hero [data-arrive] {
+  animation: mk-arrive var(--motion-slow) var(--ease-emphasis) both;
+}
+
+.mk-hero [data-arrive="2"] {
+  animation-delay: calc(var(--motion-fast) * 0.75);
+}
+
+.mk-hero [data-arrive="3"] {
+  animation-delay: calc(var(--motion-fast) * 1.5);
+}
+
+.mk-hero [data-arrive="4"] {
+  animation-delay: calc(var(--motion-fast) * 2.25);
+}
+
+/* ---------- Responsivo ---------- */
+/* Tela BAIXA (paisagem de celular): o letreiro cede altura pra dobra mostrar o CTA —
+   mesma decisão da home do jogo, que dimensiona o wordmark também por vh. */
+@media (max-height: 520px) {
+  .mk-hero {
+    padding-block: 1.25rem 2rem;
+  }
+
+  .mk-hero h1 {
+    font-size: clamp(2.2rem, 14vh, 3.2rem);
+  }
+
+  .mk-hero__tagline {
+    margin-top: 0.8rem;
+  }
+
+  .mk-hero__actions {
+    margin-top: 1.1rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .mk-hero .mk-container {
+    grid-template-columns: 1fr;
+  }
+
+  .mk-themes {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .mk-ledger {
+    grid-template-columns: 1fr;
+  }
+
+  /* Em tela estreita a linha do razão empilha: nome em cima, descrição embaixo —
+     lado a lado a descrição ficava espremida numa coluna de poucas palavras. */
+  .mk-ledger > div {
+    grid-template-columns: 1fr;
+  }
+
+  .mk-shots {
+    grid-template-columns: 1fr;
+  }
+
+  .mk-steps {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+    max-width: 30rem;
+  }
+
+  /* Em coluna, a rota vira um fio vertical à esquerda das paradas. */
+  .mk-steps::before {
+    top: 2.4rem;
+    bottom: 0.5rem;
+    left: 1.02rem;
+    right: auto;
+    border-top: 0;
+    border-left: 2px dashed color-mix(in srgb, var(--color-brass) 34%, transparent);
+  }
+
+  .mk-steps li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 1rem;
+  }
+
+  .mk-steps li::before {
+    grid-row: 1 / span 2;
+  }
+
+  .mk-steps h3 {
+    margin-top: 0.35rem;
+  }
+
+  .mk-steps p {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 460px) {
+  .mk-brand {
+    font-size: 1.05rem;
+  }
+
+  .mk-header .mk-container {
+    gap: 0.5rem;
+  }
+
+  .mk-header nav {
+    gap: 0.1rem;
+  }
+
+  .mk-header nav a:not(.mk-btn) {
+    padding-inline: 0.4rem;
+    font-size: 0.7rem;
+  }
+
+  .mk-header .mk-btn {
+    padding-inline: 0.7rem;
+    font-size: 0.88rem;
+  }
+
+  .mk-hero__actions .mk-btn {
+    flex: 1 1 100%;
+  }
+}

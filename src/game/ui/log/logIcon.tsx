@@ -34,6 +34,10 @@ export function logIcon(kind: LogEntry['kind']): ReactNode {
     case 'lot-won':
     case 'lot-unsold':
     case 'bankruptcy':
+    case 'concede':
+    case 'sell-to-bank':
+    case 'hostile-takeover':
+    case 'evict':
       return <GavelIcon size={11} />
     case 'go':
     case 'rent':
@@ -43,7 +47,11 @@ export function logIcon(kind: LogEntry['kind']): ReactNode {
     case 'unmortgage':
     case 'free-parking':
     case 'jail-fine':
+    case 'debt-open':
     case 'debt-paid':
+    case 'tax-man':
+    case 'audit':
+    case 'card-collect':
     case 'loan-interest':
     case 'loan-interest-short':
     case 'loan-due':

@@ -14,11 +14,11 @@ import type { Rarity } from '@/game/cards/types'
 import { BOARD, GROUPS, type PropertySquare, type Square } from '@/lib/boardData'
 import { busSideOf, canUseBusTicket } from '@/game/turn/turnMachine'
 import { AUCTION_WINDOW } from '@/game/economy/purchase'
-import { RARITY_COLOR, RARITY_LABEL, cardLabel, CARD_DESC } from '@/game/ui/cards/cardMeta'
+import { RARITY_COLOR, RARITY_LABEL, RARITY_PIPS, cardLabel, CARD_DESC } from '@/game/ui/cards/cardMeta'
 import { cardById } from '@/game/cards/catalog'
 import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { PlayerFace } from '@/boards/PlayerFace'
-import { SquareIcon } from '@/boards/glyphs/squares'
+import { SquareIcon, AcasoCellGlyph, TesouroCellGlyph } from '@/boards/glyphs/squares'
 import {
   PlotBadgeIcon,
   HouseBadgeIcon,
@@ -79,7 +79,6 @@ function ArrowGlyph({ flip = false }: { flip?: boolean }) {
 // à parte) resolve certo.
 function CardRevealCard({
   view,
-  reduced,
   onConfirm,
 }: {
   // 043: `cardId`/`rarity`/`effect` são anuláveis na view — um slot OCULTO é carta alheia, e
@@ -87,55 +86,70 @@ function CardRevealCard({
   // transporta essa garantia para dentro do componente: o estreitamento feito no chamador
   // vale aqui também, sem um `!` por campo no corpo.
   view: Extract<ModalView, { kind: 'card-reveal' }> & { cardId: string; rarity: Rarity; effect: string }
-  reduced: boolean
   onConfirm: () => void
 }) {
   const titleId = useModalTitleId()
+  const { pop } = useMotion()
+  const accent = RARITY_COLOR[view.rarity]
+  const deckName = view.deckId === 'acaso' ? 'Acaso' : 'Tesouro'
   return (
-    <motion.div
-      initial={reduced ? false : { opacity: 0, scale: 0.9, y: 10, rotateZ: -2 }}
-      animate={{ opacity: 1, scale: 1, y: 0, rotateZ: 0 }}
-      exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 10 }}
-      transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 26 }}
-      onClick={(e) => e.stopPropagation()}
-      className="atlas-surface atlas-surface--modal card-reveal w-[300px] max-w-[90vw] overflow-hidden"
-      style={{
-        '--atlas-surface-accent': RARITY_COLOR[view.rarity],
-        '--card-reveal-accent': RARITY_COLOR[view.rarity],
-        boxShadow: `inset 0 1px 0 color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 12%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-ink-950) 72%, transparent), 0 0 0 5px color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 18%, transparent), var(--shadow-dropdown), 0 0 22px color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 45%, transparent)`,
-      } as React.CSSProperties}
-    >
-      {/* Raridade como filete, sem quebrar a superfície azul do modal. */}
-      <div
-        className="card-reveal__header px-5 pt-5 pb-3 flex items-center justify-between"
-      >
-        <span className="display text-starlight text-base leading-none tracking-[var(--tracking-caps)] uppercase">{view.deckId === 'acaso' ? 'Acaso' : 'Tesouro'}</span>
-        <span className="label card-reveal__rarity text-micro">{RARITY_LABEL[view.rarity]}</span>
-      </div>
-
-      {/* Corpo — véu radial na cor da raridade atrás do título */}
-      <div
-        className="px-5 pt-7 pb-5 flex flex-col items-center gap-5"
-        style={{
-          background: `radial-gradient(90% 55% at 50% 0%, color-mix(in srgb, ${RARITY_COLOR[view.rarity]} 10%, transparent) 0%, transparent 62%)`,
-        }}
-      >
-        <h2 id={titleId ?? undefined} className="display text-cream text-3xl leading-[0.95] text-center">{cardLabel(view.effect)}</h2>
-        <div className="w-full">
-          <div className="flex items-center gap-2 justify-center mb-2">
-            <span className="h-px flex-1 bg-coffee-500/50" />
-            <span className="label text-gold text-micro">O que faz</span>
-            <span className="h-px flex-1 bg-coffee-500/50" />
-          </div>
-          <p className="text-cream text-sm leading-snug text-center">{CARD_DESC[view.effect] ?? 'Carta sorteada.'}</p>
+    // O `motion.div` cuida da CHEGADA do conjunto (opacidade/escala, freadas pelo
+    // vocabulário); a VIRADA é CSS no `__inner`, porque um keyframe declarativo já
+    // respeita `prefers-reduced-motion` sem passar o freio por prop.
+    <motion.div {...pop} onClick={(e) => e.stopPropagation()} className="card-flip">
+      <div className="card-flip__inner">
+        {/* Verso: mesma prancha, sem acento de raridade — o dorso do baralho é um só. */}
+        <div className="card-flip__face card-flip__back atlas-surface atlas-surface--modal" aria-hidden>
+          <span className="card-flip__back-glyph">
+            {view.deckId === 'acaso' ? <AcasoCellGlyph size={88} /> : <TesouroCellGlyph size={88} />}
+          </span>
+          <span className="card-flip__back-deck">{deckName}</span>
         </div>
-      </div>
 
-      {/* Rodapé */}
-      <div className="px-4 py-3 border-t-2 border-coffee-950 bg-coffee-900/60">
-        <p className="label text-cream-muted text-center mb-2 text-micro">vai para a sua mão</p>
-        <div className="flex">
-          <ActionBtn onClick={onConfirm}>Guardar na mão</ActionBtn>
+        <div
+          className="card-flip__face card-flip__front atlas-surface atlas-surface--modal card-reveal"
+          style={{ '--atlas-surface-accent': accent, '--card-reveal-accent': accent } as React.CSSProperties}
+        >
+          {/* Raridade como filete, sem quebrar a superfície azul do modal. */}
+          <div className="card-reveal__header px-5 pt-5 pb-3 flex items-center justify-between">
+            <span className="display text-starlight text-base leading-none tracking-[var(--tracking-caps)] uppercase">{deckName}</span>
+            <span className="label card-reveal__rarity text-micro">{RARITY_LABEL[view.rarity]}</span>
+          </div>
+
+          {/* Corpo — véu radial na cor da raridade atrás do selo e do título */}
+          <div
+            className="px-5 pt-6 pb-5 flex flex-col items-center gap-4"
+            style={{
+              background: `radial-gradient(90% 55% at 50% 0%, color-mix(in srgb, ${accent} 10%, transparent) 0%, transparent 62%)`,
+            }}
+          >
+            <span className="card-reveal__seal" aria-hidden>
+              <span className="card-reveal__pips">
+                {Array.from({ length: RARITY_PIPS[view.rarity] }, (_, i) => (
+                  <i key={i} />
+                ))}
+              </span>
+            </span>
+            <h2 id={titleId ?? undefined} className="card-reveal__line card-reveal__line--1 display text-starlight text-3xl leading-[0.95] text-center text-balance">
+              {cardLabel(view.effect)}
+            </h2>
+            <div className="card-reveal__line card-reveal__line--2 w-full">
+              <div className="flex items-center gap-2 justify-center mb-2">
+                <span className="h-px flex-1 bg-ink-500/70" />
+                <span className="label text-brass text-micro">O que faz</span>
+                <span className="h-px flex-1 bg-ink-500/70" />
+              </div>
+              <p className="text-starlight text-sm leading-snug text-center">{CARD_DESC[view.effect] ?? 'Carta sorteada.'}</p>
+            </div>
+          </div>
+
+          {/* Rodapé */}
+          <div className="px-4 py-3 border-t border-ink-500/80 bg-ink-950/45">
+            <p className="label text-starlight-muted text-center mb-2 text-micro">vai para a sua mão</p>
+            <div className="flex">
+              <ActionBtn onClick={onConfirm}>Guardar na mão</ActionBtn>
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -171,7 +185,6 @@ const MODAL_WAITING = {
 } as const
 
 export function ModalLayer() {
-  const { reduced } = useMotion()
   const game = useGameStore((s) => s.game)
   const dispatch = useGameStore((s) => s.dispatch)
   const placeBid = (playerId: string, amount: number): void => dispatch({ kind: 'place-bid', playerId, amount })
@@ -296,7 +309,6 @@ export function ModalLayer() {
               // Reafirma os três campos já estreitados na condição: o TS não carrega um
               // `&&` sobre propriedades para dentro do tipo do objeto inteiro.
               view={{ ...view, cardId: view.cardId, rarity: view.rarity, effect: view.effect }}
-              reduced={reduced}
               onConfirm={confirmCardReveal}
             />
           )}

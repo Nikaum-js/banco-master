@@ -76,7 +76,9 @@ describe('Aluguel — resolução (US2)', () => {
     g.players[0].cash = 1 // < aluguel base 2
     const out = economyResolve({ playerId: 'p1', square: BOARD[1], roll: null, ports, state: g })
     expect(out).toEqual({ done: false })
-    expect(g.resolution).toEqual({ kind: 'debt', amount: 2, creditorId: 'p2' }) // dívida (008)
+    // `debtorId`/`cause`: D-061/D-063 — o devedor deixou de ser implícito e a causa é narrada.
+    expect(g.resolution).toEqual({ kind: 'debt', amount: 2, creditorId: 'p2', debtorId: 'p1', cause: 'rent' })
+    expect(g.log.at(-1)).toEqual({ kind: 'debt-open', who: 'p1', amount: 2, creditorId: 'p2', cause: 'rent' })
     expect(g.players[0].cash).toBe(1) // não debitou
   })
 })

@@ -1,0 +1,81 @@
+/* =====================================================================
+   Tokens de marketing — SUBSET do design system do jogo.
+   Fonte canônica: `src/index.css` (@theme "Atlas da Meia-Noite") — mudou lá,
+   muda aqui. Copiado (e não importado) de propósito: importar o index.css
+   arrastaria as ~7k linhas do jogo pro bundle da landing (051, FR-006).
+   Só entra token que as páginas públicas de fato usam.
+   ===================================================================== */
+:root {
+  /* ---------- Escala tinta (background → texto) ---------- */
+  --color-ink-100: #cfd9ec;
+  --color-ink-200: #a3b2cf;
+  --color-ink-300: #71809f;
+  --color-ink-400: #48546f;
+  --color-ink-500: #2c3750;
+  --color-ink-600: #202942;
+  --color-ink-700: #182136;
+  --color-ink-800: #121a2c;
+  --color-ink-900: #0d1424;
+  --color-ink-950: #060b17;
+  --color-ink-abyss: #04070f;
+
+  /* ---------- Acentos ---------- */
+  --color-starlight: #eef2fb;
+  --color-starlight-muted: #93a1bd;
+  --color-brass: #d9a650;
+  --color-brass-soft: #b58430;
+  --color-brass-glow: #ffd98a;
+  --color-signal: #e2574b;
+
+  /* ---------- 10 cores de grupo — "luzes de cidade" ---------- */
+  --color-group-brown: #c2854f;
+  --color-group-skyblue: #56cdec;
+  --color-group-pink: #f2589c;
+  --color-group-orange: #ff9b45;
+  --color-group-red: #f25048;
+  --color-group-yellow: #ffd23f;
+  --color-group-green: #35d97b;
+  --color-group-navy: #4d8bf5;
+  --color-group-purple: #a76bf5;
+  --color-group-platinum: #c4c9d2;
+
+  /* ---------- Tipografia ---------- */
+  --font-display: "Bebas Neue", "Oswald", system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
+  --font-slab: "Roboto Slab Variable", "Roboto Slab", Georgia, serif;
+
+  /* ---------- Raios ---------- */
+  --radius-sharp: 2px;
+  --radius-card: 4px;
+  --radius-chip: 6px;
+  --radius-modal: 12px;
+  --radius-pill: 9999px;
+
+  /* ---------- Sombras com cor (tinta azul, não cinza) ---------- */
+  --shadow-card: 0 1px 0 0 #060b17, 0 2px 8px -2px rgb(2 6 16 / 0.65);
+  --shadow-lift: 0 8px 24px -8px rgb(2 6 16 / 0.75), 0 2px 6px -2px rgb(2 6 16 / 0.45);
+  --shadow-glow: 0 0 0 1px rgb(217 166 80 / 0.4), 0 0 28px -4px rgb(217 166 80 / 0.35);
+
+  /* ---------- Movimento ---------- */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 420ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ---------- Tracking ---------- */
+  --tracking-display: 0.04em;
+  --tracking-mono: 0.06em;
+  --tracking-caps: 0.28em;
+}
+
+/* Mesmo freio do jogo (src/index.css): sob movimento reduzido as três durações zeram e
+   toda transição/animação que resolve por var(--motion-*) para de se mover — o fato
+   (posição final, cor, conteúdo) continua inteiro. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+  }
+}

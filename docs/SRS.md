@@ -1,6 +1,6 @@
 # Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.21
+**Versão:** 1.25
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -64,8 +64,8 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | IA / bots | Fora do escopo desta versão |
 | Casas e hotéis | Presentes e obrigatórios no v1 |
 | Negociação entre jogadores | Presente e obrigatória no v1 |
-| Hipoteca | Presente e obrigatória no v1 |
-| Leilão | Presente — ativado quando jogador recusa a compra |
+| Hipoteca | Presente e obrigatória no v1 — a hipotecada pode ser devolvida ao banco por zero, virando terreno livre (D-062, §6.4) |
+| Leilão | Presente — ativado quando jogador recusa a compra, e por **escassez de terrenos** quando restam ≤3 sem dono (D-060, §7.3/§7.5) |
 | Timer de turno | Não há — o jogador controla quando finaliza |
 | Desconexão mid-game | Partida pausa; propriedades não vão ao banco; aguarda reconexão |
 | Speed Die | Presente — ativado após primeira volta completa do jogador |
@@ -75,12 +75,14 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Segundo hotel por propriedade | Presente — sequencial, cobra **mais** aluguel que o 1º; 2 hotéis viram arranha-céu |
 | Empréstimos entre jogadores | Presentes — juros 10%–50%, cobrados a cada passagem pelo GO; vencem em 3 voltas com cobrança automática do principal (D-054, §15.6) |
 | Imunidade de aluguel em negociações | Presente — pode ser negociada por N voltas ou até o fim |
-| Negociação com contrapartida mínima | Presente — cada lado recebe ao menos metade do valor dos ativos que entrega (D-055, §8.5) |
+| Negociação com trava de esvaziamento | Presente — troca livre em qualquer proporção; recusadas só a doação pura e a troca que reduz o patrimônio a menos de um terço (D-058, §8.5) |
 | Sistema de raridade de cartas | 3 tiers (Lendária/Rara/Comum) com cores (laranja/azul/verde) |
 | Cartas em mão | Privadas (apenas contador visível), não-negociáveis, limite de 3 totais |
 | Bus Tickets | Item de mão separado das cartas, obtido via carta "Passagem de Ônibus" |
 | Cartas ofensivas (Aquisição Hostil, Despejo, Auditoria, Boicote) | Presentes no v1 — não podem ser recusadas pelo alvo, exceto via reação (Diplomacia) |
 | Tesouro precisa ser impactante | Princípio de design: Tesouro não pode virar "casa de troquinho" como no Richup |
+| Obrigação entre jogadores | Nunca truncada — pagamento parcial deixa o restante devido e abre dívida pendente, inclusive fora da vez (D-061, §9.1) |
+| Rastreabilidade de caixa | Toda mudança de caixa tem motivo registrado; nenhuma regra move dinheiro em silêncio (D-063, §12.3) |
 | Fim de jogo | Classificação completa por ordem inversa de eliminação, com patrimônio e duração; depois, retorno à mesma sala para revanche (D-038/D-052) |
 | Acessibilidade | WCAG 2.2 AA no caminho de jogo, verificada automaticamente; paisagem é a orientação de jogo (D-039) |
 | Telemetria | Mínima e anônima — contagem de partidas no próprio Supabase, exceção em monitoramento de erro (D-040) |
@@ -337,6 +339,7 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 - **NÃO** cobra aluguel.
 - Não é possível hipotecar com qualquer construção — vender casas, hotéis e arranha-céus do grupo ou o Hangar do aeroporto antes.
 - Não é possível construir em qualquer propriedade de grupo que contenha propriedade hipotecada.
+- Quem não quiser (ou não puder) resgatar tem a **devolução ao banco** da §6.4 como saída — é o único jeito de destravar a construção do grupo sem pagar o resgate.
 
 ### 6.2 Deshipotecar uma Propriedade
 
@@ -349,6 +352,19 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 - Novo dono pode manter hipotecada ou deshipotecar pagando original + 10%.
 - Se mantida hipotecada: paga 10% de juros ao banco imediatamente como taxa de transferência.
 
+### 6.4 Devolução de Propriedade Hipotecada ao Banco
+
+**(v1.25, [D-062](adr/D-062-hipotecada-pode-voltar-ao-banco.md))** O dono pode devolver ao banco uma propriedade **hipotecada** e **não recebe nada** por ela.
+
+- **Só a hipotecada.** Propriedade sem hipoteca não tem venda ao banco — hipotecar (§6.1) **é** a venda ao banco, por metade do preço e com recompra. O que a §6.4 abre é a saída do estado seguinte.
+- **Valor: zero.** A metade do preço já foi paga ao dono no ato da hipoteca; devolver o título liquida esse financiamento. Qualquer valor a mais criaria dinheiro para quem já recebeu adiantado pelo mesmo ativo.
+- **A propriedade volta a ser terreno livre** (§7.2): perde hipoteca, Hangar e construção, e volta ao fluxo de cair-e-comprar. Passa a contar de novo para a escassez de terrenos (§7.5).
+- **Só na própria vez**, com a partida em andamento e sem pausa.
+- **Proibida com dívida pendente** (§9.1). Sem esta trava o devedor derrubaria o próprio valor de liquidação devolvendo títulos e declararia falência com o credor recebendo menos do que os ativos valiam — a mesma proteção de credor que a §8.5 aplica à troca.
+- A **trava de esvaziamento** (§8.5) **não** se aplica: ela existe contra doação a um jogador escolhido, e aqui não há donatário — o terreno fica livre para qualquer um, inclusive para quem devolveu.
+
+> 📌 O ganho não é caixa, é posição: uma cidade hipotecada que o dono não consegue resgatar **congela a construção do país inteiro** (§6.1), inclusive nas cidades quitadas ao lado dela.
+
 ---
 
 ## 7. Leilão
@@ -357,7 +373,7 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 
 - Jogador para em propriedade livre e recusa a compra.
 - Banco leiloa propriedades de jogador falido (quando devia ao banco) — **espólio**, no formato de pregão simultâneo da Seção 7.3 ([D-031](adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md), v1.6).
-- **Escassez de terrenos:** quando restam poucos terrenos sem dono no tabuleiro (Seção 7.3).
+- **Escassez de terrenos:** quando restam poucos terrenos sem dono no tabuleiro (Seção 7.5). Restaurado em v1.25 pela [D-060](adr/D-060-leilao-de-escassez-restaurado-com-janela-legivel.md).
 
 ### 7.2 Regras do Leilão
 
@@ -368,18 +384,33 @@ Enquanto preso, o jogador **PODE**: receber aluguéis, construir, hipotecar, pro
 - Vencedor paga seu lance ao banco e recebe o título.
 - Se ninguém der lance, a propriedade permanece com o banco.
 
-### 7.3 Leilão de Escassez de Terrenos (pregão simultâneo)
+### 7.3 Pregão Simultâneo (formato)
 
-Mecanismo de fim de jogo que evita a partida se arrastar esperando alguém *cair* nos últimos terrenos livres. **Não confundir** com o antigo leilão de *casas* (removido — [D-022](adr/README.md)); aqui leiloam-se **terrenos** (cidades/aeroportos/utilidades sem dono).
+Formato usado quando **vários** terrenos vão a leilão de uma vez. Tem **duas procedências**: a **escassez de terrenos** (§7.5) e o **espólio do falido** (§9.2). **Não confundir** com o leilão de *casas*, removido ([D-022](adr/README.md)).
 
-- **Gatilho:** quando o número de terrenos compráveis **sem dono** cai a **≤ 3** (mas ≥ 1) **e** há **≥ 2 jogadores não-eliminados**, abre-se automaticamente um pregão por esses terrenos. É um **evento próprio**, fora do turno em andamento (abrir/encerrar não altera a vez).
-- **Pregão simultâneo:** todos os terrenos restantes vão a leilão **ao mesmo tempo**; cada um é um leilão inglês próprio (lance atual + maior licitante).
-- **Cronômetro por terreno:** cada terreno tem seu **próprio prazo** (padrão 8s). Um lance **reinicia só o prazo daquele terreno** — dar lance no terreno B **não** mexe no relógio do terreno A. Quando o prazo de um terreno zera sem novo lance, **aquele terreno fecha sozinho** (independente dos demais); o pregão acaba quando o último fecha.
-- **Lances:** valem as regras gerais (Seção 7.2 — lance mínimo do tema, maior que o atual daquele terreno). Um jogador pode liderar/arrematar **vários** terrenos, limitado pelo caixa: a soma dos seus lances líderes nunca pode exceder seu caixa (trava de solvência).
-- **Resultado de cada terreno:** ao fechar, o terreno com licitante vai ao maior lance (paga ao banco, recebe a escritura); terreno **sem lance permanece livre** (com o banco).
-- **Uma vez por episódio:** dispara uma única vez por "descida a ≤3"; sobras sem lance voltam ao fluxo normal (cair-e-comprar) e não reabrem o pregão. Só re-arma se a contagem subir acima do limiar (ex.: falência devolve terreno ao banco) e voltar a cair.
+- **Pregão simultâneo:** todos os lotes vão a leilão **ao mesmo tempo**; cada um é um leilão inglês próprio (lance atual + maior licitante). É um **evento próprio**, fora do turno em andamento (abrir/encerrar não altera a vez).
+- **Cronômetro por lote:** cada lote tem seu **próprio prazo** (padrão **24s**, v1.25). Um lance **reinicia só o prazo daquele lote** — dar lance no lote B **não** mexe no relógio do lote A. Quando o prazo de um lote zera sem novo lance, **aquele lote fecha sozinho** (independente dos demais); o pregão acaba quando o último fecha.
+- **O prazo é visível** (v1.25): cada lote mostra contagem regressiva derivada do prazo **autoritativo** do servidor, nunca de um relógio local. Prazo que o servidor conhece e a tela esconde vira susto, não decisão.
+- **Lances:** valem as regras gerais (Seção 7.2 — lance mínimo do tema, maior que o atual daquele lote). Um jogador pode liderar/arrematar **vários** lotes, limitado pelo caixa: a soma dos seus lances líderes nunca pode exceder seu caixa (trava de solvência).
+- **Resultado de cada lote:** ao fechar, o lote com licitante vai ao maior lance (paga ao banco, recebe a escritura); lote **sem lance permanece livre** (com o banco).
+- **Um lance por vez, sem duplicata:** o comando de lance é idempotente por valor — reenviar o mesmo lance no mesmo lote não o cobra duas vezes nem reinicia o prazo de novo.
 
-> 📌 Fecha o tabuleiro com donos → mais aluguel circulando → fim de jogo mais rápido, com um clímax de pregão. Limiar (3) e duração do cronômetro por terreno (8s) são tunáveis no tema.
+> 📌 Duração do cronômetro por lote (24s) é tunável no tema. Era 8s até a v1.24; a [D-060](adr/D-060-leilao-de-escassez-restaurado-com-janela-legivel.md) subiu para 24s porque 8s é menos que o tempo de ler o nome da cidade, achá-la no tabuleiro e conferir o próprio caixa.
+
+### 7.4 Espólio do Falido
+
+Ver §9.2 — o espólio usa o formato da §7.3.
+
+### 7.5 Pregão de Terrenos (escassez)
+
+**(v1.25, [D-060](adr/D-060-leilao-de-escassez-restaurado-com-janela-legivel.md), restaurando a [D-023](adr/D-023-leilao-de-escassez-de-terrenos-pregao-simultaneo.md))** Mecanismo de fim de jogo que evita a partida se arrastar esperando alguém *cair* nos últimos terrenos livres. Aqui leiloam-se **terrenos** (cidades/aeroportos/utilidades sem dono), no formato da §7.3.
+
+- **Gatilho:** quando o número de terrenos compráveis **sem dono** cai a **≤ 3** (mas ≥ 1) **e** há **≥ 2 jogadores não-eliminados**, abre-se automaticamente um pregão por esses terrenos.
+- **Uma vez por episódio:** dispara uma única vez por "descida a ≤3"; sobras sem lance voltam ao fluxo normal (cair-e-comprar) e não reabrem o pregão. Só re-arma se a contagem subir acima do limiar — falência que devolve terreno, desistência (§9.6), devolução ao banco (§6.4) — e voltar a cair.
+- **A contagem é visível** (v1.25): enquanto não há pregão aberto, a interface mostra **quantos terrenos livres ainda faltam** para o gatilho, derivado do estado do motor. Quando o pregão abre, o contador dá lugar ao estado do leilão.
+- **Cruzamento com o espólio:** se um espólio (§9.2) abrir durante um pregão de escassez, os lotes dele **entram no mesmo pregão** e a procedência passa a ser mista.
+
+> 📌 Fecha o tabuleiro com donos → mais aluguel circulando → fim de jogo mais rápido, com um clímax de pregão. Limiar (3) é tunável no tema.
 
 ---
 
@@ -429,16 +460,17 @@ Um jogador pode oferecer/solicitar imunidade de aluguel em uma ou mais proprieda
 
 > 📌 Exemplo válido: "Te dou Paris se você me deixar passar nas suas propriedades de graça por 3 voltas."
 
-### 8.5 Contrapartida Mínima
+### 8.5 Trava de Esvaziamento
 
-> Seção nova em v1.21, apoiada na [D-055](adr/D-055-troca-exige-contrapartida-minima.md).
+> Seção introduzida em v1.21 ([D-055](adr/D-055-troca-exige-contrapartida-minima.md)) como piso proporcional; reescrita em v1.23 pela [D-058](adr/D-058-troca-e-livre-ate-o-esvaziamento.md), que a substitui.
 
-Uma proposta só é válida se **cada lado receber pelo menos metade do valor avaliado dos ativos que entrega**. Ativo, aqui, é **propriedade, Bus Ticket e imunidade** — concedida ou transferida.
+Negociação desequilibrada é **livre em qualquer proporção** — três propriedades por uma, um país por $200, pagar caro, vender barato. Valor é subjetivo entre jogadores e o jogo não legisla sobre ele. Uma proposta só é recusada em **dois casos**:
 
-- **Dinheiro entregue não conta contra quem paga.** Pagar caro por uma propriedade é livre, em qualquer valor.
-- O que o lado **recebe** conta integralmente: propriedades, Bus Tickets, imunidades **e** dinheiro.
-- **Entregar e não receber absolutamente nada nunca é troca**, mesmo quando o que sai é só dinheiro.
-- A proposta que não atinge o piso **não pode ser enviada nem aceita**, e o proponente vê na hora quanto falta.
+1. **Doação pura** — entregar propriedade, Bus Ticket ou dinheiro e não receber **absolutamente nada** em troca (nem imunidade) não é negociação.
+2. **Esvaziamento** — a troca não pode deixar um jogador com **menos de um terço do patrimônio** que ele tinha antes dela. Patrimônio é a soma de propriedades avaliadas, Bus Tickets e caixa; o que o jogador **recebe** na própria troca conta a favor. Quem entrega quase tudo precisa receber valor real de volta.
+
+- Conceder ou transferir **só imunidades**, mesmo sem nada em troca, é **sempre válido** — imunidade não é patrimônio (vale zero na avaliação, ver abaixo) e evapora se o concedente sair da partida (§9.4).
+- A proposta recusada **não pode ser enviada nem aceita**, e o proponente vê na hora o motivo: doação pura pede qualquer contrapartida; esvaziamento diz quanto falta em valor real.
 - A verificação acontece na criação da proposta **e de novo na aceitação**, junto da revalidação da §8.3.
 
 **Avaliação** — vale só para esta verificação; nenhum destes valores é cobrado de ninguém:
@@ -448,11 +480,10 @@ Uma proposta só é válida se **cada lado receber pelo menos metade do valor av
 | Propriedade livre | Preço de tabela |
 | Propriedade hipotecada | Metade do preço de tabela |
 | Bus Ticket | $100 cada |
-| Imunidade por N voltas | 10% do preço da propriedade protegida por volta, teto de 50% do preço |
-| Imunidade permanente | 50% do preço da propriedade protegida |
-| Dinheiro | Valor nominal (só a favor de quem recebe) |
+| Imunidade (qualquer duração) | **Zero, dos dois lados** — evapora com a saída de quem a concedeu ou recebeu (§9.4) |
+| Dinheiro | Valor nominal |
 
-> 📌 O que essa regra barra é o **abandono com dano dirigido** — entregar o patrimônio inteiro a um jogador escolhido a dedo para decidir a partida dos outros fora do tabuleiro. Negociação desequilibrada continua permitida; o exemplo da §8.4 (uma propriedade por 3 voltas de imunidade **nas propriedades** do outro) é válido e permanece válido — a imunidade é sobre um conjunto, e um conjunto de peso comparável cobre o piso.
+> 📌 O que essa regra barra é o **abandono com dano dirigido** — entregar o patrimônio inteiro a um jogador escolhido a dedo para decidir a partida dos outros fora do tabuleiro. Abandono tem assinatura objetiva: o jogador sai da troca sem patrimônio. Toda troca que não chega perto disso nem é medida.
 >
 > 📌 Esta regra **soma-se** à proteção de credor da §9.1 (o devedor com dívida pendente não pode ficar insolvente por causa de uma troca), sem substituí-la.
 
@@ -462,11 +493,26 @@ Uma proposta só é válida se **cada lado receber pelo menos metade do valor av
 
 ### 9.1 Condição de Falência
 
+Esta seção trata da falência **forçada** — a que nasce de uma dívida que o jogador não consegue pagar. A saída **voluntária** tem regra própria em §9.6.
+
 Um jogador está em falência quando não consegue pagar o que deve, mesmo após:
 
 - Vender todas as construções ao banco.
 - Hipotecar todas as propriedades.
 - Usar todo o dinheiro em caixa.
+
+**A dívida pendente nomeia o devedor** (v1.25, [D-061](adr/D-061-obrigacao-a-outro-jogador-nao-e-truncada.md)), e ele **não precisa ser o jogador da vez**. Toda a mesa aguarda a resolução dela, como já aguarda uma reação a carta ofensiva (§10.6) ou a resposta de um credor a um pedido de empréstimo (§15.2).
+
+**Obrigação a outro jogador nunca é truncada.** Quando uma regra obriga um jogador a pagar **a outro jogador** e o caixa não cobre, o que houver é transferido e **o restante permanece devido**, abrindo dívida pendente:
+
+| Credor | Caixa insuficiente |
+|---|---|
+| Outro **jogador** (Aniversário §10.6, Aquisição Hostil §10.6, aluguel §4.2) | Paga o que tem; **o restante fica devido** e entra nesta seção |
+| **Banco** ou **pote**, valor pequeno e incondicional (multa de prisão §4.11, Fiscal §13.8, Honorários, Crise Imobiliária, Conserto de Imóveis, Auditoria Fiscal) | Paga o que houver; **o restante não é cobrado** |
+
+> 📌 A linha é **quem é o credor**, não o tamanho do valor. Truncar um pagamento ao banco só faz sair menos dinheiro da economia; truncar um pagamento a um jogador tira dele uma receita à qual a regra lhe deu direito — só o segundo tem parte lesada. E o Fiscal é catch-up **discreto** (princípio IV): uma cobrança que pode falir quem está por cima deixa de ser discreta.
+
+**Proteção de credor** — com dívida pendente, o devedor não pode ficar insolvente de propósito: nem por troca (§8.5), nem devolvendo propriedade hipotecada ao banco (§6.4), que fica proibida enquanto a dívida existir.
 
 ### 9.2 Destino dos Ativos — Sem Empréstimo Ativo
 
@@ -475,7 +521,7 @@ Um jogador está em falência quando não consegue pagar o que deve, mesmo após
 | Devia ao banco | Propriedades (sem construções) vão a leilão pelo banco — o **espólio** (ver nota abaixo) |
 | Devia a outro jogador | Propriedades (sem construções) transferidas diretamente ao credor. Dinheiro restante também vai ao credor |
 
-> 📌 **Formato do leilão do espólio** (v1.6, [D-031](adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md)): o espólio inteiro vai a **pregão simultâneo** — o mesmo formato da Seção 7.3, com cronômetro próprio por propriedade. Licitantes são os jogadores **não-eliminados**; o falido não participa. Vencedor de cada lote paga **ao banco**; lote **sem lance fica livre** (§7.2), voltando ao fluxo de cair-e-comprar. O pregão é **evento autônomo**: abrir não altera a vez, e a eliminação do falido passa o turno normalmente. Se já houver um pregão de escassez aberto, os lotes do espólio **entram nele**. O espólio é só de **propriedades**: o dinheiro em caixa do falido que devia ao banco continua sendo destruído (não há credor para recebê-lo, e a tabela acima só destina caixa quando o credor é um jogador) — D-031 não altera isso.
+> 📌 **Formato do leilão do espólio** (v1.6, [D-031](adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md)): o espólio inteiro vai a **pregão simultâneo** — o mesmo formato da Seção 7.3, com cronômetro próprio por propriedade. Licitantes são os jogadores **não-eliminados**; o falido não participa. Vencedor de cada lote paga **ao banco**; lote **sem lance fica livre** (§7.2), voltando ao fluxo de cair-e-comprar. O pregão é **evento autônomo**: abrir não altera a vez, e a eliminação do falido passa o turno normalmente. Se já houver um pregão aberto (outra falência ainda em curso), os lotes do novo espólio **entram nele**. O espólio é só de **propriedades**: o dinheiro em caixa do falido que devia ao banco continua sendo destruído (não há credor para recebê-lo, e a tabela acima só destina caixa quando o credor é um jogador) — D-031 não altera isso.
 
 ### 9.3 Falência com Empréstimo Ativo (ver Seção 15)
 
@@ -502,6 +548,22 @@ A partida termina quando restar apenas **1 jogador** com saldo positivo. Ele é 
 > 📌 **O fim tem classificação e resumo** (v1.9, [D-038](adr/D-038-fim-de-jogo-tem-classificacao-e-resumo.md)): ao terminar, **todas** as telas — inclusive as de quem já foi eliminado — mostram a classificação completa, do 1º ao último. A ordem é a **inversa da ordem de eliminação**: vence quem sobrou, é 2º o último a falir, e é último o primeiro a falir. Cada linha traz o **patrimônio final** (o mesmo cálculo de patrimônio líquido usado por Auditoria Fiscal e Aquisição Hostil: caixa + preço das propriedades, hipotecada pela metade, + custo das construções), **quantas propriedades** o jogador tinha e — para quem caiu — **em que rodada** caiu. O resumo fecha com a **duração da partida** em rodadas e em tempo decorrido. A classificação é derivada do estado da partida, não da tela: por isso o estado registra a ordem de eliminação, o número da rodada e os instantes de início e de fim, e todos veem exatamente a mesma classificação, inclusive depois de recarregar.
 >
 > 📌 **Depois do resumo, o grupo continua na mesma sala** (v1.19, [D-052](adr/D-052-revanche-reabre-a-mesma-sala.md)): cada jogador pode deixar a classificação no próprio ritmo e voltar ao lobby da sala. O host reabre a sala e inicia outra partida pelo fluxo normal; assentos e identidades permanecem, mas todo estado específico da partida encerrada é descartado. Em partida local, começar de novo continua disponível.
+
+### 9.6 Desistência (saída voluntária)
+
+**(v1.22, [D-057](adr/D-057-desistencia-voluntaria-encerra-a-participacao.md))** Um jogador pode encerrar a própria participação por vontade própria, sem dever nada a ninguém.
+
+| Aspecto | Desistência (§9.6) | Falência forçada (§9.1) |
+|---|---|---|
+| Exige insolvência | **Não** — vale com qualquer caixa e qualquer patrimônio | Sim — só quando nem liquidando tudo cobre a dívida |
+| Quando | **Só na própria vez**, com a partida em andamento e sem pausa | Quando há dívida pendente que não se consegue pagar |
+| Destino dos bens **sem** empréstimo ativo | Propriedades voltam **livres** ao banco (§7.2); **sem pregão de espólio** | Espólio vai a pregão (§9.2) ou ao credor da dívida |
+| Destino dos bens **com** empréstimo ativo | **O credor herda tudo**, ativos e passivos — igual ao §9.3 | O credor herda tudo (§9.3) |
+
+- Ao voltarem ao banco, as propriedades perdem **construções**, **Hangar** e **hipoteca**: voltam ao estado de terreno livre e ao fluxo normal de cair-e-comprar. O **caixa restante é destruído**.
+- Como a devolução aumenta a contagem de terrenos livres, a desistência é gatilho de reavaliação do **Pregão de Terrenos** (§7.5), assim como a falência e a devolução ao banco (§6.4).
+- A **eliminação** segue o §9.4 (token fora, imunidades canceladas), a partida termina pelo §9.5, e quem desistiu entra na **ordem de eliminação** e aparece na classificação final como qualquer outro eliminado.
+- A ação **exige confirmação explícita** e é a única do jogo sem desfazer (§12.2).
 
 ---
 
@@ -707,6 +769,8 @@ Cada carta pertence a uma das 3 raridades, identificadas por cor:
 
 **Aniversário** (Tesouro)
 > Cada outro jogador da partida te paga **$50**. Em partidas de 8 jogadores = $350 total. Em 4 jogadores = $150 total.
+>
+> Adversário sem caixa para os $50 paga o que tem e **continua devendo o restante** (v1.25, [D-061](adr/D-061-obrigacao-a-outro-jogador-nao-e-truncada.md)): a diferença abre dívida pendente **dele**, resolvida pelo §9.1 fora da vez. O aniversariante recebe o valor cheio da carta — em duas parcelas, se preciso.
 
 **Honorários médicos** (Tesouro)
 > Pague **$50** ao banco. Valor vai para o **centro do tabuleiro** (Free Parking).
@@ -839,6 +903,8 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor d
 | Hangar | Jogador deseja construir hangar em aeroporto próprio |
 
 > 📌 **A cobrança de dívida NÃO é modal** (v1.21, [D-056](adr/D-056-cobranca-de-divida-sai-do-centro-da-tela.md)). Ela aparece como **faixa ancorada na base**, que **reduz a altura do tabuleiro em vez de cobri-lo** — a decisão de o que hipotecar ou vender é tomada olhando o tabuleiro inteiro. A faixa não escurece a tela, não captura nem prende o foco, e Esc continua sem fechá-la (§12.6): sai-se dela pagando, negociando ou declarando falência (§9.1). Ela mostra, na ordem: a quem se deve, quanto, o caixa atual, quanto falta e **quanto ainda dá para levantar** vendendo construções e hipotecando tudo — este último é a mesma medida que autoriza o botão de falência. A escolha de credor para empréstimo abre a partir da faixa, sem empilhar um botão por adversário.
+>
+> A faixa é do **devedor nomeado** na dívida (v1.25, [D-061](adr/D-061-obrigacao-a-outro-jogador-nao-e-truncada.md)), que pode não ser o jogador da vez. Quem não é o devedor vê, no lugar dela, quem a mesa está aguardando — mesmo tratamento que a janela de reação (§10.6) e o pedido de empréstimo (§15.2) já recebem.
 
 ### 12.3 HUD
 
@@ -853,6 +919,9 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor d
 - **Contador de cartas em mão** de cada jogador (apenas quantidade, sem identificação) — ver Seção 10.3.
 - **Contador de Bus Tickets** de cada jogador.
 - **Efeitos ativos no tabuleiro** (Apagão, Greve nas Utilidades, Boicotes ativos, Imunidades Temporárias) — visíveis a todos.
+- **Caixa líquido durante dívida** (v1.25, [D-061](adr/D-061-obrigacao-a-outro-jogador-nao-e-truncada.md)): quando um jogador deve mais do que tem, o HUD mostra o **líquido real** (caixa − obrigação pendente). Líquido negativo aparece em **vermelho** e acompanhado de texto — nunca só por cor (§12.6) —, com **quanto ainda falta pagar**. Vale para o devedor **e** para os adversários: a mesa precisa saber que há dívida em resolução e de quem, inclusive quando o devedor não é o jogador da vez. O modelo econômico não muda: o caixa continua nunca ficando negativo no estado, o negativo é uma **leitura** de caixa menos obrigação.
+- **Terrenos livres até o pregão** (v1.25, [D-060](adr/D-060-leilao-de-escassez-restaurado-com-janela-legivel.md)): quantos terrenos sem dono ainda faltam para o gatilho da §7.5, derivado do motor, nunca negativo, preservado após reconexão. Com o pregão aberto, o contador dá lugar ao estado do leilão.
+- **Log de eventos completo** (v1.25, [D-063](adr/D-063-toda-mutacao-de-caixa-tem-causa-registrada.md)): **nenhuma** regra move caixa sem fato correspondente no log. Toda mudança de caixa tem motivo registrado — saldo anterior, valor, motivo e saldo final —, inclusive as que acontecem fora da vez do jogador afetado (Fiscal §13.8, cartas que cobram de todos §10.6, Aquisição Hostil e Auditoria §10.6) e as que movem caixa de mais de um jogador de uma vez (troca §8.3).
 
 ### 12.4 Painel de Cartas (do próprio jogador)
 
@@ -1035,7 +1104,10 @@ Token especial controlado pelo banco. A cada turno:
 - Se cair em outras casas: nenhum efeito.
 - Se o Fiscal cair em propriedade do próprio jogador que rolou por ele: **o jogador paga ao banco mesmo assim**.
 
-> 📌 Pune quem domina o tabuleiro, beneficia indiretamente quem está atrás. Catch-up discreto que cria tensão sobre os ricos.
+- **A cobrança é narrada** (v1.25, [D-063](adr/D-063-toda-mutacao-de-caixa-tem-causa-registrada.md)): o débito entra no log de eventos nomeando o dono, a propriedade e o valor. O Fiscal é a **única** regra do jogo que debita um jogador **fora da vez dele** e roda automaticamente na passagem de turno — sem fato registrado, o jogador vê o caixa cair sem causa, e o que era catch-up discreto vira suspeita de bug.
+- Sem caixa suficiente, paga o que houver (§9.1): o Fiscal **não** abre dívida nem falência — é cobrança do banco, incondicional, e catch-up que elimina deixa de ser discreto.
+
+> 📌 Pune quem domina o tabuleiro, beneficia indiretamente quem está atrás. Catch-up discreto que cria tensão sobre os ricos. **Discreto na UI, não invisível no log** — a diferença é o que separa a mecânica de um bug financeiro.
 
 ---
 
@@ -1156,4 +1228,4 @@ sendo a fonte de verdade da **regra**, o `CONTEXT.md` é a fonte dos **nomes**.
 
 ---
 
-**Magnata Imobiliário — SRS v1.21 | Julho 2026 | Documento de fonte de verdade absoluta**
+**Magnata Imobiliário — SRS v1.25 | Julho 2026 | Documento de fonte de verdade absoluta**

@@ -24,9 +24,10 @@ import {
 import { buyProperty, declineProperty } from './economy/purchase'
 import { placeBid, passBid, closeAuction } from './economy/auction'
 import { maybeOpenLandAuction, placeLandBid, closeLandAuction, closeExpiredLandLots } from './economy/landAuction'
+import { promoteObligation } from './economy/obligation'
 import { buildHouse, sellBuilding, buildHangar, sellHangar } from './economy/construction'
-import { mortgageProperty, unmortgageProperty } from './economy/mortgage'
-import { payDebt, declareBankruptcy } from './falencia/falencia'
+import { mortgageProperty, unmortgageProperty, sellMortgagedToBank } from './economy/mortgage'
+import { payDebt, declareBankruptcy, concede } from './falencia/falencia'
 import { grantLoan, proposeLoan, respondLoan, payOffLoan } from './emprestimos/emprestimos'
 import { executeTrade, proposeTrade, acceptTrade, rejectTrade, type Trade } from './economy/trade'
 import { confirmCardReveal, playHandCard, resolveCardDiscard, resolveCardShortcut } from './cards/draw'
@@ -72,6 +73,10 @@ export type PlayerAction =
   // Dívida/falência — ator = devedor (jogador ativo da resolução `debt`).
   | { kind: 'pay-debt' }
   | { kind: 'declare-bankruptcy' }
+  // Desistência (§9.6/D-057) — ator = jogador da vez, sem exigência de saldo.
+  | { kind: 'concede' }
+  // Devolução da hipotecada ao banco (§6.4/D-062) — ator = jogador da vez; bloqueada em dívida.
+  | { kind: 'sell-to-bank'; pos: number }
   // Empréstimo (§15) — devedor = jogador ativo; resposta = credor.
   | { kind: 'grant-loan'; creditorId: string; principal: number; ratePct: number }
   | { kind: 'propose-loan'; creditorId: string }
@@ -89,18 +94,18 @@ export type PlayerAction =
 // jogador): fechamento de leilão por prazo e pausa/retomada por (des)conexão.
 export type SystemAction =
   | { kind: 'close-auction' } // deadline do leilão de propriedade venceu
-  | { kind: 'close-land-lots'; now: number } // lotes do pregão (031) expiraram
-  | { kind: 'close-land-auction' } // fecho manual do pregão (026/031)
+  | { kind: 'close-land-lots'; now: number } // lotes do pregão (031/039) expiraram
+  | { kind: 'close-land-auction' } // fecho manual do pregão (031/039)
   | { kind: 'pause'; cause: PauseCause; at: number } // desconexão ou falha de persistência → pausa (041, FR-016)
   | { kind: 'resume'; cause: PauseCause; at: number } // causa resolvida → retoma se for a última (FR-017)
 
 export type GameAction = PlayerAction | SystemAction
 
-// Gatilhos de escassez de terrenos (031): os comandos que mudam a CONTAGEM de terrenos
-// sem dono. TABELA ÚNICA — antes existiam três conjuntos diferentes (store, este arquivo
-// e `tests/sim/engine/driver.ts`), e o da simulação disparava em `decline-property`,
-// `place-bid` e `accept-trade`, que não mudam a contagem, enquanto a produção não
-// disparava em `declare-bankruptcy`, que muda.
+// Gatilhos de escassez de terrenos (031/D-060): os comandos que mudam a CONTAGEM de terrenos
+// sem dono. TABELA ÚNICA — antes existiam três conjuntos diferentes (store, este arquivo e
+// `tests/sim/engine/driver.ts`), e o da simulação disparava em `decline-property`, `place-bid`
+// e `accept-trade`, que não mudam a contagem, enquanto a produção não disparava em
+// `declare-bankruptcy`, que muda. A simulação validava um jogo que ninguém jogava.
 //
 // `declare-bankruptcy` entra pelo RE-ARME do episódio. O motivo original era que a falência
 // sem herdeiro devolvia terreno direto ao banco, subindo a contagem de livres acima do limiar.
@@ -111,7 +116,10 @@ export type GameAction = PlayerAction | SystemAction
 // quando a contagem está acima do limiar — o que precisa ser reavaliado a cada mudança de
 // posse. Lote de espólio sem lance vira terreno livre no fecho, e aí quem dispara é
 // `close-land-lots`, que já está nesta tabela.
-// Troca NÃO entra: transferir entre dois donos deixa a contagem intacta.
+//
+// `concede` (§9.6/D-057) e `sell-to-bank` (§6.4/D-062) devolvem terreno LIVRE ao banco — as
+// duas SOBEM a contagem, então re-armam o episódio. Troca NÃO entra: transferir entre dois
+// donos deixa a contagem intacta.
 const LAND_TRIGGERING = new Set<GameAction['kind']>([
   'finalize',
   'buy-property',
@@ -119,6 +127,8 @@ const LAND_TRIGGERING = new Set<GameAction['kind']>([
   'close-land-auction',
   'close-land-lots',
   'declare-bankruptcy',
+  'concede',
+  'sell-to-bank',
 ])
 
 // Comandos de sistema — o único caminho que atravessa a pausa. Ver `PAUSE_GATE` abaixo.
@@ -158,7 +168,7 @@ export function applyCommand(state: GameState, action: GameAction, ctx: TurnCtx)
     case 'place-bid': next = placeBid(state, action.playerId, action.amount, ctx.now!()); break
     case 'pass-bid': next = passBid(state, action.playerId); break
     case 'close-auction': next = closeAuction(state); break
-    // — pregão de terrenos (031) —
+    // — pregão simultâneo: escassez (031) + espólio (039) —
     case 'place-land-bid': next = placeLandBid(state, action.playerId, action.pos, action.amount, ctx.now!()); break
     case 'close-land-auction': next = closeLandAuction(state); break
     case 'close-land-lots': next = closeExpiredLandLots(state, action.now); break
@@ -178,6 +188,8 @@ export function applyCommand(state: GameState, action: GameAction, ctx: TurnCtx)
     // — dívida / falência —
     case 'pay-debt': next = payDebt(state); break
     case 'declare-bankruptcy': next = declareBankruptcy(state, ctx); break
+    case 'concede': next = concede(state, ctx); break
+    case 'sell-to-bank': next = sellMortgagedToBank(state, action.pos); break
     // — empréstimo (§15) —
     case 'grant-loan': next = grantLoan(state, activePlayer(state).id, action.creditorId, action.principal, action.ratePct); break
     case 'propose-loan': next = proposeLoan(state, activePlayer(state).id, action.creditorId); break
@@ -201,6 +213,16 @@ export function applyCommand(state: GameState, action: GameAction, ctx: TurnCtx)
   // Gatilho de escassez de terrenos — só quando o comando mudou o estado (paridade com store).
   if (next !== state && LAND_TRIGGERING.has(action.kind)) {
     next = maybeOpenLandAuction(next, ctx.now!())
+  }
+  // Fila de obrigações (§9.1/D-061) → slot de dívida. Aqui, e não numa tabela de comandos como
+  // a de escassez, porque QUALQUER comando pode liberar o slot (`pay-debt`, `declare-bankruptcy`,
+  // `finalize`, o fecho de um leilão) e qualquer um pode enfileirar (uma carta cobra de todos).
+  // Uma tabela aqui seria a lista que um comando novo esquece de entrar — e o sintoma seria uma
+  // dívida presa na fila, invisível, com a mesa esperando por nada.
+  if (next.obligations.length > 0 && next.resolution === null && next.phase === 'playing') {
+    const promoted = structuredClone(next)
+    promoteObligation(promoted)
+    if (promoted.resolution !== null) next = promoted
   }
   return next
 }
@@ -276,6 +298,8 @@ const ACTOR_RULES: Record<PlayerAction['kind'], ActorRule> = {
   'confirm-card-reveal': 'active',
   'pay-debt': 'active',
   'declare-bankruptcy': 'active',
+  concede: 'active',
+  'sell-to-bank': 'active',
   'grant-loan': 'active',
   'propose-loan': 'active',
   'pay-off-loan': 'active',

@@ -84,13 +84,17 @@ _Avoid_: Arranha-céu (no código), torre
 Melhoria de aeroporto que dobra o aluguel daquele aeroporto.
 
 **Leilão**:
-Disputa de lances por uma propriedade. Dispara por recusa de compra, pelo pregão de escassez de terrenos ([D-023](./docs/adr/D-023-leilao-de-escassez-de-terrenos-pregao-simultaneo.md)) ou pelo espólio de um falido ([D-031](./docs/adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md)).
+Disputa de lances por uma propriedade. Dispara por recusa de compra ou pelo espólio de um falido ([D-031](./docs/adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md)). O gatilho por **escassez de terrenos** existiu entre a D-023 e a [D-059](./docs/adr/D-059-leilao-de-escassez-de-terrenos-revertido.md), que o reverteu.
 
 **Pregão**:
-Leilão **simultâneo** de vários lotes ao mesmo tempo, cada um com cronômetro próprio. Formato compartilhado pela escassez de terrenos e pelo espólio — o que distingue os dois é a **origem**, não o mecanismo.
+Leilão **simultâneo** de vários lotes ao mesmo tempo, cada um com cronômetro próprio. Desde a [D-059](./docs/adr/D-059-leilao-de-escassez-de-terrenos-revertido.md) tem uma procedência só — o **espólio**.
 
 **Espólio**:
 Conjunto de propriedades de um jogador que faliu **devendo ao banco**. Vai a pregão em vez de voltar de graça ao banco ([D-031](./docs/adr/D-031-espolio-do-falido-vai-a-pregao-simultaneo.md)). Quando o falido devia a um **jogador**, não há espólio: as propriedades vão direto ao credor.
+
+**Desistência**:
+Saída **voluntária** da partida, na própria vez, sem precisar dever nada ([D-057](./docs/adr/D-057-desistencia-voluntaria-encerra-a-participacao.md), §9.6). Não é falência: não exige insolvência, e sem empréstimo ativo os bens voltam **livres ao banco**, sem espólio nem pregão. Havendo empréstimo, o credor herda tudo, como no §9.3.
+_Avoid_: falência voluntária, abandonar, render-se
 
 ### Cartas
 

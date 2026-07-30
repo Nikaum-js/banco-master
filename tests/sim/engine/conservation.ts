@@ -54,6 +54,8 @@ export const KNOWN_MECHANISMS: readonly string[] = [
   'declare-bankruptcy', 'declare-bankruptcy-sink',
   'accept-trade', 'pay-off-loan', 'grant-loan', 'pay-debt',
   'auction-close', 'land-auction-close',
+  // D-061/D-062/D-063 — mecanismos novos; cobertura ZERO num lote passa a ser gap visível.
+  'obligation-open', 'obligation-paid', 'sell-to-bank',
   'card-drawn-hand', 'card:atalho-opened', 'card-effect-no-cash',
   ...IMMEDIATE_CARD_EFFECTS.map((e) => `card:${e}`),
 ]
@@ -282,13 +284,24 @@ function applyImmediateCard(prev: GameState, _next: GameState, actorId: string, 
     case 'erroBanco':
       addCash(ledger, actorId, 200)
       return
+    // §10.6/D-061 — o esperado é a obrigação CHEIA, não o que o caixa cobriu.
+    //
+    // Esta era a linha que fazia o harness concordar com o bug do CARD 02: o oráculo calculava
+    // `Math.min(50, p.cash)`, exatamente a truncagem do reducer. Recomputar "de forma
+    // independente" copiando a fórmula do código sob teste não é independência — é a mesma
+    // afirmação escrita duas vezes, e ela concorda consigo mesma para sempre. Um oráculo derivado
+    // do código sob teste só prova consistência interna.
+    //
+    // O esperado agora vem da REGRA ($50 de cada adversário). Quando o caixa não cobre, o Δcaixa
+    // observado é menor — e a diferença tem de aparecer em `obligations`, o que é verificado por
+    // `checkObligationLedger` abaixo em vez de ser absorvido no valor esperado.
     case 'aniversario': {
       let total = 0
       for (const p of prev.players) {
         if (p.id === actorId || p.eliminated) continue
-        const paid = Math.min(50, p.cash)
-        addCash(ledger, p.id, -paid)
-        total += paid
+        const cobrado = Math.min(50, Math.max(0, p.cash)) // o que SAIU do caixa
+        addCash(ledger, p.id, -cobrado)
+        total += cobrado
       }
       addCash(ledger, actorId, total)
       return
@@ -679,10 +692,9 @@ function checkDirectAction(prev: GameState, next: GameState, action: SimAction, 
 export function checkAuctionClose(prev: GameState, next: GameState): { violations: Violation[]; mechanisms: string[] } {
   const ledger = newLedger()
   // Saldo corrente por jogador DENTRO deste passo. O fecho do leilão de propriedade e o
-  // dos lotes do pregão podem cair no mesmo passo — desde que `applyCommand` passou a
-  // disparar o gatilho de escassez também em `close-auction` (como o store sempre fez),
-  // arrematar uma propriedade pode ABRIR o pregão e fechar lotes na mesma volta. Quem
-  // paga o 2º evento paga com o caixa JÁ descontado pelo 1º.
+  // dos lotes do pregão podem cair no mesmo passo (uma falência que abre pregão enquanto
+  // um leilão comum vence no mesmo instante). Quem paga o 2º evento paga com o caixa JÁ
+  // descontado pelo 1º.
   const running = new Map<string, number>()
   const take = (id: string, bid: number): number => {
     const available = running.get(id) ?? cashOf(prev, id)
@@ -728,10 +740,45 @@ function bankruptcyContext(prev: GameState, action: SimAction): { heirId: string
   return { heirId, debtorCashBefore: debtor.cash }
 }
 
+/**
+ * A fila de obrigações (§9.1/D-061) é um PASSIVO, e passivo também se conserva.
+ *
+ * A conservação de caixa por si não vê a fila: uma obrigação enfileirada não move dinheiro, e uma
+ * obrigação apagada indevidamente também não. Este checker fecha o buraco pelo outro lado —
+ * obrigação só pode SUMIR por pagamento (`debt-paid`) ou por eliminação (§9.4). Sem ele, o motor
+ * poderia voltar a apagar o restante de uma cobrança e o harness continuaria verde.
+ */
+function checkObligationLedger(prev: GameState, next: GameState): Violation[] {
+  const out: Violation[] = []
+  const owedBefore = (g: GameState, id: string): number =>
+    g.obligations.filter((o) => o.debtorId === id).reduce((s, o) => s + o.amount, 0) +
+    (g.resolution?.kind === 'debt' && g.resolution.debtorId === id ? g.resolution.amount : 0)
+
+  const pagou = next.log.length !== prev.log.length || JSON.stringify(next.log) !== JSON.stringify(prev.log)
+  for (const p of prev.players) {
+    const antes = owedBefore(prev, p.id)
+    const depois = owedBefore(next, p.id)
+    if (depois >= antes) continue // subiu ou ficou igual: nada a justificar
+    const eliminado = next.players.find((q) => q.id === p.id)?.eliminated === true
+    if (eliminado) continue // §9.4 — os vínculos do eliminado somem com ele
+    const caiu = antes - depois
+    const caixaCaiu = p.cash - (next.players.find((q) => q.id === p.id)?.cash ?? p.cash)
+    // Pagamento: o passivo caiu e o caixa caiu junto, no mesmo valor.
+    if (caixaCaiu === caiu) continue
+    if (!pagou) {
+      out.push({ code: 'o', detail: `obrigação de ${p.id} caiu ${caiu} sem pagamento nem eliminação (D-061)` })
+    }
+  }
+  return out
+}
+
 export function checkConservation(prev: GameState, next: GameState, action: SimAction): { violations: Violation[]; mechanisms: string[] } {
   const ledger = newLedger()
   checkDirectAction(prev, next, action, ledger)
   if (action.kind === 'resolve-pending') checkResolvePending(prev, next, ledger)
   applyTaxMan(prev, next, ledger, bankruptcyContext(prev, action))
-  return { violations: finalize(prev, next, ledger), mechanisms: ledger.mechanisms }
+  return {
+    violations: [...finalize(prev, next, ledger), ...checkObligationLedger(prev, next)],
+    mechanisms: ledger.mechanisms,
+  }
 }

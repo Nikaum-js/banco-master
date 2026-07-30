@@ -1,6 +1,6 @@
 # D-055 — Troca exige contrapartida mínima de metade do valor entregue
 
-**Data:** 2026-07-29 · **Status:** aceita
+**Data:** 2026-07-29 · **Status:** revogada — substituída pela [D-058](D-058-troca-e-livre-ate-o-esvaziamento.md)
 
 **Decisão:** uma proposta de negociação só é válida se **cada lado receber pelo menos metade do valor avaliado dos ativos que entrega**. Ativo, aqui, é propriedade, Bus Ticket e imunidade de aluguel — concedida ou transferida. Propostas que não atingem o piso são recusadas pelo próprio jogo: não podem ser enviadas nem aceitas.
 

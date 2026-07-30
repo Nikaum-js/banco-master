@@ -43,8 +43,8 @@ const PRE_040_KIND_CUE: ReadonlyArray<{ entry: LogEntry; cue: SoundCue | null }>
   { entry: { kind: 'card-draw', who: 'p1', deck: 'acaso' }, cue: 'card-draw' },
   { entry: { kind: 'card-draw', who: 'p1', deck: 'tesouro' }, cue: 'card-draw' },
   { entry: { kind: 'roll', who: 'p1', white: [3, 4], isDouble: false, special: null, speed: null, attempt: false }, cue: null },
-  { entry: { kind: 'debt-paid', who: 'p1', amount: 300 }, cue: null },
-  { entry: { kind: 'trade', who: 'p1', toId: 'p2' }, cue: null },
+  { entry: { kind: 'debt-paid', who: 'p1', amount: 300, creditorId: 'p2' }, cue: null },
+  { entry: { kind: 'trade', who: 'p1', toId: 'p2', fromDelta: 0, toDelta: 0 }, cue: null },
 ]
 
 describe('classifyLogEntry — oráculo pré-040 por kind (SC-009 — não-regressão)', () => {
@@ -73,7 +73,7 @@ const NEW_KIND_CUE: ReadonlyArray<{ entry: LogEntry; cue: SoundCue | null }> = [
   { entry: { kind: 'unmortgage', who: 'p1', pos: 1, cost: 33 }, cue: null },
   { entry: { kind: 'auction-won', who: 'bank', pos: 1, amount: 60, winnerId: 'p1' }, cue: 'auction-close' },
   { entry: { kind: 'auction-unsold', who: 'bank', pos: 1 }, cue: 'auction-close' },
-  { entry: { kind: 'lot-won', who: 'bank', pos: 1, amount: 60, winnerId: 'p1', origin: 'scarcity' }, cue: null },
+  { entry: { kind: 'lot-won', who: 'bank', pos: 1, amount: 60, winnerId: 'p1', origin: 'bankruptcy' }, cue: null },
   { entry: { kind: 'lot-unsold', who: 'bank', pos: 1, origin: 'scarcity' }, cue: null },
   { entry: { kind: 'free-parking', who: 'p1', amount: 500 }, cue: null },
   { entry: { kind: 'jail-fine', who: 'p1', amount: 50 }, cue: null },

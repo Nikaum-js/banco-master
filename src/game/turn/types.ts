@@ -1,6 +1,6 @@
 // Tipos de domínio do Fluxo de Turno (spec 002). Tudo serializável (JSON puro):
 // nada de funções/refs no estado — pré-requisito de pausa/reconexão (FR-028).
-import type { Title, ResolutionSlice, Loan, LoanRequest, Immunity, TempEffect, LogEntry, Trade, TradeProposal, LandAuction } from '../economy/types'
+import type { Title, ResolutionSlice, Loan, LoanRequest, Immunity, TempEffect, LogEntry, Obligation, Trade, TradeProposal, LandAuction } from '../economy/types'
 import type { CardSlot, DeckId } from '../cards/types'
 
 export type SpeedFace = 1 | 2 | 3 | 'mr-magnata' | 'onibus'
@@ -98,8 +98,12 @@ export interface GameState {
   log: LogEntry[] // eventos do jogo (021); bounded em 50, mais recentes ao fim
   tradeProposals: TradeProposal[] // propostas simultâneas e independentes (047, D-048)
   nextTradeProposalId: number // próximo id monotônico; começa em 1 e nunca reutiliza
-  landAuction: LandAuction | null // pregão de escassez de terrenos (031, §7.3); evento autônomo, fora do turno
-  landAuctionArmed: boolean // trava de episódio do pregão (031): true = pode disparar nesta "descida" a ≤3
+  // Obrigações a outro jogador ainda não pagas (§9.1, D-061). O slot `resolution` cabe UMA
+  // decisão; esta fila guarda as demais até a vez delas. Snapshot anterior à D-061 não tem o
+  // campo — `normalizeGame` lê ausente como `[]`, que é a semântica de antes (nada devido).
+  obligations: Obligation[]
+  landAuction: LandAuction | null // pregão simultâneo (031 §7.5 / 039 §9.2); evento autônomo, fora do turno
+  landAuctionArmed: boolean // trava de episódio do pregão de escassez (031/D-060): true = pode disparar nesta "descida" a ≤3
   tradeHistory: Trade[] // trocas aceitas (027); mais recentes ao fim, bounded ~12
   notice: Notice | null // notificação informativa ativa (030, §12.2); null = nenhuma
 

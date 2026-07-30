@@ -33,7 +33,7 @@
 - [D-020](D-020-modelo-de-autoridade-sincronizacao-host-autoritativo-realtim.md) — Modelo de autoridade & sync: host-autoritativo + Realtime + snapshot
 - [D-021](D-021-espaco-bus-ticket-uso-imediato-ao-parar-revisa-27107.md) — Espaço Bus Ticket: uso imediato ao parar (revisa §2.7/§10.7) — **revertida (2026-05-27): volta a guardar o ticket**
 - [D-022](D-022-escassez-de-construcao-removida-construcao-ilimitada.md) — Escassez de construção removida (construção ilimitada; remove leilão de casas)
-- [D-023](D-023-leilao-de-escassez-de-terrenos-pregao-simultaneo.md) — Leilão de escassez de terrenos (pregão simultâneo, fim de jogo)
+- [D-023](D-023-leilao-de-escassez-de-terrenos-pregao-simultaneo.md) — Leilão de escassez de terrenos (pregão simultâneo, fim de jogo) — revertida pela D-059 e **restaurada pela D-060**, agora com janela de 24s e contagem regressiva visível
 - [D-024](D-024-economia-recalibrada-tiers-de-casa-aluguel-por-grupo.md) — Economia recalibrada: tiers de casa + aluguel por grupo (sweet spots; laranja→3)
 - [D-025](D-025-distrito-super-luxo-alta-roda.md) — Distrito super-luxo dos Emirados (Abu Dhabi/Dubai; 10º grupo, armadilha de prestígio)
 - [D-026](D-026-construcao-com-pais-parcial-aluguel-escalonado-por-posse.md) — Construção com país parcial: constrói com 1+ cidade, aluguel escala por posse (revisa D-004)
@@ -41,7 +41,7 @@
 - [D-028](D-028-bus-tickets-negociaveis.md) — Bus Tickets negociáveis em propostas de troca (revisa §8.2/§10.7 do SRS)
 - [D-029](D-029-desconexao-de-jogador-eliminado-nao-pausa-a-partida.md) — Desconexão de jogador eliminado NÃO pausa a partida (refina §11.3)
 - [D-030](D-030-privacidade-de-cartas-e-garantia-de-apresentacao-no-v1.md) — ~~Privacidade de cartas é garantia de apresentação no v1~~ **revogada** pela D-037
-- [D-031](D-031-espolio-do-falido-vai-a-pregao-simultaneo.md) — Espólio do falido-ao-banco vai a pregão simultâneo, reusando a D-023 (implementa §9.2)
+- [D-031](D-031-espolio-do-falido-vai-a-pregao-simultaneo.md) — Espólio do falido-ao-banco vai a pregão simultâneo (implementa §9.2; herdou o formato da D-023, e volta a compartilhá-lo com a escassez desde a D-060)
 - [D-032](D-032-log-de-eventos-tipado-narrativa-e-da-ui.md) — Log de eventos tipado: o motor emite fatos, a narrativa (e a identidade) é da UI
 - [D-033](D-033-codigo-de-reentrada-por-assento.md) — Código de reentrada por assento: reconexão de outro dispositivo (refina §11.3/§11.4 e D-019)
 - [D-034](D-034-persistencia-indisponivel-pausa-a-partida.md) — Persistência indisponível pausa a partida (refina §11.4; pausa ganha causa explícita)
@@ -65,8 +65,15 @@
 - [D-052](D-052-revanche-reabre-a-mesma-sala.md) — Revanche reabre a mesma sala e preserva assentos entre partidas (revoga parcialmente D-038)
 - [D-053](D-053-projeto-renomeado-para-magnata-imobiliario.md) — Projeto renomeado de Banco Master para Magnata Imobiliário (risco de marca registrada no INPI)
 - [D-054](D-054-emprestimo-vence-em-tres-voltas.md) — Empréstimo vence em três voltas, com cobrança automática do principal (revoga parcialmente D-009)
-- [D-055](D-055-troca-exige-contrapartida-minima.md) — Troca exige contrapartida mínima de metade do valor entregue em ativos (novo §8.5)
+- [D-055](D-055-troca-exige-contrapartida-minima.md) — ~~Troca exige contrapartida mínima de metade do valor entregue em ativos~~ **revogada** (substituída pela D-058)
 - [D-056](D-056-cobranca-de-divida-sai-do-centro-da-tela.md) — Cobrança de dívida sai do centro da tela e vira faixa ancorada que encolhe o tabuleiro (refina D-039)
+- [D-057](D-057-desistencia-voluntaria-encerra-a-participacao.md) — Desistir encerra a participação sem exigir insolvência; sem empréstimo ativo os bens voltam livres ao banco, sem pregão (novo §9.6)
+- [D-058](D-058-troca-e-livre-ate-o-esvaziamento.md) — Troca é livre em qualquer proporção; só doação pura e esvaziamento (reduzir o patrimônio a menos de um terço) são recusados (substitui D-055, §8.5)
+- [D-059](D-059-leilao-de-escassez-de-terrenos-revertido.md) — ~~Leilão de escassez de terrenos revertido~~ **revogada** (revertida pela D-060, que restaura a D-023)
+- [D-060](D-060-leilao-de-escassez-restaurado-com-janela-legivel.md) — Leilão de escassez restaurado, com janela de 24s e contagem regressiva visível (revoga D-059, restaura D-023, §7.3/§7.5)
+- [D-061](D-061-obrigacao-a-outro-jogador-nao-e-truncada.md) — Obrigação a outro jogador não é truncada: pagamento parcial deixa o restante devido e abre dívida pendente, inclusive fora da vez (§9.1)
+- [D-062](D-062-hipotecada-pode-voltar-ao-banco.md) — Propriedade hipotecada pode voltar ao banco por zero e vira terreno livre; bloqueada com dívida pendente (novo §6.4)
+- [D-063](D-063-toda-mutacao-de-caixa-tem-causa-registrada.md) — Toda mutação de caixa passa por uma função e registra motivo; o Fiscal e mais cinco regras deixam de mover dinheiro em silêncio (refina D-032)
 
 > ℹ️ **Renumeração na integração da 043** (a colisão que este arquivo avisava): a worktree da 043
 > tinha escrito a identidade de transporte como `D-035` e o código de reentrada como `D-038`, e

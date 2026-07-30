@@ -14,12 +14,16 @@ function codesOf(state: GameState, action?: Parameters<typeof checkInvariants>[2
 }
 
 describe('checkInvariants — FR-004a-g', () => {
-  it('(a) cash negativo fora de dívida pendente é violação; dentro de dívida não é', () => {
+  it('(a) cash negativo é violação SEMPRE — inclusive com dívida pendente (D-061)', () => {
     const s = baseState()
     s.players[0].cash = -10
     expect(codesOf(s)).toContain('a')
-    s.resolution = { kind: 'debt', amount: 10, creditorId: null }
-    expect(codesOf(s)).not.toContain('a')
+    // D-061: dívida pendente NÃO passou a autorizar saldo negativo — pelo contrário. A dívida
+    // vive no slot de resolução e na fila de obrigações; o caixa nunca fica negativo no estado, e
+    // o negativo que o §12.3 mostra é uma LEITURA (caixa − obrigação) calculada na apresentação.
+    // A tolerância anterior era o que permitia um reducer novo deixar caixa negativo em silêncio.
+    s.resolution = { kind: 'debt', amount: 10, creditorId: null, debtorId: s.players[0].id, cause: 'tax' }
+    expect(codesOf(s)).toContain('a')
   })
 
   it('(c) hotel2 sem hotel / skyscraper sem hotel2 é violação estrutural', () => {

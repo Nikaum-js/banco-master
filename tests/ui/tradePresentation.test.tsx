@@ -289,11 +289,11 @@ describe('apresentação da negociação', () => {
     expect(screen.getByLabelText('Duração da imunidade em Roma')).toBeTruthy()
   })
 
-  // §8.5 (050/D-055, FR-017) — recusar sem dizer o porquê seria indistinguível de bug, e é
-  // justamente quem está montando a proposta desequilibrada que precisa saber de quanto.
-  it('explica a recusa por contrapartida com o valor que falta', () => {
+  // §8.5 (D-058, FR-017) — recusar sem dizer o porquê seria indistinguível de bug. Roma sem
+  // nada em troca é doação pura; a mensagem pede qualquer contrapartida.
+  it('explica a recusa por doação pura', () => {
     const game = createSeedState(['p1', 'p2'])
-    game.titles[1].ownerId = 'p1' // Roma, $60 → piso de $30
+    game.titles[1].ownerId = 'p1' // Roma, $60, oferecida por nada
     act(() => useGameStore.setState({ game }))
 
     render(<><ActionsPanel /><TradeLayer /></>)
@@ -301,15 +301,14 @@ describe('apresentação da negociação', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Incluir o título Roma' }))
 
     const status = screen.getByRole('status')
-    expect(status.textContent).toContain('entregando demais')
-    expect(status.textContent).toMatch(/30/)
+    expect(status.textContent).toContain('sem receber nada')
     expect((screen.getByRole('button', { name: 'Confirmar' }) as HTMLButtonElement).disabled).toBe(true)
   })
 
-  it('some com a explicação quando a contrapartida cobre o piso', () => {
+  it('some com a explicação quando há contrapartida', () => {
     const game = createSeedState(['p1', 'p2'])
     game.titles[1].ownerId = 'p1'
-    game.titles[3].ownerId = 'p2' // Veneza, $80 — contrapartida acima do piso
+    game.titles[3].ownerId = 'p2' // Veneza, $80 — contrapartida real
     act(() => useGameStore.setState({ game }))
 
     render(<><ActionsPanel /><TradeLayer /></>)
