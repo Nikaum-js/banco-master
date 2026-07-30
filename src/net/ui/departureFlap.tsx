@@ -10,7 +10,7 @@
 // (`aria-hidden`) — anunciar um destino novo a cada 3s seria ruído em leitor de tela — e
 // sob movimento reduzido para de girar: mostra um destino fixo, sem timer nem animação.
 import { useEffect, useState } from 'react'
-import { BOARD, GROUPS, type PropertySquare } from '@/lib/boardData'
+import { ATLAS_BOARD, GROUPS, type PropertySquare } from '@/lib/boardData'
 import { useMotion } from '@/game/ui/motion'
 import { cn } from '@/lib/utils'
 
@@ -18,7 +18,11 @@ const CELLS = 9 // palhetas do letreiro — cabe o nome mais longo que seleciona
 const DWELL_MS = 3400 // quanto um destino fica no letreiro antes do próximo
 const FLAP_STAGGER_MS = 55 // atraso por coluna: é isso que faz a onda
 
-const DESTINATIONS = BOARD.filter((s): s is PropertySquare => s.kind === 'property')
+// Letreiro de embarque do ATLAS — vocabulário de aeroporto e nome de país. Lê
+// `ATLAS_BOARD` explicitamente, e não `BOARD`: como `const` de módulo isto era avaliado no
+// import e passou a depender de ordem de import quando `BOARD` virou o tabuleiro ativo
+// (D-070). A Fuligem tem cenário próprio (`FuligemBackdrop`) e não usa este letreiro.
+const DESTINATIONS = ATLAS_BOARD.filter((s): s is PropertySquare => s.kind === 'property')
   .map((s) => ({ name: (s.short ?? s.name).toUpperCase(), group: s.group, country: GROUPS[s.group].name }))
   .filter((d) => d.name.length <= CELLS)
 

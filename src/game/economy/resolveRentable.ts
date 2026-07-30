@@ -1,15 +1,16 @@
-// Resolver de economia (003) — handler de property/airport/utility injetado na
+// Resolver de economia (003) — handler de property/airport/utility/mine injetado na
 // resolução do turno (002). Retorna null para outros kinds (cai no registry default).
 import type { ResolveCtx, ResolutionOutcome } from '../turn/resolution'
+import { isRentableKind } from './titles'
 import { ownerOf, isMortgaged } from './titles'
-import { rentDue } from './rent'
+import { discountedByTin, rentDue } from './rent'
 import { hasImmunity } from './imunidade'
 import { logEvent } from '../log'
 import { isBoycotted, isPlayerImmune, isValorizada, estatizacaoActive } from './tempEffects'
 
 export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
   const { square, state, playerId, roll } = ctx
-  if (square.kind !== 'property' && square.kind !== 'airport' && square.kind !== 'utility') return null
+  if (!isRentableKind(square.kind)) return null
 
   const pos = square.pos
   const owner = ownerOf(state, pos)
@@ -23,6 +24,9 @@ export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
     state.resolution = { kind: 'purchase', pos } // abre modal; turno segue pendente (FR-001/FR-005)
     return { done: false }
   }
+  // D-071: Mina continua nesta categoria para compra/leilão, mas uma Mina ocupada nunca
+  // cobra aluguel. Encerrar antes de imunidade/efeitos evita log ou dívida de valor zero.
+  if (square.kind === 'mine') return { done: true }
   if (owner === playerId) return { done: true } // própria (FR-011)
   if (isMortgaged(state, pos)) return { done: true } // hipotecada → sem aluguel (FR-010)
   if (hasImmunity(state, playerId, pos)) return { done: true } // imunidade pessoal (014, §8.4)
@@ -32,6 +36,7 @@ export function economyResolve(ctx: ResolveCtx): ResolutionOutcome | null {
   let amount = rentDue(state, pos, owner, roll) // FR-006..009 — fonte única, ver rent.ts
   if (isValorizada(state, pos)) amount *= 2 // Valorização (D-064): a propriedade cobra em dobro
   if (doubleOnce) amount *= 2 // Obras na Pista (D-064)
+  amount = discountedByTin(state, playerId, amount) // Mina de Estanho: −15% no aluguel PAGO
 
   // Estatização (D-064): por 2 voltas o aluguel vai à Loteria, não ao dono.
   const confiscated = estatizacaoActive(state)

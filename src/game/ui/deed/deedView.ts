@@ -8,6 +8,7 @@ import {
   cityLevel,
   buildLevelLimit,
   buildCost,
+  buildPaymentFor,
   canBuildHouse,
   canSellBuilding,
   canBuildHangar,
@@ -37,7 +38,7 @@ export type BuildBlock =
 
 export interface DeedView {
   pos: number
-  kind: 'property' | 'airport' | 'utility'
+  kind: 'property' | 'airport' | 'utility' | 'mine' // D-071: a mina também tem título
   owner: string | null
   ownedByActive: boolean
   mortgaged: boolean
@@ -86,13 +87,16 @@ function buildBlock(game: GameState, pos: number): BuildBlock {
   if (cur === 6 && cities.length !== size) return 'grupo-incompleto' // Skyscraper exige país completo
   if (cur >= buildLevelLimit(cities.length, size)) return 'limite-posse'
   const cash = game.players.find((pl) => pl.id === owner)?.cash ?? 0
-  if (cash < buildCost(sq)) return 'caixa'
+  const player = game.players.find((pl) => pl.id === owner)
+  if (cash < buildPaymentFor(game, sq, owner, cur + 1, player?.nextBuildFree === true)) return 'caixa'
   return null
 }
 
 export function deedView(game: GameState, pos: number): DeedView | null {
   const sq = activeBoard()[pos]
-  if (sq.kind !== 'property' && sq.kind !== 'airport' && sq.kind !== 'utility') return null
+  // Disjunção explícita (e não `isRentableKind`) porque é ela que ESTREITA `sq` para o
+  // union comprável — um predicado sobre `sq.kind` estreitaria só o campo, não o objeto.
+  if (sq.kind !== 'property' && sq.kind !== 'airport' && sq.kind !== 'utility' && sq.kind !== 'mine') return null
   const title = game.titles[pos]
   const owner = title?.ownerId ?? null
   const ownedByActive = owner !== null && owner === activeId(game)

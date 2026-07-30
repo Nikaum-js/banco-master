@@ -82,9 +82,9 @@ function StageRoutes({ className }: { className?: string }) {
 }
 
 // Cada mapa tem seu palco de partida (055/D-069). O da Fuligem é a MESMA cidade da
-// home/lobby, atenuada via CSS (`fuligem-backdrop--stage`) — e as janelas do complexo
-// principal continuam acesas nas cores dos assentos: a fábrica segue sendo o retrato da
-// mesa durante a partida, atrás do tabuleiro.
+// home/lobby, atenuada e estática: quase toda a cena fica escondida pela mesa, então
+// duplicar dezenas de timelines não acrescenta informação. As janelas do complexo
+// principal continuam acesas nas cores dos assentos.
 export function StageBackdrop() {
   const theme = useBoardTheme((state) => state.theme)
   // Sirene breve na abertura dos portões (055/US3): toca UMA vez, quando o palco da
@@ -96,7 +96,7 @@ export function StageBackdrop() {
   if (theme === 'fuligem') {
     return (
       <div className="stage-backdrop" aria-hidden="true">
-        <FuligemBackdrop className="fuligem-backdrop--stage" />
+        <FuligemBackdrop className="fuligem-backdrop--stage" staticScene />
       </div>
     )
   }

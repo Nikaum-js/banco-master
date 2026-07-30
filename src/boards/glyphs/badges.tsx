@@ -111,6 +111,117 @@ export function HangarBadgeIcon({ size = 20 }: BuildingBadgeProps) {
   )
 }
 
+// =====================================================================
+// FAMÍLIA DA FULIGEM (D-070) — oficina, fábrica, Torre de Ferro, Estação de Carga.
+//
+// O mapa já chamava os níveis de oficina/fábrica/Torre de Ferro, mas desenhava CASA,
+// HOTEL e ARRANHA-CÉU: o rótulo dizia uma coisa e o glifo dizia outra, e a leitura que
+// vence é sempre a do desenho. Estes quatro fecham a fresta.
+//
+// Mesmo traço da família cartográfica acima (viewBox 24–28, corpo em `ink-950` a 0.82,
+// contorno `currentColor` 1.55, detalhe em `starlight`), para que os dois mapas tenham
+// pesos idênticos no tabuleiro e no título.
+// =====================================================================
+
+// OFICINA (níveis 1–4) — galpão de UMA água com chaminé e fumaça. O que a separa de uma
+// casa: telhado de inclinação única (casa é duas águas simétricas) e a chaminé fumando.
+export function WorkshopBadgeIcon({ size = 13 }: BuildingBadgeProps) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" data-glyph="oficina" aria-hidden="true">
+      <path
+        d="M5 11.5V21h14V8.5L5 11.5Z"
+        fill="var(--color-ink-950)"
+        fillOpacity="0.82"
+        stroke="currentColor"
+        strokeWidth="1.55"
+        strokeLinejoin="round"
+      />
+      <path d="m3.6 12 15.8-3.4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+      <path d="M15.6 9.2V4.6h2.4v4.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16.8 3.4c.9-.5.2-1.5 1.1-2" stroke="var(--color-starlight)" strokeWidth="1.05" strokeLinecap="round" opacity="0.7" />
+      <path d="M10 21v-4.6h4V21M7.4 14.4h2M7.4 17.6h2" stroke="var(--color-starlight)" strokeWidth="1.15" strokeLinecap="round" opacity="0.86" />
+      <path d="M4 21h16" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" opacity="0.7" />
+    </svg>
+  )
+}
+
+// FÁBRICA (nível 5) — telhado em DENTE DE SERRA e duas chaminés escalonadas. É a silhueta
+// canônica: os dois sinais juntos não leem como prédio de escritório em nenhum tamanho.
+export function FactoryBadgeIcon({ size = 18 }: BuildingBadgeProps) {
+  return (
+    <svg viewBox="0 0 28 24" width={Math.round(size * 1.17)} height={size} fill="none" data-glyph="fabrica" aria-hidden="true">
+      <path d="M6.5 11V3.5h2.6V11M11.5 11V6h2.4v5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M3 21v-7l4-3.4v3.4l4-3.4v3.4l4-3.4v3.4l4-3.4V21H3Z"
+        fill="var(--color-ink-950)"
+        fillOpacity="0.82"
+        stroke="currentColor"
+        strokeWidth="1.55"
+        strokeLinejoin="round"
+      />
+      <path d="M19 21V9.5h6V21" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" />
+      <path d="M5.5 17.5h2M9.5 17.5h2M13.5 17.5h2M21 12.5h2M21 16.5h2" stroke="var(--color-starlight)" strokeWidth="1.25" strokeLinecap="round" opacity="0.84" />
+      <path d="M2 21h24" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+// TORRE DE FERRO (nível 7) — alto-forno: cuba cônica sobre base treliçada, galeria no topo
+// e a boca de corrida acesa. Substitui o arranha-céu, que lia como distrito financeiro.
+export function IronTowerBadgeIcon({ size = 19 }: BuildingBadgeProps) {
+  return (
+    <svg viewBox="0 0 28 28" width={size} height={size} fill="none" data-glyph="torre-de-ferro" aria-hidden="true">
+      <path d="M14 1.5V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M9.5 4h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path
+        d="M10.5 4h7l1.5 7.5v5.5h-10v-5.5L10.5 4Z"
+        fill="var(--color-ink-950)"
+        fillOpacity="0.82"
+        stroke="currentColor"
+        strokeWidth="1.55"
+        strokeLinejoin="round"
+      />
+      <path d="M8 11.5h12" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" opacity="0.8" />
+      <path d="M9 17h10v8H9v-8Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="m9 17 10 8M19 17 9 25" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" opacity="0.62" />
+      <path d="M12.4 8.2h3.2" stroke="var(--color-starlight)" strokeWidth="1.2" strokeLinecap="round" opacity="0.86" />
+      <path d="M12.6 22.2h2.8" stroke="var(--color-starlight)" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M2.5 25h23" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
+      <circle cx="14" cy="1.5" r="1" fill="currentColor" />
+    </svg>
+  )
+}
+
+// ESTAÇÃO DE CARGA (melhoria de ferrovia) — galpão de carga sobre os trilhos com um vagão
+// dentro. O `HangarBadgeIcon` do Atlas tem silhueta de AVIÃO; numa ferrovia isso é ruído.
+export function FreightDepotBadgeIcon({ size = 20 }: BuildingBadgeProps) {
+  return (
+    <svg
+      viewBox="0 0 28 22"
+      width={Math.round(size * 1.27)}
+      height={size}
+      fill="none"
+      data-glyph="estacao-de-carga"
+      aria-hidden="true"
+    >
+      <path
+        d="M2.5 18.5V7.5L14 2l11.5 5.5v11h-23Z"
+        fill="var(--color-ink-950)"
+        fillOpacity="0.84"
+        stroke="currentColor"
+        strokeWidth="1.55"
+        strokeLinejoin="round"
+      />
+      <path d="M2.5 7.5h23" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.75" />
+      <path d="M8 18.5v-7h12v7" stroke="var(--color-starlight)" strokeWidth="1.25" strokeLinejoin="round" opacity="0.8" />
+      <path d="M10.5 14h7" stroke="var(--color-starlight)" strokeWidth="1.15" strokeLinecap="round" opacity="0.7" />
+      <circle cx="11" cy="18.4" r="1.35" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="17" cy="18.4" r="1.35" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M1 20.5h26M4 22h6M18 22h6" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 // Círculo com visto — glifo do estado vazio "tabuleiro em paz".
 export function CalmGlyph({ size = 20 }: { size?: number }) {
   return (

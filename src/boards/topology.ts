@@ -122,6 +122,8 @@ export interface BoardTopology {
   readonly size: number
   readonly corners: readonly number[]
   readonly trackTemplate: string
+  /** Célula do miolo (`gridRow`/`gridColumn`) — depende do tamanho da grade. */
+  readonly centerArea: CSSProperties
   sideOf(pos: number): Side
   gridArea(pos: number): CSSProperties
 }
@@ -130,6 +132,59 @@ export const CLASSIC_TOPOLOGY: BoardTopology = {
   size: 48,
   corners: CORNERS,
   trackTemplate: TRACK_TEMPLATE,
+  centerArea: { gridRow: '2 / 13', gridColumn: '2 / 13' },
   sideOf,
   gridArea,
+}
+
+// ---------------------------------------------------------------------
+// FULIGEM — 40 casas (D-070): cantos em 0/10/20/30, 9 casas por lado,
+// grade 11×11. Mesma família geométrica do clássico, outro tamanho — é
+// exatamente o caso que esta interface existia pra atender.
+//
+// As quatro minas (D-071) entraram por TROCA, não por adição: o tamanho
+// não mudou, então esta topologia continua valendo sem uma linha alterada.
+// ---------------------------------------------------------------------
+
+/** Índices de canto do tabuleiro de 40 casas. */
+export const FULIGEM_CORNERS = [0, 10, 20, 30] as const
+
+/**
+ * Faixas da grade 11×11. Os cantos/perímetro usam 2,5fr: com 40 casas, a Fuligem
+ * transforma a redução do circuito em profundidade real para nome completo e ícone,
+ * em vez de deixar o miolo crescer e conservar células visualmente iguais ao Atlas.
+ */
+export const FULIGEM_TRACK_TEMPLATE = 'minmax(0, 2.5fr) repeat(9, minmax(0, 1fr)) minmax(0, 2.5fr)'
+
+function fuligemSideOf(pos: number): Side {
+  if ((FULIGEM_CORNERS as readonly number[]).includes(pos)) return 'corner'
+  if (pos < 10) return 'bottom' // 1–9
+  if (pos < 20) return 'left' // 11–19
+  if (pos < 30) return 'top' // 21–29
+  return 'right' // 31–39
+}
+
+function fuligemGridArea(pos: number): CSSProperties {
+  if (pos >= 0 && pos <= 10) return { gridRow: 11, gridColumn: 11 - pos } // linha de baixo
+  if (pos >= 11 && pos <= 20) return { gridRow: 11 - (pos - 10), gridColumn: 1 } // coluna esquerda
+  if (pos >= 21 && pos <= 30) return { gridRow: 1, gridColumn: pos - 19 } // linha de cima
+  return { gridRow: pos - 29, gridColumn: 11 } // coluna direita
+}
+
+export const FULIGEM_TOPOLOGY: BoardTopology = {
+  size: 40,
+  corners: FULIGEM_CORNERS,
+  trackTemplate: FULIGEM_TRACK_TEMPLATE,
+  centerArea: { gridRow: '2 / 11', gridColumn: '2 / 11' },
+  sideOf: fuligemSideOf,
+  gridArea: fuligemGridArea,
+}
+
+/**
+ * Topologia do mapa. Vive AQUI e não no `MapCatalog` de propósito: `src/lib` é camada
+ * de dados e não deve depender de `src/boards` (camada de apresentação). O tipo `BoardId`
+ * entra só como tipo — sem import de runtime, sem ciclo.
+ */
+export function topologyOf(id: import('@/lib/mapCatalog').BoardId): BoardTopology {
+  return id === 'fuligem' ? FULIGEM_TOPOLOGY : CLASSIC_TOPOLOGY
 }

@@ -59,6 +59,8 @@ export function logKey(e: LogEntry): string {
     case 'card-draw': return [e.kind, e.who, e.deck].join('|')
     case 'card-immediate': return [e.kind, e.who, e.deck, e.name, e.delta].join('|')
     case 'build': return [e.kind, e.who, e.pos, e.level, e.cost].join('|')
+    case 'smoke-tax': return [e.kind, e.who, e.pos, e.amount].join('|')
+    case 'rail-hop': return [e.kind, e.who, e.from, e.to].join('|')
     case 'build-hangar': return [e.kind, e.who, e.pos, e.cost].join('|')
     case 'sell-building': return [e.kind, e.who, e.pos, e.level, e.amount].join('|')
     case 'sell-hangar': return [e.kind, e.who, e.pos, e.amount].join('|')
@@ -161,6 +163,8 @@ export function classifyLogEntry(e: LogEntry): SoundCue | null {
     //   sell-to-bank (§6.4/D-062) → o Canal 1 já soa pelo delta de `mortgaged`, que CAI aqui.
     // Os demais: sem cue apropriado nesta fatia — decisão explícita, não esquecimento (SC-009).
     case 'build':
+    case 'smoke-tax': // D-070: o Canal 1 já soa o delta de caixa da construção
+    case 'rail-hop': // D-070: o movimento do peão já tem o próprio som de passo
     case 'build-hangar':
     case 'sell-building':
     case 'sell-hangar':

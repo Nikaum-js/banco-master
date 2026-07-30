@@ -11,20 +11,11 @@ import { create } from 'zustand'
 export const useTokenAnim = create<{
   animating: boolean
   rolling: boolean
-  goCrossing: { id: number; playerId: string } | null
   set: (b: boolean) => void
   setRolling: (b: boolean) => void
-  signalGoCrossing: (playerId: string) => void
 }>((set) => ({
   animating: false,
   rolling: false,
-  goCrossing: null,
   set: (b) => set((s) => (s.animating === b ? s : { animating: b })),
   setRolling: (b) => set((s) => (s.rolling === b ? s : { rolling: b })),
-  signalGoCrossing: (playerId) => set((s) => ({
-    goCrossing: {
-      id: (s.goCrossing?.id ?? 0) + 1,
-      playerId,
-    },
-  })),
 }))

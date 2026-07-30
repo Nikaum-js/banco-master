@@ -9,6 +9,8 @@
 // board precisa conhecer daqui.
 import type { Square } from '@/lib/boardData'
 import { activeCatalog } from '@/game/ui/theme/boardTheme'
+import type { MetalId } from '@/lib/boardData'
+import { METAL_ACCENT } from './metals'
 
 // ---------------------------------------------------------------------
 // Glifos SVG próprios para casas especiais — ilustrações full-bleed com
@@ -513,6 +515,204 @@ export function WaterGlyph({ size = 24 }: GlyphProps) {
   )
 }
 
+
+// =====================================================================
+// CANTOS DA FULIGEM (D-070) — os três cantos do Atlas são de outro mundo: o globo de
+// loteria é de sorteio moderno, e o quepe com estrela é polícia americana de século XX.
+// Numa cidade de 1870 nada disso existe.
+// =====================================================================
+
+// SORTE GRANDE — pilha de barras de ouro sobre a bancada, com o pó brilhando por cima.
+// Substitui o globo de loteria: o prêmio da Fuligem é metal, não bolinha numerada.
+export function GoldPileGlyph({ size = 24 }: GlyphProps) {
+  const bar = (x: number, y: number, w: number) => (
+    <>
+      <path
+        d={`M${x} ${y}h${w}l${w * 0.13} ${-3.2}h${-w * 0.74}Z`}
+        fill="var(--color-brass-glow)"
+        stroke="var(--color-ink-950)"
+        strokeWidth="0.7"
+        strokeLinejoin="round"
+      />
+      <rect x={x} y={y} width={w} height="3.4" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="0.7" />
+    </>
+  )
+  return (
+    <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
+      <ellipse cx="20" cy="34.5" rx="15" ry="1.6" fill="var(--color-ink-950)" opacity="0.5" />
+      {/* fileira de baixo (três barras), fileira do meio (duas), coroamento (uma) */}
+      {bar(6, 30, 9)}
+      {bar(16, 30, 9)}
+      {bar(26, 30, 8)}
+      {bar(11, 25.5, 9)}
+      {bar(21, 25.5, 9)}
+      {bar(16, 21, 9)}
+      {/* brilho do metal e pó de ouro no ar */}
+      <path d="M17.6 22.4h6.2" stroke="var(--color-starlight)" strokeWidth="0.9" strokeLinecap="round" opacity="0.75" />
+      <path d="M12.6 26.9h6.2M22.6 26.9h6.2" stroke="var(--color-starlight)" strokeWidth="0.8" strokeLinecap="round" opacity="0.55" />
+      <circle cx="12" cy="15" r="1" fill="var(--color-brass-glow)" opacity="0.85" />
+      <circle cx="28.5" cy="13.5" r="0.8" fill="var(--color-brass-glow)" opacity="0.7" />
+      <circle cx="20.5" cy="11" r="1.2" fill="var(--color-brass-glow)" opacity="0.6" />
+      <circle cx="25" cy="17.5" r="0.7" fill="var(--color-brass-glow)" opacity="0.5" />
+    </svg>
+  )
+}
+
+// PRISÃO (visita) — portão de ferro rebitado com grade e cadeado pesado. É a "casa de
+// correção" da cidade, não a cadeia de faroeste do Atlas.
+export function IronGateGlyph({ size = 24 }: GlyphProps) {
+  return (
+    <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
+      {/* vão de alvenaria */}
+      <path d="M6 34V13.5C6 8.8 12.3 5 20 5s14 3.8 14 8.5V34H6Z" fill="var(--color-ink-abyss)" stroke="var(--color-ink-950)" strokeWidth="1.2" />
+      {/* aro do portão, em ferro */}
+      <path d="M8.5 33V13.8C8.5 10 13.7 7.2 20 7.2s11.5 2.8 11.5 6.6V33" fill="none" stroke="var(--color-brass)" strokeWidth="1.7" />
+      {/* barras verticais e travessas */}
+      <path d="M13 8.6V33M20 7.2V33M27 8.6V33" stroke="var(--color-brass-soft)" strokeWidth="1.5" />
+      <path d="M9 18h22M9 26h22" stroke="var(--color-brass-soft)" strokeWidth="1.5" />
+      {/* rebites nas travessas — o sinal de ferro forjado */}
+      {[12, 17, 23, 28].map((x) => (
+        <circle key={x} cx={x} cy="18" r="0.85" fill="var(--color-brass-glow)" />
+      ))}
+      {/* cadeado no encontro das duas folhas */}
+      <path d="M18.2 21.4v-1.6a1.8 1.8 0 0 1 3.6 0v1.6" fill="none" stroke="var(--color-starlight)" strokeWidth="1.1" />
+      <rect x="17" y="21.2" width="6" height="4.6" rx="0.8" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.7" />
+      <circle cx="20" cy="23.4" r="0.75" fill="var(--color-ink-950)" />
+      <path d="M4.5 34h31" stroke="var(--color-brass)" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+// VÁ PARA A PRISÃO — ALGEMA: o par de argolas de ferro unido pela corrente curta, na
+// diagonal. O quepe de polícia do Atlas é anacrônico aqui; a algema é o instrumento da
+// época — e, ao contrário do grilhão de uma argola só, lê como algema a 20px porque o
+// PAR é o que nomeia o objeto (uma argola sozinha vira "anel", "ferradura", "C").
+export function ShackleGlyph({ size = 24 }: GlyphProps) {
+  // Cada punho: anel grosso de ferro com miolo escuro (o vão do pulso) MAIS o corpo da
+  // catraca — a peça reta tangente ao aro, virada para a corrente, por onde o arco entra
+  // ao fechar. Sem ela dois anéis simétricos leem como binóculo; é a catraca que nomeia
+  // a algema. `dir` é ±1: aponta a catraca para o centro do glifo em cada punho.
+  const cuff = (cx: number, cy: number, r: number, dir: 1 | -1) => {
+    // A catraca fica CENTRADA na linha do aro (offset r/√2 em cada eixo, na diagonal do
+    // glifo), atravessando o ferro — dentro do miolo ela viraria um cadeado solto.
+    const bx = cx + (dir * r) / Math.SQRT2
+    const by = cy + (dir * r) / Math.SQRT2
+    return (
+      <>
+        <circle cx={cx} cy={cy} r={r} fill="var(--color-ink-abyss)" stroke="var(--color-brass)" strokeWidth="3.4" />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--color-brass-glow)" strokeWidth="1.1" opacity="0.65" />
+        <circle cx={cx} cy={cy} r={r - 2.1} fill="none" stroke="var(--color-ink-950)" strokeWidth="0.8" opacity="0.8" />
+        {/* corpo da catraca: barra chata perpendicular à diagonal, cavalgando o aro */}
+        <g transform={`rotate(-45 ${bx} ${by})`}>
+          <rect
+            x={bx - 3.3}
+            y={by - 1.8}
+            width="6.6"
+            height="3.6"
+            rx="1"
+            fill="var(--color-brass)"
+            stroke="var(--color-ink-950)"
+            strokeWidth="0.8"
+          />
+          {/* ranhuras do dente — só duas, para não sujar em 20px */}
+          <path
+            d={`M${bx - 1.1} ${by - 0.9}v1.8M${bx + 1.1} ${by - 0.9}v1.8`}
+            stroke="var(--color-ink-950)"
+            strokeWidth="0.7"
+            opacity="0.7"
+          />
+        </g>
+      </>
+    )
+  }
+  return (
+    <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden="true">
+      <ellipse cx="20" cy="36" rx="12" ry="1.3" fill="var(--color-ink-950)" opacity="0.4" />
+      {/* corrente central: dois elos que ligam os punhos, desenhados ANTES dos anéis
+          para que o ferro das argolas passe por cima e feche a junção */}
+      {[
+        [18.7, 18.7],
+        [21.3, 21.3],
+      ].map(([cx, cy], i) => (
+        <ellipse
+          key={i}
+          cx={cx}
+          cy={cy}
+          rx="3"
+          ry="2.1"
+          transform={`rotate(45 ${cx} ${cy})`}
+          fill="none"
+          stroke="var(--color-brass-soft)"
+          strokeWidth="1.8"
+        />
+      ))}
+      {/* punho de cima (esquerda) e punho de baixo (direita) */}
+      {cuff(10.4, 10.4, 7, 1)}
+      {cuff(29.6, 29.6, 7, -1)}
+      {/* rebite do eixo de cada aro, na diagonal oposta à catraca */}
+      <circle cx="5.7" cy="5.7" r="1" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.5" />
+      <circle cx="34.3" cy="34.3" r="1" fill="var(--color-brass-glow)" stroke="var(--color-ink-950)" strokeWidth="0.5" />
+      {/* o brilho no ferro, só no punho de cima, para dar volume sem sujar */}
+      <path d="M6.2 12.6a5.3 5.3 0 0 1 2.3-6.2" stroke="var(--color-starlight)" strokeWidth="1" strokeLinecap="round" opacity="0.45" fill="none" />
+    </svg>
+  )
+}
+
+
+// MINA (D-071) — boca de galeria escorada em madeira, com o vagonete e o minério à frente.
+// A silhueta é a mesma nos quatro metais (é o mesmo conjunto, tem de ler como conjunto); o
+// que muda é a COR do minério e o formato dos torrões, para os quatro serem distinguíveis
+// de relance sem depender do nome.
+export function MineGlyph({ metal, size = 24 }: GlyphProps & { metal: MetalId }) {
+  const ore = METAL_ACCENT[metal]
+  return (
+    <svg viewBox="0 0 40 40" width={size} height={size} data-glyph={`mina-${metal}`} aria-hidden="true">
+      <ellipse cx="20" cy="35" rx="15" ry="1.5" fill="var(--color-ink-950)" opacity="0.45" />
+      {/* encosta */}
+      <path d="M2 34c3-9 8-15 18-15s15 6 18 15H2Z" fill="var(--color-ink-900)" stroke="var(--color-ink-950)" strokeWidth="0.9" />
+      {/* boca da galeria, escorada em madeira */}
+      <path d="M13 34V24.5a7 7 0 0 1 14 0V34H13Z" fill="var(--color-ink-abyss)" />
+      <path d="M12 34V24.5a8 8 0 0 1 16 0V34" fill="none" stroke="var(--color-brass)" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M15.4 34V25.6M24.6 34v-8.4" stroke="var(--color-brass-soft)" strokeWidth="1.3" />
+      <path d="M14 25.8h12" stroke="var(--color-brass-soft)" strokeWidth="1.3" />
+      {/* trilho saindo da boca */}
+      <path d="M11 33h18M13.5 30.5h13" stroke="var(--color-ink-500)" strokeWidth="0.9" opacity="0.7" />
+      {/* torrões de minério — a cor e a forma são a identidade do metal */}
+      {metal === 'carvao' && (
+        <>
+          <path d="m7 31 3-3 3.4 2-1 3.6-4.6.4Z" fill={ore} stroke="var(--color-brass-soft)" strokeWidth="0.7" />
+          <path d="m30 32.2 2.6-2.6 3 2.2-1.4 2.2h-4Z" fill={ore} stroke="var(--color-brass-soft)" strokeWidth="0.7" />
+        </>
+      )}
+      {metal === 'ferro' && (
+        <>
+          <path d="m6.6 30.4 4.2-1.8 2.4 3-2.6 2.6-3.8-1Z" fill={ore} stroke="var(--color-ink-950)" strokeWidth="0.7" />
+          <path d="m29.6 31.6 3.6-1.4 2.6 2.4-2 1.6h-3.6Z" fill={ore} stroke="var(--color-ink-950)" strokeWidth="0.7" />
+        </>
+      )}
+      {metal === 'cobre' && (
+        <>
+          {/* veio, não torrão: o cobre aparece em filete na rocha */}
+          <path d="m5.8 32.6 4-4.6 3 1.2-2.2 4.8-4.8-.4Z" fill={ore} stroke="var(--color-ink-950)" strokeWidth="0.7" />
+          <path d="m8 29.4 2.6 3.4" stroke="var(--color-brass-glow)" strokeWidth="0.9" strokeLinecap="round" />
+          <path d="m30 33 3-3.4 2.8 1.6-1.4 2.6-4.4-.8Z" fill={ore} stroke="var(--color-ink-950)" strokeWidth="0.7" />
+        </>
+      )}
+      {metal === 'estanho' && (
+        <>
+          {/* grãos redondos e claros — o estanho é aluvionar, vem lavado */}
+          <circle cx="9" cy="31.4" r="2.4" fill={ore} stroke="var(--color-ink-950)" strokeWidth="0.7" opacity="0.9" />
+          <circle cx="12.6" cy="33.4" r="1.5" fill={ore} stroke="var(--color-ink-950)" strokeWidth="0.6" opacity="0.75" />
+          <circle cx="32" cy="32.4" r="2.2" fill={ore} stroke="var(--color-ink-950)" strokeWidth="0.7" opacity="0.9" />
+        </>
+      )}
+      {/* picareta apoiada na escora */}
+      <path d="M27.5 22 33 15.5" stroke="var(--color-brass-soft)" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M30.4 14.2c1.6-1.4 4-1.2 5.4.4-1.8.2-3 .8-4 2Z" fill="var(--color-brass)" stroke="var(--color-ink-950)" strokeWidth="0.6" />
+    </svg>
+  )
+}
+
 // ---------------------------------------------------------------------
 // Ícones por tipo de casa especial — todos usam glifos SVG próprios. O
 // glifo é escolhido pelo MAPA ativo quando o papel muda de mundo (avião →
@@ -525,14 +725,15 @@ export function SquareIcon({ square, size = 18 }: { square: Square; size?: numbe
     case 'utility':         return square.icon === 'fuel' ? (fuligem ? <CoalGlyph size={size} /> : <FuelGlyph size={size} />)
                                  : square.icon === 'bolt' ? <BoltGlyph size={size} />
                                  : (fuligem ? <WaterGlyph size={size} /> : <GasGlyph size={size} />)
+    case 'mine':            return <MineGlyph metal={square.metal} size={size} />
     case 'tax':             return <TaxGlyph        size={size} />
     case 'acaso':           return <AcasoCellGlyph size={size} />
     case 'tesouro':         return <TesouroCellGlyph  size={size} />
     case 'bus-ticket':      return fuligem ? <TrainTicketGlyph size={size} /> : <BusGlyph size={size} />
     case 'corner-go':       return <GoGlyph         size={size} />
-    case 'corner-jail':     return <JailGlyph       size={size} />
-    case 'corner-parking':  return <LotteryGlyph    size={size} />
-    case 'corner-gotojail': return <GoToJailGlyph   size={size} />
+    case 'corner-jail':     return fuligem ? <IronGateGlyph size={size} /> : <JailGlyph size={size} />
+    case 'corner-parking':  return fuligem ? <GoldPileGlyph size={size} /> : <LotteryGlyph size={size} />
+    case 'corner-gotojail': return fuligem ? <ShackleGlyph  size={size} /> : <GoToJailGlyph size={size} />
     default: return null
   }
 }

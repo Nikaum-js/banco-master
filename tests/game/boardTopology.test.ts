@@ -3,7 +3,18 @@
 // é pura — e estes são os primeiros testes que ela tem.
 import { describe, expect, it } from 'vitest'
 import { BOARD } from '@/lib/boardData'
-import { CLASSIC_TOPOLOGY, CORNERS, gridArea, isCorner, markLayout, popoverPlacement, sideOf } from '@/boards/topology'
+import {
+  CLASSIC_TOPOLOGY,
+  CORNERS,
+  FULIGEM_TOPOLOGY,
+  FULIGEM_TRACK_TEMPLATE,
+  gridArea,
+  isCorner,
+  markLayout,
+  popoverPlacement,
+  sideOf,
+} from '@/boards/topology'
+import { catalogOf } from '@/lib/mapCatalog'
 
 describe('sideOf', () => {
   it('as quatro esquinas são canto', () => {
@@ -101,5 +112,22 @@ describe('CLASSIC_TOPOLOGY', () => {
     expect(CLASSIC_TOPOLOGY.corners).toEqual(CORNERS)
     // `minmax(0, …)` mantém as faixas proporcionais — sem ele o board sai retangular.
     expect(CLASSIC_TOPOLOGY.trackTemplate).toContain('minmax(0,')
+  })
+})
+
+describe('FULIGEM_TOPOLOGY', () => {
+  it('declara 40 casas, quatro cantos e 9 casas por lado', () => {
+    const board = catalogOf('fuligem').board
+    const count = { bottom: 0, left: 0, top: 0, right: 0, corner: 0 }
+    for (const square of board) count[FULIGEM_TOPOLOGY.sideOf(square.pos)] += 1
+
+    expect(FULIGEM_TOPOLOGY.size).toBe(40)
+    expect(FULIGEM_TOPOLOGY.corners).toEqual([0, 10, 20, 30])
+    expect(count).toEqual({ bottom: 9, left: 9, top: 9, right: 9, corner: 4 })
+  })
+
+  it('usa uma faixa periférica mais profunda que o Atlas', () => {
+    expect(FULIGEM_TRACK_TEMPLATE).toContain('2.5fr')
+    expect(FULIGEM_TRACK_TEMPLATE).not.toBe(CLASSIC_TOPOLOGY.trackTemplate)
   })
 })

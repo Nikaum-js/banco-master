@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BOARD } from '@/lib/boardData'
 import { deedPresentation } from '@/game/ui/deed/presentation'
+import { catalogOf } from '@/lib/mapCatalog'
 
 describe('deedPresentation', () => {
   it('projeta todos os fatos econômicos e visuais de uma propriedade', () => {
@@ -45,6 +46,21 @@ describe('deedPresentation', () => {
       mortgage: 75,
       multipliers: [4, 10, 20],
     })
+  })
+
+  it('projeta Mina como bônus passivo sem escada de aluguel', () => {
+    const mine = catalogOf('fuligem').board[4]
+    const presentation = deedPresentation(mine)
+
+    expect(presentation).toMatchObject({
+      kind: 'mine',
+      name: 'Mina de Ferro',
+      price: 220,
+      mortgage: 110,
+      bonus: 'Suas construções custam 25% menos.',
+      rentRows: [],
+    })
+    expect(presentation).not.toHaveProperty('rents')
   })
 
   it('recusa casas que não representam uma escritura', () => {

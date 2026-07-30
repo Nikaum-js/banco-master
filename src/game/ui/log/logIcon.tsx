@@ -29,6 +29,10 @@ export function logIcon(kind: LogEntry['kind']): ReactNode {
     case 'sell-building':
     case 'sell-hangar':
       return <HouseIcon size={11} />
+    case 'smoke-tax':
+      return <CoinIcon size={11} /> // D-070: é dinheiro saindo pro pote, não construção
+    case 'rail-hop':
+      return <DiceIcon size={11} /> // D-070: é movimento, mesma família das jogadas
     case 'auction-won':
     case 'auction-unsold':
     case 'lot-won':

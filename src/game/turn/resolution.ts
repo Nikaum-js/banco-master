@@ -11,6 +11,7 @@ import type { Square } from '@/lib/boardData'
 import type { Roll, GameState } from './types'
 import type { CardSlot, DeckId } from '../cards/types'
 import { logEvent } from '../log'
+import { discountedByTin } from '../economy/rent'
 
 export interface TurnPorts {
   onPassGo(state: GameState, playerId: string): number // bônus do GO; advance credita o retorno (007)
@@ -65,6 +66,8 @@ export const resolutionRegistry: Record<Square['kind'], ResolutionHandler> = {
   property: stub,
   airport: stub,
   utility: stub,
+  mine: stub, // D-071 — comprável/rentável; quem resolve é `economyResolve`
+
   acaso: stub,
   tesouro: stub,
   // Espaço Bus Ticket (009; SRS §2.7): parar GANHA 1 Bus Ticket guardado — uso é
@@ -82,17 +85,18 @@ export const resolutionRegistry: Record<Square['kind'], ResolutionHandler> = {
     // Imunidade Total (D-064): 1 volta sem pagar imposto algum. Import inline para manter
     // este módulo sem dependência estática de economy/ (fronteira de spec, ver cabeçalho).
     if (state.tempEffects.some((e) => e.kind === 'imunidade-total' && e.ownerId === playerId)) return { done: true }
+    const amount = discountedByTin(state, playerId, square.amount)
     const p = state.players.find((x) => x.id === playerId)
-    if (p && p.cash < square.amount) {
+    if (p && p.cash < amount) {
       // dívida ao banco (008). O imposto de CASA abre dívida (diferente das cobranças pequenas e
       // incondicionais que truncam, §9.1/D-061): o valor é grande e o jogador escolheu andar até ali.
-      state.resolution = { kind: 'debt', amount: square.amount, creditorId: null, debtorId: playerId, cause: 'tax' }
-      logEvent(state, { kind: 'debt-open', who: playerId, amount: square.amount, creditorId: null, cause: 'tax' })
+      state.resolution = { kind: 'debt', amount, creditorId: null, debtorId: playerId, cause: 'tax' }
+      logEvent(state, { kind: 'debt-open', who: playerId, amount, creditorId: null, cause: 'tax' })
       return { done: false }
     }
-    if (p) p.cash -= square.amount // débito real (007)
-    ports.onPayToCenter(state, square.amount) // → pote
-    logEvent(state, { kind: 'tax', who: playerId, amount: square.amount }) // 021/040
+    if (p) p.cash -= amount // débito real (007)
+    ports.onPayToCenter(state, amount) // → pote
+    logEvent(state, { kind: 'tax', who: playerId, amount }) // 021/040
     return { done: true }
   },
   'corner-parking': ({ playerId, ports, state }) => {

@@ -3,7 +3,7 @@
 // repetir clipboard, extração de id de sala e persistência de nome.
 import { useState } from 'react'
 import type { BoardTheme } from '@/game/ui/theme/boardTheme'
-import { BOARD, GROUPS, type PropertySquare } from '@/lib/boardData'
+import { ATLAS_BOARD, BOARD, GROUPS, type PropertySquare } from '@/lib/boardData'
 import { catalogOf } from '@/lib/mapCatalog'
 import { extractRoomId, rememberPlayerName, recallPlayerName, NAME_MAX } from '@/net/session'
 
@@ -70,7 +70,12 @@ export interface HomeActions {
 }
 
 /** Cidades do tabuleiro de verdade — letreiro, ticker e mapa da home saem daqui. */
-export const CITIES = BOARD.filter((s): s is PropertySquare => s.kind === 'property').map((s) => ({
+/**
+ * Cidades do tabuleiro do ATLAS — letreiro, ticker e mapa da home do Atlas saem daqui.
+ * Lê `ATLAS_BOARD` de propósito (mesmo motivo do `departureFlap`): é conteúdo do mapa
+ * Cidades do Mundo, com nome de país, e não deve mudar quando a sala é da Fuligem.
+ */
+export const CITIES = ATLAS_BOARD.filter((s): s is PropertySquare => s.kind === 'property').map((s) => ({
   name: s.name,
   short: (s.short ?? s.name).toUpperCase(),
   group: s.group,

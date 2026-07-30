@@ -18,6 +18,7 @@ import {
   chooseBusMove,
   chooseTripleDest,
   spendBusTicket,
+  railHop,
   activePlayer,
   dismissNotice,
 } from './turn/turnMachine'
@@ -43,6 +44,7 @@ export type PlayerAction =
   | { kind: 'choose-bus-move'; opt: 'die0' | 'die1' | 'sum' }
   | { kind: 'choose-triple-dest'; dest: number }
   | { kind: 'use-bus-ticket'; dest: number }
+  | { kind: 'rail-hop'; dest: number } // Desvio pela Ferrovia (D-070, mapa Fuligem)
   | { kind: 'resolve-pending' }
   // Casa/compra — ator = jogador ativo.
   | { kind: 'buy-property' }
@@ -160,6 +162,7 @@ export function applyCommand(state: GameState, action: GameAction, ctx: TurnCtx)
     case 'choose-bus-move': next = chooseBusMove(state, action.opt, ctx); break
     case 'choose-triple-dest': next = chooseTripleDest(state, action.dest, ctx); break
     case 'use-bus-ticket': next = spendBusTicket(state, action.dest, ctx); break
+    case 'rail-hop': next = railHop(state, action.dest, ctx); break // D-070 (mapa Fuligem)
     case 'resolve-pending': next = resolvePending(state, ctx); break
     // — compra —
     case 'buy-property': next = buyProperty(state); break
@@ -283,6 +286,7 @@ const ACTOR_RULES: Record<PlayerAction['kind'], ActorRule> = {
   'choose-bus-move': 'active',
   'choose-triple-dest': 'active',
   'use-bus-ticket': 'active',
+  'rail-hop': 'active',
   'resolve-pending': 'active',
   'buy-property': 'active',
   'decline-property': 'active',

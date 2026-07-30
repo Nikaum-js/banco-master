@@ -93,6 +93,18 @@ function cardImmediatePhrase(name: string, delta: number): LogSentence {
 
 // Substantivo do degrau construído — deriva de `level` (nível RESULTANTE, D5 do plan):
 // 1-4 = casas, 5 = hotel, 6 = 2º hotel, 7 = arranha-céu (ladder de `construction.ts`).
+/**
+ * O rótulo da melhoria de ferrovia com artigo, para caber na frase do log.
+ *
+ * O Atlas diz "Hangar" (masculino, nome comum → minúsculo na frase); a Fuligem diz
+ * "Estação de Carga" (feminino, nome próprio da instalação → mantém a maiúscula). Um
+ * literal só não serve para os dois, e "construiu um Estação de Carga" é pior que o bug
+ * que estamos consertando.
+ */
+function lowerLabel(label: string): string {
+  return label === 'Hangar' ? 'um hangar' : `a ${label}`
+}
+
 function buildingNoun(level: number): string {
   const labels = activeLabels()
   if (level <= 4) return `${level}ª ${labels.house}`
@@ -146,12 +158,21 @@ export function describeLogEntry(entry: LogEntry, room: Room | null): LogSentenc
       return [who(room, entry.who), text(': '), ...cardImmediatePhrase(entry.name, entry.delta)]
     case 'build':
       return [who(room, entry.who), text(` construiu ${buildingNoun(entry.level)} em `), place(entry.pos), text(' por '), money(entry.cost)]
+    case 'rail-hop':
+      // D-070 (mapa Fuligem): embarque entre ferrovias próprias — movimento, não dinheiro.
+      return [who(room, entry.who), text(' embarcou em '), place(entry.from), text(' e desceu em '), place(entry.to)]
+    case 'smoke-tax':
+      // D-070 (mapa Fuligem): a fumaça da fábrica é cobrada, e o dinheiro vai ao pote.
+      return [who(room, entry.who), text(' pagou '), money(entry.amount), text(' de Taxa de Fumaça em '), place(entry.pos)]
     case 'build-hangar':
-      return [who(room, entry.who), text(' construiu um hangar em '), place(entry.pos), text(' por '), money(entry.cost)]
+      // O nome da melhoria vem do MAPA (Hangar / Estação de Carga). Era o literal
+      // "hangar", então o log da Fuligem contradizia o botão que o jogador acabou de
+      // clicar — ele comprou uma Estação de Carga e leu que construiu um hangar.
+      return [who(room, entry.who), text(` construiu ${lowerLabel(activeLabels().hangar)} em `), place(entry.pos), text(' por '), money(entry.cost)]
     case 'sell-building':
       return [who(room, entry.who), text(` vendeu construção em `), place(entry.pos), text(' por '), money(entry.amount)]
     case 'sell-hangar':
-      return [who(room, entry.who), text(' vendeu o hangar em '), place(entry.pos), text(' por '), money(entry.amount)]
+      return [who(room, entry.who), text(` vendeu ${lowerLabel(activeLabels().hangar)} em `), place(entry.pos), text(' por '), money(entry.amount)]
     case 'mortgage':
       return [who(room, entry.who), text(' hipotecou '), place(entry.pos), text(' e recebeu '), money(entry.amount)]
     case 'unmortgage':

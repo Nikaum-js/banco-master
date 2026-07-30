@@ -37,6 +37,23 @@ export const THEME = {
   AIRPORT_RENT: [25, 50, 100, 200] as const, // por nº de aeroportos do dono (§2.4)
   UTILITY_MULT: [4, 10, 20] as const, // × valor dos dados, por nº de utilidades (§2.5)
 
+  // MINAS (D-071, mapa Fuligem) — títulos sem aluguel. O valor vem exclusivamente do
+  // bônus passivo de cada metal: qual delas vale mais depende da carteira do dono.
+  //
+  // Fatores como multiplicador direto (1.5 = +50%). O ferro é o único que age no CUSTO e
+  // não no aluguel, por isso é < 1.
+  // O cobre MUDOU DE ALVO em relação ao desenho original: ele dobrava o aluguel das
+  // utilidades, mas as minas entraram por TROCA e as utilidades saíram do mapa Fuligem —
+  // um passivo sem alvo é um passivo morto. Agora ele age em propriedades construídas.
+  // O estanho, por sua vez, reduz as duas cobranças econômicas que mais pressionam caixa:
+  // impostos e aluguéis pagos.
+  MINE_BONUS: {
+    ferro: 0.75, // suas construções custam 25% menos — a estrutura é do seu ferro
+    carvao: 1.5, // aluguel das SUAS ferrovias +50% — a locomotiva queima seu carvão
+    cobre: 1.25, // aluguel das propriedades com QUALQUER construção +25%
+    estanho: 0.85, // impostos e aluguéis que VOCÊ paga −15%
+  } as const,
+
   HANGAR_COST: 100, // melhoria de aeroporto (§13.6); venda = metade
 
   MORTGAGE_RATIO: 0.5, // hipoteca = metade do preço (§6.1)

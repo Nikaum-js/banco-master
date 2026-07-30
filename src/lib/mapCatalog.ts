@@ -1,22 +1,24 @@
-// CATÁLOGO DE MAPAS (055/D-069) — a fonte única do que um mapa jogável fornece:
-// identificador estável, nome público, as 48 casas de APRESENTAÇÃO, nomes de grupo,
-// rótulos dos contratos do motor e overrides de texto de carta.
+// CATÁLOGO DE MAPAS (055/D-069, 056/D-070) — a fonte única do que um mapa jogável
+// fornece: identificador estável, nome público, o TABULEIRO, nomes de grupo, rótulos
+// dos contratos do motor, overrides de texto de carta e as regras próprias do mapa.
 //
-// O ESQUELETO ECONÔMICO é um só: `BOARD` (posições, tipos, grupos, preços, aluguéis)
-// continua sendo a fonte que o motor consome — o motor não conhece mapa. O board da
-// Cidade da Fuligem é DERIVADO de `BOARD` por overlay de posição, o que garante a
-// paridade econômica por construção (e um teste a prova byte a byte).
+// MUDANÇA DA D-070: cada mapa tem tabuleiro PRÓPRIO, de tamanho próprio. Antes a
+// Fuligem era derivada do `BOARD` do Atlas por overlay de posição — o que garantia
+// paridade econômica byte a byte, mas travava os dois mapas em 48 casas e reduzia o
+// segundo mapa a uma troca de nomes. A Fuligem agora tem 40 casas, 8 bairros e uma
+// disposição própria (ver `fuligemBoard.ts`), e o motor passa a ler o tabuleiro do
+// mapa ativo em vez de `BOARD` direto.
 //
 // Contratos internos (`airport`, `hangar`, `bus-ticket`, `corner-parking`, centerPot)
 // permanecem; o catálogo os APRESENTA (Ferrovia, Estação de Carga, Bilhete de Trem,
 // Sorte Grande) via `labels`.
 import {
-  BOARD,
+  ATLAS_BOARD,
   GROUPS,
   type GroupKey,
-  type PropertyIconId,
   type Square,
 } from './boardData'
+import { FULIGEM_BOARD, FULIGEM_GROUP_NAMES } from './fuligemBoard'
 
 /** Identificador estável de mapa jogável — gravado na sala (D-069). */
 export const BOARD_IDS = ['atlas', 'fuligem'] as const
@@ -55,17 +57,56 @@ export interface CardTextOverride {
   desc?: string
 }
 
+/**
+ * Regras próprias do mapa (D-070). O default é o comportamento do Atlas, então um mapa
+ * que não declara nada joga exatamente como sempre — a Fuligem liga as duas dela.
+ */
+export interface MapRules {
+  /**
+   * Desvio pela Ferrovia: cair numa ferrovia SUA permite embarcar até outra ferrovia
+   * sua (mínimo 2 no seu nome), resolvendo a casa de destino normalmente e SEM o bônus
+   * de GO. Zero mudança em preço ou aluguel — é uma escolha, no seu turno.
+   */
+  railHop: boolean
+  /**
+   * Taxa de Fumaça: valor que vai ao pote central (`centerPot`) a cada construção de
+   * FÁBRICA OU ACIMA — `cityLevel >= 5`, ou seja fábrica/Complexo/Torre de Ferro, nunca
+   * oficina. 0 = desligado. Quem constrói grande engorda um pote que qualquer um pode
+   * levar: freio no líder que é sorte pura, portanto discreto (Princípio IV).
+   */
+  smokeTax: number
+}
+
+export const DEFAULT_RULES: MapRules = { railHop: false, smokeTax: 0 }
+
+// REGRAS DO MAPA ATIVO — mesmo desenho de `setActiveBoard` em `boardData.ts` e pela mesma
+// razão: o motor precisa consultá-las sem importar da camada de UI (onde vive o store do
+// tema). Quem chama o setter é só `boardTheme.setTheme`, junto do tabuleiro.
+let activeRulesRef: MapRules = DEFAULT_RULES
+
+/** Aplica as regras do mapa ativo. Chamado só por `boardTheme.setTheme`. */
+export function setActiveRules(rules: MapRules): void {
+  activeRulesRef = rules
+}
+
+/** Regras do mapa ativo (Atlas = `DEFAULT_RULES`). */
+export function activeRules(): MapRules {
+  return activeRulesRef
+}
+
 export interface MapCatalog {
   id: BoardId
   /** Nome público do mapa (home, lobby, landing). */
   name: string
-  /** As 48 casas de apresentação — MESMO esqueleto econômico de `BOARD`. */
+  /** O tabuleiro do mapa — tamanho próprio (Atlas 48, Fuligem 40). */
   board: readonly Square[]
   /** Nome público de cada grupo (a cor/token vem de `GROUPS`, compartilhada). */
-  groupNames: Record<GroupKey, string>
+  groupNames: Partial<Record<GroupKey, string>>
   labels: MapLabels
   /** Overrides de texto de carta (apresentação; efeitos/raridades intocados). */
   cardText: Record<string, CardTextOverride>
+  /** Regras próprias do mapa. */
+  rules: MapRules
 }
 
 // ---------------------------------------------------------------------
@@ -79,7 +120,7 @@ const ATLAS_GROUP_NAMES = Object.fromEntries(
 const ATLAS: MapCatalog = {
   id: 'atlas',
   name: 'Cidades do Mundo',
-  board: BOARD,
+  board: ATLAS_BOARD,
   groupNames: ATLAS_GROUP_NAMES,
   labels: {
     airport: 'Aeroporto',
@@ -94,121 +135,14 @@ const ATLAS: MapCatalog = {
     group: 'país',
   },
   cardText: {},
+  rules: DEFAULT_RULES,
 }
 
 // ---------------------------------------------------------------------
-// FULIGEM — Cidade da Fuligem: Revolução Industrial. Board derivado de
-// `BOARD` por overlay de posição; nada econômico muda.
-//
-// Reparo registrado na spec 055: o brief listou Bairro da Fumaça com 2
-// propriedades e Centro da Cidade com 3, mas as posições fixam 3 e 2 —
-// a Fumaça ganhou "Travessa do Carvão" e "Rua do Comércio" ficou de fora.
+// FULIGEM — Cidade da Fuligem: 40 casas próprias (D-070). O tabuleiro, os 8
+// bairros e a disposição vivem em `fuligemBoard.ts`, junto do raciocínio de
+// por que cada coisa está onde está.
 // ---------------------------------------------------------------------
-
-export const FULIGEM_GROUP_NAMES: Record<GroupKey, string> = {
-  brown: 'Bairro da Fumaça',
-  skyblue: 'Bairro das Fábricas',
-  pink: 'Bairro do Ferro',
-  purple: 'Porto do Vapor',
-  orange: 'Vila dos Trabalhadores',
-  red: 'Bairro das Máquinas',
-  yellow: 'Bairro dos Trens',
-  green: 'Bairro da Energia',
-  navy: 'Centro da Cidade',
-  platinum: 'Bairro dos Magnatas',
-}
-
-interface PropertyOverlay {
-  name: string
-  short?: string
-  icon: PropertyIconId
-}
-
-// Propriedades por posição (28). O grupo/preço/aluguel vêm do esqueleto.
-const FULIGEM_PROPERTIES: Record<number, PropertyOverlay> = {
-  1: { name: 'Rua da Fumaça', icon: 'chimney' },
-  3: { name: 'Beco da Chaminé', icon: 'chimney' },
-  5: { name: 'Travessa do Carvão', icon: 'chimney' },
-  7: { name: 'Fábrica Velha', icon: 'factory' },
-  9: { name: 'Rua das Oficinas', icon: 'factory' },
-  11: { name: 'Pátio da Caldeira', icon: 'factory' },
-  13: { name: 'Rua do Ferro', icon: 'anvil' },
-  15: { name: 'Ponte de Aço', icon: 'anvil' },
-  16: { name: 'Mercado das Peças', icon: 'anvil' },
-  19: { name: 'Doca da Fumaça', icon: 'crane' },
-  21: { name: 'Cais das Máquinas', icon: 'crane' },
-  22: { name: 'Armazém do Porto', icon: 'crane' },
-  25: { name: 'Rua da Vila', icon: 'house' },
-  26: { name: 'Praça dos Trabalhadores', icon: 'house' },
-  27: { name: 'Mercado da Estação', icon: 'house' },
-  28: { name: 'Rua das Engrenagens', icon: 'gear' },
-  29: { name: 'Fábrica Central', icon: 'gear' },
-  31: { name: 'Torre do Relógio', icon: 'clock' },
-  33: { name: 'Rua dos Trilhos', icon: 'train' },
-  34: { name: 'Pátio dos Vagões', icon: 'train' },
-  35: { name: 'Avenida da Estação', icon: 'train' },
-  37: { name: 'Rua das Lâmpadas', icon: 'lamp' },
-  38: { name: 'Praça da Usina', icon: 'lamp' },
-  40: { name: 'Avenida da Luz', icon: 'lamp' },
-  41: { name: 'Avenida Central', icon: 'building' },
-  44: { name: 'Praça do Banco', icon: 'bank' },
-  46: { name: 'Avenida do Progresso', icon: 'building' },
-  47: { name: 'Mansão da Colina', icon: 'mansion' },
-}
-
-// Ferrovias por LADO do tabuleiro: pos 6 (inferior) Sul · 18 (esquerdo) Oeste ·
-// 30 (superior) Norte · 42 (direito) Leste. O campo `iata` vira a sigla da estação.
-const FULIGEM_AIRPORTS: Record<number, { name: string; iata: string }> = {
-  6: { name: 'Ferrovia Sul', iata: 'SUL' },
-  18: { name: 'Ferrovia Oeste', iata: 'OESTE' },
-  30: { name: 'Ferrovia Norte', iata: 'NORTE' },
-  42: { name: 'Ferrovia Leste', iata: 'LESTE' },
-}
-
-const FULIGEM_UTILITIES: Record<number, string> = {
-  14: 'Mina de Carvão',
-  32: 'Usina Elétrica',
-  43: 'Companhia de Água',
-}
-
-const FULIGEM_TAXES: Record<number, string> = {
-  4: 'Imposto da Cidade',
-  45: 'Taxa de Fumaça',
-}
-
-function fuligemSquare(sq: Square): Square {
-  switch (sq.kind) {
-    case 'property': {
-      const overlay = FULIGEM_PROPERTIES[sq.pos]
-      if (!overlay) throw new Error(`Fuligem sem overlay para a propriedade ${sq.pos}`)
-      const { uf: _uf, capital: _capital, short: _short, ...rest } = sq
-      return {
-        ...rest,
-        name: overlay.name,
-        ...(overlay.short ? { short: overlay.short } : {}),
-        capital: FULIGEM_GROUP_NAMES[sq.group],
-        icon: overlay.icon,
-      }
-    }
-    case 'airport': {
-      const overlay = FULIGEM_AIRPORTS[sq.pos]
-      if (!overlay) throw new Error(`Fuligem sem overlay para a ferrovia ${sq.pos}`)
-      return { ...sq, name: overlay.name, iata: overlay.iata }
-    }
-    case 'utility':
-      return { ...sq, name: FULIGEM_UTILITIES[sq.pos] ?? sq.name }
-    case 'tax':
-      return { ...sq, name: FULIGEM_TAXES[sq.pos] ?? sq.name }
-    case 'bus-ticket':
-      return { ...sq, name: 'Bilhete de Trem' }
-    case 'corner-parking':
-      return { ...sq, name: 'Sorte Grande', short: 'Sorte Grande' }
-    default:
-      return { ...sq }
-  }
-}
-
-const FULIGEM_BOARD: readonly Square[] = BOARD.map(fuligemSquare)
 
 // Overrides de texto de carta — chave = EFFECT ID (`cardMeta.CARD_LABEL`/`CARD_DESC`).
 // O motor e o log seguem intocados; só o rótulo/descrição apresentados mudam.
@@ -271,6 +205,8 @@ const FULIGEM: MapCatalog = {
     group: 'bairro',
   },
   cardText: FULIGEM_CARD_TEXT,
+  // As duas mecânicas próprias do mapa (D-070). Ver `MapRules` para o contrato.
+  rules: { railHop: true, smokeTax: 50 },
 }
 
 const CATALOGS: Record<BoardId, MapCatalog> = { atlas: ATLAS, fuligem: FULIGEM }

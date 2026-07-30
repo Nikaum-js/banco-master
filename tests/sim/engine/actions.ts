@@ -5,6 +5,7 @@ import type { GameState, Player } from '@/game/turn/types'
 import { activePlayer } from '@/game/turn/turnMachine'
 import { canBuildHouse, canSellBuilding, canBuildHangar, canSellHangar } from '@/game/economy/construction'
 import { canMortgage, canUnmortgage } from '@/game/economy/mortgage'
+import { isRentableKind } from '@/game/economy/titles'
 import { ownerOf } from '@/game/economy/titles'
 import { tradableProps, validateTrade, type Trade } from '@/game/economy/trade'
 import { tradeBalance } from '@/game/economy/appraisal'
@@ -145,7 +146,7 @@ function propertyActions(game: GameState, ownerId: string = activePlayer(game).i
       if (canBuildHangar(game, sq.pos)) out.push({ kind: 'build-hangar', pos: sq.pos })
       if (canSellHangar(game, sq.pos)) out.push({ kind: 'sell-hangar', pos: sq.pos })
     }
-    if (sq.kind === 'property' || sq.kind === 'airport' || sq.kind === 'utility') {
+    if (isRentableKind(sq.kind)) {
       if (!title.mortgaged && canMortgage(game, sq.pos)) out.push({ kind: 'mortgage', pos: sq.pos })
       if (title.mortgaged && canUnmortgage(game, sq.pos)) out.push({ kind: 'unmortgage', pos: sq.pos })
     }

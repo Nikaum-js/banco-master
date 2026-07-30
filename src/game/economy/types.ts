@@ -111,6 +111,8 @@ export type LogEntry =
   | { kind: 'card-draw'; who: string; deck: DeckId } // genérico por construção — sem carta nem raridade (FR-015, princípio VI)
   | { kind: 'card-immediate'; who: string; deck: DeckId; name: string; delta: number }
   | { kind: 'build'; who: string; pos: number; level: number; cost: number } // level = nível RESULTANTE (1-7)
+  | { kind: 'smoke-tax'; who: string; pos: number; amount: number } // Taxa de Fumaça (D-070, mapa Fuligem)
+  | { kind: 'rail-hop'; who: string; from: number; to: number } // Desvio pela Ferrovia (D-070)
   | { kind: 'build-hangar'; who: string; pos: number; cost: number }
   | { kind: 'sell-building'; who: string; pos: number; level: number; amount: number } // level = nível resultante
   | { kind: 'sell-hangar'; who: string; pos: number; amount: number }

@@ -5,6 +5,7 @@
 // Cada lote tem seu PRÓPRIO prazo (`deadline`): um lance reinicia só o prazo daquele lote,
 // e cada lote fecha sozinho quando o seu tempo expira (independente dos demais).
 import { BOARD } from '@/lib/boardData'
+import { isRentableKind } from '@/game/economy/titles'
 import type { GameState } from '../turn/types'
 import type { AuctionOrigin, LandAuction, LandLot } from './types'
 import { THEME } from '../theme'
@@ -28,7 +29,7 @@ function aliveCount(state: GameState): number {
 export function freeLots(state: GameState): number[] {
   return BOARD.filter(
     (sq) =>
-      (sq.kind === 'property' || sq.kind === 'airport' || sq.kind === 'utility') &&
+      isRentableKind(sq.kind) &&
       state.titles[sq.pos]?.ownerId == null,
   ).map((sq) => sq.pos)
 }

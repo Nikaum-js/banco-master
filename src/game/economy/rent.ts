@@ -4,7 +4,7 @@
 // A spec de Construção envolverá esta função para somar os multiplicadores de
 // casas/hotéis/2º hotel/Skyscraper (SRS §5.1, linhas "com construção").
 import type { Roll, GameState } from '../turn/types'
-import { BOARD, type GroupKey } from '@/lib/boardData'
+import { BOARD, type GroupKey, type MetalId, type Square } from '@/lib/boardData'
 import { THEME } from '../theme'
 import { countOwned, groupOwnedCount, groupSize, groupHasSkyscraper } from './titles'
 import { apagaoActive, greveActive } from './tempEffects'
@@ -84,6 +84,45 @@ export function diceValue(roll: Roll | null): number {
 }
 
 /**
+ * O dono possui a mina daquele metal, não hipotecada? É a pergunta que os quatro bônus
+ * passivos fazem (D-071). Mina hipotecada não rende nem dá bônus — mesma regra do Hangar.
+ */
+export function ownsMine(state: GameState, metal: MetalId, ownerId: string): boolean {
+  return BOARD.some(
+    (s) => s.kind === 'mine' && s.metal === metal
+      && state.titles[s.pos]?.ownerId === ownerId
+      && !state.titles[s.pos]?.mortgaged,
+  )
+}
+
+/** Aplica o desconto passivo da Mina de Estanho a imposto ou aluguel PAGO pelo dono. */
+export function discountedByTin(state: GameState, payerId: string, amount: number): number {
+  return ownsMine(state, 'estanho', payerId)
+    ? Math.round(amount * THEME.MINE_BONUS.estanho)
+    : amount
+}
+
+/**
+ * Fator do bônus passivo de mina que incide sobre ESTE aluguel (D-071).
+ *
+ * Carvão e cobre aumentam a renda dos ativos do dono. Ferro age no custo de construir e
+ * estanho no pagamento do visitante, por isso os dois não aparecem aqui.
+ */
+function mineBonusFor(state: GameState, sq: Square, ownerId: string): number {
+  if (sq.kind === 'airport') {
+    return ownsMine(state, 'carvao', ownerId) ? THEME.MINE_BONUS.carvao : 1
+  }
+  if (sq.kind === 'property') {
+    const t = state.titles[sq.pos]
+    const temConstrucao = t.houses >= 1 || t.hotel || t.hotel2 || t.skyscraper
+    if (temConstrucao) {
+      return ownsMine(state, 'cobre', ownerId) ? THEME.MINE_BONUS.cobre : 1
+    }
+  }
+  return 1
+}
+
+/**
  * ALUGUEL DEVIDO por parar em `pos`, já com os modificadores de posse e de efeito
  * temporário aplicados (Hangar dobra, Apagão desliga a dobra, Greve zera a utilidade).
  * NÃO decide quem paga, nem se paga — isso é do chamador.
@@ -95,22 +134,30 @@ export function diceValue(roll: Roll | null): number {
  */
 export function rentDue(state: GameState, pos: number, ownerId: string, roll: Roll | null): number {
   const sq = BOARD[pos]
+  // O bônus de mina (D-071) é o ÚLTIMO fator a entrar, sobre o aluguel já modificado: ele
+  // premia a carteira do dono, não substitui regra nenhuma. Vale 1 quando não se aplica.
+  const bonus = mineBonusFor(state, sq, ownerId)
+  if (sq.kind === 'mine') return 0 // D-071: Mina vale só pelo bônus passivo
   if (sq.kind === 'airport') {
     const hangarDobra = state.titles[pos].hangar && !apagaoActive(state) // Apagão desliga a dobra (015)
-    return rentAirport(countOwned(state, 'airport', ownerId)) * (hangarDobra ? 2 : 1) // Hangar dobra (011, §13.6)
+    // O carvão incide sobre a escada BASE, nunca sobre o valor já dobrado pela Estação de
+    // Carga: empilhar os dois daria ~$600 numa visita, e a mina passaria a valer mais que
+    // o conjunto de ferrovias que ela deveria só temperar.
+    const base = Math.round(rentAirport(countOwned(state, 'airport', ownerId)) * bonus)
+    return base * (hangarDobra ? 2 : 1) // Hangar dobra (011, §13.6)
   }
   if (sq.kind === 'utility') {
     if (greveActive(state)) return 0 // Greve zera (015)
-    return rentUtility(countOwned(state, 'utility', ownerId), diceValue(roll))
+    return Math.round(rentUtility(countOwned(state, 'utility', ownerId), diceValue(roll)) * bonus)
   }
   if (sq.kind !== 'property') return 0
   const t = state.titles[pos]
-  return rentCity(
+  return Math.round(rentCity(
     sq.group,
     sq.rent,
     groupOwnedCount(state, sq.group, ownerId),
     groupSize(sq.group),
     { houses: t.houses, hotel: t.hotel, hotel2: t.hotel2, skyscraper: t.skyscraper },
     groupHasSkyscraper(state, sq.group),
-  )
+  ) * bonus)
 }

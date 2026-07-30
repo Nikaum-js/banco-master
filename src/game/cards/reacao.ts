@@ -10,6 +10,7 @@ import { ownerOf } from '../economy/titles'
 import { isTempImmune, isPlayerImmune, addTempEffect } from '../economy/tempEffects'
 import { acquire, confiscate, audit, swap, embargo, canAcquire, canConfiscate, canAudit, canSwap, canEmbargo } from './ofensivas'
 import { logEvent } from '../log'
+import { discountedByTin } from '../economy/rent'
 
 // id da carta na mão do jogador cujo efeito é a reação procurada (privado: não revela ao
 // atacante). 043, T031 — ignora slot OCULTO: numa mão alheia (perspectiva de quem não é
@@ -81,7 +82,11 @@ export function taxBunkerResolve(rctx: ResolveCtx): ResolutionOutcome | null {
   if (square.kind !== 'tax') return null
   if (isPlayerImmune(state, playerId)) return null // Imunidade Total (D-064): o imposto nem será cobrado — não gaste o Bunker
   if (ports.hasReaction(state, playerId, 'bunkerFiscal') === null) return null
-  state.resolution = { kind: 'reaction-bunker', reactorId: playerId, amount: square.amount }
+  state.resolution = {
+    kind: 'reaction-bunker',
+    reactorId: playerId,
+    amount: discountedByTin(state, playerId, square.amount),
+  }
   return { done: false }
 }
 

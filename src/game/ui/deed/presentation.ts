@@ -6,9 +6,10 @@ import { mortgageValue } from '@/game/economy/mortgage'
 import { rentLadder } from '@/game/economy/rent'
 import { THEME } from '@/game/theme'
 import { activeLabels, capLabel } from '@/game/ui/theme/boardTheme'
-import type { AirportSquare, PropertySquare, Square, UtilitySquare } from '@/lib/boardData'
+import type { AirportSquare, MineSquare, PropertySquare, Square, UtilitySquare } from '@/lib/boardData'
+import { METAL_ACCENT, METAL_BONUS_TEXT, METAL_LABEL } from '@/boards/glyphs/metals'
 
-export type DeedSquare = PropertySquare | AirportSquare | UtilitySquare
+export type DeedSquare = PropertySquare | AirportSquare | UtilitySquare | MineSquare
 
 export interface MoneyRentRow {
   key: string
@@ -64,14 +65,24 @@ export interface UtilityDeedPresentation extends DeedPresentationBase {
   multipliers: readonly number[]
 }
 
+export interface MineDeedPresentation extends DeedPresentationBase {
+  kind: 'mine'
+  /** O metal da lavra — define a cor e QUAL bônus passivo ela dá (D-071). */
+  metal: MineSquare['metal']
+  /** O bônus passivo, em uma frase. É o que o jogador precisa ler antes de comprar. */
+  bonus: string
+}
+
 export type DeedPresentation =
   | PropertyDeedPresentation
   | AirportDeedPresentation
   | UtilityDeedPresentation
+  | MineDeedPresentation
 
 export function deedPresentation(square: PropertySquare): PropertyDeedPresentation
 export function deedPresentation(square: AirportSquare): AirportDeedPresentation
 export function deedPresentation(square: UtilitySquare): UtilityDeedPresentation
+export function deedPresentation(square: MineSquare): MineDeedPresentation
 export function deedPresentation(square: DeedSquare): DeedPresentation
 export function deedPresentation(square: Square): DeedPresentation | null
 export function deedPresentation(square: Square): DeedPresentation | null {
@@ -148,6 +159,21 @@ export function deedPresentation(square: Square): DeedPresentation | null {
         kind: 'multiplier' as const,
         value,
       })),
+    }
+  }
+
+  if (square.kind === 'mine') {
+    return {
+      kind: 'mine',
+      name: square.name,
+      subtitle: `Mina · ${METAL_LABEL[square.metal]}`,
+      accent: METAL_ACCENT[square.metal],
+      flagCode: null,
+      price: square.price,
+      mortgage: mortgageValue(square),
+      metal: square.metal,
+      bonus: METAL_BONUS_TEXT[square.metal],
+      rentRows: [],
     }
   }
 

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-// Spec 055 (D-069) — a apresentação segue o MAPA ativo: nomes, ícone-sem-bandeira,
+// Spec 055 (D-069) + 056 (D-070) — a apresentação segue o MAPA ativo: nomes,
+// ícone-sem-bandeira,
 // rótulos de carta e placa de hipoteca da Cidade da Fuligem; e o Atlas permanece
 // byte-idêntico quando o mapa volta.
 import { act, cleanup, render, screen } from '@testing-library/react'
@@ -28,11 +29,12 @@ function setTheme(theme: 'atlas' | 'fuligem') {
 }
 
 describe('apresentação por mapa (055)', () => {
-  it('a casa 1 é Rua da Fumaça com ícone (sem bandeira) na Fuligem; Roma com bandeira no Atlas', () => {
+  it('a casa 1 é Ladeira do Barreiro com ícone (sem bandeira) na Fuligem; Roma com bandeira no Atlas', () => {
     setTheme('fuligem')
     const fuligemSquare = catalogOf('fuligem').board.find((s) => s.pos === 1)!
     const first = render(<ClassicSquare square={fuligemSquare} side="bottom" />)
-    expect(screen.getByText('Rua da Fumaça')).toBeTruthy()
+    // A topologia de 40 casas usa a área extra para o topônimo completo.
+    expect(screen.getByText('Ladeira do Barreiro')).toBeTruthy()
     // Sem bandeira: nenhuma arte de bandeira dentro do avatar da casa.
     expect(first.container.querySelector('.board-flag-avatar svg[data-flag]')).toBeNull()
     first.unmount()
@@ -41,6 +43,20 @@ describe('apresentação por mapa (055)', () => {
     const atlasSquare = catalogOf('atlas').board.find((s) => s.pos === 1)!
     render(<ClassicSquare square={atlasSquare} side="bottom" />)
     expect(screen.getByText('Roma')).toBeTruthy()
+  })
+
+  it('todo título livre mostra preço — inclusive ferrovia e mina', () => {
+    setTheme('fuligem')
+    const board = catalogOf('fuligem').board
+
+    const rail = render(<ClassicSquare square={board[5]} side="bottom" />)
+    expect(rail.container.querySelector('.board-square-price')?.textContent).toBe('R$200')
+    expect(screen.getByText('Estação Bonfim')).toBeTruthy()
+    rail.unmount()
+
+    const mine = render(<ClassicSquare square={board[4]} side="bottom" />)
+    expect(mine.container.querySelector('.board-square-price')?.textContent).toBe('R$220')
+    expect(screen.getByText('Mina de Ferro')).toBeTruthy()
   })
 
   it('cardLabel/cardDesc apresentam o vocabulário do mapa sem tocar o canônico', () => {

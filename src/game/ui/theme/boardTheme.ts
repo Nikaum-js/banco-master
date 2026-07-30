@@ -11,7 +11,8 @@
 //   atlas   — Cidades do Mundo: carta náutica noturna, tinta azul, latão, Bebas condensada.
 //   fuligem — Cidade da Fuligem: Revolução Industrial, carvão, ferro, cobre, luz de fornalha.
 import { create } from 'zustand'
-import { BOARD_IDS, catalogOf, coerceBoardId, type BoardId, type MapCatalog } from '@/lib/mapCatalog'
+import { BOARD_IDS, catalogOf, coerceBoardId, setActiveRules, type BoardId, type MapCatalog } from '@/lib/mapCatalog'
+import { setActiveBoard } from '@/lib/boardData'
 
 export const BOARD_THEMES = BOARD_IDS
 /** Mantido como alias do id de mapa: tema do app ≡ mapa ativo (D-069). */
@@ -40,6 +41,12 @@ export const useBoardTheme = create<BoardThemeState>()(
       const theme = coerceBoardId(t)
       set({ theme })
       applyTheme(theme)
+      // O TABULEIRO ATIVO do motor acompanha o mapa (D-070). Este é o ÚNICO ponto que
+      // chama o setter: quem manda é a sala (`roomStore.setRoom` → `setTheme`), então o
+      // motor e a apresentação nunca divergem de tamanho ou de disposição.
+      const catalog = catalogOf(theme)
+      setActiveBoard(catalog.board)
+      setActiveRules(catalog.rules)
     },
     cycle: () => {
       const i = BOARD_THEMES.indexOf(get().theme)
@@ -53,8 +60,8 @@ export function activeCatalog(): MapCatalog {
   return catalogOf(useBoardTheme.getState().theme)
 }
 
-/** As 48 casas de APRESENTAÇÃO do mapa ativo. O motor continua lendo `BOARD` direto —
- * o esqueleto econômico é idêntico entre mapas (paridade provada em tests/lib). */
+/** Casas de APRESENTAÇÃO do mapa ativo. O motor continua lendo o binding vivo `BOARD`
+ * direto, que acompanha a topologia própria de cada mapa (paridade provada em tests/lib). */
 export function activeBoard(): MapCatalog['board'] {
   return activeCatalog().board
 }

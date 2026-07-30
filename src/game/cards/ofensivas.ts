@@ -10,6 +10,7 @@ import { transferKeepFee } from '../economy/mortgage'
 import { isTempImmune, isPlayerImmune, isEmbargoed, addTempEffect } from '../economy/tempEffects'
 import { netWorth } from './effects'
 import { logEvent } from '../log'
+import { discountedByTin } from '../economy/rent'
 
 function priceOf(sq: Square): number {
   return 'price' in sq ? sq.price : 0
@@ -24,7 +25,7 @@ function nonMortgagedCount(state: GameState, ownerId: string): number {
 // aeroporto/utilidade incide sobre a metade. + taxa de hipoteca (§6.3).
 function acquireCost(state: GameState, pos: number): { price: number; fee: number } {
   const sq = BOARD[pos]
-  const mult = sq.kind === 'airport' || sq.kind === 'utility' ? 1.5 : 1
+  const mult = sq.kind === 'airport' || sq.kind === 'utility' || sq.kind === 'mine' ? 1.5 : 1
   const price = Math.round(priceOf(sq) * 0.5 * mult)
   const fee = state.titles[pos]?.mortgaged ? transferKeepFee(sq) : 0
   return { price, fee }
@@ -101,7 +102,7 @@ export function audit(state: GameState, attackerId: string, targetId: string, po
   if (!canAudit(state, attackerId, targetId)) return false
   const target = state.players.find((p) => p.id === targetId)!
 
-  const owed = Math.round(netWorth(state, targetId) * 0.25)
+  const owed = discountedByTin(state, targetId, Math.round(netWorth(state, targetId) * 0.25))
   // Truncagem MANTIDA de propósito (§9.1/D-061): o credor é o POTE, não um jogador — ninguém é
   // privado de receita a que a regra lhe deu direito, e cobrança incondicional que pode falir
   // transforma azar em eliminação. O que mudou é que agora o fato existe.

@@ -1,14 +1,17 @@
 // Máquina de estados do turno — funções PURAS (state, ctx) → novo state.
 // Único efeito é o setter do store; aqui nada muta o argumento (clona via structuredClone).
-import { BOARD } from '@/lib/boardData'
+import { BOARD, boardCorners, boardSize, jailPos } from '@/lib/boardData'
+import { isRentableKind } from '@/game/economy/titles'
+import { activeRules } from '@/lib/mapCatalog'
 import type { GameState, Player, Turn, Roll } from './types'
 import { roll as rollDiceFn, type RNG } from './dice'
 import { resolveSquare, type TurnPorts, type ResolveCtx, type ResolutionOutcome } from './resolution'
 import { THEME } from '../theme'
 import { logEvent } from '../log'
 
-export const BOARD_SIZE = 48
-export const JAIL_POS = 12
+// `BOARD_SIZE = 48` e `JAIL_POS = 12` viviam aqui como literais. Agora quem responde é o
+// TABULEIRO ATIVO (D-070) — `boardSize()`/`jailPos()` em `@/lib/boardData`: o Atlas tem 48
+// casas com a prisão em 12, a Fuligem tem 40 com a prisão em 10.
 export const JAIL_FINE = THEME.JAIL_FINE
 
 export interface TurnCtx {
@@ -47,8 +50,9 @@ function countsAsDouble(roll: Roll): boolean {
 // Exportado para reuso por cartas de movimento (006).
 export function advance(state: GameState, player: Player, steps: number, ports: TurnPorts): void {
   if (steps <= 0) return
-  const passedGo = player.pos + steps >= BOARD_SIZE
-  player.pos = (player.pos + steps) % BOARD_SIZE
+  const size = boardSize()
+  const passedGo = player.pos + steps >= size
+  player.pos = (player.pos + steps) % size
   if (passedGo) {
     const landedOnGo = player.pos === 0 // caiu EXATAMENTE no GO → bônus em dobro
     const bonus = ports.onPassGo(state, player.id) * (landedOnGo ? 2 : 1)
@@ -61,7 +65,7 @@ export function advance(state: GameState, player: Player, steps: number, ports: 
 
 // Teleporte do triple: move à frente até `dest`; GO se o caminho cruzar o 0.
 function teleport(state: GameState, player: Player, dest: number, ports: TurnPorts): void {
-  advance(state, player, (dest - player.pos + BOARD_SIZE) % BOARD_SIZE, ports)
+  advance(state, player, (dest - player.pos + boardSize()) % boardSize(), ports)
 }
 
 // Índice do lado do tabuleiro (0..3) — as 11 casas entre cantos; `null` para os
@@ -71,23 +75,27 @@ function teleport(state: GameState, player: Player, dest: number, ports: TurnPor
 // devolve `'bottom'|'left'|…` e é LAYOUT. Mesmo nome, mesma partição do tabuleiro,
 // codomínios diferentes: `shared.tsx` tinha de apelidar um dos dois no import.
 export function busSideOf(pos: number): 0 | 1 | 2 | 3 | null {
-  if (pos === 0 || pos === 12 || pos === 24 || pos === 36) return null
-  if (pos <= 11) return 0 // 1..11
-  if (pos <= 23) return 1 // 13..23
-  if (pos <= 35) return 2 // 25..35
-  return 3 // 37..47
+  // Derivado dos CANTOS do tabuleiro ativo — antes eram os literais 0/12/24/36, que
+  // colocavam metade da Fuligem (cantos 0/10/20/30) no lado errado.
+  const corners = boardCorners()
+  if (corners.includes(pos)) return null
+  if (pos < corners[1]) return 0
+  if (pos < corners[2]) return 1
+  if (pos < corners[3]) return 2
+  return 3
 }
 
 function sendToJail(player: Player): void {
-  player.pos = JAIL_POS
+  player.pos = jailPos()
   player.jail = { inJail: true, attempts: 0 }
 }
 
 // Próxima casa comprável (Mr. Magnata). "Não comprada" refina na spec de Compra & Aluguel.
 function nextBuyableSteps(fromPos: number): number {
-  for (let s = 1; s <= BOARD_SIZE; s++) {
-    const k = BOARD[(fromPos + s) % BOARD_SIZE].kind
-    if (k === 'property' || k === 'airport' || k === 'utility') return s
+  const size = boardSize()
+  for (let s = 1; s <= size; s++) {
+    const k = BOARD[(fromPos + s) % size].kind
+    if (isRentableKind(k)) return s
   }
   return 0
 }
@@ -261,6 +269,66 @@ export function spendBusTicket(state: GameState, dest: number, ctx: TurnCtx): Ga
   p.busTickets -= 1 // FR-004
   p.pos = dest // pulo direto no mesmo lado — sem volta no tabuleiro, sem bônus de GO
   land(turn, p, null) // resolve o destino; sem rolagem ⇒ sem dupla/re-rolagem (FR-007)
+  return finishIfEnded(s, ctx)
+}
+
+// ---------------------------------------------------------------------
+// DESVIO PELA FERROVIA (D-070, mapa Fuligem)
+//
+// Cair numa ferrovia SUA permite embarcar até OUTRA ferrovia sua. Zero mudança em preço
+// ou aluguel: converte as quatro ferrovias — o ativo mais morno do gênero — num ativo
+// POSICIONAL, porque com o layout da Fuligem uma delas fica na faixa mais pisada do
+// tabuleiro (casa 16) e as distâncias entre elas são desiguais de propósito.
+//
+// Mesmo molde do Bilhete de Trem, e pela mesma razão: um comando com destino, não um
+// estado novo de turno. Sem bônus de GO — é embarque, não volta no tabuleiro.
+// ---------------------------------------------------------------------
+
+/** Ferrovias do tabuleiro ativo pertencentes a `ownerId`. */
+function ownedRails(state: GameState, ownerId: string): number[] {
+  return BOARD
+    .filter((sq) => sq.kind === 'airport' && state.titles[sq.pos]?.ownerId === ownerId)
+    .map((sq) => sq.pos)
+}
+
+/**
+ * O jogador ativo pode embarcar agora? Exige, na ordem: a regra ligada no mapa, o turno
+ * numa janela em que mover é legal, estar EM CIMA de uma ferrovia própria e ter pelo
+ * menos uma segunda ferrovia para onde ir. Uma pergunta, uma resposta — a UI usa esta
+ * mesma cadeia, para nunca oferecer um botão que seria no-op.
+ */
+export function canRailHop(state: GameState): boolean {
+  if (state.paused) return false
+  if (state.phase !== 'playing') return false
+  if (!activeRules().railHop) return false
+  if (state.turn.state !== 'aguardando-finalizacao') return false
+  const player = activePlayer(state)
+  const here = BOARD[player.pos]
+  if (here?.kind !== 'airport') return false
+  const rails = ownedRails(state, player.id)
+  if (!rails.includes(player.pos)) return false // precisa ser SUA
+  if (state.titles[player.pos]?.mortgaged) return false // hipotecada não embarca
+  return rails.length >= 2
+}
+
+/** Destinos válidos de embarque — as outras ferrovias do jogador, não hipotecadas. */
+export function railHopTargets(state: GameState): number[] {
+  if (!canRailHop(state)) return []
+  const player = activePlayer(state)
+  return ownedRails(state, player.id).filter(
+    (pos) => pos !== player.pos && !state.titles[pos]?.mortgaged,
+  )
+}
+
+/** Embarca até `dest`. No-op se inválido — mesma cadeia de `canRailHop`. */
+export function railHop(state: GameState, dest: number, ctx: TurnCtx): GameState {
+  if (!railHopTargets(state).includes(dest)) return state
+  const s = clone(state)
+  const p = activePlayer(s)
+  const from = p.pos
+  p.pos = dest // embarque direto: não percorre o tabuleiro ⇒ sem bônus de GO
+  logEvent(s, { kind: 'rail-hop', who: p.id, from, to: dest })
+  land(s.turn, p, null) // resolve o destino; sem rolagem ⇒ sem dupla/re-rolagem
   return finishIfEnded(s, ctx)
 }
 

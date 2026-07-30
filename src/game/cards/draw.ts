@@ -4,8 +4,8 @@ import type { GameState, Player } from '../turn/types'
 import type { CardSlot, DeckId } from './types'
 import { cardById } from './catalog'
 import { applyEffect } from './effects'
-import { activePlayer, completeResolution, advance, land, finishIfEnded, BOARD_SIZE, type TurnCtx } from '../turn/turnMachine'
-import { BOARD } from '@/lib/boardData'
+import { activePlayer, completeResolution, advance, land, finishIfEnded, type TurnCtx } from '../turn/turnMachine'
+import { BOARD, boardSize } from '@/lib/boardData'
 import { ownerOf } from '../economy/titles'
 import { addTempEffect } from '../economy/tempEffects'
 import { reactorFor, applyOffensive } from './reacao'
@@ -253,7 +253,7 @@ export function resolveCardShortcut(state: GameState, dir: 'frente' | 'tras', ct
   const s = structuredClone(state)
   const player = activePlayer(s)
   if (dir === 'frente') advance(s, player, 3, ctx.ports) // credita GO ao cruzar
-  else player.pos = (player.pos - 3 + BOARD_SIZE) % BOARD_SIZE // ré: sem bônus de GO (§10.6)
+  else player.pos = (player.pos - 3 + boardSize()) % boardSize() // ré: sem bônus de GO (§10.6)
   s.decks[deckId].push(cardId)
   s.resolution = null // limpa o card-shortcut
   landAfterCardMovement(s, player) // resolve o destino sem apagar a dupla que trouxe até a carta

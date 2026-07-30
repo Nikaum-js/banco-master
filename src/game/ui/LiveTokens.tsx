@@ -15,7 +15,10 @@ import { useMotion, MOTION, EASE } from '@/game/ui/motion'
 import { useRoomStore } from '@/net/roomStore'
 import { identityOf } from '@/net/identity'
 
-const BOARD_SIZE = 48
+// Tamanho do tabuleiro ATIVO (D-070) — era o literal 48, que fazia o peão dar a volta
+// errada na Fuligem (40 casas).
+import { boardSize } from '@/lib/boardData'
+
 const STEP_MS = 150 // tempo entre passos
 const WALK_MAX = 12 // distância máx. (horária) que anima passo a passo; acima disso, snap
 
@@ -42,7 +45,6 @@ function useWalkedPositions(targets: Record<string, number>, paused: boolean, re
     if (paused) return // dados em arremesso: não anda ainda
     const next: Record<string, number> = {}
     const arrived: string[] = [] // chegaram NESTE passo (andando→parado)
-    const crossedGo: string[] = [] // cruzaram 47→0 NESTE passo visual
     let moving = false
     let walked = false
     for (const id of Object.keys(targets)) {
@@ -50,9 +52,10 @@ function useWalkedPositions(targets: Record<string, number>, paused: boolean, re
       const tgt = targets[id]
       if (cur === undefined) { next[id] = tgt; continue } // jogador novo: entra na posição
       if (cur === tgt) { next[id] = cur; continue }
-      const fwd = (tgt - cur + BOARD_SIZE) % BOARD_SIZE
+      const size = boardSize()
+      const fwd = (tgt - cur + size) % size
       if (!reduced && fwd >= 1 && fwd <= WALK_MAX) {
-        next[id] = (cur + 1) % BOARD_SIZE // anda 1
+        next[id] = (cur + 1) % size // anda 1
         moving = true
         walked = true
         if (next[id] === tgt) arrived.push(id)
@@ -61,7 +64,6 @@ function useWalkedPositions(targets: Record<string, number>, paused: boolean, re
         moving = true
         arrived.push(id)
       }
-      if (cur > next[id]) crossedGo.push(id)
     }
     if (walked) play('step-tick') // um tick por batida de STEP_MS, mesmo com N peões (035)
     // Remove ids que sumiram (eliminados não importam aqui).
@@ -75,7 +77,6 @@ function useWalkedPositions(targets: Record<string, number>, paused: boolean, re
           for (const id of arrived) pop[id] = (pop[id] ?? 0) + 1
           return { shown: next, pop }
         })
-        for (const id of crossedGo) useTokenAnim.getState().signalGoCrossing(id)
         if (arrived.length) play('step-land') // um som por chegada, mesmo com N peões (035)
       }, delay)
       return () => { if (timer.current) clearTimeout(timer.current) }

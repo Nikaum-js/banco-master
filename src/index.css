@@ -926,6 +926,18 @@
   box-shadow: inset 0 0 28px -12px rgb(7 5 4 / 0.95);
 }
 
+/* A Fuligem tem 40 casas e usa a faixa mais profunda para exibir topônimos completos.
+   O nome pode quebrar em linhas, mas nunca no meio de uma palavra. */
+:root[data-board-theme="fuligem"] .cell-text--fuligem,
+:root[data-board-theme="fuligem"] .board-square-content--fuligem .board-square-label {
+  max-width: 94%;
+  line-height: 0.88 !important;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  hyphens: manual;
+  text-wrap: balance;
+}
+
 
 /* =====================================================================
    Base layer — defaults com personalidade
@@ -6197,10 +6209,12 @@
 
      A cidade escura em planos vive no SVG do FuligemBackdrop (gerador
      semeado, determinístico); aqui ficam só o céu, a névoa, a vinheta e
-     as TRÊS animações do mundo — fumaça, fornalha e trem —, todas por
-     transform/opacity, em amostra pequena, congeláveis sob movimento
-     reduzido. Nada de fundo de tela cheia animado (a lição do tema que
-     este substituiu).
+     as animações do mundo — sopro de fumaça, chama do queimador, baliza,
+     brasa, carvão na correia, fornalha e trem —, todas por
+     transform/opacity, em amostra pequena (dezenas de elementos sobre
+     sete keyframes, nunca centenas de timelines — FR-012), congeláveis
+     sob movimento reduzido. Nada de fundo de tela cheia animado (a lição
+     do tema que este substituiu).
      ================================================================= */
   .fuligem-stage {
     background-color: #0c0906;
@@ -6213,14 +6227,91 @@
       radial-gradient(ellipse 120% 60% at 50% 108%, rgb(217 130 46 / 0.15) 0%, transparent 58%),
       linear-gradient(180deg, #0a0806 0%, #14100b 52%, #1d150d 78%, #241a10 100%);
   }
-  /* Fumaça: UM keyframe; 4 chaminés × 3 sopros no total do cenário. */
-  .fuligem-smoke {
-    animation: fuligem-smoke 16s ease-in-out infinite;
+  /* FUMAÇA — UM keyframe para todo o mundo da Fuligem.
+     Uma pluma é um punhado de sopros com a MESMA animação e a fase deslocada por
+     delay negativo: é a defasagem que produz a coluna contínua, não uma timeline
+     por partícula. Altura, deriva, pico, duração e o quadro congelado entram por
+     custom property, então o cenário de tela cheia (1440×900) e o miolo do
+     tabuleiro (viewBox 100×100, boards/glyphs/patterns.tsx) reusam este mesmo
+     keyframe em escalas diferentes.
+     `transform-box: fill-box` é obrigatório: sem ele o `scale` do SVG orbitaria o
+     centro do viewBox inteiro em vez do próprio sopro. */
+  .fuligem-puff {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    opacity: 0;
+    animation: fuligem-puff var(--puff-dur, 12000ms) linear infinite;
   }
-  @keyframes fuligem-smoke {
-    0% { transform: translateY(0) scale(0.9); opacity: 1; }
-    60% { transform: translateY(-30px) scale(1.12); opacity: 0.6; }
-    100% { transform: translateY(-56px) scale(1.28); opacity: 0; }
+  @keyframes fuligem-puff {
+    0% { transform: translate(0, 0) scale(0.34); opacity: 0; }
+    14% { opacity: var(--puff-peak, 0.16); }
+    /* A cauda alta desvanece rápido, e não é só física: é o que deixa a base da coluna
+       ser opaca o bastante para LER como fumaça sem que o topo chegue velando o letreiro
+       e o formulário lá em cima (FR-011). */
+    58% { opacity: calc(var(--puff-peak, 0.16) * 0.4); }
+    100% {
+      transform: translate(var(--puff-drift, 48px), var(--puff-rise, -180px)) scale(2.1);
+      opacity: 0;
+    }
+  }
+  /* Queimador de gás: tremor rápido, mas pequeno, longe de texto e sem informação —
+     o único elemento do cenário em escala de segundo. Ciclo de 1,8s (alternate),
+     bem abaixo do limite de flash de 3Hz (FR-011). */
+  .fuligem-flare {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: fuligem-flare 900ms ease-in-out infinite alternate;
+  }
+  @keyframes fuligem-flare {
+    from { transform: scale(0.84, 0.72); opacity: 0.5; }
+    to { transform: scale(1.08, 1.16); opacity: 0.82; }
+  }
+  .fuligem-flare-glow {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    animation: fuligem-flare 1500ms ease-in-out infinite alternate;
+  }
+  /* Baliza no topo das duas chaminés mais altas — mesmo critério de aeroporto.
+     Ciclo de 3,2s com subida suave: pisca, não estroba. */
+  .fuligem-beacon {
+    animation: fuligem-beacon 3200ms ease-in-out infinite;
+  }
+  @keyframes fuligem-beacon {
+    0%, 60%, 100% { opacity: 0.14; }
+    72%, 80% { opacity: 0.9; }
+  }
+  /* Brasa: oito faíscas subindo do pátio, o efeito mais barato do cenário. */
+  .fuligem-ember {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    opacity: 0;
+    animation: fuligem-ember var(--ember-dur, 22000ms) linear infinite;
+  }
+  @keyframes fuligem-ember {
+    0% { transform: translate(0, 0) scale(1); opacity: 0; }
+    12% { opacity: 0.5; }
+    74% { opacity: 0.22; }
+    100% {
+      transform: translate(var(--ember-drift, 60px), var(--ember-rise, -340px)) scale(0.35);
+      opacity: 0;
+    }
+  }
+  /* Carvão subindo a galeria da correia — translate ao longo da rampa; nunca
+     stroke-dashoffset, que repintaria o traço inteiro a cada quadro. */
+  .fuligem-coal {
+    animation: fuligem-coal var(--coal-dur, 10000ms) linear infinite;
+  }
+  @keyframes fuligem-coal {
+    from { transform: translate(0, 0); }
+    to { transform: translate(var(--coal-dx, 200px), var(--coal-dy, -120px)); }
+  }
+  /* Brasa da fornalha respirando no vão dos portões: luz, não deslocamento. */
+  .fuligem-forge {
+    animation: fuligem-forge 9s ease-in-out infinite;
+  }
+  @keyframes fuligem-forge {
+    0%, 100% { opacity: 0.07; }
+    50% { opacity: 0.16; }
   }
   /* Fornalha piscando: amostra pequena (delay %11), ciclo longo, sem flash. */
   .fuligem-furnace {
@@ -6283,15 +6374,62 @@
     background: radial-gradient(ellipse at center, transparent 28%, rgb(7 5 4 / 0.92) 100%);
   }
 
+  /* A cidade atrás do tabuleiro é só contexto. Mantém um quadro intermediário legível
+     da fumaça, mas não duplica as timelines da home/lobby sob uma mesa opaca. */
+  .fuligem-backdrop--static .fuligem-puff,
+  .fuligem-backdrop--static .fuligem-flare,
+  .fuligem-backdrop--static .fuligem-flare-glow,
+  .fuligem-backdrop--static .fuligem-beacon,
+  .fuligem-backdrop--static .fuligem-ember,
+  .fuligem-backdrop--static .fuligem-coal,
+  .fuligem-backdrop--static .fuligem-forge,
+  .fuligem-backdrop--static .fuligem-furnace,
+  .fuligem-backdrop--static .fuligem-train {
+    animation: none;
+  }
+  .fuligem-backdrop--static .fuligem-puff {
+    opacity: calc(var(--puff-peak, 0.16) * 0.85);
+    transform:
+      translate(
+        calc(var(--puff-drift, 48px) * var(--puff-t, 0)),
+        calc(var(--puff-rise, -180px) * var(--puff-t, 0))
+      )
+      scale(calc(0.34 + 1.76 * var(--puff-t, 0)));
+  }
+  .fuligem-backdrop--static .fuligem-flare { opacity: 0.7; }
+  .fuligem-backdrop--static .fuligem-beacon { opacity: 0.7; }
+  .fuligem-backdrop--static .fuligem-ember { opacity: 0.4; }
+
   @media (prefers-reduced-motion: reduce) {
-    /* O fato permanece (fumaça presente, fornalha acesa, trem parado no
-       cenário); só a interpolação some. */
-    .fuligem-smoke,
+    /* O fato permanece (fumaça presente, chama acesa, fornalha acesa, carvão na
+       correia, trem parado no cenário); só a interpolação some. */
+    .fuligem-puff,
+    .fuligem-flare,
+    .fuligem-flare-glow,
+    .fuligem-beacon,
+    .fuligem-ember,
+    .fuligem-coal,
+    .fuligem-forge,
     .fuligem-furnace,
     .fuligem-train {
       animation: none;
     }
-    .fuligem-smoke { opacity: 0.55; }
+    /* A pluma congela COM A FORMA DA COLUNA, não empilhada na boca da chaminé:
+       `--puff-t` é a posição (0…1) que cada sopro ocupa no ciclo, então o quadro
+       parado é um quadro do meio da animação — fumaça, não bolha. */
+    .fuligem-puff {
+      opacity: calc(var(--puff-peak, 0.16) * 0.85);
+      transform:
+        translate(
+          calc(var(--puff-drift, 48px) * var(--puff-t, 0)),
+          calc(var(--puff-rise, -180px) * var(--puff-t, 0))
+        )
+        scale(calc(0.34 + 1.76 * var(--puff-t, 0)));
+    }
+    .fuligem-flare { opacity: 0.7; }
+    .fuligem-beacon { opacity: 0.7; }
+    .fuligem-ember { opacity: 0.4; }
+    .fuligem-forge { opacity: 0.12; }
   }
 }
 
@@ -7699,4 +7837,21 @@
       font-size: 0.625rem;
     }
   }
+}
+
+/* Desvio pela Ferrovia (D-070) — mesma anatomia do botão de Bilhete de Trem, para as
+   duas ações opcionais de fim de turno lerem como a mesma família. */
+.rail-hop-action__icon { display: grid; place-items: center; color: var(--color-brass-glow); }
+.rail-hop-action__label { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.05; min-width: 0; }
+.rail-hop-action__eyebrow { font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--color-starlight-muted); }
+.rail-hop-action__name { font-family: var(--font-display); font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; max-width: 11ch; }
+
+/* Bônus passivo no título da mina (D-071) — bloco destacado, porque é todo o valor
+   econômico do título: Mina não cobra aluguel. */
+.deed-mine-bonus {
+  border: 1px solid color-mix(in srgb, var(--deed-accent, var(--color-brass)) 45%, transparent);
+  border-left-width: 3px;
+  border-radius: var(--radius-sharp);
+  background: color-mix(in srgb, var(--deed-accent, var(--color-brass)) 10%, transparent);
+  padding: 0.5rem 0.625rem;
 }

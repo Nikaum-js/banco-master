@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AnimatePresence } from 'motion/react'
-import type { Square, PropertySquare, AirportSquare, UtilitySquare } from '@/lib/boardData'
+import type { Square, PropertySquare, AirportSquare, UtilitySquare, MineSquare } from '@/lib/boardData'
 import { useMapCatalog } from '@/game/ui/theme/boardTheme'
 import {
   ClassicSquare,
@@ -11,6 +11,7 @@ import {
   PropertyPopover,
   AirportPopover,
   UtilityPopover,
+  MinePopover,
 } from './shared'
 import { LiveTokens } from '@/game/ui/LiveTokens'
 import { DebtSlot } from '@/game/ui/debt/DebtCall'
@@ -18,14 +19,17 @@ import { StageBackdrop } from './StageBackdrop'
 // A FORMA do tabuleiro (lados, células, faixas da grade) vem da topologia. Antes
 // `gridArea` morava aqui e `sideOf` no `shared.tsx`: a mesma família de geometria
 // partida em dois arquivos, com os cantos 0/12/24/36 escritos duas vezes.
-import { CLASSIC_TOPOLOGY } from './topology'
-
-const { sideOf, gridArea, trackTemplate } = CLASSIC_TOPOLOGY
+// A topologia agora vem do MAPA (D-070): o Atlas é 48 casas em grade 13×13, a Fuligem
+// é 40 em 11×11. Era um import fixo de `CLASSIC_TOPOLOGY` — a seam existia, mas estava
+// amarrada num tabuleiro só.
+import { topologyOf } from './topology'
 
 export default function Board01Classic() {
-  // As 48 casas de APRESENTAÇÃO vêm do catálogo do mapa da sala (055/D-069) —
-  // mesmo esqueleto econômico, nomes/ícones próprios. Reativo: a home pré-visualiza.
-  const board = useMapCatalog().board
+  // O tabuleiro vem do catálogo do mapa da sala (055/D-069) — cada mapa tem o seu, com
+  // tamanho próprio. Reativo: a home pré-visualiza.
+  const catalog = useMapCatalog()
+  const board = catalog.board
+  const { sideOf, gridArea, trackTemplate, centerArea } = topologyOf(catalog.id)
   // Casa selecionada — abre o popover-balão adjacente. Clicar fora ou em
   // outra casa fecha. O elemento-âncora acompanha a posição porque o deed
   // é portado ao `body`: assim ele escapa do stacking context do tabuleiro
@@ -70,7 +74,7 @@ export default function Board01Classic() {
               board-center
               border border-coffee-500
             "
-            style={{ gridRow: '2 / 13', gridColumn: '2 / 13' }}
+            style={centerArea}
           >
             <CenterArena />
             {/* Área livre de casa, do tamanho do próprio tabuleiro: é aqui que a cobrança de
@@ -79,14 +83,15 @@ export default function Board01Classic() {
             <DebtSlot />
           </div>
 
-          {/* 40 casas */}
+          {/* As casas do mapa ativo — 48 no Atlas, 40 na Fuligem */}
           {board.map((square) => {
             const side = sideOf(square.pos)
             const isCorner = side === 'corner'
             const isProperty = square.kind === 'property'
             const isAirport  = square.kind === 'airport'
             const isUtility  = square.kind === 'utility'
-            const isClickable = isProperty || isAirport || isUtility
+            const isMine     = square.kind === 'mine' // D-071: comprável ⇒ clicável, como as outras
+            const isClickable = isProperty || isAirport || isUtility || isMine
             const isSelected = selectedPos === square.pos
             // 044/T032: casa clicável (propriedade/aeroporto/utilidade) precisa ser
             // alcançável e operável por teclado, com nome. Antes era um `<div onClick>` —
@@ -155,6 +160,15 @@ export default function Board01Classic() {
                     <UtilityPopover
                       key={`utility-${square.pos}`}
                       square={selectedSquare as UtilitySquare}
+                      side={side}
+                      anchor={selection?.anchor}
+                      onClose={() => setSelection(null)}
+                    />
+                  )}
+                  {isSelected && isMine && selectedSquare?.kind === 'mine' && (
+                    <MinePopover
+                      key={`mine-${square.pos}`}
+                      square={selectedSquare as MineSquare}
                       side={side}
                       anchor={selection?.anchor}
                       onClose={() => setSelection(null)}

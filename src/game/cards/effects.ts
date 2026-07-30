@@ -3,11 +3,11 @@
 //
 // SIMPLIFICAÇÃO (006): cartas de movimento mudam a posição (e bônus de GO p/ frente),
 // mas NÃO auto-resolvem a casa de destino — refinamento deferido (SRS §10.6 "resolve a casa").
-import { BOARD } from '@/lib/boardData'
+import { BOARD, boardSize, jailPos } from '@/lib/boardData'
 import type { Square, PropertySquare } from '@/lib/boardData'
 import type { GameState, Player } from '../turn/types'
 import type { TurnPorts } from '../turn/resolution'
-import { advance, JAIL_POS } from '../turn/turnMachine'
+import { advance } from '../turn/turnMachine'
 import { buildCost, cityLevel, HANGAR_COST } from '../economy/construction'
 import { addTempEffect, isPlayerImmune } from '../economy/tempEffects'
 import { chargePlayer } from '../economy/obligation'
@@ -162,13 +162,13 @@ const handlers: Record<string, Handler> = {
   },
   vaPrisao: (s, id) => {
     const p = pl(s, id)
-    p.pos = JAIL_POS
+    p.pos = jailPos()
     p.jail = { inJail: true, attempts: 0 }
   },
   avance3: (s, id, ports) => advance(s, pl(s, id), 3, ports),
   volte3: (s, id) => {
     const p = pl(s, id)
-    p.pos = (p.pos - 3 + 48) % 48 // ré: sem bônus de GO (SRS §10.6)
+    p.pos = (p.pos - 3 + boardSize()) % boardSize() // ré: sem bônus de GO (SRS §10.6)
   },
   saiaPrisao: (s, id) => {
     pl(s, id).jail = { inJail: false, attempts: 0 }

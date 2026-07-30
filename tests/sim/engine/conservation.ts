@@ -17,7 +17,7 @@ import { BOARD } from '@/lib/boardData'
 import type { GameState } from '@/game/turn/types'
 import { activePlayer } from '@/game/turn/turnMachine'
 import { rentCity, rentAirport, rentUtility, diceValue } from '@/game/economy/rent'
-import { ownerOf, isMortgaged, groupOwnedCount, groupSize, countOwned, groupHasSkyscraper } from '@/game/economy/titles'
+import { ownerOf, isMortgaged, groupOwnedCount, groupSize, countOwned, groupHasSkyscraper, isRentableKind } from '@/game/economy/titles'
 import { hasImmunity } from '@/game/economy/imunidade'
 import { apagaoActive, greveActive, isBoycotted, isPlayerImmune, isValorizada, estatizacaoActive } from '@/game/economy/tempEffects'
 import { mortgageValue, unmortgageCost, transferKeepFee } from '@/game/economy/mortgage'
@@ -29,6 +29,7 @@ import { isBankrupt, liquidatorOf } from '@/game/falencia/falencia'
 import { validateTrade } from '@/game/economy/trade'
 import { reactorFor, findReactionCard } from '@/game/cards/reacao'
 import { THEME } from '@/game/theme'
+import { activeRules } from '@/lib/mapCatalog'
 import type { SimAction } from './types'
 import type { Violation } from './invariants'
 
@@ -91,6 +92,20 @@ function mark(ledger: Ledger, mechanism: string): void {
   ledger.mechanisms.push(mechanism)
 }
 
+function ownsMine(state: GameState, metal: 'ferro' | 'carvao' | 'cobre' | 'estanho', ownerId: string): boolean {
+  return BOARD.some(
+    (sq) => sq.kind === 'mine' && sq.metal === metal
+      && state.titles[sq.pos]?.ownerId === ownerId
+      && !state.titles[sq.pos]?.mortgaged,
+  )
+}
+
+function discountedByTin(state: GameState, payerId: string, amount: number): number {
+  return ownsMine(state, 'estanho', payerId)
+    ? Math.round(amount * THEME.MINE_BONUS.estanho)
+    : amount
+}
+
 function finalize(prev: GameState, next: GameState, ledger: Ledger): Violation[] {
   const out: Violation[] = []
   for (const p of prev.players) {
@@ -119,16 +134,19 @@ function finalize(prev: GameState, next: GameState, ledger: Ledger): Violation[]
 // devido (própria/hipotecada/imune/boicotada) — mesmas guardas de resolveRentable.ts/taxMan.ts.
 function rentDue(state: GameState, pos: number, ownerIdOverride?: string): { owner: string; amount: number } | null {
   const sq = BOARD[pos]
-  if (sq.kind !== 'property' && sq.kind !== 'airport' && sq.kind !== 'utility') return null
+  if (sq.kind !== 'property' && sq.kind !== 'airport' && sq.kind !== 'utility' && sq.kind !== 'mine') return null
   const owner = ownerIdOverride ?? ownerOf(state, pos)
   if (owner === null) return null
   if (isMortgaged(state, pos)) return null
   if (isBoycotted(state, pos)) return null
 
   let amount: number
-  if (sq.kind === 'airport') {
+  if (sq.kind === 'mine') {
+    amount = 0
+  } else if (sq.kind === 'airport') {
     const hangarDobra = state.titles[pos].hangar && !apagaoActive(state)
-    amount = rentAirport(countOwned(state, 'airport', owner)) * (hangarDobra ? 2 : 1)
+    const coal = ownsMine(state, 'carvao', owner) ? THEME.MINE_BONUS.carvao : 1
+    amount = Math.round(rentAirport(countOwned(state, 'airport', owner)) * coal) * (hangarDobra ? 2 : 1)
   } else if (sq.kind === 'utility') {
     amount = greveActive(state) ? 0 : rentUtility(countOwned(state, 'utility', owner), diceValue(state.turn.lastRoll))
   } else {
@@ -141,6 +159,10 @@ function rentDue(state: GameState, pos: number, ownerIdOverride?: string): { own
       { houses: t.houses, hotel: t.hotel, hotel2: t.hotel2, skyscraper: t.skyscraper },
       groupHasSkyscraper(state, sq.group),
     )
+    const temConstrucao = t.houses >= 1 || t.hotel || t.hotel2 || t.skyscraper
+    if (temConstrucao && ownsMine(state, 'cobre', owner)) {
+      amount = Math.round(amount * THEME.MINE_BONUS.cobre)
+    }
   }
   return { owner, amount }
 }
@@ -388,7 +410,7 @@ function checkResolvePending(prev: GameState, next: GameState, ledger: Ledger): 
   const actor = activePlayer(prev)
   const sq = BOARD[actor.pos]
 
-  if (sq.kind === 'property' || sq.kind === 'airport' || sq.kind === 'utility') {
+  if (isRentableKind(sq.kind)) {
     const owner = ownerOf(prev, actor.pos)
     if (owner === null || owner === actor.id) return // compra pendente ou própria — sem aluguel
     if (hasImmunity(prev, actor.id, actor.pos) || isPlayerImmune(prev, actor.id)) {
@@ -403,6 +425,7 @@ function checkResolvePending(prev: GameState, next: GameState, ledger: Ledger): 
     let amount = due.amount
     if (isValorizada(prev, actor.pos)) amount *= 2 // Valorização (D-064)
     if (actor.doubleRentOnce) amount *= 2 // Obras na Pista (D-064)
+    amount = discountedByTin(prev, actor.id, amount)
     if (actor.cash < amount) {
       mark(ledger, 'rent-debt') // insolvente → dívida pendente, sem pagamento agora
       return
@@ -425,12 +448,13 @@ function checkResolvePending(prev: GameState, next: GameState, ledger: Ledger): 
       mark(ledger, 'tax-bunker-open')
       return
     }
-    if (actor.cash < sq.amount) {
+    const amount = discountedByTin(prev, actor.id, sq.amount)
+    if (actor.cash < amount) {
       mark(ledger, 'tax-debt')
       return
     }
-    addCash(ledger, actor.id, -sq.amount)
-    addPot(ledger, sq.amount)
+    addCash(ledger, actor.id, -amount)
+    addPot(ledger, amount)
     mark(ledger, 'tax')
     return
   }
@@ -469,7 +493,7 @@ function applyOffensiveMoney(prev: GameState, attackerId: string, effect: string
     const sq = BOARD[targetPos]
     const owner = ownerOf(prev, targetPos)
     if (owner === null) return
-    const mult = sq.kind === 'airport' || sq.kind === 'utility' ? 1.5 : 1
+    const mult = sq.kind === 'airport' || sq.kind === 'utility' || sq.kind === 'mine' ? 1.5 : 1
     const price = Math.round(('price' in sq ? sq.price : 0) * 0.5 * mult) // metade da tabela (D-064)
     const fee = prev.titles[targetPos]?.mortgaged ? transferKeepFee(sq) : 0
     addCash(ledger, attackerId, -(price + fee))
@@ -482,7 +506,7 @@ function applyOffensiveMoney(prev: GameState, attackerId: string, effect: string
     return
   }
   if (effect === 'impostoFederal' && targetPlayer != null) {
-    const owed = Math.round(netWorth(prev, targetPlayer) * 0.25) // 25% (D-064)
+    const owed = discountedByTin(prev, targetPlayer, Math.round(netWorth(prev, targetPlayer) * 0.25)) // D-064 + Estanho
     const paid = Math.min(cashOf(prev, targetPlayer), owed)
     addCash(ledger, targetPlayer, -paid)
     addPot(ledger, paid)
@@ -529,8 +553,18 @@ function checkDirectAction(prev: GameState, next: GameState, action: SimAction, 
     }
     case 'build-house': {
       const sq = BOARD[action.pos]
-      if (sq.kind !== 'property' || prev.titles[action.pos]?.ownerId !== activePlayer(prev).id) return
-      addCash(ledger, activePlayer(prev).id, activePlayer(prev).nextBuildFree ? 0 : -buildCost(sq)) // Obra Relâmpago (D-064)
+      const actor = activePlayer(prev)
+      if (sq.kind !== 'property' || prev.titles[action.pos]?.ownerId !== actor.id) return
+      const buildAmount = actor.nextBuildFree
+        ? 0
+        : Math.round(buildCost(sq) * (ownsMine(prev, 'ferro', actor.id) ? THEME.MINE_BONUS.ferro : 1))
+      addCash(ledger, actor.id, -buildAmount) // Obra Relâmpago (D-064) + Mina de Ferro
+      const smokeTax = activeRules().smokeTax
+      if (smokeTax > 0 && cityLevel(prev.titles[action.pos]) + 1 >= 5) {
+        const taxAmount = discountedByTin(prev, actor.id, smokeTax)
+        addCash(ledger, actor.id, -taxAmount)
+        addPot(ledger, taxAmount)
+      }
       mark(ledger, 'build-house')
       return
     }

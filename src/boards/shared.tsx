@@ -1,15 +1,18 @@
 import { cn } from '@/lib/utils'
-import { Bus, ChevronRight, DoorOpen } from 'lucide-react'
+import { Bus, ChevronRight, DoorOpen, TrainFront } from 'lucide-react'
 import { motion } from 'motion/react'
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare } from '@/lib/boardData'
+import type { Square, PropertySquare, AirportSquare, TaxSquare, UtilitySquare, MineSquare } from '@/lib/boardData'
 import { activeBoard } from '@/game/ui/theme/boardTheme'
+import { railHopTargets } from '@/game/turn/turnMachine'
+import { METAL_ACCENT, METAL_LABEL } from '@/boards/glyphs/metals'
+import { buildingFamily } from '@/boards/glyphs/buildingFamily'
 import { BOARD as ENGINE_BOARD, type GroupKey } from '@/lib/boardData'
 import { useGameStore } from '@/game/store'
 import { useLocalView, useRoomStore } from '@/net/roomStore'
-import { cityLevel } from '@/game/economy/construction'
+import { cityLevel, smokeTaxFor } from '@/game/economy/construction'
 import { THEME } from '@/game/theme'
 import { deedView, type BuildBlock } from '@/game/ui/deed/deedView'
 import { deedPresentation } from '@/game/ui/deed/presentation'
@@ -20,7 +23,6 @@ import { useBusTicketUI } from '@/game/ui/busTicketUI'
 import { markLayout, popoverPlacement, sideOf, type Side } from './topology'
 import { SquareIcon, CardGlyph, LotteryGlyph } from './glyphs/squares'
 import {
-  PlotBadgeIcon, HouseBadgeIcon, HotelBadgeIcon, SkyscraperBadgeIcon, HangarBadgeIcon,
   CalmGlyph, TradeArrowGlyph, PlusGlyph, SwapMiniGlyph,
 } from './glyphs/badges'
 import { ChartPattern, FoundryPattern } from './glyphs/patterns'
@@ -47,6 +49,7 @@ import { AccessoryErrorBoundary } from '@/app/AccessoryErrorBoundary'
 import { identityOf } from '@/net/identity'
 import { CountryFlag } from '@/boards/glyphs/flags'
 import { PropertyIconArt } from '@/boards/glyphs/propertyIcons'
+import { GROUP_COLOR } from '@/boards/groupColors'
 
 // Este módulo exporta SÓ componentes — cada consumidor importa constante e seletor da
 // própria fonte (`./groupColors`, `./topology`, `./glyphs/squares`, `@/game/ui/panels/playersView`).
@@ -86,7 +89,12 @@ function FlagAvatar({ square, side }: { square: PropertySquare; side: Side }) {
         ...position,
         width: size,
         height: size,
-        boxShadow: 'var(--shadow-card), inset 0 0 0 1.5px color-mix(in srgb, var(--color-brass) 60%, transparent)',
+        boxShadow: iso2
+          ? 'var(--shadow-card), inset 0 0 0 1.5px color-mix(in srgb, var(--color-brass) 60%, transparent)'
+          : `var(--shadow-card), inset 0 0 0 1.5px color-mix(in srgb, ${GROUP_COLOR[square.group] ?? 'var(--color-brass)'} 70%, transparent)`,
+        background: iso2
+          ? undefined
+          : `color-mix(in srgb, ${GROUP_COLOR[square.group] ?? 'var(--color-brass)'} 14%, var(--color-coffee-900))`,
       }}
       title={iso2 ?? square.capital}
     >
@@ -97,9 +105,18 @@ function FlagAvatar({ square, side }: { square: PropertySquare; side: Side }) {
           style={{ transform: `rotate(${artRotation}deg)` }}
         />
       ) : (
+        // ÍCONE NA COR DO BAIRRO. Era `text-brass` fixo: os oito bairros da Fuligem
+        // apareciam no MESMO latão, então distinguir grupo exigia comparar o desenho
+        // (chaminé × bigorna × engrenagem) em 19px — o que na prática ninguém faz. Com a
+        // cor do grupo, o bairro se lê de relance, que é o papel que a faixa colorida
+        // cumpre no Monopoly. O disco também ganha o halo da cor, para o contraste não
+        // depender só do traço.
         <span
-          className="w-full h-full grid place-items-center text-brass"
-          style={{ transform: `rotate(${artRotation}deg)` }}
+          className="board-flag-avatar__art w-full h-full grid place-items-center"
+          style={{
+            transform: `rotate(${artRotation}deg)`,
+            color: GROUP_COLOR[square.group] ?? 'var(--color-brass)',
+          }}
         >
           <PropertyIconArt icon={square.icon ?? 'building'} size={19} />
         </span>
@@ -120,6 +137,8 @@ export function ClassicSquare({
   const isProperty = square.kind === 'property'
   const isAirport  = square.kind === 'airport'
   const isUtility  = square.kind === 'utility'
+  const isMine     = square.kind === 'mine' // D-071 — quarto conjunto comprável
+  const isBuyable  = isProperty || isAirport || isUtility || isMine
   const isTax      = square.kind === 'tax'
   const isAcaso    = square.kind === 'acaso'
   const isTesouro  = square.kind === 'tesouro'
@@ -146,8 +165,18 @@ export function ClassicSquare({
   // aviso visual — cor aparecia/sumia de golpe. `key={ownerColor}` remonta o grupo a cada
   // transferência (compra, leilão, aquisição hostil) e o `pop` do vocabulário entra por cima.
   const { pop: ownerPop } = useMotion()
-  // Propriedade COMPRADA não exibe valor — a posse é comunicada pela stripe
-  // colorida do jogador. Só propriedade À VENDA (sem dono) mostra o preço.
+  // Título COMPRADO não exibe valor — a posse é comunicada pela stripe colorida do
+  // jogador. Todo título À VENDA mostra o preço: propriedade, ferrovia, utilidade e mina.
+
+  const pricePos: React.CSSProperties = (() => {
+    switch (side) {
+      case 'bottom': return { bottom: '5px', left: '50%', transform: 'translateX(-50%)' }
+      case 'top':    return { top: '5px', left: '50%', transform: 'translateX(-50%)' }
+      case 'left':   return { left: '7%', top: '50%', transform: 'translate(-50%, -50%) rotate(90deg)' }
+      case 'right':  return { left: '93%', top: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)' }
+      default:       return { bottom: '24%', left: '50%', transform: 'translateX(-50%)' }
+    }
+  })()
 
   // O flag transborda pelo lado interno da célula sobre o centro do
   // tabuleiro em todos os lados — `.board-square` precisa rodar sem
@@ -213,6 +242,30 @@ export function ClassicSquare({
       <MortgageMark pos={square.pos} />
       <EffectMark pos={square.pos} />
 
+      {/* Preço como CHIP (pílula) em TODO título à venda. O agente anterior deixou este
+          bloco dentro de `isProperty`; ferrovias e minas tinham `price` no catálogo, mas
+          renderizavam só a faixa de acento e pareciam gratuitas. */}
+      {isBuyable && !ownerColor && (
+        <div
+          className="board-square-price absolute currency leading-none whitespace-nowrap"
+          style={{
+            ...pricePos,
+            zIndex: 35,
+            fontSize: '11px',
+            fontWeight: 700,
+            color: 'var(--color-gold-glow)',
+            background: 'color-mix(in srgb, var(--color-ink-950) 85%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--color-brass) 45%, transparent)',
+            borderRadius: 9999,
+            padding: '1px 5px',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        >
+          <span style={{ fontSize: '0.8em', opacity: 0.75, marginRight: 2 }}>R$</span>
+          {'price' in square ? square.price : 0}
+        </div>
+      )}
+
       {/* Conteúdo da PROPRIEDADE — posicionado em valores absolutos pra
           separar valor (junto da stripe externa) do nome (centro).
           Em todos os lados, flag está na borda INTERNA (transbordando
@@ -248,45 +301,13 @@ export function ClassicSquare({
                 default:       return { top: '50%',    left: '4%', right: '4%', transform: 'translateY(-50%)' }
               }
             })()
-            // Valor é um CHIP centralizado (pílula) — posiciona pelo centro
-            // horizontal pra a pílula encolher pro conteúdo.
-            const moneyPos: React.CSSProperties = (() => {
-              switch (side) {
-                case 'bottom': return { bottom: '5px', left: '50%', transform: 'translateX(-50%)' }
-                case 'top':    return { top: '5px',    left: '50%', transform: 'translateX(-50%)' }
-                // Leste/oeste: chip girado, no extremo EXTERNO (longe da bandeira).
-                case 'left':   return { left: '7%',  top: '50%', transform: 'translate(-50%, -50%) rotate(90deg)' }
-                case 'right':  return { left: '93%', top: '50%', transform: 'translate(-50%, -50%) rotate(-90deg)' }
-                default:       return { bottom: '24%', left: '50%', transform: 'translateX(-50%)' }
-              }
-            })()
             return (
               <>
-                {/* Preço como CHIP (pílula) — só em propriedade À VENDA (sem
-                    dono). Comprada não mostra valor: a cor do dono na célula
-                    já comunica a posse. Mesmo tratamento nos dois temas; o
-                    dourado resolve pelo tema via var(). */}
-                {!ownerColor && (
-                  <div
-                    className="board-square-price absolute currency leading-none whitespace-nowrap"
-                    style={{
-                      ...moneyPos,
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      color: 'var(--color-gold-glow)',
-                      background: 'color-mix(in srgb, var(--color-ink-950) 85%, transparent)',
-                      border: '1px solid color-mix(in srgb, var(--color-brass) 45%, transparent)',
-                      borderRadius: 9999,
-                      padding: '1px 5px',
-                      boxShadow: 'var(--shadow-card)',
-                    }}
-                  >
-                    <span style={{ fontSize: '0.8em', opacity: 0.75, marginRight: 2 }}>R$</span>
-                    {(square as PropertySquare).price}
-                  </div>
-                )}
                 <p
-                  className="absolute text-center display text-cream leading-none tracking-wide cell-text"
+                  className={cn(
+                    'absolute text-center display text-cream leading-none tracking-wide cell-text',
+                    fuligemMap && 'cell-text--fuligem',
+                  )}
                   style={{
                     ...cityPos,
                     // Fonte UNIFORME 14px em todos os nomes (sem auto-fit —
@@ -298,7 +319,7 @@ export function ClassicSquare({
                     ...(side === 'left' || side === 'right' ? { maxWidth: '94cqmin' } : {}),
                   }}
                 >
-                  {(square as PropertySquare).short ?? square.name}
+                  {fuligemMap ? square.name : (square as PropertySquare).short ?? square.name}
                 </p>
               </>
             )
@@ -308,9 +329,10 @@ export function ClassicSquare({
 
       {/* Faixa de acento na borda externa — aeroportos (dourado) e
           utilidades (cor do ícone). Identidade visual sem dono. */}
-      {(isAirport || isUtility) && (() => {
+      {(isAirport || isUtility || isMine) && (() => {
         const color = isAirport
           ? 'var(--color-brass)'
+          : isMine ? METAL_ACCENT[(square as MineSquare).metal] // D-071: a cor é do metal
           : (square as UtilitySquare).icon === 'fuel' ? 'var(--color-group-green)'
           : (square as UtilitySquare).icon === 'bolt' ? 'var(--color-brass-glow)'
           : 'var(--color-group-orange)'
@@ -333,6 +355,7 @@ export function ClassicSquare({
       {!isProperty && (() => {
         const glow =
           isAirport ? 'var(--color-brass)'
+          : isMine ? METAL_ACCENT[(square as MineSquare).metal]
           : isUtility ? ((square as UtilitySquare).icon === 'fuel' ? 'var(--color-group-green)'
             : (square as UtilitySquare).icon === 'bolt' ? 'var(--color-brass-glow)'
             : 'var(--color-group-orange)')
@@ -355,14 +378,17 @@ export function ClassicSquare({
           + encolhe um pouco pra o label girado caber na altura. */}
       {!isProperty && (
         <div
-          className="absolute inset-0 flex flex-col items-center text-center gap-1 justify-center p-1"
+          className={cn(
+            'absolute inset-0 flex flex-col items-center text-center gap-1 justify-center p-1',
+            fuligemMap && 'board-square-content--fuligem',
+          )}
           style={{
             transform:
               side === 'left'  ? 'rotate(90deg)' :
               side === 'right' ? 'rotate(-90deg)' : undefined,
           }}
         >
-          {(isAirport || isUtility || isCard || isTax || isBus) && (
+          {(isAirport || isUtility || isMine || isCard || isTax || isBus) && (
             <div style={{ fontSize: 32 }} className="board-square-icon leading-none">
               <SquareIcon square={square} size="1em" />
             </div>
@@ -372,7 +398,15 @@ export function ClassicSquare({
               className="board-square-label display mt-1 text-cream leading-none tracking-wider"
               style={{ fontSize: '14px' }}
             >
-              {(square as AirportSquare).name}
+              {fuligemMap ? square.name : square.short ?? (square as AirportSquare).name}
+            </p>
+          )}
+          {isMine && (
+            <p
+              className="board-square-label display mt-1 text-cream leading-none tracking-wide"
+              style={{ fontSize: '14px' }}
+            >
+              {fuligemMap ? square.name : square.short ?? METAL_LABEL[(square as MineSquare).metal]}
             </p>
           )}
           {isUtility && (
@@ -381,10 +415,14 @@ export function ClassicSquare({
               style={{ fontSize: '14px' }}
             >
               {(() => {
+                // O rótulo curto vem do DADO da casa (`short`), não de uma tabela por ícone.
+                // Antes o mapa escolhia por `icon`, então mover uma utilidade de lugar levava
+                // o rótulo errado com ela — e o nome da empresa no título (Carbonífera Santa
+                // Rita) não tinha relação com a palavra na casa. A casa mede 14px fixos, por
+                // isso o `short` continua obrigatório aqui; o nome cheio vive no título.
+                if (fuligemMap) return square.name
+                if (square.short) return square.short
                 const icon = (square as UtilitySquare).icon
-                // Rótulo curto por mapa: a casa mede 14px fixos — o nome completo não cabe.
-                const fuligem = activeCatalog().id === 'fuligem'
-                if (fuligem) return icon === 'fuel' ? 'Carvão' : icon === 'bolt' ? 'Usina' : 'Água'
                 return icon === 'fuel' ? 'Petro' : icon === 'bolt' ? 'Eletro' : 'Gás'
               })()}
             </p>
@@ -412,7 +450,7 @@ export function ClassicSquare({
           )}
           {isBus && (
             <p className="board-square-label display mt-1 text-cream leading-none tracking-wide text-center" style={{ fontSize: '14px' }}>
-              {activeLabels().busTicket}
+              {fuligemMap ? square.name : square.short ?? activeLabels().busTicket}
             </p>
           )}
         </div>
@@ -484,10 +522,19 @@ export function BuildingMark({ pos }: { pos: number }) {
         filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))',
       }}
     >
-      {isSkyscraper && <SkyscraperBadgeIcon />}
-      {hotelCount > 0 && Array.from({ length: hotelCount }, (_, i) => <HotelBadgeIcon key={i} />)}
-      {/* 1–3 casas em linha; quatro usam grade 2×2 para caber na faixa lateral. */}
-      {houseCount > 0 && Array.from({ length: houseCount }, (_, i) => <HouseBadgeIcon key={i} />)}
+      {/* Glifos do MAPA ativo (D-070): casa/hotel/arranha-céu no Atlas, oficina/fábrica/
+          Torre de Ferro na Fuligem — o rótulo e o desenho passam a dizer a mesma coisa. */}
+      {(() => {
+        const B = buildingFamily(activeCatalog().id)
+        return (
+          <>
+            {isSkyscraper && <B.top />}
+            {hotelCount > 0 && Array.from({ length: hotelCount }, (_, i) => <B.big key={i} />)}
+            {/* 1–3 unidades em linha; quatro usam grade 2×2 para caber na faixa lateral. */}
+            {houseCount > 0 && Array.from({ length: houseCount }, (_, i) => <B.unit key={i} />)}
+          </>
+        )
+      })()}
     </div>
   )
 }
@@ -507,7 +554,7 @@ export function HangarMark({ pos }: { pos: number }) {
         filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))',
       }}
     >
-      <HangarBadgeIcon />
+      {(() => { const B = buildingFamily(activeCatalog().id); return <B.depot /> })()}
     </div>
   )
 }
@@ -901,6 +948,40 @@ function TurnActionBtn({
   )
 }
 
+/**
+ * DESVIO PELA FERROVIA (D-070, mapa Fuligem) — aparece só quando o jogador está PARADO
+ * numa ferrovia própria e tem outra para onde ir. Com um destino, embarca direto; com
+ * dois ou três, mostra um por botão, nomeado, porque a escolha de PARA ONDE é a jogada.
+ *
+ * Fica na linha de fim de turno junto do Bilhete de Trem, e não num modal, porque é a
+ * mesma natureza de decisão: opcional, do jogador ativo, antes de passar a vez.
+ */
+function RailHopAction({ targets, onHop }: { targets: number[]; onHop: (dest: number) => void }) {
+  const board = activeBoard()
+  const nameOf = (pos: number) => board[pos]?.short ?? board[pos]?.name ?? `#${pos}`
+  return (
+    <>
+      {targets.map((dest) => (
+        <TurnActionBtn
+          key={dest}
+          variant="secondary"
+          onClick={() => onHop(dest)}
+          className="rail-hop-action min-w-0 flex-[1.35] justify-start gap-2 px-2 text-sm"
+          title={`Embarcar para ${board[dest]?.name ?? dest} — resolve a casa de destino, sem bônus de GO`}
+        >
+          <span className="rail-hop-action__icon" aria-hidden="true">
+            <TrainFront size={18} />
+          </span>
+          <span className="rail-hop-action__label">
+            <span className="rail-hop-action__eyebrow">Embarcar</span>
+            <span className="rail-hop-action__name">{nameOf(dest)}</span>
+          </span>
+        </TurnActionBtn>
+      ))}
+    </>
+  )
+}
+
 // Ação opcional pré-rolagem/fim de turno (034). Divide a mesma linha da
 // ação principal da DiceArena, com hierarquia secundária.
 function BusTicketAction({ count, onClick }: { count: number; onClick: () => void }) {
@@ -938,19 +1019,14 @@ export function DiceArena() {
   const declineProperty = (): void => dispatch({ kind: 'decline-property' })
   const finalizeTurn = (): void => dispatch({ kind: 'finalize' })
   const jailDecision = (decision: 'pay' | 'card' | 'try'): void => dispatch({ kind: 'jail-decision', decision })
+  // D-070 (mapa Fuligem): destinos de embarque. Vazio no Atlas e sempre que a cadeia de
+  // `canRailHop` não fecha — o botão só existe quando o clique faria algo.
+  const hopTargets = railHopTargets(game)
+  const railHop = (dest: number): void => dispatch({ kind: 'rail-hop', dest })
 
   const [rollKey, setRollKey] = useState(0)
   const [rolling, setRolling] = useState(false)
-  const [goPulse, setGoPulse] = useState<{ id: number; d: number } | null>(null)
-  const [pendingGoBonus, setPendingGoBonus] = useState<{
-    who: string
-    amount: number
-    afterCrossingId: number
-  } | null>(null)
-  const goCrossing = useTokenAnim((s) => s.goCrossing)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const goPulseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const goPulseId = useRef(0)
   // Chaves de valor do log do último snapshot visto — mesma técnica do SoundLayer
   // (o motor clona o estado a cada comando; identidade de objeto não sobrevive).
   const prevLogKeys = useRef<string[] | null>(null)
@@ -958,7 +1034,6 @@ export function DiceArena() {
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
-      if (goPulseTimeoutRef.current) clearTimeout(goPulseTimeoutRef.current)
     }
   }, [])
 
@@ -987,19 +1062,8 @@ export function DiceArena() {
     if (before === null) return // primeiro snapshot: nada a animar
     const fresh = countNewLogEntries(before, keys)
     let rolled = false
-    let goBonus: { who: string; amount: number } | null = null
     for (let i = game.log.length - fresh; i < game.log.length; i++) {
-      const entry = game.log[i]
-      if (entry.kind === 'roll') rolled = true
-      if (entry.kind === 'go' && entry.who === active.id) {
-        goBonus = { who: entry.who, amount: entry.amount }
-      }
-    }
-    if (goBonus !== null) {
-      setPendingGoBonus({
-        ...goBonus,
-        afterCrossingId: useTokenAnim.getState().goCrossing?.id ?? 0,
-      })
+      if (game.log[i].kind === 'roll') rolled = true
     }
     if (!rolled) return
     setRolling(true)
@@ -1011,23 +1075,6 @@ export function DiceArena() {
       useTokenAnim.getState().setRolling(false) // dado caiu → peão pode andar
     }, rollDurationMs)
   }, [active.id, game, rollDurationMs])
-
-  // O motor credita e loga o bônus no mesmo snapshot da rolagem, mas o peão só cruza
-  // o GO depois que os dados param e a caminhada chega ao passo 47→0. `LiveTokens`
-  // publica esse instante visual; a arena segura o valor até o sinal correspondente.
-  useEffect(() => {
-    if (
-      pendingGoBonus === null
-      || goCrossing === null
-      || goCrossing.id <= pendingGoBonus.afterCrossingId
-      || goCrossing.playerId !== pendingGoBonus.who
-    ) return
-    goPulseId.current += 1
-    setGoPulse({ id: goPulseId.current, d: pendingGoBonus.amount })
-    setPendingGoBonus(null)
-    if (goPulseTimeoutRef.current) clearTimeout(goPulseTimeoutRef.current)
-    goPulseTimeoutRef.current = setTimeout(() => setGoPulse(null), 1400)
-  }, [goCrossing, pendingGoBonus])
 
   // Trava otimista entre o clique e a chegada do resultado (online): o botão não aceita
   // clique duplo e o peão não sai andando antes do efeito acima assumir. O timeout é
@@ -1079,15 +1126,13 @@ export function DiceArena() {
           showActiveRing={false}
           size={72}
         />
-        <div className="relative">
-          <MoneyPulse
-            pulse={goPulse}
-            className="dice-arena__money-pulse left-1/2 -translate-x-1/2 -top-4 whitespace-nowrap"
-          />
-          <p className="display text-cream text-xl leading-none tracking-wide">
-            {active.name}
-          </p>
-        </div>
+        {/* O bônus de GO NÃO aparece aqui. Dinheiro tem UM lugar nesta tela: a caixa de
+            jogadores à esquerda, onde o `player-row__pulse` já mostra o delta. Um segundo
+            pulso em cima da carinha central duplicava a informação no ponto de maior
+            atenção da tela — justo onde ficam os dados e o botão de rolar. */}
+        <p className="display text-cream text-xl leading-none tracking-wide">
+          {active.name}
+        </p>
         <p className={cn('label', isDoubleReroll ? 'text-gold font-bold' : 'text-cream-muted')}>{status}</p>
       </div>
 
@@ -1156,7 +1201,8 @@ export function DiceArena() {
             </TurnActionBtn>
           </div>
         ) : canFinalize ? (
-          <div className="flex gap-2 w-full">
+          <div className="flex gap-2 w-full flex-wrap">
+            {hopTargets.length > 0 && <RailHopAction targets={hopTargets} onHop={railHop} />}
             {canBus && <BusTicketAction count={activeBusTickets} onClick={() => useBusTicketUI.getState().arm()} />}
             <TurnActionBtn variant="primary" onClick={() => finalizeTurn()} className="min-w-0 flex-1 px-3 text-sm">
               Finalizar turno
@@ -1565,7 +1611,7 @@ export function CenterArena() {
           por tema, os dois em `glyphs/patterns`. */}
       {boardTheme === 'fuligem' ? <FoundryPattern /> : <ChartPattern />}
 
-      {boardTheme === 'atlas' ? (
+      {boardTheme === 'atlas' && (
         <>
           <div className="board-center__brand" aria-hidden>
             <span>Magnata Imobiliário</span>
@@ -1590,36 +1636,6 @@ export function CenterArena() {
                 borderBottom: c.includes('b') ? '1.5px solid color-mix(in srgb, var(--color-brass) 55%, transparent)' : 'none',
                 borderLeft: c.includes('l') ? '1.5px solid color-mix(in srgb, var(--color-brass) 55%, transparent)' : 'none',
                 borderRight: c.includes('r') ? '1.5px solid color-mix(in srgb, var(--color-brass) 55%, transparent)' : 'none',
-              }}
-            />
-          ))}
-        </>
-      ) : (
-        <>
-          {/* Moldura de gabinete: filete de néon com cantoneiras acesas */}
-          <div
-            className="absolute inset-3 pointer-events-none rounded-[var(--radius-sharp)]"
-            style={{
-              border: '1px solid color-mix(in srgb, var(--color-group-skyblue) 45%, transparent)',
-              boxShadow: '0 0 14px -2px color-mix(in srgb, var(--color-group-purple) 55%, transparent)',
-            }}
-          />
-          {(['tl', 'tr', 'bl', 'br'] as const).map((c) => (
-            <span
-              key={c}
-              className="absolute pointer-events-none"
-              style={{
-                width: 18,
-                height: 18,
-                top: c.includes('t') ? 9 : 'auto',
-                bottom: c.includes('b') ? 9 : 'auto',
-                left: c.includes('l') ? 9 : 'auto',
-                right: c.includes('r') ? 9 : 'auto',
-                borderTop: c.includes('t') ? '2px solid var(--color-group-pink)' : 'none',
-                borderBottom: c.includes('b') ? '2px solid var(--color-group-pink)' : 'none',
-                borderLeft: c.includes('l') ? '2px solid var(--color-group-pink)' : 'none',
-                borderRight: c.includes('r') ? '2px solid var(--color-group-pink)' : 'none',
-                filter: 'drop-shadow(0 0 4px color-mix(in srgb, var(--color-group-pink) 70%, transparent))',
               }}
             />
           ))}
@@ -1888,6 +1904,12 @@ function DeedActions({ pos }: { pos: number }) {
         : `Hipotecar por $${dv.mortgageValue}`
     : `Hipotecar por $${dv.mortgageValue}`
 
+  // Taxa de Fumaça (D-070): `smokeTax` é 0 no Atlas, então nada disto aparece lá.
+  // `smokeTaxDue` = a PRÓXIMA construção já é fábrica ou acima (nível atual ≥ 4).
+  const activePlayerId = game.players[game.turnOrder[game.activeSeat]].id
+  const smokeTax = smokeTaxFor(game, activePlayerId, 5)
+  const smokeTaxDue = dv.kind === 'property' && smokeTaxFor(game, activePlayerId, dv.level + 1) > 0
+
   return (
     <div className="deed-actions">
       <p className="property-deed__section-label">Gerenciar</p>
@@ -1897,11 +1919,23 @@ function DeedActions({ pos }: { pos: number }) {
           <span>{blockMsg}</span>
         </p>
       )}
+      {/* TAXA DE FUMAÇA anunciada ANTES da cobrança (D-070). A lição do taxMan: dinheiro
+          que sai sem aviso lê como bug, não como regra. Aqui o jogador vê o valor no
+          botão e o motivo na legenda, então quando o caixa cai ele já sabia. */}
+      {dv.kind === 'property' && smokeTax > 0 && (
+        <p className="deed-actions__note deed-actions__note--smoke">
+          <i aria-hidden>≈</i>
+          <span>
+            {capLabel(activeLabels().hotel)} ou acima paga <strong>R$ {fmtMoney(smokeTax)}</strong> de
+            Taxa de Fumaça para o pote da {activeLabels().lottery}.
+          </span>
+        </p>
+      )}
       <div className="deed-actions__grid" data-kind={dv.kind}>
         {dv.kind === 'property' && (
           <>
             <DeedBtn variant="primary" icon={<HouseIcon size={13} />} disabled={!flags.podeConstruir} onClick={() => buildHouse(pos)} title={blockMsg}>
-              Construir
+              {smokeTaxDue ? `Construir +R$ ${fmtMoney(smokeTax)}` : 'Construir'}
             </DeedBtn>
             <DeedBtn disabled={!flags.podeVender} onClick={() => sellBuilding(pos)}>Vender</DeedBtn>
           </>
@@ -1954,14 +1988,15 @@ function PropertyRentTier({
   active?: boolean
 }) {
   const markers = (() => {
-    if (kind === 'base') return <PlotBadgeIcon />
+    const B = buildingFamily(activeCatalog().id) // D-070: glifos do mapa ativo
+    if (kind === 'base') return <B.plot />
     if (kind === 'house') {
-      return Array.from({ length: count }, (_, index) => <HouseBadgeIcon key={index} />)
+      return Array.from({ length: count }, (_, index) => <B.unit key={index} />)
     }
     if (kind === 'hotel') {
-      return Array.from({ length: count }, (_, index) => <HotelBadgeIcon key={index} />)
+      return Array.from({ length: count }, (_, index) => <B.big key={index} />)
     }
-    return <SkyscraperBadgeIcon />
+    return <B.top />
   })()
 
   return (
@@ -2074,7 +2109,10 @@ function PropertyDeedContent({ square, onClose }: { square: PropertySquare; onCl
             <dd>R$ {fmtMoney(square.price)}</dd>
           </div>
           <div className="property-deed__fact">
-            <dt>Casa</dt>
+            {/* D-070: o rótulo do nível 1 vem do mapa — "Casa" no Atlas, "Oficina" na
+                Fuligem. Era literal, então o título dizia Casa embaixo de uma escada
+                que dizia oficina/fábrica/Torre de Ferro. */}
+            <dt>{capLabel(activeLabels().house)}</dt>
             <dd>R$ {fmtMoney(houseCost)}</dd>
           </div>
           <div className="property-deed__fact">
@@ -2186,6 +2224,83 @@ export function AirportPopover({
 // ---------------------------------------------------------------------
 // UtilityPopover — regras e aluguel de utilidade (SRS §2.5)
 // ---------------------------------------------------------------------
+
+/**
+ * TÍTULO DA MINA (D-071). Modelado no `UtilityPopover`, com uma diferença que é a razão de
+ * ele existir: acima do preço vem o BÔNUS PASSIVO em destaque.
+ *
+ * Sem isso a mina era a única casa comprável do tabuleiro que não dizia o que fazia — o
+ * jogador via "R$ 220" e um desenho de galeria, e tinha de descobrir o efeito comprando.
+ * O passivo é a metade do valor da carta; esconder isso é esconder o preço.
+ */
+export function MinePopover({
+  square,
+  side,
+  anchor,
+  onClose,
+}: {
+  square: MineSquare
+  side: Side
+  anchor?: HTMLElement | null
+  onClose: () => void
+}) {
+  const { ref: clampRef, off } = useViewportClamp()
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const { tail: tailStyle } = popoverPlacement(side)
+  const { position: positionStyle, centerTransform } = useAnchoredPopover(anchor, side)
+
+  const presentation = deedPresentation(square)
+  const accentColor = presentation.accent
+
+  return deedPopoverLayer((
+    <div data-deed-popover-layer ref={clampRef} style={{ position: anchor ? 'fixed' : 'absolute', zIndex: 65, transform: `${centerTransform} translate(${off.x}px, ${off.y}px)`, ...positionStyle }} onClick={(e) => e.stopPropagation()}>
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ position: 'relative' }}>
+        <div
+          className="atlas-surface atlas-surface--popover deed-popover w-[270px] overflow-hidden"
+          style={{ '--atlas-surface-accent': accentColor } as React.CSSProperties}
+        >
+          <div className="deed-header relative px-4 pt-4 pb-3" style={{ '--deed-accent': accentColor } as React.CSSProperties}>
+            <button onClick={onClose} aria-label="Fechar" className="deed-close absolute top-1.5 right-1.5 w-11 h-11 flex items-center justify-center text-xs transition-colors">✕</button>
+            <div className="flex items-center gap-2.5 pr-10">
+              <div className="shrink-0 w-9 h-9 flex items-center justify-center">
+                <SquareIcon square={square} size={32} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="display text-starlight text-lg leading-none truncate">{presentation.name}</h3>
+                <p className="label deed-header__meta mt-1 text-micro">{presentation.subtitle}</p>
+              </div>
+            </div>
+          </div>
+          <div className="px-3.5 py-3">
+            {/* O bônus é todo o valor econômico da Mina: ela não cobra aluguel (D-071). */}
+            <div className="deed-mine-bonus" style={{ '--deed-accent': accentColor } as React.CSSProperties}>
+              <p className="label text-gold text-micro">Enquanto for sua</p>
+              <p className="deed-mine-bonus__text text-starlight text-xs leading-snug mt-1">{presentation.bonus}</p>
+            </div>
+
+            <div className="mt-3 pt-2.5 border-t border-coffee-500/60">
+              <p className="text-cream-muted text-micro">
+                Não cobra aluguel e não recebe construções. Hipotecada, a mina não dá o bônus.
+              </p>
+            </div>
+            <div className="mt-2.5 pt-2.5 border-t border-coffee-500/60 flex flex-col gap-0.5">
+              <CompactRent label="Preço"    value={presentation.price}    muted />
+              <CompactRent label="Hipoteca" value={presentation.mortgage} muted />
+            </div>
+            <DeedActions pos={square.pos} />
+          </div>
+        </div>
+        <div style={tailStyle} />
+      </motion.div>
+    </div>
+  ), Boolean(anchor))
+}
+
 export function UtilityPopover({
   square,
   side,

@@ -10,9 +10,12 @@ import type { GameState } from '../turn/types'
 import { activePlayer } from '../turn/turnMachine'
 import { liquidatorOf } from '../falencia/falencia'
 import { groupSize } from './titles'
+import { discountedByTin, ownsMine } from './rent'
 import { isEmbargoed } from './tempEffects'
 import { THEME } from '../theme'
 import { logEvent } from '../log'
+import { activeRules } from '@/lib/mapCatalog'
+import { payToCenter } from '../balancing/balancing'
 
 function clone(state: GameState): GameState {
   return structuredClone(state)
@@ -20,6 +23,40 @@ function clone(state: GameState): GameState {
 
 export function buildCost(square: PropertySquare): number {
   return THEME.HOUSE_COST[square.group] // tier fixo por grupo (032); todos os níveis usam o mesmo custo
+}
+
+/**
+ * Custo de construção JÁ com o bônus da Mina de Ferro (D-071): quem tem o ferro da cidade
+ * constrói 25% mais barato. É o único dos quatro passivos que age no custo e não no
+ * aluguel, e por isso precisa do estado (a posse) que `buildCost` puro não tem.
+ *
+ * Toda decisão de caixa — a guarda de `canBuildHouse` e o débito de `buildHouse` — usa
+ * ESTA, nunca `buildCost` direto: se as duas divergirem, o botão libera uma construção que
+ * o jogador não paga (ou cobra o que ele não devia).
+ */
+export function buildCostFor(state: GameState, square: PropertySquare, ownerId: string): number {
+  const base = buildCost(square)
+  return ownsMine(state, 'ferro', ownerId) ? Math.round(base * THEME.MINE_BONUS.ferro) : base
+}
+
+/** Taxa de Fumaça de uma construção que termina em `nextLevel`; Estanho reduz a cobrança. */
+export function smokeTaxFor(state: GameState, ownerId: string, nextLevel: number): number {
+  const smokeTax = activeRules().smokeTax
+  return smokeTax > 0 && nextLevel >= 5
+    ? discountedByTin(state, ownerId, smokeTax)
+    : 0
+}
+
+/** Saída total de caixa da próxima construção, incluindo a Taxa de Fumaça quando devida. */
+export function buildPaymentFor(
+  state: GameState,
+  square: PropertySquare,
+  ownerId: string,
+  nextLevel: number,
+  buildIsFree = false,
+): number {
+  const construction = buildIsFree ? 0 : buildCostFor(state, square, ownerId)
+  return construction + smokeTaxFor(state, ownerId, nextLevel)
 }
 
 export const HANGAR_COST = THEME.HANGAR_COST // §13.6; venda = metade ($50)
@@ -77,7 +114,8 @@ export function canBuildHouse(state: GameState, pos: number): boolean {
   const size = groupSize(sq.group)
   if (cur === 6 && cities.length !== size) return false // → Skyscraper exige grupo completo (§13.7)
   if (cur >= buildLevelLimit(cities.length, size)) return false // D-050: teto enquanto país incompleto
-  if (!player.nextBuildFree && player.cash < buildCost(sq)) return false // Obra Relâmpago (D-064): grátis dispensa caixa
+  const payment = buildPaymentFor(state, sq, player.id, cur + 1, player.nextBuildFree === true)
+  if (player.cash < payment) return false
   return true // casas/hotéis/arranha-céus são ilimitados (sem estoque do banco)
 }
 
@@ -91,9 +129,10 @@ export function buildHouse(state: GameState, pos: number): GameState {
   const s = clone(state)
   const p = activePlayer(s)
   const t = s.titles[pos]
-  const cost = p.nextBuildFree ? 0 : buildCost(sq) // Obra Relâmpago (D-064)
+  const cost = p.nextBuildFree ? 0 : buildCostFor(s, sq, p.id) // Obra Relâmpago (D-064) + Mina de Ferro (D-071)
+  const smokeTax = smokeTaxFor(s, p.id, cur + 1)
   if (p.nextBuildFree) delete p.nextBuildFree
-  p.cash -= cost
+  p.cash -= cost + smokeTax
   if (cur === 4) {
     t.houses = 0
     t.hotel = true // 4 casas viram 1 hotel
@@ -104,7 +143,15 @@ export function buildHouse(state: GameState, pos: number): GameState {
   } else {
     t.houses += 1
   }
-  logEvent(s, { kind: 'build', who: p.id, pos, level: cityLevel(t), cost })
+  const level = cityLevel(t)
+  // TAXA DE FUMAÇA (D-070, mapa Fuligem): construir FÁBRICA ou acima solta fumaça, e a
+  // cidade cobra — o valor vai ao pote central, não ao banco. O Atlas tem `smokeTax: 0`,
+  // então nada acontece lá. Oficina (níveis 1–4) nunca paga: a taxa é do porte grande.
+  if (smokeTax > 0 && level >= 5) {
+    payToCenter(s, smokeTax)
+    logEvent(s, { kind: 'smoke-tax', who: p.id, pos, amount: smokeTax })
+  }
+  logEvent(s, { kind: 'build', who: p.id, pos, level, cost })
   return s
 }
 

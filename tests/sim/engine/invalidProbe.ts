@@ -39,10 +39,10 @@ export const INVALID_PROBE_CATALOG: ProbeEntry[] = [
   {
     name: 'hipotecar-propriedade-alheia',
     isApplicable: (g) =>
-      BOARD.some((sq) => (sq.kind === 'property' || sq.kind === 'airport' || sq.kind === 'utility') && g.titles[sq.pos]?.ownerId !== activePlayer(g).id),
+      BOARD.some((sq) => (sq.kind === 'property' || sq.kind === 'airport' || sq.kind === 'utility' || sq.kind === 'mine') && g.titles[sq.pos]?.ownerId !== activePlayer(g).id),
     build: (g) => {
       const sq = BOARD.find(
-        (s) => (s.kind === 'property' || s.kind === 'airport' || s.kind === 'utility') && g.titles[s.pos]?.ownerId !== activePlayer(g).id,
+        (s) => (s.kind === 'property' || s.kind === 'airport' || s.kind === 'utility' || s.kind === 'mine') && g.titles[s.pos]?.ownerId !== activePlayer(g).id,
       )!
       return { kind: 'mortgage', pos: sq.pos }
     },

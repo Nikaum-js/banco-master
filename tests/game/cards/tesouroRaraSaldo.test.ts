@@ -24,12 +24,12 @@
  */
 import { describe, it, expect } from 'vitest'
 import { createSeedState, buildPorts, buildResolve } from '@/game/setup'
-import { jailDecision, rollDice, resolvePending, JAIL_POS } from '@/game/turn/turnMachine'
+import { jailDecision, rollDice, resolvePending } from '@/game/turn/turnMachine'
 import { confirmCardReveal } from '@/game/cards/draw'
 import { cardById } from '@/game/cards/catalog'
 import { recordingCtx, replayCtx } from '@/net/recorder'
 import { THEME } from '@/game/theme'
-import { BOARD } from '@/lib/boardData'
+import { BOARD, jailPos } from '@/lib/boardData'
 import { rngFromDice } from '../turn/_helpers'
 import type { TurnCtx } from '@/game/turn/turnMachine'
 import type { GameState } from '@/game/turn/types'
@@ -43,7 +43,7 @@ function ctxComDados(values: number[]): TurnCtx {
 // A mesa do incidente: p1 preso no 12, deck de Acaso com a carta rara no topo.
 function presoComCartaRaraNoTopo(): GameState {
   const g = createSeedState(['p1', 'p2'])
-  g.players[0].pos = JAIL_POS
+  g.players[0].pos = jailPos()
   g.players[0].jail = { inJail: true, attempts: 0 }
   g.turn.state = 'prisao-decisao'
   g.decks.acaso = [CARTA_RARA_DE_MAO, ...g.decks.acaso.filter((c) => c !== CARTA_RARA_DE_MAO)]
@@ -52,7 +52,7 @@ function presoComCartaRaraNoTopo(): GameState {
 
 describe('CARD 01 — prisão → rolagem → carta rara não zera o saldo', () => {
   it('a casa alcançada é de carta, e a carta do topo é RARA e de mão (a do relato)', () => {
-    expect(BOARD[JAIL_POS + 11].kind).toBe('acaso')
+    expect(BOARD[jailPos() + 11].kind).toBe('acaso')
     const carta = cardById(CARTA_RARA_DE_MAO)
     expect(carta.rarity).toBe('rara')
     expect(carta.mode).toBe('mao')

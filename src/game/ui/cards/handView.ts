@@ -31,8 +31,14 @@ export interface HandCard {
   reason?: string
 }
 
-// Posições que são propriedade (cidade/aeroporto/utilidade) — alvos potenciais.
-const PROP_POSITIONS = BOARD.filter((sq) => 'price' in sq).map((sq) => sq.pos)
+// Posições compráveis (cidade/ferrovia/utilidade/mina) — alvos potenciais de carta.
+//
+// FUNÇÃO, não `const` de módulo: `BOARD` é o tabuleiro ATIVO (D-070) e muda quando a sala
+// troca de mapa. Como `const`, isto era avaliado UMA vez no import e ficava preso no Atlas
+// — na Fuligem oferecia as posições 40–47, que não existem, e não oferecia as minas.
+function propPositions(): number[] {
+  return BOARD.filter((sq) => 'price' in sq).map((sq) => sq.pos)
+}
 
 function activeId(game: GameState): string {
   return game.players[game.turnOrder[game.activeSeat]].id
@@ -44,24 +50,24 @@ export function cardTargets(game: GameState, playerId: string, cardId: string): 
   const card = cardById(cardId)
   switch (card.effect) {
     case 'aquisicaoHostil':
-      return { positions: PROP_POSITIONS.filter((pos) => reactorFor(game, 'aquisicaoHostil', playerId, pos, null) !== null) }
+      return { positions: propPositions().filter((pos) => reactorFor(game, 'aquisicaoHostil', playerId, pos, null) !== null) }
     case 'confiscoGeral':
-      return { positions: PROP_POSITIONS.filter((pos) => reactorFor(game, 'confiscoGeral', playerId, pos, null) !== null) }
+      return { positions: propPositions().filter((pos) => reactorFor(game, 'confiscoGeral', playerId, pos, null) !== null) }
     case 'boicote':
-      return { positions: PROP_POSITIONS.filter((pos) => reactorFor(game, 'boicote', playerId, pos, null) !== null) }
+      return { positions: propPositions().filter((pos) => reactorFor(game, 'boicote', playerId, pos, null) !== null) }
     case 'impostoFederal':
       return { players: game.players.filter((p) => canAudit(game, playerId, p.id)).map((p) => p.id) }
     case 'embargoDeObras':
       return { players: game.players.filter((p) => canEmbargo(game, playerId, p.id)).map((p) => p.id) }
     case 'valorizacao':
-      return { positions: PROP_POSITIONS.filter((pos) => ownerOf(game, pos) === playerId) }
+      return { positions: propPositions().filter((pos) => ownerOf(game, pos) === playerId) }
     case 'permutaForcada': {
       // Duas etapas (D-064): própria entregue × adversária tomada. Uma própria é elegível se
       // existe AO MENOS uma adversária com a qual a troca passa nos gates do motor (canSwap).
-      const own = PROP_POSITIONS.filter((myPos) =>
-        ownerOf(game, myPos) === playerId && PROP_POSITIONS.some((t) => canSwap(game, playerId, myPos, t)),
+      const own = propPositions().filter((myPos) =>
+        ownerOf(game, myPos) === playerId && propPositions().some((t) => canSwap(game, playerId, myPos, t)),
       )
-      const theirs = PROP_POSITIONS.filter((t) => own.some((myPos) => canSwap(game, playerId, myPos, t)))
+      const theirs = propPositions().filter((t) => own.some((myPos) => canSwap(game, playerId, myPos, t)))
       return { positionsOwn: own, positions: theirs }
     }
     default:

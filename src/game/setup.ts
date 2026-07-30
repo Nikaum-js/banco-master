@@ -14,6 +14,7 @@
 // então importá-lo NÃO inicia partida nenhuma (ao contrário de `store.ts`, cujo
 // `create()` roda no load e lê `window.location.search`).
 import { BOARD } from '@/lib/boardData'
+import { isRentableKind } from './economy/titles'
 import { THEME } from './theme'
 import type { GameState, Player } from './turn/types'
 import type { Title } from './economy/types'
@@ -34,7 +35,7 @@ import { taxBunkerResolve, findReactionCard } from './cards/reacao'
 function seedTitles(): Record<number, Title> {
   const titles: Record<number, Title> = {}
   for (const sq of BOARD) {
-    if (sq.kind === 'property' || sq.kind === 'airport' || sq.kind === 'utility') {
+    if (isRentableKind(sq.kind)) {
       titles[sq.pos] = { ownerId: null, mortgaged: false, houses: 0, hotel: false, hotel2: false, skyscraper: false, hangar: false }
     }
   }

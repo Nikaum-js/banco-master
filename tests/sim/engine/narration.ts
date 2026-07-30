@@ -73,6 +73,8 @@ export function namesIn(e: LogEntry): string[] {
     case 'card-draw':
     case 'card-immediate':
     case 'build':
+    case 'smoke-tax': // D-070: nomeia só quem construiu; o destino é o pote, não um jogador
+    case 'rail-hop': // D-070: só quem embarcou; não move caixa de ninguém
     case 'build-hangar':
     case 'sell-building':
     case 'sell-hangar':

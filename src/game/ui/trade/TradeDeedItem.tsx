@@ -4,6 +4,7 @@ import { deedPresentation } from '@/game/ui/deed/presentation'
 import { SquareIcon } from '@/boards/glyphs/squares'
 import { money } from '@/lib/money'
 import { CountryFlag } from '@/boards/glyphs/flags'
+import { PropertyIconArt } from '@/boards/glyphs/propertyIcons'
 import { activeBoard } from '@/game/ui/theme/boardTheme'
 
 function TradeDeedAvatar({ pos, compact }: { pos: number; compact: boolean }) {
@@ -19,6 +20,17 @@ function TradeDeedAvatar({ pos, compact }: { pos: number; compact: boolean }) {
           code={deed.flagCode}
           fill
         />
+      </span>
+    )
+  }
+
+  // Propriedade sem bandeira é o caso da Fuligem (055/D-069): o `SquareIcon` só cobre as
+  // casas ESPECIAIS e devolve null em `property`, então o item saía sem avatar nenhum. O
+  // ícone do papel vem do próprio quadrado, como no cabeçalho da escritura.
+  if (square.kind === 'property') {
+    return (
+      <span className="trade-deed-item__avatar trade-deed-item__avatar--glyph" style={{ width: size, height: size }}>
+        <PropertyIconArt icon={square.icon ?? 'building'} size={size * 0.64} />
       </span>
     )
   }

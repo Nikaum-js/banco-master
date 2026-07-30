@@ -44,6 +44,7 @@ export type SquareKind =
   | 'property'
   | 'airport'
   | 'utility'
+  | 'mine'
   | 'acaso'
   | 'tesouro'
   | 'tax'
@@ -86,6 +87,23 @@ export interface UtilitySquare extends SquareBase {
   icon: 'fuel' | 'bolt' | 'gas'
 }
 
+/** O metal de uma mina — identifica QUAL bônus passivo ela carrega (D-071). */
+export type MetalId = 'ferro' | 'cobre' | 'carvao' | 'estanho'
+
+/**
+ * MINA (D-071, mapa Fuligem) — quarto conjunto comprável, ao lado de propriedade,
+ * ferrovia e utilidade.
+ *
+ * Não cobra aluguel. Seu valor econômico é o bônus passivo por metal
+ * (`THEME.MINE_BONUS`): cada mina altera uma classe de ativo diferente que o dono já tem,
+ * então qual delas vale mais depende da carteira — e é isso que dá conteúdo ao leilão.
+ */
+export interface MineSquare extends SquareBase {
+  kind: 'mine'
+  price: number
+  metal: MetalId
+}
+
 export interface TaxSquare extends SquareBase {
   kind: 'tax'
   amount: number
@@ -100,7 +118,7 @@ export type CornerParkingSq  = SquareBase & { kind: 'corner-parking' }
 export type CornerGoToJail   = SquareBase & { kind: 'corner-gotojail' }
 
 export type Square =
-  | PropertySquare | AirportSquare | UtilitySquare | TaxSquare
+  | PropertySquare | AirportSquare | UtilitySquare | MineSquare | TaxSquare
   | AcasoSquare | TesouroSquare | BusTicketSquare
   | CornerGoSquare | CornerJailSq | CornerParkingSq | CornerGoToJail
 
@@ -110,7 +128,7 @@ export type Square =
 //   Inferior: 0–12 · Esquerda: 12–24 · Superior: 24–36 · Direita: 36–47→0
 // Sequência canônica: specs/001-tabuleiro-48-casas/research.md §Decisão 3.
 // ---------------------------------------------------------------------
-export const BOARD: Square[] = [
+const ATLAS_BOARD: readonly Square[] = [
   // ---------- canto inferior direito ----------
   { pos: 0,  kind: 'corner-go', name: 'GO', short: 'GO' },
 
@@ -175,3 +193,70 @@ export const BOARD: Square[] = [
   { pos: 46, kind: 'property', group: 'platinum', name: 'Abu Dhabi',   uf: 'AE', capital: 'Emirados', price: 550, rent: 60 },
   { pos: 47, kind: 'property', group: 'platinum', name: 'Dubai',       uf: 'AE', capital: 'Emirados', price: 650, rent: 72 },
 ]
+
+// ---------------------------------------------------------------------
+// O TABULEIRO ATIVO (D-070)
+//
+// `BOARD` era `const` e valia 48 casas para sempre: o motor inteiro (aluguel,
+// construção, hipoteca, cartas, falência, leilão — ~20 arquivos) lia daqui direto, e
+// era exatamente isso que impedia um segundo mapa de ter tamanho ou disposição própria.
+//
+// Agora é um `let` reatribuível por `setActiveBoard`. Binding de módulo ES é VIVO: quem
+// fez `import { BOARD }` passa a ver o tabuleiro novo sem precisar de mudança nenhuma —
+// é o que torna os ~20 arquivos do motor board-aware sem tocá-los.
+//
+// Por que um singleton mutável é aceitável aqui: `BOARD` JÁ era um singleton de módulo,
+// e um cliente renderiza uma sala por vez (o mapa é imutável depois da criação, D-069).
+// Quem manda é sempre a autoridade: `roomStore.setRoom` aplica o `boardId` da sala e
+// `boardTheme.setTheme` chama este setter. Ninguém mais deve chamá-lo.
+// ---------------------------------------------------------------------
+export let BOARD: readonly Square[] = ATLAS_BOARD
+
+/** Troca o tabuleiro ativo. Chamado só por `boardTheme.setTheme` (fonte: a sala). */
+export function setActiveBoard(board: readonly Square[]): void {
+  BOARD = board
+}
+
+/** O tabuleiro do Atlas, para quem precisa dele nominalmente (catálogo, testes). */
+export { ATLAS_BOARD }
+
+/** Nº de casas do tabuleiro ativo (Atlas 48, Fuligem 40). */
+export function boardSize(): number {
+  return BOARD.length
+}
+
+// GEOMETRIA DO TABULEIRO ATIVO — as duas coisas que o MOTOR (não o layout) precisa saber
+// sobre a forma: onde estão os cantos e onde é a prisão. Ambas eram literais (`JAIL_POS =
+// 12`, `pos === 0 || pos === 12 || pos === 24 || pos === 36` no `busSideOf`) e por isso
+// silenciosamente erradas em qualquer tabuleiro que não fosse o de 48.
+//
+// Memoizado pela IDENTIDADE do array: `busSideOf` roda dentro de laço sobre o tabuleiro
+// inteiro (Bilhete de Trem, sim de invariantes), e recalcular a varredura a cada chamada
+// tornaria isso quadrático.
+const CORNER_KINDS: readonly SquareKind[] = [
+  'corner-go', 'corner-jail', 'corner-parking', 'corner-gotojail',
+]
+
+let geoCache: { of: readonly Square[]; corners: readonly number[]; jail: number } | null = null
+
+function geo() {
+  if (geoCache?.of !== BOARD) {
+    const corners = BOARD.filter((s) => CORNER_KINDS.includes(s.kind)).map((s) => s.pos)
+    geoCache = {
+      of: BOARD,
+      corners,
+      jail: BOARD.find((s) => s.kind === 'corner-jail')?.pos ?? 0,
+    }
+  }
+  return geoCache
+}
+
+/** Índices dos quatro cantos do tabuleiro ativo (Atlas 0/12/24/36, Fuligem 0/10/20/30). */
+export function boardCorners(): readonly number[] {
+  return geo().corners
+}
+
+/** Índice da casa `corner-jail` do tabuleiro ativo (Atlas 12, Fuligem 10). */
+export function jailPos(): number {
+  return geo().jail
+}

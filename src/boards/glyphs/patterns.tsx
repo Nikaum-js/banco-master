@@ -11,7 +11,9 @@
 // Tudo é SVG decorativo, sem lógica, e o conteúdo (dados, histórico) fica por cima com
 // fundo próprio. O que gira usa a classe `.bm-spin-slow` (index.css), que para sob
 // `prefers-reduced-motion` — SMIL não para, e movimento de fundo não é informação.
+import { useId, type CSSProperties } from 'react'
 import { AirlinerMark } from '@/net/ui/entryShell'
+import { Plume, PlumeDefs, PlumePaintProvider } from '@/net/ui/home/FuligemBackdrop'
 
 // ---------------------------------------------------------------------
 // ATLAS — o mapa selecionado, aberto sobre a mesa
@@ -213,19 +215,50 @@ export function ChartPattern() {
 // FULIGEM — o pátio da fábrica visto da mesa (055/D-069)
 //
 // Mesmo papel do ChartPattern no Atlas: o miolo é onde o mapa se apresenta.
-// Silhueta industrial no horizonte com chaminés soltando fumaça PARADA (traço,
-// não partícula), a linha férrea cortando o pátio, uma engrenagem-instrumento
-// no canto (o análogo da rosa dos ventos — gira com `.bm-spin-slow`, que já
-// congela sob prefers-reduced-motion) e um medidor simples no canto oposto.
+// Silhueta industrial no horizonte com as chaminés soltando fumaça DE VERDADE — a
+// mesma pluma do cenário de tela cheia (`Plume`), só num viewBox de 100 unidades
+// em vez de 1440, e por isso sem keyframe novo: quatro sopros defasados por
+// delay negativo, tudo em transform/opacity (FR-012). Antes era um traço parado,
+// que lia como decalque; a coluna subindo é o que diz que a fábrica está acesa.
+// Completam o pátio a linha férrea, as brasas subindo do chão, uma
+// engrenagem-instrumento no canto (o análogo da rosa dos ventos — gira com
+// `.bm-spin-slow`, que já congela sob prefers-reduced-motion) e um medidor simples
+// no canto oposto.
 // ---------------------------------------------------------------------
 
 const FOUNDRY_HORIZON = 42
 
+// Gradiente próprio E único por instância. Id fixo aqui tem a mesma exposição que teve no
+// cenário de tela cheia: `url(#id)` resolve no documento todo e pega a primeira ocorrência,
+// então dois miolos montados juntos (o tabuleiro visível e um sob `<Activity>` oculto) fariam
+// os sopros pintarem NADA, sem erro nenhum. Ver o comentário do `usePaintId` no
+// FuligemBackdrop para o diagnóstico completo.
+
 // Silhueta do complexo: [x, largura, altura] + chaminés como pares [x, altura].
+// `hall` alterna com `block` pelo índice: telhado em dente de serra é o sinal mais
+// forte de "fábrica" numa silhueta desse tamanho — bloco liso lê como escritório.
 const FOUNDRY_BLOCKS: [number, number, number][] = [
   [2, 14, 12], [17, 9, 18], [27, 12, 9], [58, 13, 15], [72, 10, 8], [83, 14, 13],
 ]
 const FOUNDRY_STACKS: [number, number][] = [[8, 22], [21, 30], [63, 26], [88, 21]]
+
+// Brasas subindo do pátio: cinco faíscas, o mesmo vocabulário do cenário de entrada.
+const FOUNDRY_EMBERS = [
+  { x: 12, dur: 19000, rise: -26, drift: 6, delay: 0 },
+  { x: 31, dur: 24000, rise: -34, drift: -5, delay: -8000 },
+  { x: 54, dur: 21000, rise: -29, drift: 7, delay: -14000 },
+  { x: 76, dur: 27000, rise: -38, drift: -4, delay: -5000 },
+  { x: 93, dur: 22000, rise: -31, drift: 6, delay: -18000 },
+] as const
+
+// Telhado em dente de serra na escala do miolo — dentes de ~2,5 unidades.
+function foundrySawtooth(x: number, y: number, width: number): string {
+  const teeth = Math.max(2, Math.round(width / 2.6))
+  const step = width / teeth
+  let d = `M ${x} ${y}`
+  for (let i = 0; i < teeth; i++) d += ` l ${step * 0.6} -1.7 l ${step * 0.4} 1.7`
+  return d
+}
 
 // Dentes da engrenagem-instrumento — mesmo truque da rosa: rotação, não polígono à mão.
 const GEAR_TEETH = Array.from({ length: 12 }, (_, i) => i * 30)
@@ -233,39 +266,98 @@ const GEAR_CX = 86.5
 const GEAR_CY = 82.5
 
 export function FoundryPattern() {
+  const puffId = `fuligem-puff-foundry-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
   return (
+    <PlumePaintProvider id={puffId}>
     <svg
       className="absolute inset-0 w-full h-full pointer-events-none"
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
     >
-      {/* complexo fabril no horizonte — silhueta em tinta, janelas de fornalha acesas */}
+      <PlumeDefs id={puffId} />
+      {/* complexo fabril no horizonte — silhueta em tinta, vidro industrial e fornalhas */}
       <g>
-        {FOUNDRY_BLOCKS.map(([x, w, h]) => (
+        {FOUNDRY_BLOCKS.map(([x, w, h], index) => (
           <g key={`${x}-${h}`} opacity="0.5">
             <rect x={x} y={FOUNDRY_HORIZON - h} width={w} height={h} fill="var(--color-ink-abyss)" />
+            {index % 2 === 0 ? (
+              <path d={foundrySawtooth(x, FOUNDRY_HORIZON - h, w)} fill="var(--color-ink-abyss)" />
+            ) : (
+              /* parapeito com beiral + respiros: o bloco de tijolo da fábrica */
+              <>
+                <rect x={x - 0.6} y={FOUNDRY_HORIZON - h - 1} width={w + 1.2} height="1.2" fill="var(--color-ink-abyss)" />
+                {[0.3, 0.66].map((f) => (
+                  <rect key={f} x={x + w * f} y={FOUNDRY_HORIZON - h - 2.4} width="1.8" height="1.5" fill="var(--color-ink-abyss)" />
+                ))}
+              </>
+            )}
             <rect x={x} y={FOUNDRY_HORIZON - h} width={w} height={h} fill="none" stroke="var(--color-brass)" strokeOpacity="0.28" strokeWidth="0.18" />
-            {[0.35, 0.68].map((f) => (
-              <rect key={f} x={x + w * 0.3} y={FOUNDRY_HORIZON - h + h * f} width="1.4" height="1" fill="var(--color-brass)" opacity="0.75" />
+            {/* vidro industrial: faixa horizontal contínua com montantes — não janelinha solta */}
+            <rect x={x + 1.2} y={FOUNDRY_HORIZON - h * 0.66} width={w - 2.4} height="1.6" fill="var(--color-brass)" opacity="0.22" />
+            {Array.from({ length: Math.max(1, Math.floor((w - 2.4) / 2.4)) }, (_, i) => (
+              <rect key={i} x={x + 1.2 + i * 2.4} y={FOUNDRY_HORIZON - h * 0.66} width="0.4" height="1.6" fill="var(--color-ink-abyss)" />
             ))}
+            {/* boca de fornalha no rés do chão; uma em cada duas pisca */}
+            <rect
+              className={index % 2 === 0 ? 'fuligem-furnace' : undefined}
+              x={x + w * 0.3}
+              y={FOUNDRY_HORIZON - 2.2}
+              width="2.2"
+              height="1.6"
+              fill="var(--color-brass)"
+              opacity="0.8"
+              style={index % 2 === 0 ? { animationDelay: `${index * 1700}ms` } : undefined}
+            />
           </g>
         ))}
         {FOUNDRY_STACKS.map(([x, h]) => (
           <g key={x} opacity="0.55">
             <path d={`M ${x} ${FOUNDRY_HORIZON} L ${x + 0.9} ${FOUNDRY_HORIZON - h} h 1.6 L ${x + 3.4} ${FOUNDRY_HORIZON} Z`} fill="var(--color-ink-abyss)" />
-            {/* fumaça: traço estático, nunca partícula (FR-012) */}
+            {/* cinta pintada perto do topo — o que faz a haste virar chaminé */}
             <path
-              d={`M ${x + 1.7} ${FOUNDRY_HORIZON - h - 1} q 2 -2.4 1 -4.6 q 2.6 0.6 3.4 -2.2`}
-              fill="none"
+              d={`M ${x + 1} ${FOUNDRY_HORIZON - h + 1.6} h 1.5`}
               stroke="var(--color-starlight)"
-              strokeOpacity="0.16"
-              strokeWidth="1.1"
-              strokeLinecap="round"
+              strokeOpacity="0.12"
+              strokeWidth="0.7"
             />
           </g>
         ))}
         <line x1="0" y1={FOUNDRY_HORIZON} x2="100" y2={FOUNDRY_HORIZON} stroke="var(--color-brass)" strokeWidth="0.22" opacity="0.3" />
       </g>
+
+      {/* FUMAÇA — fora do grupo da silhueta, pra subir por cima das vizinhas em vez de
+          herdar a opacidade do plano. Uma pluma por chaminé, fases desencontradas. */}
+      {FOUNDRY_STACKS.map(([x, h], index) => (
+        <Plume
+          key={x}
+          x={x + 1.7}
+          y={FOUNDRY_HORIZON - h - 0.8}
+          r={1.4}
+          rise={-15}
+          drift={4.6}
+          peak={0.34}
+          dur={12000 + index * 1900}
+          delay={-index * 3400}
+        />
+      ))}
+
+      {/* brasas do pátio — cinco faíscas, o efeito mais barato do cenário */}
+      {FOUNDRY_EMBERS.map((ember) => (
+        <circle
+          key={ember.x}
+          className="fuligem-ember"
+          cx={ember.x}
+          cy={FOUNDRY_HORIZON + 2}
+          r="0.42"
+          fill="var(--color-brass-glow)"
+          style={{
+            '--ember-rise': `${ember.rise}px`,
+            '--ember-drift': `${ember.drift}px`,
+            '--ember-dur': `${ember.dur}ms`,
+            animationDelay: `${ember.delay}ms`,
+          } as CSSProperties}
+        />
+      ))}
 
       {/* linha férrea cortando o pátio — dormentes espaçando com a fuga */}
       <g stroke="var(--color-starlight)" opacity="0.2">
@@ -328,5 +420,6 @@ export function FoundryPattern() {
         <line x1="8.8" y1="90" x2="23.2" y2="90" />
       </g>
     </svg>
+    </PlumePaintProvider>
   )
 }
