@@ -6,8 +6,8 @@ import { supabaseTransport, type SupabaseLike } from '@/net/supabaseTransport'
 import { fakeSupabase } from './fakeSupabase'
 import { mulberry32 } from '../sim/engine/rng'
 
-describe('supabaseTransport — janela de deploy da revanche', () => {
-  it('recua para as RPCs da migration 0005 somente na geração inicial', async () => {
+describe('supabaseTransport — janela de deploy da retenção', () => {
+  it('recua de 0007 para 0006 e depois 0005 somente na geração inicial', async () => {
     const fake = fakeSupabase()
     const current = fake.client('uid-host')
     const calls: { fn: string; args: Record<string, unknown> }[] = []
@@ -46,12 +46,18 @@ describe('supabaseTransport — janela de deploy da revanche', () => {
 
     const roomWrites = calls.filter(({ fn }) => fn === 'write_room')
     const snapshotWrites = calls.filter(({ fn }) => fn === 'write_snapshot')
-    expect(roomWrites).toHaveLength(2)
-    expect(snapshotWrites).toHaveLength(2)
+    expect(roomWrites).toHaveLength(3)
+    expect(snapshotWrites).toHaveLength(3)
+    expect(roomWrites[0].args).toHaveProperty('match_history', [])
     expect(roomWrites[0].args).toHaveProperty('match_generation', 0)
-    expect(roomWrites[1].args).not.toHaveProperty('match_generation')
+    expect(roomWrites[1].args).not.toHaveProperty('match_history')
+    expect(roomWrites[1].args).toHaveProperty('match_generation', 0)
+    expect(roomWrites[2].args).not.toHaveProperty('match_generation')
+    expect(snapshotWrites[0].args).toHaveProperty('match_history', [])
     expect(snapshotWrites[0].args).toHaveProperty('match_generation', 0)
-    expect(snapshotWrites[1].args).not.toHaveProperty('match_generation')
+    expect(snapshotWrites[1].args).not.toHaveProperty('match_history')
+    expect(snapshotWrites[1].args).toHaveProperty('match_generation', 0)
+    expect(snapshotWrites[2].args).not.toHaveProperty('match_generation')
     expect(fake.rows.get('rooms:sala-legada')).toMatchObject({
       status: 'lobby',
       matchGeneration: 0,
@@ -59,7 +65,7 @@ describe('supabaseTransport — janela de deploy da revanche', () => {
     })
   })
 
-  it('não recua para a assinatura antiga depois que a geração avançou', async () => {
+  it('recua de 0007 para 0006 depois que a geração avançou, sem perder a partida', async () => {
     const fake = fakeSupabase()
     const current = fake.client('uid-host')
     const calls: Record<string, unknown>[] = []
@@ -67,13 +73,14 @@ describe('supabaseTransport — janela de deploy da revanche', () => {
       channel: current.channel.bind(current),
       from: current.from.bind(current),
       rpc(fn, args) {
-        if (fn === 'write_room') {
+        if (fn === 'write_room' && Object.hasOwn(args, 'match_history')) {
           calls.push(args)
           return Promise.resolve({
             data: null,
             error: { code: 'PGRST202', message: 'Could not find the function public.write_room' },
           })
         }
+        if (fn === 'write_room') calls.push(args)
         return current.rpc(fn, args)
       },
     }
@@ -88,7 +95,11 @@ describe('supabaseTransport — janela de deploy da revanche', () => {
     }
     const transport = supabaseTransport(legacyBackend, room.id, 'uid-host')
 
-    await expect(transport.saveRoom(room)).rejects.toMatchObject({ code: 'PGRST202' })
-    expect(calls).toHaveLength(1)
+    await expect(transport.saveRoom(room)).resolves.toBeUndefined()
+    expect(calls).toHaveLength(2)
+    expect(calls[0]).toHaveProperty('match_history')
+    expect(calls[1]).not.toHaveProperty('match_history')
+    expect(calls[1]).toHaveProperty('match_generation', 1)
+    expect(fake.rows.get('rooms:sala-nova')).toMatchObject({ matchGeneration: 1 })
   })
 })

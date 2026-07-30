@@ -16,6 +16,7 @@
 // tópico de assento só o dono ou a autoridade. NÃO é a prova real — é o caminho do código
 // exercitado headless; quem prova a política de verdade é `scripts/attack.ts` na Fase 6.
 import type { SupabaseChannelLike, SupabaseLike } from '@/net/supabaseTransport'
+import { mergeRoomMatchHistory } from '@/net/roomHistory'
 
 type BroadcastCb = (msg: { payload: unknown }) => void
 type PresenceCb = (payload: { key: string; newPresences?: unknown[]; leftPresences?: unknown[] }) => void
@@ -327,6 +328,7 @@ export function fakeSupabase(): FakeSupabase {
                 revision: row.seq ?? -1,
                 openingMode: row.openingMode,
                 openingAuction: row.openingAuction,
+                matchHistory: row.matchHistory ?? [],
                 seats: scoped,
               },
               error: null,
@@ -357,6 +359,7 @@ export function fakeSupabase(): FakeSupabase {
                 revision: row.seq ?? -1,
                 openingMode: row.openingMode,
                 openingAuction: row.openingAuction,
+                matchHistory: row.matchHistory ?? [],
                 seats: scopedSeats,
                 seq: row.seq,
                 game: row.game,
@@ -386,6 +389,9 @@ export function fakeSupabase(): FakeSupabase {
             const known = new Map(stored.filter((s) => s.reentryCode).map((s) => [s.playerId, s.reentryCode]))
             return ((claimedSeats as SeatRow[]) ?? []).map((s) => (s.reentryCode ? s : { ...s, reentryCode: known.get(s.playerId) ?? s.reentryCode }))
           }
+          function mergeMatchHistory(stored: unknown, requested: unknown): unknown {
+            return mergeRoomMatchHistory(stored, requested)
+          }
           if (fn === 'write_room') {
             if (consumeWriteFailure()) return Promise.resolve({ data: null, error: new Error('injected write failure') })
             const key = `rooms:${roomId}`
@@ -401,6 +407,7 @@ export function fakeSupabase(): FakeSupabase {
               matchGeneration: args.match_generation ?? 0,
               openingMode: args.opening_mode,
               openingAuction: args.opening_auction,
+              matchHistory: mergeMatchHistory(existing?.matchHistory, args.match_history),
             })
             return Promise.resolve({ data: null, error: null })
           }
@@ -434,6 +441,7 @@ export function fakeSupabase(): FakeSupabase {
               matchGeneration: incomingGeneration,
               openingMode: args.opening_mode,
               openingAuction: args.opening_auction,
+              matchHistory: mergeMatchHistory(existing?.matchHistory, args.match_history),
               seq: args.seq,
               game: args.game,
               secrets: args.secrets,

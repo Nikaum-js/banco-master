@@ -11,13 +11,18 @@
 // Aqui o transporte entra por PARÂMETRO. `OnlineGate` vira uma assinatura.
 import { createClient, type Client } from './client'
 import { createHost, type Host, type HostOptions } from './host'
-import { createRoom, hostSeat, newReentryCode, seatByUid, type JoinError, type OpeningMode, type Room } from './room'
+import { createRoom, hostSeat, newHistoryId, newReentryCode, seatByUid, type JoinError, type OpeningMode, type Room } from './room'
 import { newRoomId } from './session'
 import type { Transport, Unsubscribe } from './transport'
 import { nullTelemetry, type Telemetry, type TelemetryEvent } from '@/telemetry/port'
 import { matchKey } from '@/telemetry/matchKey'
 import type { AvatarId } from '@/boards/playerAvatarCatalog'
 import type { SkinId } from '@/boards/playerSkinCatalog'
+import {
+  applyRoomPreset,
+  type RoomPreset,
+  type RoomPresetId,
+} from './roomPresets'
 
 /** Ritual de início (`reveal`) é de ENTRADA, nunca de reconexão — ver `isReentry`.
  * `'reentry'` (041, D-033): partida em curso, sem assento — perder o aparelho não é mais
@@ -96,6 +101,8 @@ export interface RoomSessionOptions {
   /** Gerador do código de reentrada do PRÓPRIO assento ao criar a sala (041, D-033/D12) —
    * `room.ts` não tem RNG. Injetável para os testes terem códigos determinísticos. */
   mintReentryCode?(): string
+  /** D-067: id público, sem poder de reentrada, usado somente no histórico desta sala. */
+  mintHistoryId?(): string
   /** RNG/relógio do host. Injetáveis para o sorteio de ordem ser reprodutível nos testes. */
   hostOptions?: HostOptions
   /** Padrão `nullTelemetry` (044, D-040). Emite `room_created` aqui e é repassado ao host
@@ -103,6 +110,10 @@ export interface RoomSessionOptions {
   telemetry?: Telemetry
   /** Duração da revelação automática; injetável para testes headless. */
   revealMs?: number
+  /** Preferência local: consultada SOMENTE por `create()`, nunca por `enter()`. */
+  initialRoomPreset?: RoomPreset
+  /** Chamado somente depois de a autoridade aceitar a mudança publicada. */
+  onRoomPresetSelected?(id: RoomPresetId): void
 }
 
 export function createRoomSession(opts: RoomSessionOptions): RoomSession {
@@ -110,6 +121,7 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
   const describeError = opts.describeError ?? ((e: unknown) => String(e))
   const mintRoomId = opts.newRoomId ?? newRoomId
   const mintReentryCode = opts.mintReentryCode ?? (() => newReentryCode(Math.random))
+  const mintHistoryId = opts.mintHistoryId ?? (() => newHistoryId(Math.random))
   const telemetry = opts.telemetry ?? nullTelemetry
   const revealMs = opts.revealMs ?? 4_200
 
@@ -306,7 +318,16 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
       try {
         const id = mintRoomId()
         await openSession(id)
-        await takeAuthority(createRoom(id, { uid: transport!.uid, ...who, reentryCode: mintReentryCode() }))
+        const created = createRoom(id, {
+          uid: transport!.uid,
+          ...who,
+          reentryCode: mintReentryCode(),
+          historyId: mintHistoryId(),
+        })
+        const preferred = opts.initialRoomPreset
+          ? applyRoomPreset(created, opts.initialRoomPreset)
+          : { ok: true as const, room: created }
+        await takeAuthority(preferred.ok ? preferred.room : created)
         // 044/T045: só AQUI, na criação de verdade — `enter()` também chama `takeAuthority`
         // quando o host reassume a própria sala (F5), e isso não é "sala criada" de novo.
         trackSafely({ kind: 'room_created', matchKey: await matchKey(id) })
@@ -346,7 +367,8 @@ export function createRoomSession(opts: RoomSessionOptions): RoomSession {
 
     setOpeningMode(mode: OpeningMode): void {
       const result = host?.setOpeningMode(mode)
-      if (result && !result.ok) emit({ error: result.reason })
+      if (result?.ok) opts.onRoomPresetSelected?.(mode)
+      else if (result) emit({ error: result.reason })
     },
 
     async startMatch(): Promise<void> {

@@ -37,7 +37,7 @@ function endedSnapshot(room: Room, seq = 9) {
   const endedRoom = normalizeRoom({
     ...room,
     status: 'ended',
-    matchGeneration: 0,
+    matchGeneration: room.matchGeneration ?? 0,
     revision: seq,
   })
   const { publicGame, secrets } = splitSnapshot(game, endedRoom)
@@ -168,6 +168,8 @@ describe('RoomSession — revanche', () => {
 
     expect(host.session.getState()).toMatchObject({ phase: 'playing', isHost: true })
     expect(guest.session.getState()).toMatchObject({ phase: 'playing', isHost: false })
+    expect(host.session.getState().room?.matchHistory).toHaveLength(1)
+    expect(guest.session.getState().room?.matchHistory).toEqual(host.session.getState().room?.matchHistory)
 
     await guest.session.returnToLobby()
     expect(guest.session.getState()).toMatchObject({ phase: 'lobby' })
@@ -179,6 +181,7 @@ describe('RoomSession — revanche', () => {
     expect(host.session.getState().room).toMatchObject({ status: 'lobby', matchGeneration: 1 })
     expect(guest.session.getState()).toMatchObject({ phase: 'lobby' })
     expect(guest.session.getState().room?.seats.map((seat) => seat.name)).toEqual(['Ana', 'Bruno'])
+    expect(guest.session.getState().room?.matchHistory).toHaveLength(1)
   })
 
   it('recarrega o lobby reaberto sem ressuscitar a partida encerrada', async () => {
@@ -192,6 +195,7 @@ describe('RoomSession — revanche', () => {
 
     expect(reloaded.session.getState()).toMatchObject({ phase: 'lobby', roomId: 'sala-revanche' })
     expect(reloaded.client()).toBeNull()
+    expect(reloaded.session.getState().room?.matchHistory).toHaveLength(1)
   })
 
   it('inicia uma segunda partida limpa, mantendo identidade e seq monotônico', async () => {
@@ -213,10 +217,32 @@ describe('RoomSession — revanche', () => {
     expect(next.centerPot).toBe(500)
     expect(next.loans).toEqual([])
     expect(next.tempEffects).toEqual([])
+    expect(host.session.getState().room?.matchHistory).toHaveLength(1)
     expect(host.session.getState().room?.seats.map((seat) => [seat.name, seat.color])).toEqual([
       ['Ana', SEAT_COLORS[0]],
       ['Bruno', SEAT_COLORS[1]],
     ])
+  })
+
+  it('acrescenta a revanche finalizada sem apagar ou duplicar a primeira', async () => {
+    const hub = await storedEndedHub()
+    const first = makeSession(hub, 'uid-host')
+    await first.session.enter('sala-revanche')
+    await first.session.returnToLobby()
+    const nextLobby = first.session.getState().room!
+    first.session.leaveOnFatalError()
+
+    await localTransport(hub, 'uid-host').saveSnapshot(endedSnapshot({
+      ...nextLobby,
+      status: 'ended',
+    }, 15))
+
+    const second = makeSession(hub, 'uid-host')
+    await second.session.enter('sala-revanche')
+    expect(second.session.getState().room?.matchHistory?.map((entry) => entry.generation)).toEqual([0, 1])
+
+    await second.session.returnToLobby()
+    expect(second.session.getState().room?.matchHistory?.map((entry) => entry.generation)).toEqual([0, 1])
   })
 })
 

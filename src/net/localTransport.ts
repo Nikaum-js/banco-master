@@ -6,6 +6,7 @@
 import type { AcceptedCommand, CommandEnvelope, CommandFailure, ConnStatus, JoinRequest, OpeningBidMessage, PersistedSnapshot, PresenceChange, Transport, Unsubscribe } from './transport'
 import { mergeSnapshot, type Secrets } from './perspective'
 import { compareRoomVersion, normalizeRoom, reattachByCode, toPublicRoom, type JoinError, type PublicRoom, type Room } from './room'
+import { mergeRoomMatchHistory } from './roomHistory'
 
 type SubmitCb = (cmd: CommandEnvelope, fromUid: string) => void
 type OpeningBidCb = (message: OpeningBidMessage, fromUid: string) => void
@@ -163,7 +164,10 @@ export class LocalHub {
       && (candidate.matchGeneration ?? 0) === (this.snapshot.room.matchGeneration ?? 0)
       && snap.seq < this.snapshot.seq
     ) return
-    const room = this.preserveSeatCodes(candidate)
+    const room = {
+      ...this.preserveSeatCodes(candidate),
+      matchHistory: mergeRoomMatchHistory(this.storedRoom?.matchHistory, candidate.matchHistory),
+    }
     this.snapshot = { ...snap, room }
     this.storedRoom = room
   }
@@ -330,7 +334,10 @@ export class LocalHub {
     if (this.consumeWriteFailure()) throw new Error('injected write failure (saveRoom)')
     const normalized = normalizeRoom(room)
     if (this.storedRoom && compareRoomVersion(normalized, this.storedRoom) < 0) return
-    const kept = this.preserveSeatCodes(normalized)
+    const kept = {
+      ...this.preserveSeatCodes(normalized),
+      matchHistory: mergeRoomMatchHistory(this.storedRoom?.matchHistory, normalized.matchHistory),
+    }
     this.storedRoom = kept
     if (this.snapshot) this.snapshot = { ...this.snapshot, room: kept }
   }

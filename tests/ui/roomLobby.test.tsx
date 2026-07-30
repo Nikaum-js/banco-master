@@ -105,4 +105,30 @@ describe('sala aberta', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Abrir leilão' }))
     expect(onStart).toHaveBeenCalledOnce()
   })
+
+  it('mostra o histórico somente no lobby de revanche', () => {
+    const { rerender } = render(
+      <RoomLobby
+        room={roomWith(hostSeat)}
+        myUid="host"
+        myReentryCode={null}
+        isHost
+        link="http://localhost:5173/play?room=fc532036e9"
+        onStart={vi.fn()}
+      />,
+    )
+    expect(screen.queryByText('Histórico da sala')).toBeNull()
+
+    rerender(
+      <RoomLobby
+        room={{ ...roomWith(hostSeat), matchGeneration: 1, matchHistory: [] }}
+        myUid="host"
+        myReentryCode={null}
+        isHost
+        link="http://localhost:5173/play?room=fc532036e9"
+        onStart={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('Histórico da sala')).toBeTruthy()
+  })
 })

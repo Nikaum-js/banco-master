@@ -10,6 +10,7 @@ import { actorOf, applyCommand, type GameAction, type PlayerAction } from '@/gam
 import { applyOpeningAuction } from '@/game/openingAuction'
 import { buildGameCtx, buildInitialGame } from '@/game/setup'
 import { matchSummary } from '@/game/summary'
+import { recordFinishedMatch } from './roomHistory'
 import { nullTelemetry, type Telemetry, type TelemetryEvent } from '@/telemetry/port'
 import { matchKey } from '@/telemetry/matchKey'
 import { recordingCtx } from './recorder'
@@ -22,6 +23,7 @@ import {
   kickSeat,
   lockOpeningBid,
   newReentryCode,
+  newHistoryId,
   markConnected,
   markDisconnected,
   normalizeRoom,
@@ -173,6 +175,11 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
       revision: seq,
       status: !wasEnded && game.phase === 'ended' ? 'ended' : room.status,
     }
+    if (!wasEnded && game.phase === 'ended') {
+      // D-067: o resumo entra ANTES do snapshot final. Assim a mesma escrita durável que
+      // encerra a partida carrega o histórico; render/reload nunca são gatilhos do fato.
+      room = recordFinishedMatch(room, game)
+    }
     const cmd: AcceptedCommand = { seq, action, resolved: drain() }
     persistSnapshot() // FR-013 (upsert)
     // 043, D9/D10: a cópia PRIVADA (íntegra) vai ANTES da pública (redigida) — o dono aplica a
@@ -263,9 +270,11 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
   // alguém reanexou.
   function handleJoinRequest(who: JoinRequest, fromUid: string): void {
     const taken = new Set(room.seats.map((s) => s.reentryCode))
+    const takenHistoryIds = new Set(room.seats.map((s) => s.historyId).filter((id): id is string => Boolean(id)))
     const result = joinRoom(room, {
       uid: fromUid, name: who.name, color: who.color, avatar: who.avatar, skin: who.skin,
       reentryCode: newReentryCode(rng, taken), // room.ts não tem RNG (D12) — o host minta
+      historyId: newHistoryId(rng, takenHistoryIds),
     })
     if (!result.ok) {
       transport.rejectJoin(fromUid, result.reason)
@@ -418,6 +427,9 @@ export function createHost(transport: Transport, initialRoom: Room, opts: HostOp
         game = snap.room.status === 'lobby' ? null : snap.game
         seq = snap.seq
         room = normalizeRoom({ ...snap.room, revision: snap.seq })
+        // Sala encerrada antes da 053 (ou cuja escrita 0007 ainda não estava disponível):
+        // materializa o resumo a partir do snapshot final, ainda uma vez e só pela autoridade.
+        if (game?.phase === 'ended') room = recordFinishedMatch(room, game)
       } else {
         // Sem partida ainda (lobby): a sala com que esta autoridade foi construída pode vir de
         // `Client.room()`, que NUNCA carrega código (T023) — é o caso do host que dá F5

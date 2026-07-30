@@ -1,6 +1,6 @@
 # Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.28
+**Versão:** 1.29
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -85,6 +85,7 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 | Obrigação entre jogadores | Nunca truncada — pagamento parcial deixa o restante devido e abre dívida pendente, inclusive fora da vez (D-061, §9.1) |
 | Rastreabilidade de caixa | Toda mudança de caixa tem motivo registrado; nenhuma regra move dinheiro em silêncio (D-063, §12.3) |
 | Fim de jogo | Classificação completa por ordem inversa de eliminação, com patrimônio e duração; depois, retorno à mesma sala para revanche (D-038/D-052) |
+| Retenção da sala | Até 10 resumos de partidas finalizadas na mesma sala, com estatísticas derivadas e sem perfil global (D-067) |
 | Acessibilidade | WCAG 2.2 AA no caminho de jogo, verificada automaticamente; paisagem é a orientação de jogo (D-039) |
 | Telemetria | Mínima e anônima — contagem de partidas no próprio Supabase, exceção em monitoramento de erro (D-040) |
 | Ordem inicial | Host escolhe no lobby entre Leilão secreto e Maior dado; neste, cada jogador rola à vista da mesa (D-046/D-051) |
@@ -548,7 +549,7 @@ A partida termina quando restar apenas **1 jogador** com saldo positivo. Ele é 
 
 > 📌 **O fim tem classificação e resumo** (v1.9, [D-038](adr/D-038-fim-de-jogo-tem-classificacao-e-resumo.md)): ao terminar, **todas** as telas — inclusive as de quem já foi eliminado — mostram a classificação completa, do 1º ao último. A ordem é a **inversa da ordem de eliminação**: vence quem sobrou, é 2º o último a falir, e é último o primeiro a falir. Cada linha traz o **patrimônio final** (o mesmo cálculo de patrimônio líquido usado por Imposto Federal e Crise Imobiliária: caixa + preço das propriedades, hipotecada pela metade, + custo das construções), **quantas propriedades** o jogador tinha e — para quem caiu — **em que rodada** caiu. O resumo fecha com a **duração da partida** em rodadas e em tempo decorrido. A classificação é derivada do estado da partida, não da tela: por isso o estado registra a ordem de eliminação, o número da rodada e os instantes de início e de fim, e todos veem exatamente a mesma classificação, inclusive depois de recarregar.
 >
-> 📌 **Depois do resumo, o grupo continua na mesma sala** (v1.19, [D-052](adr/D-052-revanche-reabre-a-mesma-sala.md)): cada jogador pode deixar a classificação no próprio ritmo e voltar ao lobby da sala. O host reabre a sala e inicia outra partida pelo fluxo normal; assentos e identidades permanecem, mas todo estado específico da partida encerrada é descartado. Em partida local, começar de novo continua disponível.
+> 📌 **Depois do resumo, o grupo continua na mesma sala** (v1.19, [D-052](adr/D-052-revanche-reabre-a-mesma-sala.md); refinada em v1.29 pela [D-067](adr/D-067-retencao-leve-fica-na-sala-privada.md)): cada jogador pode deixar a classificação no próprio ritmo e voltar ao lobby da sala. O host reabre a sala e inicia outra partida pelo fluxo normal; assentos e identidades permanecem. Todo estado econômico e mecânico específico da partida encerrada é descartado; somente o resumo limitado da sala atravessa revanches. Em partida local, começar de novo continua disponível.
 
 ### 9.6 Desistência (saída voluntária)
 
@@ -885,9 +886,23 @@ Regras de v1.19, introduzidas pela [D-052](adr/D-052-revanche-reabre-a-mesma-sal
 - O host preserva sua autoridade e é quem reabre a sala e inicia a próxima partida.
 - A sala preserva assentos, nomes, cores, Avatar, Skin, códigos de reentrada e estado de conexão.
 - A próxima partida não começa automaticamente: o host escolhe novamente o Ritual de Largada e confirma o início.
-- O estado da partida anterior não atravessa a revanche: caixa, posições, propriedades, construções, cartas, efeitos, imunidades, empréstimos, negociações, leilões, ordem, Loteria, decks, log e classificação são recriados.
+- O estado econômico e mecânico da partida anterior não atravessa a revanche: caixa, posições, propriedades, construções, cartas, efeitos, imunidades, empréstimos, negociações, leilões, ordem, Loteria, decks e log são recriados. A classificação completa permanece apenas no resumo limitado da sala (§11.7).
 - A classificação encerrada permanece estável para quem ainda não saiu dela; a volta de outro jogador não apaga o resumo local.
 - Reload e mensagens atrasadas não podem restaurar o jogo encerrado depois que a sala foi reaberta. A versão vigente da mesa é sempre a publicada pela autoridade.
+
+### 11.7 Histórico, Estatísticas e Presets da Sala
+
+Regras de v1.29, introduzidas pela [D-067](adr/D-067-retencao-leve-fica-na-sala-privada.md).
+
+- A sala privada guarda as **10 partidas finalizadas mais recentes** e mostra esse histórico somente no lobby de revanche. Antes da primeira partida, há apenas um estado vazio discreto.
+- Cada partida entra uma única vez, identificada por sua geração. Reload, repetição de snapshot e mensagem atrasada não duplicam nem removem uma geração já preservada.
+- Cada entrada registra somente geração, instante de término, duração, quantidade de rodadas, classificação, nome e identidade visual dos assentos, patrimônio final, quantidade de propriedades e rodada de eliminação quando aplicável.
+- Mãos, cartas, negociações privadas, log completo, credenciais e códigos de reentrada nunca são preservados no histórico.
+- Todos os integrantes da sala veem o mesmo histórico publicado pela autoridade. Sala antiga ou sem histórico continua válida e equivale a histórico vazio.
+- As estatísticas são derivadas do histórico: partidas, vitórias, taxa de vitória, colocação média e melhor patrimônio final por jogador; duração média e média de rodadas para a sala. Não existem contadores narrativos novos no motor.
+- O histórico não cruza salas e não cria conta, perfil, ranking público, leaderboard, replay, matchmaking nem analytics individual.
+- Um **preset de sala** é somente um mapeamento nomeado para configurações já suportadas. “Leilão secreto” seleciona `sealed-bid`; “Maior dado” seleciona `dice-roll`. O host escolhe antes do início e todos veem a configuração publicada.
+- A preferência local do navegador pode preencher a escolha inicial de uma sala nova do host, mas nunca substitui o estado publicado de uma sala existente. Convidado não altera preset e a escolha não muda depois que a partida começa.
 
 
 ---
@@ -1239,7 +1254,7 @@ Todo empréstimo nasce com **prazo de 3 voltas do devedor**, contadas pelas pass
 | Transferência de host | Host desconectado pausa a partida indefinidamente |
 | Chat em tempo real | Não previsto no v1 |
 | Espectadores | Não previsto no v1 |
-| Histórico de partidas | Não previsto no v1 |
+| Histórico global de partidas | Não previsto no v1; a única exceção é o histórico limitado à sala privada atual (§11.7, D-067) |
 | Sistema de contas/perfis | A definir se auth anônima ou por email será necessária |
 | Versão mobile nativa | Web responsivo apenas |
 | Mercado de ações / investimento em propriedades alheias | Candidata a v2 |

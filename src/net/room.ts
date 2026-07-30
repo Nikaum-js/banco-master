@@ -6,6 +6,7 @@
 //
 import { normalizeAvatar, type AvatarId } from '@/boards/playerAvatarCatalog'
 import { normalizeSkin, type SkinId } from '@/boards/playerSkinCatalog'
+import { normalizeMatchHistory, type RoomMatchHistoryEntry } from './roomHistory'
 
 // Identidade visual: a COR é única por sala (§12.5); NOME, AVATAR e SKIN podem repetir. A
 // composição pública acompanha o assento (D-047) e nunca vira regra competitiva. Ordem de turno = ordem
@@ -46,6 +47,9 @@ export interface OpeningAuction {
 export interface Seat {
   playerId: string // id serializável usado pelo GameState ('p1'..'p8')
   uid: string // ERA `token` (043, D-042) — identidade atestada pelo servidor, chave de reconexão
+  /** D-067: identidade pública e NÃO credencial, estável somente nesta sala. Diferente de
+   * `playerId` (posicional) e `uid` (troca na reentrada). Opcional para salas legadas. */
+  historyId?: string
   name: string // nome exibido (livre)
   color: string // cor (única por sala)
   /** D-047: forma visual pública; opcional apenas para absorver salas anteriores à 046. */
@@ -86,6 +90,8 @@ export interface Room {
   openingMode?: OpeningMode
   /** Prazo da rodada pré-partida. Opcional só para shapes legados. */
   openingAuction?: OpeningAuction | null
+  /** D-067: até 10 resumos finais da própria sala. Opcional só no fio legado. */
+  matchHistory?: RoomMatchHistoryEntry[]
 }
 
 // Sala PUBLICADA (043, D-036/data-model §3) — o que trafega em `publishRoom`/`onRoom`. Sem
@@ -106,6 +112,7 @@ export interface PublicRoom {
   revision?: number
   openingMode?: OpeningMode
   openingAuction?: OpeningAuction | null
+  matchHistory?: RoomMatchHistoryEntry[]
 }
 
 export function toPublicRoom(room: Room): PublicRoom {
@@ -118,6 +125,7 @@ export function toPublicRoom(room: Room): PublicRoom {
     revision: normalized.revision,
     openingMode: normalized.openingMode,
     openingAuction: normalized.openingAuction,
+    matchHistory: normalized.matchHistory,
     seats: normalized.seats.map(({ reentryCode: _reentryCode, openingBid, bidLocked, ...rest }) => ({
       ...rest,
       openingBid: reveal ? (openingBid ?? null) : null,
@@ -152,8 +160,10 @@ export function normalizeRoom(room: Room): Room {
       : -1,
     openingMode: room.openingMode === 'dice-roll' ? 'dice-roll' : 'sealed-bid',
     openingAuction: room.openingAuction ?? null,
+    matchHistory: normalizeMatchHistory(room.matchHistory),
     seats: room.seats.map((seat) => ({
       ...seat,
+      historyId: typeof seat.historyId === 'string' && seat.historyId ? seat.historyId : seat.uid,
       avatar: normalizeAvatar(seat.avatar),
       skin: normalizeSkin(seat.skin),
       openingBid: seat.openingBid ?? null,
@@ -196,6 +206,8 @@ export type JoinError = 'room-full' | 'color-taken' | 'invalid-color' | 'already
 
 export interface Identity {
   uid: string // ERA `token` (043, D-042) — emitido pelo servidor, nunca escolhido pelo participante
+  /** Produção minta na sessão/autoridade; opcional em reducers/testes legados. */
+  historyId?: string
   name: string
   color: string
   /** O adapter aceita ausência/valor legado; a autoridade sempre normaliza ao catálogo. */
@@ -230,8 +242,9 @@ export function createRoom(id: string, host: Identity): Room {
     revision: -1,
     openingMode: 'sealed-bid',
     openingAuction: null,
+    matchHistory: [],
     seats: [{
-      playerId: seatIdFor(0), uid: host.uid, name: host.name, color: host.color,
+      playerId: seatIdFor(0), uid: host.uid, historyId: host.historyId ?? host.uid, name: host.name, color: host.color,
       avatar: normalizeAvatar(host.avatar),
       skin: normalizeSkin(host.skin),
       isHost: true, connected: true, openingBid: null, bidLocked: false, openingRoll: null,
@@ -267,6 +280,7 @@ export function joinRoom(room: Room, who: Identity): JoinResult {
   const seat: Seat = {
     playerId: seatIdFor(current.seats.length),
     uid: who.uid,
+    historyId: who.historyId ?? who.uid,
     name: who.name,
     color: who.color,
     avatar: normalizeAvatar(who.avatar),
@@ -680,6 +694,20 @@ export function newReentryCode(rng: () => number, taken: ReadonlySet<string> = n
     let code = ''
     for (let i = 0; i < REENTRY_CODE_LENGTH; i++) code += REENTRY_ALPHABET[Math.floor(rng() * REENTRY_ALPHABET.length)]
     if (!taken.has(code)) return code
+  }
+}
+
+const HISTORY_ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'
+const HISTORY_ID_LENGTH = 16
+
+/** Id público de agregação dentro da sala. Não serve como tópico, sessão ou reentrada. */
+export function newHistoryId(rng: () => number, taken: ReadonlySet<string> = new Set()): string {
+  for (;;) {
+    let id = ''
+    for (let i = 0; i < HISTORY_ID_LENGTH; i += 1) {
+      id += HISTORY_ID_ALPHABET[Math.floor(rng() * HISTORY_ID_ALPHABET.length)]
+    }
+    if (!taken.has(id)) return id
   }
 }
 

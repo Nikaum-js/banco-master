@@ -20,6 +20,8 @@ import { NAME_MAX, recallPlayerName, rememberPlayerName } from '@/net/session'
 import { EntryPanel, EntryStage, EntryHeader } from './entryShell'
 import { AvatarPickers, AvatarPreview } from './AvatarConceptLab'
 import { RoomInviteDialog } from './RoomInviteDialog'
+import { ROOM_PRESETS } from '@/net/roomPresets'
+import { RoomHistoryPanel } from './RoomHistoryPanel'
 
 const JOIN_ERROR_TEXT: Record<JoinError, string> = {
   'room-full': `Sala cheia — o limite é ${MAX_SEATS} jogadores.`,
@@ -361,36 +363,29 @@ export function RoomLobby({
         ))}
         </div>
       </div>
+      {(room.matchGeneration ?? 0) > 0 && (
+        <RoomHistoryPanel history={room.matchHistory ?? []} />
+      )}
       </section>
 
       <section className="lobby-column lobby-column--launch">
       <fieldset className="lobby-launch-fieldset">
-        <legend className="label text-brass">Ritual de largada</legend>
-        <p className="lobby-launch-intro">Escolha como a primeira posição será definida.</p>
+        <legend className="label text-brass">Preset da sala</legend>
+        <p className="lobby-launch-intro">Escolha o Ritual de Largada desta partida.</p>
         <div className="opening-mode-picker">
-          {([
-            {
-              mode: 'sealed-bid',
-              label: 'Leilão secreto',
-              detail: 'Lances definem a ordem e abastecem a Loteria.',
-            },
-            {
-              mode: 'dice-roll',
-              label: 'Maior dado',
-              detail: 'Cada jogador rola dois dados, um por vez e sem custo.',
-            },
-          ] as const).map((option) => {
-            const selected = openingMode === option.mode
+          {ROOM_PRESETS.map((option) => {
+            const mode = option.settings.openingMode
+            const selected = openingMode === mode
             return (
               <button
-                key={option.mode}
+                key={option.id}
                 type="button"
                 className={`opening-mode-option ${selected ? 'opening-mode-option--selected' : ''}`}
                 aria-pressed={selected}
                 disabled={!isHost || starting}
-                onClick={() => onOpeningModeChange?.(option.mode)}
+                onClick={() => onOpeningModeChange?.(mode)}
               >
-                <OpeningModeMark mode={option.mode} />
+                <OpeningModeMark mode={mode} />
                 <span className="min-w-0 text-left">
                   <strong>{option.label}</strong>
                   <small>{option.detail}</small>

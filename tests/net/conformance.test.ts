@@ -496,6 +496,41 @@ describe.each(ADAPTERS)('contrato de Transport — %s', (_name, fixture) => {
     expect(await t.loadRoom()).toEqual(normalizeRoom(room))
   })
 
+  it('histórico faz round-trip e uma escrita atrasada da mesma geração não o apaga', async () => {
+    const f = fixture()
+    const t = f.make('t-host')
+    await t.connect()
+    const matchHistory: NonNullable<Room['matchHistory']> = [{
+      generation: 0,
+      endedAt: 9_000,
+      durationMs: 8_000,
+      rounds: 6,
+      standings: [{
+        historyId: 'hist-host',
+        playerId: 'p1',
+        name: 'Host',
+        color: '#fff',
+        avatar: 'classic-alive',
+        skin: 'careca',
+        rank: 1,
+        netWorth: 4_000,
+        properties: 5,
+        eliminatedAtRound: null,
+      }],
+    }]
+    const room: Room = {
+      ...ROOM,
+      matchGeneration: 1,
+      seats: [{ ...seat('t-host', true), historyId: 'hist-host' }],
+      matchHistory,
+    }
+
+    await t.saveRoom(room)
+    await t.saveRoom({ ...room, matchHistory: [] })
+
+    expect((await t.loadRoom())?.matchHistory).toEqual(matchHistory)
+  })
+
   it('preferência e rolagens do Ritual de Largada fazem round-trip', async () => {
     const f = fixture()
     const host = f.make('t-host')

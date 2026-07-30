@@ -20,6 +20,18 @@ _Avoid_: peça, Avatar
 Nova partida iniciada no lobby da mesma sala depois do resumo final. Preserva assentos e identidades, mas recria todo o estado de jogo ([D-052](./docs/adr/D-052-revanche-reabre-a-mesma-sala.md)).
 _Avoid_: reiniciar a partida, recriar sala
 
+**Histórico da sala**:
+Conjunto limitado de resumos de partidas finalizadas na sala privada atual, preservado entre revanches e sem atravessar para outra sala ([D-067](./docs/adr/D-067-retencao-leve-fica-na-sala-privada.md)).
+_Avoid_: histórico do jogador, histórico global, replay
+
+**Estatísticas da sala**:
+Medidas derivadas do Histórico da sala para os jogadores daquele grupo e para as partidas preservadas ([D-067](./docs/adr/D-067-retencao-leve-fica-na-sala-privada.md)).
+_Avoid_: perfil, ranking global, leaderboard
+
+**Preset de sala**:
+Objeto nomeado que seleciona somente configurações já existentes no lobby, sem criar regra ou estado paralelo ([D-067](./docs/adr/D-067-retencao-leve-fica-na-sala-privada.md)).
+_Avoid_: modo de jogo, regra personalizada
+
 ### Tabuleiro e movimento
 
 **GO**:

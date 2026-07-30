@@ -54,9 +54,10 @@ select public.write_room(
     {"playerId":"p1","uid":"%s","name":"Anfitria","color":"#e11d48","isHost":true,"connected":true,"reentryCode":"HOST01"},
     {"playerId":"p2","uid":"%s","name":"Convidado","color":"#2563eb","isHost":false,"connected":true,"reentryCode":"GUEST1"}
   ]', :'host_uid', :'guest_uid')::jsonb,
-  0,
-  'sealed-bid',
-  null
+	  0,
+	  'sealed-bid',
+	  null,
+	  '[]'::jsonb
 );
 
 do $$
@@ -64,7 +65,8 @@ declare r public.rooms%rowtype;
 begin
   select * into r from public.rooms where id = 'TEST01';
   assert r.status = 'lobby', 'status inicial: ' || r.status;
-  assert r.match_generation = 0, 'geração inicial: ' || r.match_generation;
+	  assert r.match_generation = 0, 'geração inicial: ' || r.match_generation;
+	  assert r.match_history = '[]'::jsonb, 'histórico inicial: ' || r.match_history::text;
   assert jsonb_array_length(r.seats) = 2, 'assentos gravados: ' || jsonb_array_length(r.seats);
 end $$;
 
@@ -77,7 +79,7 @@ do $$
 declare recusou boolean := false;
 begin
   begin
-    perform public.write_room('TEST01', 'lobby', '[]'::jsonb, 0, 'sealed-bid', null);
+	    perform public.write_room('TEST01', 'lobby', '[]'::jsonb, 0, 'sealed-bid', null, '[]'::jsonb);
   exception when others then
     recusou := true;
     assert sqlerrm like '%not the current host%', 'recusou pelo motivo errado: ' || sqlerrm;
@@ -101,9 +103,43 @@ select public.write_snapshot(
     {"playerId":"p1","uid":"%s","name":"Anfitria","color":"#e11d48","isHost":true,"connected":true,"reentryCode":"HOST01"},
     {"playerId":"p2","uid":"%s","name":"Convidado","color":"#2563eb","isHost":false,"connected":true,"reentryCode":"GUEST1"}
   ]', :'host_uid', :'guest_uid')::jsonb,
-  0,
-  'sealed-bid',
-  null
+	  0,
+	  'sealed-bid',
+	  null,
+	  '[
+	    {
+	      "generation": 0,
+	      "endedAt": 9000,
+	      "durationMs": 8000,
+	      "rounds": 12,
+	      "standings": [
+	        {
+	          "historyId": "hist-host",
+	          "playerId": "p1",
+	          "name": "Anfitria",
+	          "color": "#e11d48",
+	          "avatar": "classic-alive",
+	          "skin": "careca",
+	          "rank": 1,
+	          "netWorth": 5000,
+	          "properties": 6,
+	          "eliminatedAtRound": null
+	        },
+	        {
+	          "historyId": "hist-guest",
+	          "playerId": "p2",
+	          "name": "Convidado",
+	          "color": "#2563eb",
+	          "avatar": "classic-alive",
+	          "skin": "careca",
+	          "rank": 2,
+	          "netWorth": 0,
+	          "properties": 0,
+	          "eliminatedAtRound": 12
+	        }
+	      ]
+	    }
+	  ]'::jsonb
 );
 
 -- ---------------------------------------------------------------------------------------------
@@ -121,10 +157,15 @@ begin
     where s->>'playerId' = 'p1' and s ? 'reentryCode'
   ), 'o convidado enxergou o reentryCode da anfitriã';
 
-  assert exists (
+	  assert exists (
     select 1 from jsonb_array_elements(vista->'seats') as s
     where s->>'playerId' = 'p2' and s->>'reentryCode' = 'GUEST1'
-  ), 'o convidado não enxergou o próprio reentryCode';
+	  ), 'o convidado não enxergou o próprio reentryCode';
+
+	  assert jsonb_array_length(vista->'matchHistory') = 1,
+	    'o histórico público não chegou ao convidado';
+	  assert not ((vista->'matchHistory')::text like '%reentryCode%'),
+	    'o histórico público contém credencial';
 
   -- A mão alheia também não trafega.
   assert (public.read_snapshot('TEST01')->'secrets'->'hands') ? '22222222-2222-2222-2222-222222222222'
@@ -166,7 +207,9 @@ begin
 
   -- Prova que o UPDATE usou o PARÂMETRO, e não a coluna homônima. Se alguém "resolver" a
   -- ambiguidade com `use_column` em vez de variável local, isto continua 'sealed-bid' e falha.
-  assert r.opening_mode = 'dice-roll', 'opening_mode ignorou o parâmetro: ' || r.opening_mode;
+	  assert r.opening_mode = 'dice-roll', 'opening_mode ignorou o parâmetro: ' || r.opening_mode;
+	  assert jsonb_array_length(r.match_history) = 1,
+	    'a revanche apagou o histórico: ' || r.match_history::text;
 
   -- D-043: o código é imutável, e quem reabre não o conhecia.
   assert exists (
@@ -200,7 +243,75 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------------------------
--- 7. Geração fora de ordem é recusada.
+-- 7. Uma escrita atrasada da mesma geração não regride o histórico.
+-- ---------------------------------------------------------------------------------------------
+select public.write_room(
+  'TEST01',
+  'lobby',
+  (select seats from public.rooms where id = 'TEST01'),
+  1,
+  'dice-roll',
+  null,
+  '[]'::jsonb
+);
+
+do $$
+declare r public.rooms%rowtype;
+begin
+  select * into r from public.rooms where id = 'TEST01';
+  assert jsonb_array_length(r.match_history) = 1,
+    'escrita atrasada apagou o histórico: ' || r.match_history::text;
+  assert (r.match_history->0->>'generation')::integer = 0,
+    'escrita atrasada trocou a geração consolidada: ' || r.match_history::text;
+end $$;
+
+-- ---------------------------------------------------------------------------------------------
+-- 8. A allowlist do histórico recusa qualquer campo privado.
+-- ---------------------------------------------------------------------------------------------
+do $$
+declare recusou boolean := false;
+begin
+  begin
+    perform public.write_room(
+      'TEST01',
+      'lobby',
+      (select seats from public.rooms where id = 'TEST01'),
+      1,
+      'dice-roll',
+      null,
+      '[
+        {
+          "generation": 1,
+          "endedAt": 10000,
+          "durationMs": 1000,
+          "rounds": 2,
+          "standings": [
+            {
+              "historyId": "hist-host",
+              "playerId": "p1",
+              "name": "Anfitria",
+              "color": "#e11d48",
+              "avatar": "classic-alive",
+              "skin": "careca",
+              "rank": 1,
+              "netWorth": 1,
+              "properties": 0,
+              "eliminatedAtRound": null,
+              "reentryCode": "NAO-PODE"
+            }
+          ]
+        }
+      ]'::jsonb
+    );
+  exception when others then
+    recusou := true;
+    assert sqlerrm like '%invalid room match history%', 'recusou histórico pelo motivo errado: ' || sqlerrm;
+  end;
+  assert recusou, 'write_room aceitou campo privado no histórico';
+end $$;
+
+-- ---------------------------------------------------------------------------------------------
+-- 9. Geração fora de ordem é recusada.
 -- ---------------------------------------------------------------------------------------------
 do $$
 declare recusou boolean := false;
@@ -215,7 +326,7 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------------------------
--- 8. Quem não é anfitrião não reabre a sala.
+-- 10. Quem não é anfitrião não reabre a sala.
 -- ---------------------------------------------------------------------------------------------
 select pg_temp.act_as(:'guest_uid');
 

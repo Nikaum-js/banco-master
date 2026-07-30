@@ -37,6 +37,7 @@ import { Button } from '@/game/ui/primitives'
 import { OrientationGate } from '@/game/ui/OrientationGate'
 import type { AvatarId } from '@/boards/playerAvatarCatalog'
 import type { SkinId } from '@/boards/playerSkinCatalog'
+import { recallRoomPreset, rememberRoomPreset } from '@/net/roomPresets'
 
 const TICK_MS = 250 // o host fecha prazos vencidos (soft-close de leilão, janela de reação)
 
@@ -119,6 +120,8 @@ function OnlineRoom({
       connectStore: connectMultiplayer,
       describeError: describeInfraError,
       telemetry: resolveTelemetry(), // 044: nulo sem env/DEV — nenhuma requisição sai (FR-038)
+      initialRoomPreset: recallRoomPreset(),
+      onRoomPresetSelected: rememberRoomPreset,
     }),
   )
   const state = useSyncExternalStore(session.subscribe, session.getState)

@@ -603,11 +603,23 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         match_generation: room.matchGeneration ?? 0,
         opening_mode: room.openingMode ?? 'sealed-bid',
         opening_auction: room.openingAuction ?? null,
+        match_history: room.matchHistory ?? [],
       }
       let { error } = await supabase.rpc('write_room', args)
-      // Janela segura de deploy: o frontend pode chegar antes da migration 0006. Na geração
-      // inicial, a assinatura da 0005 ainda representa exatamente o mesmo estado; depois de
-      // uma revanche jamais recuamos, porque aí `match_generation` já é parte da identidade.
+      // Janela segura de deploy: 0007 pode chegar depois do frontend. A 0006 continua
+      // persistindo toda a partida (só ainda não o histórico). Se também faltar, somente a
+      // geração inicial pode recuar à 0005, pois depois disso a geração é identidade.
+      if (isMissingRpcSignature(error)) {
+        const previous = await supabase.rpc('write_room', {
+          room_id: args.room_id,
+          status: args.status,
+          seats: args.seats,
+          match_generation: args.match_generation,
+          opening_mode: args.opening_mode,
+          opening_auction: args.opening_auction,
+        })
+        error = previous.error
+      }
       if (isMissingRpcSignature(error) && args.match_generation === 0) {
         const legacy = await supabase.rpc('write_room', {
           room_id: args.room_id,
@@ -642,6 +654,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         revision?: number
         openingMode?: Room['openingMode']
         openingAuction?: Room['openingAuction']
+        matchHistory?: Room['matchHistory']
       }
       return normalizeRoom({
         id: row.id,
@@ -651,6 +664,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         revision: row.revision,
         openingMode: row.openingMode,
         openingAuction: row.openingAuction ?? null,
+        matchHistory: row.matchHistory,
       })
     },
 
@@ -685,8 +699,23 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         match_generation: snap.room.matchGeneration ?? 0,
         opening_mode: snap.room.openingMode ?? 'sealed-bid',
         opening_auction: snap.room.openingAuction ?? null,
+        match_history: snap.room.matchHistory ?? [],
       }
       let { error } = await supabase.rpc('write_snapshot', args)
+      if (isMissingRpcSignature(error)) {
+        const previous = await supabase.rpc('write_snapshot', {
+          room_id: args.room_id,
+          seq: args.seq,
+          game: args.game,
+          secrets: args.secrets,
+          status: args.status,
+          seats: args.seats,
+          match_generation: args.match_generation,
+          opening_mode: args.opening_mode,
+          opening_auction: args.opening_auction,
+        })
+        error = previous.error
+      }
       if (isMissingRpcSignature(error) && args.match_generation === 0) {
         const legacy = await supabase.rpc('write_snapshot', {
           room_id: args.room_id,
@@ -724,6 +753,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         revision?: number
         openingMode?: Room['openingMode']
         openingAuction?: Room['openingAuction']
+        matchHistory?: Room['matchHistory']
         seq: number
         game: unknown
         secrets: Secrets
@@ -737,6 +767,7 @@ export function supabaseTransport(supabase: SupabaseLike, roomId: string, uid: s
         revision: row.revision ?? row.seq,
         openingMode: row.openingMode,
         openingAuction: row.openingAuction ?? null,
+        matchHistory: row.matchHistory,
       })
       const publicGame = normalizeSnapshot(row.game as PersistedSnapshot['game'])
       const game = mergeSnapshot(publicGame, row.secrets, room)
