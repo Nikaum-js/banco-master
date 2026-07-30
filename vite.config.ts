@@ -110,7 +110,9 @@ function marketingRoutes(): Plugin {
  * gerados aqui para nunca divergirem do domínio configurado.
  */
 function siteMeta(): Plugin {
-  const routes = ['/', '/how-to-play', '/faq', '/play']
+  // Só conteúdo público entra no sitemap. `/play` é a aplicação privada; qualquer
+  // `?room=<id>` serve o mesmo HTML com `noindex`, então nenhuma credencial vira URL SEO.
+  const routes = ['/', '/how-to-play', '/faq']
   return {
     name: 'magnata-imobiliario:site-meta',
     transformIndexHtml(html) {

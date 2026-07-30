@@ -2,10 +2,13 @@
 
 ## Como funciona
 
-As páginas públicas (`/`, `/como-jogar`, `/faq`) são HTML autoral prerenderizado no build
+As páginas públicas (`/`, `/how-to-play`, `/faq`) são HTML autoral prerenderizado no build
 MPA do Vite; o app interativo vive em `/play`. Canonical, Open Graph, `robots.txt` e
 `sitemap.xml` são gerados pelo plugin `siteMeta()` em `vite.config.ts` a partir de uma
 única variável — nada de domínio hardcoded nas páginas (`%SITE_URL%` é substituído no build).
+
+`/play` declara `noindex, nofollow` e fica fora do sitemap. Como links de sala variam apenas
+pela query `?room=<id>` e usam o mesmo HTML/canonical, nenhuma sala ou `roomId` é indexável.
 
 ## Variáveis
 
@@ -25,6 +28,13 @@ Vercel — nenhuma página precisa mudar.
    `VITE_GSC_VERIFICATION=<esse valor>` nas env vars de produção da Vercel.
 3. Faça um novo deploy (a meta entra em todas as páginas) e conclua a verificação.
 4. Em **Sitemaps**, envie `sitemap.xml`.
+
+### Status auditado em 2026-07-30
+
+- canonical, `robots.txt` e `sitemap.xml` publicados e acessíveis;
+- sitemap ainda publicado com `/play` na versão anterior — correção versionada nesta entrega;
+- `VITE_GSC_VERIFICATION` ausente no ambiente **Production** da Vercel;
+- propriedade do Search Console não declarada verificada sem evidência externa.
 
 ## Imagem social
 
