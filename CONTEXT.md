@@ -35,21 +35,21 @@ _Avoid_: modo de jogo, regra personalizada
 ### Mapa
 
 **Mapa**:
-Catálogo de conteúdo e apresentação de um tabuleiro jogável — identificador estável, nome público, grupos, 48 casas, ícones, textos, cenários. Escolhido pelo host antes da criação da sala, gravado nela e imutável depois; todos os participantes recebem o mesmo. Não altera motor, posições, economia nem regra ([D-069](./docs/adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md)).
+Catálogo autoritativo de um tabuleiro jogável — identificador estável, nome público, grupos, casas, topologia, apresentação e regras próprias declaradas. Escolhido pelo host antes da criação da sala, gravado nela e imutável depois; todos os participantes recebem o mesmo. Compartilha o motor e os contratos de estado com os demais mapas ([D-069](./docs/adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md), [D-070](./docs/adr/D-070-fuligem-tem-topologia-e-regras-proprias.md)).
 _Avoid_: tema (para o eixo jogável), skin de tabuleiro
 
 **Cidades do Mundo**:
 Mapa incumbente (`atlas`) — países e cidades, universo visual "Atlas da Meia-Noite". Fallback de sala antiga ou sem identificação de mapa.
 
 **Cidade da Fuligem**:
-Segundo mapa jogável (`fuligem`) — cidade da Revolução Industrial: bairros de fábricas, chaminés, ferrovias, ferro, madeira, cobre e luz de fornalha ([D-069](./docs/adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md)).
+Segundo mapa jogável (`fuligem`) — circuito próprio de 40 casas e 8 bairros numa cidade da Revolução Industrial: fábricas, chaminés, ferrovias, minas e luz de fornalha ([D-069](./docs/adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md), [D-070](./docs/adr/D-070-fuligem-tem-topologia-e-regras-proprias.md)).
 _Avoid_: Fliperama Neon, Metrópole Neon, neon
 
 **Sorte Grande**:
 Nome de apresentação, no mapa Cidade da Fuligem, do prêmio acumulado da Loteria (Free Parking, §13.4). Mesma regra, mesmo `centerPot`.
 
 **Ferrovia**:
-Nome de apresentação, no mapa Cidade da Fuligem, das quatro casas de aeroporto (Ferrovia Norte/Sul/Leste/Oeste). Mesma regra de aluguel escalonado (§2.4).
+Nome de apresentação, no mapa Cidade da Fuligem, das quatro casas de aeroporto. Segue a regra de aluguel escalonado da categoria (§2.4).
 
 **Estação de Carga**:
 Nome de apresentação, no mapa Cidade da Fuligem, do Hangar (§13.6) — melhoria que dobra o aluguel da Ferrovia.
@@ -63,6 +63,16 @@ Nome de apresentação, no mapa Cidade da Fuligem, da casa construída (níveis 
 **Fábrica**:
 Nome de apresentação, no mapa Cidade da Fuligem, do Hotel; **Complexo de Fábricas** é o 2º hotel e **Torre de Ferro** é o Skyscraper. Mesma escada, mesmos custos e aluguéis.
 
+**Mina**:
+Título comprável da Cidade da Fuligem que não cobra aluguel nem recebe construção. Dá ao dono um bônus passivo conforme o metal enquanto não estiver hipotecada ([D-071](./docs/adr/D-071-minas-sao-ativos-passivos-sem-aluguel.md)).
+_Avoid_: Utilidade, Ferrovia
+
+**Taxa de Fumaça**:
+Pagamento de R$ 50 à Sorte Grande ao construir Fábrica, Complexo de Fábricas ou Torre de Ferro na Cidade da Fuligem. Oficina não paga ([D-070](./docs/adr/D-070-fuligem-tem-topologia-e-regras-proprias.md)).
+
+**Desvio pela Ferrovia**:
+Movimento opcional, ao terminar o turno numa Ferrovia própria e não hipotecada, para outra Ferrovia própria e não hipotecada. Não passa pelo GO nem cobra aluguel na chegada ([D-070](./docs/adr/D-070-fuligem-tem-topologia-e-regras-proprias.md)).
+
 ### Tabuleiro e movimento
 
 **GO**:
@@ -70,7 +80,7 @@ Casa de índice 0. Passar por ela credita $200; parar exatamente nela credita $4
 _Avoid_: Início, Partida, Start
 
 **Free Parking**:
-Casa de índice 24. Quem para nela coleta toda a Loteria.
+Casa de canto oposta ao GO: índice 24 no Atlas e 20 na Cidade da Fuligem. Quem para nela coleta toda a Loteria.
 _Avoid_: Férias, Estacionamento Livre
 
 **Loteria**:

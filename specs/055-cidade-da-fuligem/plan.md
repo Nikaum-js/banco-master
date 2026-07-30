@@ -2,6 +2,12 @@
 
 **Spec**: [spec.md](./spec.md) · **ADR**: [D-069](../../docs/adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md) · **Stack**: a do repo (React+Vite+TS+Tailwind+Zustand+Supabase) — nada novo.
 
+> **Histórico:** topologia, economia própria e Minas foram refinadas depois pela
+> [D-070](../../docs/adr/D-070-fuligem-tem-topologia-e-regras-proprias.md),
+> [D-071](../../docs/adr/D-071-minas-sao-ativos-passivos-sem-aluguel.md) e
+> [spec 056](../056-fuligem-mecanicas-legibilidade/plan.md). Este plano permanece como
+> registro da introdução do segundo mapa e de sua seleção autoritativa.
+
 ## Decisões de design
 
 ### D1 — O esqueleto econômico continua sendo `BOARD`; o catálogo é overlay de apresentação

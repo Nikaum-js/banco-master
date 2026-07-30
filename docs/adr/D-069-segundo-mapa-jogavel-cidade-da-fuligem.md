@@ -1,6 +1,6 @@
 # D-069 — Segundo mapa jogável selecionado por sala: Cidade da Fuligem
 
-**Data:** 2026-07-30 · **Status:** aceita · **Refina:** [D-017](D-017-tabuleiro-de-48-casas.md), [D-019](D-019-autenticacao-anonima-por-link-sem-contas-no-v1.md), [D-020](D-020-modelo-de-autoridade-sincronizacao-host-autoritativo-realtim.md) · **Revisa:** SRS §16 (linha "Múltiplos temas simultâneos")
+**Data:** 2026-07-30 · **Status:** aceita · **Refina:** [D-017](D-017-tabuleiro-de-48-casas.md), [D-019](D-019-autenticacao-anonima-por-link-sem-contas-no-v1.md), [D-020](D-020-modelo-de-autoridade-sincronizacao-host-autoritativo-realtim.md) · **Revisa:** SRS §16 (linha "Múltiplos temas simultâneos") · **Refinada por:** [D-070](D-070-fuligem-tem-topologia-e-regras-proprias.md)
 
 > **Nota de numeração:** `D-068` está reservada pela worktree paralela da spec 054 (diretório
 > opt-in de lobbies anônimos), ainda fora do `main`. Esta decisão nasce como `D-069` de
@@ -15,10 +15,12 @@
 
 Com quatro regras estruturais:
 
-- **Mapa é conteúdo + apresentação, nunca regra.** Os dois mapas compartilham o mesmo motor,
-  as mesmas 48 posições, a mesma economia (preços, aluguéis, custos, multiplicadores), os
-  mesmos efeitos, raridades e regras de carta. Um mapa fornece, por **catálogo de fonte
-  única**: identificador estável, nome público, grupos, as 48 casas (nomes apresentados,
+- **Mapa seleciona um catálogo autoritativo.** Nesta decisão inicial, os dois mapas
+  compartilhavam as mesmas 48 posições e economia; a [D-070](D-070-fuligem-tem-topologia-e-regras-proprias.md)
+  substitui somente essa restrição e permite topologia, composição e regras próprias
+  declaradas por mapa. Permanecem compartilhados o motor, os contratos de estado, os
+  efeitos, raridades e regras de carta. Um mapa fornece, por **catálogo de fonte
+  única**: identificador estável, nome público, grupos, suas casas (nomes apresentados,
   ícones, textos), apresentação das construções e das cartas, e os cenários de home, lobby e
   partida. Contratos internos do motor (`airport`, `hangar`, `bus-ticket`, `corner-parking`,
   `centerPot`…) permanecem como estão — o catálogo os **apresenta** (no mapa Fuligem:
@@ -47,10 +49,10 @@ persistência — mantê-lo ao lado de um mapa real seria custo permanente sem f
 
 **Como aplicar:**
 
-- SRS: nota na §2 (a estrutura de 48 posições é compartilhada pelos mapas; nomes e valores da
-  §2.3 são do mapa Cidades do Mundo), revisão da linha "Múltiplos temas simultâneos" da §16 e
-  bump de versão. "Simultâneos" no sentido de *mais de um mapa na mesma partida* segue fora
-  de escopo.
+- SRS: a versão original desta decisão registrou 48 posições compartilhadas; a
+  [D-070](D-070-fuligem-tem-topologia-e-regras-proprias.md) substituiu essa parte pela
+  composição própria de 40 casas da Fuligem. A seleção por sala e o sentido de
+  "simultâneos" permanecem como definidos aqui.
 - `CONTEXT.md`: registrar **Mapa**, **Cidade da Fuligem** e os nomes de apresentação do mapa
   novo (Sorte Grande, Ferrovia, Estação de Carga, Bilhete de Trem, Oficina, Fábrica,
   Complexo de Fábricas, Torre de Ferro).
@@ -60,3 +62,4 @@ persistência — mantê-lo ao lado de um mapa real seria custo permanente sem f
 - A sala grava `boardId` na criação (precedente: `opening_mode` do Ritual de Largada, D-046);
   o valor é publicado pela autoridade como o resto do estado da sala (D-020).
 - Nenhuma regra nova de jogo nasce desta decisão; a spec que a operacionaliza é a 055.
+  As regras e a topologia próprias da Fuligem nascem depois, na D-070/D-071 e na spec 056.

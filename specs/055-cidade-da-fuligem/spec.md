@@ -10,6 +10,13 @@
 
 > Regra criada antes da spec: [D-069](../../docs/adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md), SRS v1.30 (§2.1, §11.1, §16). Esta spec operacionaliza a decisão; **nenhuma regra de jogo nasce aqui**.
 
+> **Histórico:** os requisitos desta spec que exigiam 48 casas, paridade econômica e
+> ausência de regra própria foram substituídos pela
+> [D-070](../../docs/adr/D-070-fuligem-tem-topologia-e-regras-proprias.md), pela
+> [D-071](../../docs/adr/D-071-minas-sao-ativos-passivos-sem-aluguel.md) e pela
+> [spec 056](../056-fuligem-mecanicas-legibilidade/spec.md). Seleção autoritativa por sala,
+> identidade visual e remoção do Neon continuam válidas.
+
 ## Clarifications
 
 Resolvidas pelo brief, ADR e código real:

@@ -1,6 +1,6 @@
 # Magnata Imobiliário — Software Requirements Specification (SRS)
 
-**Versão:** 1.29
+**Versão:** 1.31
 **Data:** Julho de 2026
 **Documento de fonte de verdade absoluta do projeto.**
 **Toda decisão de produto e de regra de negócio deve ser baseada neste documento.**
@@ -96,9 +96,16 @@ Decisões tomadas durante a fase de discovery e definitivas para esta versão:
 
 ### 2.1 Estrutura Geral
 
-O tabuleiro é composto por **48 casas** dispostas em um quadrado, percorridas no sentido horário (11 casas por lado + 4 cantos).
+O mapa **Cidades do Mundo** é composto por **48 casas** dispostas em um quadrado,
+percorridas no sentido horário (11 casas por lado + 4 cantos).
 
-> 📌 **Mapas** (v1.30, [D-069](adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md)): a estrutura desta seção — 48 posições, tipos de casa, grupos, valores econômicos e todas as regras — é **compartilhada por todos os mapas jogáveis**. Um mapa fornece apenas conteúdo de apresentação (nomes, ícones, textos, cenários) por catálogo de fonte única. Os nomes e o tema descritos neste §2 são do mapa **Cidades do Mundo** (`atlas`); o mapa **Cidade da Fuligem** (`fuligem`) apresenta as mesmas posições e valores com bairros e ruas da Revolução Industrial — os aeroportos como **Ferrovias**, o Hangar como **Estação de Carga**, o espaço Bus Ticket como **Bilhete de Trem** e a Loteria do Free Parking como **Sorte Grande**. O mapa é gravado na sala na criação e é imutável (§11.1).
+> 📌 **Mapas** (v1.31, [D-069](adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md),
+> [D-070](adr/D-070-fuligem-tem-topologia-e-regras-proprias.md)): cada mapa fornece, por
+> catálogo de fonte única, suas casas, grupos, topologia, apresentação e regras próprias
+> explicitamente declaradas. O motor, a autoridade da sala e os contratos de estado
+> continuam compartilhados. Os nomes, quantidades e valores das §§2.2–2.7 são do mapa
+> **Cidades do Mundo** (`atlas`). A **Cidade da Fuligem** (`fuligem`) usa a composição
+> própria da §2.8. O mapa é gravado na sala na criação e é imutável (§11.1).
 
 > **Nota de design (v1.1):** o tabuleiro foi expandido de 40 → 48 casas, inspirado no **Monopoly: The Mega Edition** (52 casas), para suportar partidas de 7-8 jogadores com mais profundidade. A escolha é coerente: as mecânicas que o Mega introduziu para fazer um tabuleiro maior funcionar — Speed Die (§13.2), Skyscraper (§13.7), Bus Tickets (§10.7), Hangares ≈ Train Depots (§13.6) e construção com grupo parcial (§13.3) — **já existiam neste SRS**. A expansão completa esse design em vez de divergir do Richup.
 
@@ -182,13 +189,55 @@ Utilidades podem ser hipotecadas mas não recebem construções.
 
 Casa especial nova (1 no tabuleiro), inspirada no Mega Edition. Quem para nela **ganha 1 Bus Ticket guardado** (contador próprio, §10.7) — **não é forçado a usá-lo na hora**: fica disponível para uso facultativo antes de rolar, no momento que o jogador escolher (mesma mecânica do ticket vindo da carta "Passagem de Ônibus"). Não é propriedade; não pode ser comprada nem hipotecada. *(D-021 chegou a tornar o espaço uma "corrida imediata"; revertida em 2026-05-27 — ver DECISIONS.)*
 
+### 2.8 Cidade da Fuligem
+
+O mapa Cidade da Fuligem usa **40 casas** (9 por lado + 4 cantos), com cantos nos
+índices `0/10/20/30`:
+
+| Tipo de casa | Quantidade |
+|---|---|
+| Propriedades em 8 bairros | 22 |
+| Ferrovias | 4 |
+| Minas | 4 |
+| Acaso | 3 |
+| Tesouro | 2 |
+| Bilhete de Trem | 1 |
+| Cantos especiais | 4 |
+| **Total** | **40** |
+
+Não há Utilidades nem casas fixas de Imposto neste mapa.
+
+As **Ferrovias** seguem a regra econômica dos Aeroportos (§2.4) e aceitam **Estação de
+Carga**, apresentação do Hangar (§13.6). Ao terminar o turno sobre uma Ferrovia própria
+e não hipotecada, o jogador pode usar o **Desvio pela Ferrovia** para mover diretamente
+até outra Ferrovia própria e não hipotecada. O movimento não passa pelo GO e não resolve
+aluguel na chegada.
+
+Cada **Mina** custa `R$ 220`, hipoteca por `R$ 110`, não recebe construções e **não cobra
+aluguel**. Cair em Mina de outro jogador não transfere dinheiro. Enquanto a Mina pertencer
+ao jogador e não estiver hipotecada, concede o bônus correspondente:
+
+| Mina | Bônus |
+|---|---|
+| Ferro | construções custam 25% menos |
+| Carvão | aluguel das Ferrovias do dono sobe 50% |
+| Estanho | impostos e aluguéis pagos pelo dono caem 15% |
+| Cobre | aluguel das propriedades do dono com qualquer construção sobe 25% |
+
+Construir **Fábrica**, **Complexo de Fábricas** ou **Torre de Ferro** paga `R$ 50` para a
+**Sorte Grande**. Construir Oficina não paga essa **Taxa de Fumaça**.
+
+O anel da Fuligem usa a redução de casas para dar mais área a cada célula e mostrar nomes
+completos. O miolo não exibe nomes de regiões ou linhas divisórias: fica reservado às
+superfícies funcionais do jogo.
+
 ---
 
 ## 3. Regras de Jogo — Fluxo de Turno
 
 ### 3.1 Início de Partida
 
-- Cada jogador recebe **$2.000 antes do Ritual de Largada**. (Tabuleiro de 48 casas exige mais caixa inicial que o padrão de 40 — mais trânsito e mais propriedades para comprar. Meio-termo entre o $1.500 clássico e o $2.500 do Mega Edition.)
+- Cada jogador recebe **$2.000 antes do Ritual de Largada**, em qualquer mapa.
 - Antes de iniciar, o host escolhe no lobby como a ordem será definida (D-046):
   - **Leilão secreto**: o host abre uma única rodada simultânea para todos os assentos, inclusive o próprio;
   - cada jogador lacra um lance de **$0 a $500**, em passos de **$50**, dentro de **15 segundos**;
@@ -914,7 +963,10 @@ Regras de v1.29, introduzidas pela [D-067](adr/D-067-retencao-leve-fica-na-sala-
 
 ### 12.1 Layout do Tabuleiro
 
-Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor da borda (11 por lado + 4 cantos). Interior exibe HUD, log de eventos, etc.
+Visão 2D de cima, quadrada, com o número de casas e a topologia do mapa ativo. O interior
+exibe HUD, log de eventos e demais superfícies funcionais. Na Cidade da Fuligem, as 40
+casas devem aproveitar a área liberada para exibir nomes completos; o miolo não mostra
+nomes de regiões nem divisórias decorativas.
 
 ### 12.2 Modais Obrigatórios
 
@@ -950,6 +1002,11 @@ Replicar o layout do Richup.io: visão 2D de cima, quadrado, 48 casas ao redor d
 > 📌 **A cobrança de dívida NÃO é modal** (v1.21, [D-056](adr/D-056-cobranca-de-divida-sai-do-centro-da-tela.md)). Ela aparece como **cartão no miolo do tabuleiro**, dentro do anel de casas (v1.28, [D-066](adr/D-066-cobranca-de-divida-vai-para-o-miolo-do-tabuleiro.md)): **não cobre casa nenhuma e não reposiciona o tabuleiro** — a decisão de o que hipotecar ou vender é tomada olhando o tabuleiro inteiro, que continua parado e clicável no lugar em que estava. A cobrança não escurece a tela além do próprio miolo, não captura nem prende o foco, e Esc continua sem fechá-la (§12.6): sai-se dela pagando, negociando ou declarando falência (§9.1). Ela mostra, na ordem: a quem se deve, quanto, o caixa atual, quanto falta e **quanto ainda dá para levantar** vendendo construções e hipotecando tudo — este último é a mesma medida que autoriza o botão de falência. A escolha de credor para empréstimo abre a partir do cartão, sem empilhar um botão por adversário.
 >
 > A cobrança é do **devedor nomeado** na dívida (v1.25, [D-061](adr/D-061-obrigacao-a-outro-jogador-nao-e-truncada.md)), que pode não ser o jogador da vez. Quem não é o devedor vê, no lugar dela, quem a mesa está aguardando — mesmo tratamento que a janela de reação (§10.6) e o pedido de empréstimo (§15.2) já recebem.
+>
+> O modal de **Leilão** preserva o tabuleiro e os saldos de todos os jogadores totalmente
+> legíveis. Pode bloquear comandos fora do modal e manter o foco acessível, mas não aplica
+> desfoque nem véu opaco sobre os painéis laterais: conhecer o caixa dos adversários é
+> informação estratégica para o lance.
 
 ### 12.3 HUD
 
@@ -1253,7 +1310,7 @@ Todo empréstimo nasce com **prazo de 3 voltas do devedor**, contadas pelas pass
 | Inteligência Artificial (bots) | Decidido: fora do escopo. Apenas jogadores humanos |
 | Timer de turno | Decidido: sem timer. Jogador finaliza quando quiser |
 | Modo local (hotseat) | Apenas multiplayer online via sala |
-| Múltiplos temas simultâneos | Revisado em v1.30 ([D-069](adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md)): **dois mapas jogáveis** — Cidades do Mundo (`atlas`) e Cidade da Fuligem (`fuligem`) —, escolhidos **por sala** na criação e imutáveis depois. "Simultâneos" no sentido de mais de um mapa na **mesma partida** segue fora de escopo |
+| Múltiplos temas simultâneos | Revisado em v1.31 ([D-069](adr/D-069-segundo-mapa-jogavel-cidade-da-fuligem.md), [D-070](adr/D-070-fuligem-tem-topologia-e-regras-proprias.md)): **dois mapas jogáveis** — Cidades do Mundo (`atlas`) e Cidade da Fuligem (`fuligem`) —, escolhidos **por sala** na criação e imutáveis depois. Cada mapa pode ter topologia e regras declaradas próprias; mais de um mapa na **mesma partida** segue fora de escopo |
 | Transferência de host | Host desconectado pausa a partida indefinidamente |
 | Chat em tempo real | Não previsto no v1 |
 | Espectadores | Não previsto no v1 |
@@ -1274,4 +1331,4 @@ sendo a fonte de verdade da **regra**, o `CONTEXT.md` é a fonte dos **nomes**.
 
 ---
 
-**Magnata Imobiliário — SRS v1.30 | Julho 2026 | Documento de fonte de verdade absoluta**
+**Magnata Imobiliário — SRS v1.31 | Julho 2026 | Documento de fonte de verdade absoluta**
